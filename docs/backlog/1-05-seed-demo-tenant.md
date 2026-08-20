@@ -1,7 +1,13 @@
 # Seed: demo tenant and operator
 
 - **Stage**: 1
-- **Status**: ready
+- **Status**: done — `create-demo-tenant.sh` verified against the real `docker-compose` Postgres: ran
+  twice, second run inserted zero rows (`INSERT 0 0` on every statement), confirmed by querying row
+  counts directly - exactly one site, operator, role, and operator_role each. Fixed, well-known ids
+  plus `ON CONFLICT DO NOTHING` make idempotency structural rather than something a cleanup step has
+  to remember to do. No credential to generate or protect turned out to exist: `1-06`'s operator-auth
+  stub trades the operator's id (not a secret) for a session token directly, so there is no password
+  this script needed to handle carefully - simpler than the original scope note anticipated.
 - **Depends on**: `1-04-postgres-persistence.md` (the schema this inserts into must exist)
 
 ## Goal
@@ -38,10 +44,11 @@ MinIO bucket script — match its style and error handling).
 
 ## Done when
 
-- [ ] Running the script twice against a clean compose Postgres leaves exactly one demo site and one
+- [x] Running the script twice against a clean compose Postgres leaves exactly one demo site and one
       demo operator.
-- [ ] `../ago-root/docs/runbooks/local-dev.md` and `k8s-local.md` each gain a line showing when to run
-      it in the bring-up sequence.
+- [x] `../ago-root/docs/runbooks/local-dev.md` and `k8s-local.md` each gain a line showing when to run
+      it in the bring-up sequence. `k8s-local.md`'s is honest that the cluster's own Postgres was not
+      independently re-verified this round - `1-04`/`1-05` scoped verification to `docker-compose`.
 
 ## Open questions
 

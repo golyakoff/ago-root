@@ -24,6 +24,17 @@ kubectl get pods -n ago-chat -w
 `kubectl kustomize deploy/k8s/overlays/local` renders the same manifests without needing a cluster
 connection at all - useful for reviewing a change before applying it.
 
+## Migrations and seeding
+
+Not yet re-verified against this cluster's own Postgres specifically - `1-04`/`1-05` verified the
+migration and the seed script against the `docker-compose` Postgres only (`local-dev.md`), which is
+what those items' own scope committed to. The same commands should work here too, against
+`svc/postgres` in the `ago-chat` namespace via `kubectl port-forward svc/postgres 15432:5432 -n
+ago-chat` from a machine with the .NET SDK and `dotnet-ef` installed - `Microsoft.EntityFrameworkCore.Design`
+is `PrivateAssets=all` (`Ago.Chat.Infrastructure.Postgres.csproj`), specifically so it never flows
+into `ago-chat-api`'s own image, so migrating from inside the cluster is not an option as-is. Saying
+so here rather than claiming coverage this session did not actually exercise.
+
 ## Known issues found this way
 
 - **Kubernetes hanging forever at "Starting Kubernetes cluster..."**: check `wsl --version` and, if

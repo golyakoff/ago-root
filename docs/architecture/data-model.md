@@ -8,12 +8,17 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 - `visitors` - `id`, `site_id`, `token_hash`, first/last seen. Anonymous, no PII by design.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
-  (`waiting|assigned|closed`), `last_sequence`, timestamps, `version` (optimistic concurrency).
+  (`waiting|assigned|closed`), `last_sequence`, timestamps. Optimistic concurrency uses Postgres's
+  built-in `xmin` system column (`1-04`), not an extra column of our own to keep in sync by hand.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
   `created_at`, `delivered_at?`, `read_at?`.
 - `outbox` - `id`, `occurred_at`, `type`, `payload` (jsonb), `partition_key`, `published_at?`,
   `attempts`. See `adr/0005`.
 - `inbox` - `message_id`, `consumer`, `processed_at`. The idempotency ledger for consumers.
+- `roles` - `id`, `site_id`, `name`, `permissions` (`text[]`) - the RBAC model `adr/0016` added,
+  built in `1-04`. No management API yet; `1-05`'s seed script is the only writer.
+- `operator_roles` - `operator_id`, `role_id` - the join table; an operator can hold more than one
+  role even though Stage 1 only ever grants the single seeded `"Operator"` role.
 
 ## Keys and indexes
 
@@ -41,6 +46,11 @@ Writes go through EF Core, one aggregate per transaction, no lazy loading. Reads
 with hand-written SQL returning DTOs. Rationale and trade-offs: `adr/0004`.
 
 ## Migrations
+
+**Verified**: `Stage1CreateChatSchema` (`1-04`) applied cleanly to a real Postgres (both the
+`docker-compose` instance and a throwaway Testcontainers one), all tables/FKs/indexes landed as
+designed, and `Ago.Chat.Integration.Tests` proves the unique `(conversation_id, sequence)` constraint
+actually rejects a duplicate insert at the storage level.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
