@@ -36,15 +36,18 @@
                   +----------+
 ```
 
-## Two hosts, one solution
+## Three hosts, one solution
 
-`Ago.Chat.Api` and `Ago.Chat.Worker` are separate processes that share the same Application and Domain
-assemblies. This is a **modular monolith with split runtimes**, not microservices - see
-`adr/0003-modular-monolith-two-hosts.md`. It buys independent scaling of "holding connections" and
-"doing work" without distributed-transaction pain.
+`Ago.Chat.Api`, `Ago.Chat.Worker` and `Ago.Chat.Webhooks` are separate processes that share the same
+Application and Domain assemblies. This is a **modular monolith with split runtimes**, not
+microservices - see `adr/0003-platform-product-split-and-two-hosts.md` (the original Api/Worker split)
+and `adr/0013-deployables-and-webhook-bulkhead.md` (the third host, added as a bulkhead against a slow
+third party). It buys independent scaling of "holding connections", "doing work" and "calling someone
+else's unreliable system" without distributed-transaction pain.
 
-The two hosts never call each other synchronously. The broker is the only path between them, which
-is what makes either one independently restartable.
+No two hosts ever call each other synchronously. The broker is the only path between them, which is
+what makes each one independently restartable. The diagram above shows only `Api` and `Worker` - the
+hot path that exists from Stage 1; `Webhooks` arrives in Stage 6 (`resilience.md`).
 
 ## Request paths
 

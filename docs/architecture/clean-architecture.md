@@ -133,7 +133,7 @@ Rules:
 - No business decisions. An adapter that decides *whether* to do something is a misplaced use case.
 - Retry, backoff, circuit-breaking, and serialisation belong here.
 
-### Hosts - `Ago.Chat.Api`, `Ago.Chat.Worker`
+### Hosts - `Ago.Chat.Api`, `Ago.Chat.Worker`, `Ago.Chat.Webhooks`
 
 Contains: `Program.cs`, module loading, DI registration, middleware, auth, health checks, telemetry.
 

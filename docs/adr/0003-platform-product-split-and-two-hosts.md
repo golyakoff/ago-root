@@ -1,6 +1,6 @@
 # ADR-0003: Platform/product split, modular monolith, two hosts
 
-- **Status**: Accepted
+- **Status**: Accepted — item 3 (two hosts) amended by `adr/0013`
 - **Date**: 2026-08-20
 - **Stage**: 0
 

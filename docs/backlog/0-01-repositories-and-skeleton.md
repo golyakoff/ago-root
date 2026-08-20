@@ -17,15 +17,17 @@ business code yet — every later item drops into a slot that already exists.
 
 ## Scope
 
+- `mkdir C:\git\ago\.nuget-feed` (`runbooks/workspace.md`) — created once, outside every repository.
 - `ago-platform`: solution, `Ago.Platform.Kernel` (`Result<T>`, `Error`, strongly-typed id base,
   `IClock`, `IIdGenerator` producing uuid v7) and `Ago.Platform.Hosting` with `IProductModule`.
-  `dotnet pack` to a local file feed; SemVer starting at `0.1.0`; a `CHANGELOG.md`.
+  `dotnet pack` to `C:\git\ago\.nuget-feed`; SemVer starting at `0.1.0`; a `CHANGELOG.md`.
 - `ago-chat`: solution, empty `Ago.Chat.Domain`/`Application`/`Contracts`/`Infrastructure.Postgres`/
-  `Module`, and the three host projects. `nuget.config` pointing at the local feed.
+  `Module`, and the three host projects. `nuget.config` pointing at `C:\git\ago\.nuget-feed`.
 - The documented dev override that swaps `PackageReference` for `ProjectReference`, plus a note in
   the repo's README that a merged branch must never keep it.
 - `Directory.Build.props` (net10.0, nullable, warnings-as-errors) and `Directory.Packages.props` in
   both backend repositories; `.editorconfig` per `docs/conventions/coding-style.md`.
+- `LICENSE` (MIT) in all six repositories — every one is public from its first commit.
 - READMEs already exist in each repository — update them if this work makes them wrong.
 
 ## Out of scope
@@ -41,7 +43,8 @@ business code yet — every later item drops into a slot that already exists.
 - [ ] `ago-chat` restores `Ago.Platform.*` from the feed, with the dev override switched off.
 - [ ] `Ago.Platform.Kernel` has unit tests for `Result<T>` and for uuid v7 ordering.
 - [ ] No project named `Common`, `Shared`, `Utils` or `Core` exists anywhere.
-- [ ] Junctions work per `runbooks/workspace.md`.
+- [ ] Junctions and the local NuGet feed work per `runbooks/workspace.md`.
+- [ ] Every repository has a `LICENSE` file.
 
 ## Open questions
 

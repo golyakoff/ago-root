@@ -49,8 +49,9 @@ Names are therefore `Ago.Chat.Api`, `Ago.Chat.Worker`, `Ago.Chat.Webhooks`.
 
 - Platform packages use SemVer. A breaking change to a platform port is a major bump with a migration
   note in the platform's changelog — the same discipline demanded of integration events.
-- Local development uses a **file-based NuGet feed**: `dotnet pack` into a local folder that
-  `nuget.config` in `ago-chat` lists as a source. No hosted feed is required to work offline.
+- Local development uses a **file-based NuGet feed**: `dotnet pack` into a local folder
+  (`C:\git\ago\.nuget-feed\`, `runbooks/workspace.md`) that `nuget.config` in `ago-chat` lists as a
+  source. No hosted feed is required to work offline.
 - For a change that genuinely spans both repositories, `ago-chat` supports a **dev override**: a
   solution filter / `Directory.Build.props` switch that swaps the `PackageReference` for a
   `ProjectReference` into a sibling `../ago-platform` checkout. Use it while iterating; the branch
@@ -73,7 +74,8 @@ signal the code was not platform code — put it back in the product and say so.
 
 ## Visibility
 
-**Everything is public**, including `ago-root` with its `CLAUDE.md`, skills and backlog.
+**Everything is public**, including `ago-root` with its `CLAUDE.md`, skills and backlog. Every
+repository carries an MIT `LICENSE` from its first commit (`backlog/0-01-repositories-and-skeleton.md`).
 
 That is a deliberate choice, not laziness. The AI-assisted workflow is itself part of what is being
 demonstrated: rules that constrain an agent, skills that encode a procedure, ADRs that keep decisions

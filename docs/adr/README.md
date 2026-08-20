@@ -12,7 +12,7 @@ naming, formatting, or anything a convention doc already covers.
 |---|---|---|
 | 0001 | Record architecture decisions | Accepted |
 | 0002 | Clean Architecture layering and the dependency rule | Accepted |
-| 0003 | Platform/product split, modular monolith, two hosts | Accepted |
+| 0003 | Platform/product split, modular monolith, two hosts | Accepted — host count amended by 0013 |
 | 0004 | PostgreSQL, EF Core for writes, Dapper for reads | Accepted |
 | 0005 | Transactional outbox for reliable publishing | Accepted |
 | 0006 | Broker abstraction at topic + partition key + at-least-once | Accepted |

@@ -3,6 +3,8 @@
 - **Status**: Accepted
 - **Date**: 2026-08-20
 - **Stage**: 6
+- **Supersedes**: the two-host count in ADR-0003 item 3 (its platform/product split and
+  modular-monolith reasoning stand unchanged)
 
 ## Context
 

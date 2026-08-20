@@ -18,7 +18,7 @@ the Docker Desktop Kubernetes cluster for everything about scale-out.
 
 - `deploy/docker/docker-compose.yml`: Postgres, RabbitMQ (management UI), Redis, MinIO, with
   healthchecks, pinned image versions, and named volumes.
-- `deploy/k8s/base/`: the same four dependencies plus placeholders for the two hosts, with resource
+- `deploy/k8s/base/`: the same four dependencies plus placeholders for the three hosts, with resource
   requests/limits, probes, and `terminationGracePeriodSeconds`.
 - `deploy/k8s/overlays/local/`: replica counts, ingress host, and local-only settings.
 - ingress-nginx install instructions in the runbook (not vendored into the repo).
