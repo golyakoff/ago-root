@@ -40,6 +40,8 @@ src/
   Ago.Platform.Hosting/               IProductModule, health checks, OpenTelemetry, config binding
 tests/
   Ago.Platform.Tests/
+  Ago.Platform.Architecture.Tests/    the platform's own smaller half of the arch-test list -
+                                      Kernel stays dependency-free, nothing here ever sees Ago.Chat.*
   Ago.Platform.Integration.Tests/
 ```
 

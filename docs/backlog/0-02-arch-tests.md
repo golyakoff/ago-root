@@ -1,7 +1,7 @@
 # Architecture tests
 
 - **Stage**: 0
-- **Status**: ready
+- **Status**: in progress — tests written and verified; CI wiring waits on `0-04-ci-pipeline.md`
 - **Depends on**: `0-01-repositories-and-skeleton.md`
 
 ## Goal
@@ -36,10 +36,12 @@ set in `ago-platform`), one test per rule, each named after the rule:
 
 ## Done when
 
-- [ ] Each rule has a test, and each test fails when the rule is deliberately broken. **Verify this
+- [x] Each rule has a test, and each test fails when the rule is deliberately broken. **Verify this
       by actually breaking each one temporarily** — an arch test that cannot fail is decoration.
-- [ ] The suite runs in CI on every branch.
-- [ ] `clean-architecture.md` and the test names say the same thing.
+      Done: all 7 rules (`Ago.Chat.Architecture.Tests`) and the platform's own smaller pair
+      (`Ago.Platform.Architecture.Tests`) were each broken and confirmed red, then reverted.
+- [ ] The suite runs in CI on every branch. Not yet — no CI exists until `0-04-ci-pipeline.md`.
+- [x] `clean-architecture.md` and the test names say the same thing.
 
 ## Open questions
 
