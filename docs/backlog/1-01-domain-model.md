@@ -1,7 +1,12 @@
 # Domain model: Site, Visitor, Operator, Conversation, Message
 
 - **Stage**: 1
-- **Status**: ready
+- **Status**: done — 42 tests (30 in `Ago.Chat.Domain.Tests`, 12 arch, unchanged) all green. One real
+  bug found by a test before it shipped: `AddOperatorMessage`'s participant check ran before its
+  state check, so an unassigned conversation (`OperatorId` still `null`) raised
+  `ConversationParticipantMismatchException` instead of `InvalidConversationStateException` — fixed
+  by reordering. `Permission` (adr/0016) was added to this project after `1-02` needed it — a small,
+  justified extension of an already-"finished" project, not scope creep.
 - **Depends on**: nothing (Stage 0 complete)
 
 ## Goal
@@ -53,11 +58,11 @@ fields each entity carries, not the schema itself; that is `1-04`'s job), `docs/
 
 ## Done when
 
-- [ ] Every entity's invalid-construction paths have a failing-first test, then pass.
-- [ ] `Conversation`'s state machine rejects every illegal transition (`Assigned -> Assigned`,
+- [x] Every entity's invalid-construction paths have a failing-first test, then pass.
+- [x] `Conversation`'s state machine rejects every illegal transition (`Assigned -> Assigned`,
       `Closed -> AssignTo`, etc.), each with a test.
-- [ ] No entity has a public setter; `dotnet build` with `TreatWarningsAsErrors` stays clean.
-- [ ] `Ago.Chat.Architecture.Tests`' existing Domain-layering rule (`Ago.Chat.Domain` depends on
+- [x] No entity has a public setter; `dotnet build` with `TreatWarningsAsErrors` stays clean.
+- [x] `Ago.Chat.Architecture.Tests`' existing Domain-layering rule (`Ago.Chat.Domain` depends on
       nothing but `Ago.Platform.Kernel` and the BCL) still passes with zero changes to that test.
 
 ## Open questions

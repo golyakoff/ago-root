@@ -1,7 +1,11 @@
 # Platform: a real IClock implementation
 
 - **Stage**: 1
-- **Status**: ready
+- **Status**: done — `SystemClock`/`AddPlatformKernel()` in `Ago.Platform.Hosting`, version bumped
+  0.1.0 -> 0.2.0 (minor, additive) with a `CHANGELOG.md` entry the pack step reads. 13 tests green
+  (11 `Ago.Platform.Tests`, 2 arch, unchanged). `IIdGenerator`'s registration was folded into the same
+  `AddPlatformKernel()` call rather than a separate extension, since both are trivial Kernel-primitive
+  singletons a host always wants together.
 - **Depends on**: nothing — independent of `1-01`/`1-02`, can be branched in parallel
 
 ## Goal
@@ -38,10 +42,10 @@ only place concrete implementations get registered), `docs/architecture/reposito
 
 ## Done when
 
-- [ ] `dotnet pack` produces the bumped version; `ago-chat`'s CI (`adr/0015`) still restores
-      successfully against a freshly-packed `main` — verify by running the same commands
-      `CLAUDE.md`'s Commands section documents.
-- [ ] `Ago.Platform.Architecture.Tests` passes unchanged.
+- [x] `dotnet pack` produces the bumped version (`0.2.0`, verified via the same changelog-driven
+      extraction `ago-platform`'s own CI uses); `ago-chat`'s CI-style restore was re-verified against
+      it locally with the same commands `CLAUDE.md`'s Commands section documents.
+- [x] `Ago.Platform.Architecture.Tests` passes unchanged.
 
 ## Open questions
 
