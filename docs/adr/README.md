@@ -23,3 +23,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0011 | All instants are UTC `DateTimeOffset`, rendered per request | Accepted |
 | 0012 | Multiple repositories, platform published as packages | Accepted |
 | 0013 | Three deployables split by failure profile; webhooks as a bulkhead | Accepted |
+| 0014 | NGINX Gateway Fabric (Gateway API) instead of ingress-nginx | Accepted |

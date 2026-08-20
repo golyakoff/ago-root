@@ -4,16 +4,18 @@
 
 | Traffic | Balanced by (local k8s) | Balanced by (demo deploy) |
 |---|---|---|
-| Widget script `widget.js` | ingress -> static file service | CDN, long-cached, versioned filename |
-| REST API calls | ingress-nginx -> `Ago.Chat.Api` Service | same, behind the cloud L4 LB |
-| WebSocket / SignalR | ingress-nginx (HTTP/1.1 upgrade) -> `Ago.Chat.Api` Service | same |
+| Widget script `widget.js` | Gateway -> static file service | CDN, long-cached, versioned filename |
+| REST API calls | NGINX Gateway Fabric -> `Ago.Chat.Api` Service | same, behind the cloud L4 LB |
+| WebSocket / SignalR | NGINX Gateway Fabric (HTTP/1.1 upgrade) -> `Ago.Chat.Api` Service | same |
 | File upload / download bytes | **nothing** - straight to object storage | same (`file-storage.md`) |
 | Internal API -> Worker | nothing - they never call each other synchronously; the broker is the boundary | same |
 
-On Docker Desktop the entry point is `ingress-nginx` installed into the cluster, reachable on
-`localhost`. Nothing in the application depends on which controller is in front, and no ingress
-annotation may encode business behaviour - if a rule matters, it belongs in code where it can be
-tested.
+On Docker Desktop the entry point is **NGINX Gateway Fabric**, configured through the Gateway API
+(`Gateway`, `HTTPRoute`) rather than a legacy `Ingress` resource, reachable on `localhost`. Nothing in
+the application depends on which controller is in front, and no route or policy attachment may encode
+business behaviour - if a rule matters, it belongs in code where it can be tested. NGF is the direct
+successor to `ingress-nginx`, which was archived in March 2026 with no further releases; `adr/0014`
+has the full reasoning.
 
 ## The load balancing decision that matters: no sticky sessions
 

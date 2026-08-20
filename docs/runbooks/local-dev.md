@@ -1,8 +1,8 @@
 # Runbook: local development
 
-> **Status: skeleton.** The commands below are the intended shape. They are filled in and verified by
-> backlog item `0-03-local-infrastructure.md`. Until then, do not quote them as working — a runbook
-> nobody has executed is fiction.
+> **Status: the compose loop below is verified** (backlog item `0-03-local-infrastructure.md` - every
+> command in this section was actually run, not just written). Migrations and seeding still show
+> their Stage 1 shape, since there is no schema yet to migrate or seed into.
 
 ## Prerequisites
 
@@ -16,12 +16,27 @@ Paths below assume you are in `ago-root`; the junctions (`deploy/`, `chat/`) mak
 reachable from here (`workspace.md`).
 
 ```
+cp deploy/docker/.env.example deploy/docker/.env   # once; edit if you want different local creds
 docker compose -f deploy/docker/docker-compose.yml up -d
 dotnet run --project ../ago-chat/src/Ago.Chat.Api
 dotnet run --project ../ago-chat/src/Ago.Chat.Worker
+dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 ```
 
-Local endpoints (to confirm at Stage 0): API, RabbitMQ management UI, MinIO console, Postgres.
+Local endpoints (all verified reachable):
+
+| Endpoint | Address |
+|---|---|
+| Postgres | `localhost:5432` |
+| RabbitMQ (AMQP) | `localhost:5672` |
+| RabbitMQ management UI | http://localhost:15672 |
+| Redis | `localhost:6379` |
+| MinIO S3 API | `localhost:9000` |
+| MinIO console | http://localhost:9001 |
+| `Ago.Chat.Api` health | http://localhost:5299/healthz/live (port from `launchSettings.json`) |
+
+Each host also exposes `/healthz/live` and `/healthz/ready` - trivially healthy for now, since none
+of them have a real dependency wired up yet to report on (`architecture/edge.md`).
 
 ## Configuration
 
@@ -33,8 +48,14 @@ startup, so a wrong key fails fast instead of silently disabling a feature.
 
 - Run the fast tests: `dotnet test` (domain, application, architecture).
 - Run integration tests: they start their own containers; Docker must be running.
-- Apply migrations: `dotnet ef database update -p <infra project> -s ../ago-chat/src/Ago.Chat.Api`.
-- Reset local data: stop compose with volumes removed, then re-seed.
+- Apply migrations: `dotnet ef database update -p <infra project> -s ../ago-chat/src/Ago.Chat.Api`
+  (Stage 1 - no schema exists yet).
+- Create the attachments bucket: `deploy/seed/create-minio-bucket.sh` (verified; source
+  `deploy/docker/.env` first). The tenant/operator half of seeding arrives with Stage 1's schema.
+- Stop and restart without losing data: `down` then `up -d` again - verified, comes back healthy
+  with no manual fixes. Add `-v` to `down` to also wipe the named volumes for a truly clean slate
+  (not run in this session - permission for a volume-destroying command was withheld; the command
+  itself is standard compose behaviour, just not exercised here).
 
 ## When something is wrong
 
