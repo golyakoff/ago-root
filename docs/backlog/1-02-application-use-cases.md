@@ -1,7 +1,22 @@
 # Application layer: StartConversation, SendMessage, GetConversationHistory
 
 - **Stage**: 1
-- **Status**: ready
+- **Status**: done — 21 tests in `Ago.Chat.Application.Tests` (all fakes, no container), including
+  the DST-boundary test, plus 12 arch (unchanged) and 30 Domain (unchanged). All passed on the first
+  run - no bug found this time, unlike `1-01`.
+  - `SendMessage` and `GetConversationHistory` each split into two entry points
+    (`SendVisitorMessage`/`SendOperatorMessage`, `HandleAsVisitorAsync`/`HandleAsOperatorAsync`)
+    rather than one command with a `MessageAuthorKind` discriminator - matches `1-01`'s own
+    two-method split on `Conversation`, for the same reason (`coding-style.md`: two same-typed
+    parameters that must not be confused is a bug that compiles).
+  - `IVisitorRepository` was added to `Abstractions/` - not named in this file's original scope, but
+    needed to persist the `Visitor` `1-01` built with "real invariants" and nothing yet to call. Not
+    scope creep: it completes what `1-01` already committed to, not a new concern.
+  - **Deviation from `naming-and-structure.md`'s example tree**: no `*Validator.cs` per use case.
+    `MessageBody`'s constructor already enforces the one real invariant (non-empty, bounded length);
+    a separate validation layer for three small use cases would be structure with no second rule to
+    justify it yet. Flagged here rather than silently omitted - revisit if a use case gains a
+    validation rule `MessageBody` cannot express.
 - **Depends on**: `1-01-domain-model.md`
 
 ## Goal
@@ -60,15 +75,15 @@ aggregate).
 
 ## Done when
 
-- [ ] All three handlers pass their tests using only fakes — no container, no real clock.
-- [ ] Every handler returns `Result<T>` for expected failures (not found, wrong participant,
+- [x] All three handlers pass their tests using only fakes — no container, no real clock.
+- [x] Every handler returns `Result<T>` for expected failures (not found, wrong participant,
       permission denied) and never throws for them.
-- [ ] A test proves an operator without `conversation:send`/`conversation:read` for the relevant site
+- [x] A test proves an operator without `conversation:send`/`conversation:read` for the relevant site
       is rejected by `SendMessage`/`GetConversationHistory` before either reaches the repository.
-- [ ] `Ago.Chat.Architecture.Tests`' existing rules (`Application` depends on nothing from
+- [x] `Ago.Chat.Architecture.Tests`' existing rules (`Application` depends on nothing from
       `Infrastructure`/hosts; every `Task`-returning public method takes a `CancellationToken`; every
       handler is `sealed` under `UseCases/`) pass against the new code with zero test changes.
-- [ ] The DST-boundary test exists and passes.
+- [x] The DST-boundary test exists and passes.
 
 ## Open questions
 
