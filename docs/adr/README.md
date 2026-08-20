@@ -25,3 +25,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0013 | Three deployables split by failure profile; webhooks as a bulkhead | Accepted |
 | 0014 | NGINX Gateway Fabric (Gateway API) instead of ingress-nginx | Accepted |
 | 0015 | `ago-chat`'s CI packs `ago-platform` from source, no hosted feed yet | Accepted |
+| 0016 | Granular permissions (RBAC), scoped per tenant, as the authorization model | Accepted |

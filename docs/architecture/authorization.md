@@ -1,19 +1,20 @@
-# Authorization: current state and the open decision
+# Authorization: current state and what's still open
 
 ## Status
 
-**No authorization model is chosen yet.** This document exists so that gap is a documented,
-deliberate "not yet" rather than something a future session discovers by accident. It records what
-already exists (identification and tenant scoping), what does not (an actual authorization model),
-and the working direction for one specific piece (operator authentication) - captured here rather
-than in an ADR because ADRs are for decisions made, and this one has not been.
+**The authorization model is decided: RBAC, scoped per tenant (`adr/0016`).** Operator-side checks
+exist in `Application` from Stage 1 onward (`1-02`, `1-06`). What remains genuinely open is narrower
+than before: operator *authentication* (who issues the token the permission check reads role claims
+from - Stage 1 uses a dev-only stub, `adr/0016`'s consequences; OIDC is the working direction for
+Stage 5), and the management surface for custom per-tenant roles (Stage 5 console work - `adr/0016`
+fixed the model, not that surface).
 
-Do not read anything in Stage 0-4 as authorized. `visitor` and `operator` tokens *identify* a
-principal and *scope* it to a `site_id`; nothing today asks "is this principal allowed to do this
-specific thing." A visitor token proves "this is the same browser that opened this conversation," not
-"this browser may read conversation X." Handlers must not be trusted to have checked this until the
-model below is decided and its checks exist in `Application` (`clean-architecture.md`: auth decisions
-are application code, never edge or infrastructure - `edge.md`, `naming-and-structure.md`).
+Do not read anything before `1-02`/`1-06` land as authorized. Until then, `visitor` and `operator`
+tokens *identify* a principal and *scope* it to a `site_id`; nothing yet asks "is this principal
+allowed to do this specific thing." A visitor token proves "this is the same browser that opened this
+conversation," not "this browser may read conversation X." Handlers must not be trusted to have
+checked this until those items ship (`clean-architecture.md`: auth decisions are application code,
+never edge or infrastructure - `edge.md`, `naming-and-structure.md`).
 
 ## The three actors, and what's already true about each
 
@@ -26,23 +27,46 @@ are application code, never edge or infrastructure - `edge.md`, `naming-and-stru
 `site_id` scoping is the one piece already load-bearing everywhere (`vision.md`: "multi-tenant from
 day one"). Every candidate model below keeps it; none of them replace it.
 
-## Open question: the authorization model
+## Decided: the authorization model
 
-Two candidate shapes, deliberately left undecided:
+`adr/0016` chose **granular permissions (RBAC)** over roles + tenant scoping: named permissions
+(`conversation:read`, `conversation:send`, `conversation:assign`, `site:configure`, ...) bound to a
+`Role`, roles assigned per tenant. Chosen knowingly over the simpler, cheaper roles+scoping
+alternative, to have the recognizable pattern in place before Stage 5's console needs it for real
+rather than retrofitting it under pressure then - see `adr/0016`'s Consequences for the trade accepted.
 
-1. **Roles + tenant scoping.** `Operator` / `Admin` roles inside a `site_id`; a visitor's token is a
-   single-purpose capability scoped to its one conversation. Coarse-grained, cheap to reason about
-   and to test, and it is what the current actor table already implies. Risk: "Admin" tends to grow
-   into a junk drawer of unrelated permissions as features accrete.
-2. **Granular permissions (RBAC).** Named permissions (`conversation:read`, `conversation:assign`,
-   `site:configure`, ...) bound to roles, roles assigned per tenant. More correct at real
-   organizational scale, and a recognizable pattern to a reviewer. Risk: for a solo-operated portfolio
-   system, the permission table is speculative structure with no second consumer to validate its
-   shape - exactly the premature-generalization failure `clean-architecture.md` warns about.
+Stage 1 ships exactly one hardcoded role (`"Operator"`) and the check mechanism, not a role-management
+surface - that arrives with Stage 5's console.
 
-Neither is chosen. Decide with an ADR when there is a concrete use case that needs the answer -
-realistically Stage 1 (`SendMessage`, `GetConversationHistory` need *some* check beyond "right
-tenant") pushes this from theoretical to blocking.
+## Permissions and roles beyond Stage 1 - deliberately deferred, not forgotten
+
+Discussed while writing `1-02`/`1-06`, decided to defer rather than build speculatively
+(`clean-architecture.md`: an abstraction with one caller is a guess about the second one). Recorded
+here so a later session designing Stage 4 or Stage 5 does not have to rediscover the reasoning:
+
+- **A supervisor/admin role** - sees every conversation for a site (not just its own assigned ones),
+  and holds `site:configure` / `site:manage_operators` (including granting the `"Operator"` role
+  itself - `adr/0016` left this ungranted by anything but the `1-05` seed script). Natural home:
+  **Stage 5**, alongside the console - that is the first point anything actually needs to *use* an
+  admin role rather than just assert one exists.
+- **`conversation:transfer`** - an operator hands off their *own already-assigned* conversation to a
+  named colleague (escalation, shift change, wrong expertise). Distinct from `conversation:assign`,
+  which claims an unassigned conversation out of the waiting queue - transfer moves an assigned one
+  directly between two operators, no queue involved. Natural home: **Stage 4**, next to the real
+  assignment engine, since both are "who is allowed to move a conversation between operators" and
+  benefit from being designed together rather than transfer arriving as an afterthought.
+- **`attachment:delete`** - a moderation action (remove an inappropriate or malicious upload),
+  naturally paired with the admin role above rather than granted to every operator. Home: wherever the
+  admin role lands (Stage 5), and after `architecture/file-storage.md`'s Stage 5 upload path exists to
+  delete from.
+- **`attachment:upload`/`attachment:view` as separate permissions from `conversation:send`/`read`** -
+  considered and rejected for now: nothing in `vision.md` calls for an operator who can read a
+  conversation's text but not its files (or vice versa). If a real compliance scenario needs that
+  split later, it is a permission split, not a data-model change - cheap to add when a caller actually
+  needs it.
+- **`site:manage_webhooks`** - not designed yet, but Stage 6 (`Ago.Chat.Webhooks`, `adr/0013`:
+  "tenant endpoint registration") will need exactly this kind of check. Flagging now so Stage 6's
+  planning session connects it to this model instead of inventing a parallel one.
 
 ## Working direction: operator authentication
 
@@ -62,9 +86,9 @@ Consequence this pins down early: Stage 0's `Ago.Chat.Api` will eventually hold 
 configuration (issuer, audience, client id) - a secret in deployment, never in the repository
 (`repositories.md` - "no secrets, ever").
 
-## Done when this stops being an open question
+## Done when nothing here is open anymore
 
-- An ADR chooses roles-and-tenant-scoping or RBAC (or a third option nobody has proposed yet), with
-  the trigger being a real use case, not a deadline.
-- A second ADR (or the same one) confirms or replaces the OIDC direction for operators.
-- `realtime.md` and `vision.md` are updated to state the chosen model as fact instead of pointing here.
+- [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
+- [ ] An ADR confirms or replaces the OIDC direction for operators (Stage 5).
+- [ ] `realtime.md` and `vision.md` are updated to state the chosen model as fact instead of pointing
+      here, once `1-06` ships the mechanism `adr/0016` describes.
