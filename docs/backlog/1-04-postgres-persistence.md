@@ -1,7 +1,23 @@
 # Postgres persistence: EF Core writes, Dapper reads, first migration
 
 - **Stage**: 1
-- **Status**: ready
+- **Status**: done — 74 tests across the solution (was 63 after `1-02`), including 10 new
+  `Ago.Chat.Integration.Tests` against a real Testcontainers Postgres, and a new
+  `PersistenceBoundaryTests` arch rule (13 arch tests total, was 12). Migration applied for real to
+  the `docker-compose` Postgres from `0-03`, schema inspected directly with `psql`. Three real bugs
+  found by running this, all fixed:
+  - EF's own convention silently claimed `_messages` as `Messages`'s backing field too, colliding
+    with the explicit field-targeted navigation - `builder.Ignore(c => c.Messages)` fixed it.
+  - FK columns need the *same CLR type* as the principal key after conversion, not just the same
+    underlying database type - `RoleRecord.SiteId`/`OperatorRoleRecord.OperatorId` had to become the
+    Domain id types, not raw `Guid`, for `HasForeignKey` to accept the relationship.
+  - Dapper's constructor-binding needs exact type matches: Npgsql returns `timestamptz` as a
+    UTC-kinded `System.DateTime` over raw ADO.NET (not `DateTimeOffset` - that conversion is EF's own
+    provider doing work Dapper never sees), so the read-model row type used `DateTime`, converted to
+    `DateTimeOffset` explicitly before crossing back into `IConversationReadStore`.
+  - Also caught, unrelated to Postgres: every PK column landed as `Id` instead of `id` at first
+    (missing `HasColumnName` on the id property in every configuration) - fixed before the first
+    migration was even generated.
 - **Depends on**: `1-02-application-use-cases.md`
 
 ## Goal
@@ -50,13 +66,13 @@ must also represent — `data-model.md` predates it), `docs/architecture/clean-a
 
 ## Done when
 
-- [ ] `dotnet ef database update` (or the CI-equivalent migration bundle) against the `docker-compose`
+- [x] `dotnet ef database update` (or the CI-equivalent migration bundle) against the `docker-compose`
       Postgres from `0-03` succeeds from empty.
-- [ ] Integration tests pass against a real Testcontainers Postgres — not mocked
+- [x] Integration tests pass against a real Testcontainers Postgres — not mocked
       (`testing.md`: "a mocked repository proves the test compiles, nothing more").
-- [ ] `Ago.Chat.Architecture.Tests`' "only this project references Npgsql" rule (or the arch-test
-      equivalent, add it if it does not exist yet) passes.
-- [ ] `docs/architecture/data-model.md` updated if the actual schema diverges from what it currently
+- [x] `Ago.Chat.Architecture.Tests`' "only this project references Npgsql" rule (added -
+      `PersistenceBoundaryTests`) passes.
+- [x] `docs/architecture/data-model.md` updated if the actual schema diverges from what it currently
       describes (it is written as the "initial shape," so some divergence during real implementation
       is expected — reconcile it, do not let the doc go stale).
 

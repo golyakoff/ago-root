@@ -1,8 +1,8 @@
 # Runbook: local development
 
 > **Status: the compose loop below is verified** (backlog item `0-03-local-infrastructure.md` - every
-> command in this section was actually run, not just written). Migrations and seeding still show
-> their Stage 1 shape, since there is no schema yet to migrate or seed into.
+> command in this section was actually run, not just written). Migrations and seeding are verified
+> too, as of `1-04`/`1-05` - the schema exists and the demo tenant seeds cleanly.
 
 ## Prerequisites
 
@@ -18,6 +18,9 @@ reachable from here (`workspace.md`).
 ```
 cp deploy/docker/.env.example deploy/docker/.env   # once; edit if you want different local creds
 docker compose -f deploy/docker/docker-compose.yml up -d
+export $(grep -v '^#' deploy/docker/.env | xargs) && AGO_CHAT_CONNECTION_STRING="Host=localhost;Port=5432;Database=$POSTGRES_DB;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD" \
+  dotnet ef database update -p ../ago-chat/src/Ago.Chat.Infrastructure.Postgres
+bash deploy/seed/create-demo-tenant.sh   # after .env is sourced, per 1-05
 dotnet run --project ../ago-chat/src/Ago.Chat.Api
 dotnet run --project ../ago-chat/src/Ago.Chat.Worker
 dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
@@ -48,10 +51,14 @@ startup, so a wrong key fails fast instead of silently disabling a feature.
 
 - Run the fast tests: `dotnet test` (domain, application, architecture).
 - Run integration tests: they start their own containers; Docker must be running.
-- Apply migrations: `dotnet ef database update -p <infra project> -s ../ago-chat/src/Ago.Chat.Api`
-  (Stage 1 - no schema exists yet).
+- Apply migrations: see the bring-up sequence above - verified against the real `docker-compose`
+  Postgres (`1-04`). `AgoChatDbContextFactory` reads the connection string from
+  `AGO_CHAT_CONNECTION_STRING`, never a hardcoded default (repositories.md - "no secrets, ever").
 - Create the attachments bucket: `deploy/seed/create-minio-bucket.sh` (verified; source
-  `deploy/docker/.env` first). The tenant/operator half of seeding arrives with Stage 1's schema.
+  `deploy/docker/.env` first).
+- Seed the demo site and operator: `deploy/seed/create-demo-tenant.sh` (verified, idempotent - `1-05`;
+  source `deploy/docker/.env` first). Prints the demo site's public key and the demo operator's id,
+  which `1-06`'s manual verification and its dev-only operator-auth stub both need.
 - Stop and restart without losing data: `down` then `up -d` again - verified, comes back healthy
   with no manual fixes. Add `-v` to `down` to also wipe the named volumes for a truly clean slate
   (not run in this session - permission for a volume-destroying command was withheld; the command
