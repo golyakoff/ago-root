@@ -1,0 +1,34 @@
+# Skills
+
+Skills live in `.claude/skills/<name>/SKILL.md`. Each is a procedure a session follows for a
+recurring kind of work, so that the same decisions get made the same way across sessions that share
+no memory. They are loaded on demand — `CLAUDE.md` stays short on purpose, and the depth lives here
+and in `docs/`.
+
+| Skill | Use it when |
+|---|---|
+| `vertical-slice` | Implementing any feature or backlog item end to end. The default skill for build work. |
+| `clean-architecture-guard` | Unsure where a file goes, whether a dependency is legal, or how to shape a port. |
+| `concurrency-review` | Touching threads, channels, consumers, shared state, ordering, cancellation or shutdown. |
+| `messaging-contract` | Adding or changing an integration event, publisher or consumer. |
+| `db-migration` | Changing schema, indexes, partitioning, or writing SQL. |
+| `testing-guide` | Deciding what level to test at, writing tests, or chasing a flaky one. |
+| `local-cluster` | Running the stack, changing manifests, or debugging why it will not come up. |
+| `load-test` | Before any performance claim; tuning batch sizes or worker counts; Stage 6. |
+| `adr-writer` | A decision was made between real alternatives, or a rule was deliberately bent. |
+| `embeddable-widget` | Any change to the script that runs on third-party sites. |
+
+## How they relate
+
+`vertical-slice` is the spine: it calls into `clean-architecture-guard` for placement decisions,
+`db-migration` for schema, `messaging-contract` for events, and `testing-guide` for coverage. The
+others are situational.
+
+## Rules for skills themselves
+
+- A skill describes **procedure and judgement**, not facts. Facts (schema, topics, targets, layer
+  rules) live in `docs/` and are linked, never duplicated — two copies of a rule become two different
+  rules within a month.
+- If a skill and a doc disagree, the doc wins and the skill gets fixed.
+- Add a skill when the same instructions have been repeated in three sessions. Not before: an
+  unused skill is context cost with no return.
