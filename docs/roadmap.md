@@ -43,7 +43,9 @@ Deliverables:
 - Domain: `Site`, `Visitor`, `Operator`, `Conversation`, `Message` with real invariants.
 - Use cases: `StartConversation`, `SendMessage`, `GetConversationHistory` (keyset).
 - Postgres persistence with EF Core migrations; Dapper read store for history.
-- `Ago.Chat.Api` with the two hubs, visitor token issuance, minimal auth for operators.
+- `Ago.Chat.Api` with the two hubs, visitor token issuance, minimal auth for operators. "Minimal"
+  means identity only, no authorization model yet - `architecture/authorization.md` is the open
+  question this slice will make impossible to keep deferring.
 - `IProductModule` and the host loading it — the platform/product seam exists from the first slice.
 - Tests at every level, including the DST-boundary time test.
 
@@ -108,7 +110,9 @@ double-assigned, ordering holds, and the stress tests pass repeatedly rather tha
 
 Deliverables:
 - Widget: TypeScript, Shadow DOM, small bundle, reconnect logic, `data-site` bootstrap, a demo host page.
-- Operator console (framework decided here — React or Angular, recorded as an ADR).
+- Operator console (framework decided here — React or Angular, recorded as an ADR). Console login is
+  where operator authentication stops being deferrable - `architecture/authorization.md` records the
+  working direction (OIDC) and the still-open authorization-model decision.
 - Attachments end to end: presign, direct upload, verify, thumbnail consumer, orphan sweeper
   (`architecture/file-storage.md`).
 - Per-site CORS from the database; per-site and per-visitor rate limits enforced.
