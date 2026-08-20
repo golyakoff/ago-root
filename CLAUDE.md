@@ -34,7 +34,7 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
 - RabbitMQ now, Kafka later — behind one abstraction (`docs/adr/0006-*`)
 - Redis — cache, rate limits, connection registry, presence. Never a source of truth
 - S3-compatible object storage (MinIO locally) for attachments — bytes never pass through the API
-- ingress-nginx at the edge, no sticky sessions (see `docs/architecture/edge.md`)
+- NGINX Gateway Fabric (Gateway API) at the edge, no sticky sessions (see `docs/architecture/edge.md`, `adr/0014`)
 - Kubernetes (Docker Desktop) + Kustomize, OpenTelemetry → Prometheus/Grafana/Jaeger
 - Frontend: embeddable widget (TypeScript, Shadow DOM); operator SPA framework is **undecided until Stage 5**
 

@@ -9,7 +9,7 @@
         |  WebSocket (SignalR) + REST  |          file bytes go straight to storage,
         +--------------+---------------+          never through the API  ---------+
                        |                                                          |
-                 [ ingress-nginx ]  TLS, coarse rate limits, least_conn,          |
+                 [ NGINX Gateway ]  TLS, coarse rate limits, least_conn,          |
                        |           no sticky sessions (edge.md)                   |
                        v                                                          |
         +--------------------------------+                                        |
