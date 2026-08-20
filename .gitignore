@@ -1,0 +1,47 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+TestResults/
+coverage/
+*.trx
+
+# Rider / VS Code
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Local config and secrets - never commit
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+
+# Load test output (reports are committed, raw output is not)
+load/output/
+load/**/*.json.gz
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Each component is its own git repository living beside this one (../ago-platform, ../ago-chat,
+# ../ago-widget, ../ago-console, ../ago-deploy), reachable here through Windows junctions for
+# convenience. Never track their contents from this repo.
+/platform
+/chat
+/widget
+/console
+/deploy
