@@ -120,5 +120,37 @@ If a request would violate a rule above, say so before writing code, and propose
 
 ## Commands
 
-Not implemented yet — Stage 0 creates them. Once the solution exists, this section holds the real
-`dotnet build` / `dotnet test` / `kubectl` invocations. Keep it accurate; it is what future sessions run.
+All verified by actually running them (`0-01`..`0-04`). Run from each repository's own root.
+
+**`ago-platform`** and **`ago-chat`** (same shape in both):
+
+```bash
+dotnet restore <Solution>.slnx
+dotnet format <Solution>.slnx --verify-no-changes   # CI runs this before build; fails fast
+dotnet build <Solution>.slnx --no-restore -c Release
+dotnet test <Solution>.slnx --no-build -c Release
+```
+
+`ago-chat` restores `Ago.Platform.*` from the local file feed `nuget.config` points at
+(`C:\git\ago\.nuget-feed\`) — pack `ago-platform` into it first if it is empty:
+
+```bash
+dotnet pack Ago.Platform.slnx -c Release -o C:\git\ago\.nuget-feed
+```
+
+For a change spanning both repositories, the dev override swaps that for a `ProjectReference` into
+`../ago-platform` (`docs/architecture/repositories.md`) — never left on in a merged branch:
+
+```bash
+AgoPlatformDevOverride=true dotnet build   # bash
+$env:AgoPlatformDevOverride = 'true'; dotnet build   # PowerShell
+```
+
+**`ago-deploy`** — compose loop and cluster loop, both in `docs/runbooks/local-dev.md` and
+`docs/runbooks/k8s-local.md`; not duplicated here since the runbooks carry the verified detail
+(healthcheck timing, the NGINX Gateway Fabric install, known WSL2/cgroup issues).
+
+**CI** (`.github/workflows/ci.yml` in both backend repos, `adr/0015`): the commands above, run by
+GitHub Actions on every push and PR; `ago-platform` additionally packs and uploads a `.nupkg` on
+`main`, and `ago-chat`'s CI packs `ago-platform`'s current `main` from source into a throwaway local
+feed before restoring — there is no hosted registry yet.
