@@ -6,7 +6,8 @@ SignalR over WebSockets, with long-polling as the fallback the widget must toler
 proxies exist). Two hubs on `Ago.Chat.Api`:
 
 - `/hubs/visitor` - authenticated by a signed visitor token, scoped to one site.
-- `/hubs/operator` - authenticated by the operator's JWT, scoped to one site.
+- `/hubs/operator` - authenticated by the operator's JWT, scoped to one site. Who issues that JWT,
+  and what it authorizes beyond identity, is an open question - `architecture/authorization.md`.
 
 A hub method is transport, not logic: it maps arguments to a command, dispatches it, maps the result
 back. Anything else in a hub is a layering violation (`clean-architecture.md`).
