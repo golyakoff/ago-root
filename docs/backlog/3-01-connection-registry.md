@@ -1,7 +1,7 @@
 # Connection registry: who is connected where
 
 - **Stage**: 3
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing - foundational for the rest of Stage 3
 
 ## Goal
@@ -49,18 +49,23 @@ described contents: "connection registry, node routing, hub base types").
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests` or `Integration.Tests`: two connections from the same visitor
+- [x] `Ago.Chat.Concurrency.Tests` or `Integration.Tests`: two connections from the same visitor
       (simulating a reconnect before the old one times out) both appear in the registry; the old
       one's entry expires on its own once its TTL lapses without a heartbeat (no manual cleanup
       needed) - proves the "advice, not truth, cleanup is a fast path not the correctness
-      mechanism" claim in `realtime.md`, not just asserts it.
-- [ ] A node's entries are removed immediately on graceful shutdown (`realtime.md`: "On graceful
-      shutdown a node deletes its own entries").
-- [ ] `Ago.Platform.Architecture.Tests`: `Ago.Platform.Realtime` does not reference any
+      mechanism" claim in `realtime.md`, not just asserts it. (`HubConnectionRegistrationTests` in
+      `Ago.Chat.Integration.Tests`, real Redis via Testcontainers; the equivalent proof also lives
+      at the platform level in `Ago.Platform.Integration.Tests.ConnectionRegistryTests`.)
+- [x] A node's entries are removed immediately on graceful shutdown (`realtime.md`: "On graceful
+      shutdown a node deletes its own entries"). `IConnectionRegistry.RemoveNodeAsync` implements
+      and tests this; wiring it to a real shutdown hook is `3-06`'s job (noted in `realtime.md`).
+- [x] `Ago.Platform.Architecture.Tests`: `Ago.Platform.Realtime` does not reference any
       `Ago.Chat.*` type - the platform-never-knows-a-product rule, same as every other platform
       project.
-- [ ] `docs/architecture/realtime.md` gets a "Shipped" note the same way `data-model.md` tracks
+- [x] `docs/architecture/realtime.md` gets a "Shipped" note the same way `data-model.md` tracks
       shipped vs. forward-looking sections, if anything here diverges from what it currently says.
+      (It did: the schema had no shipped `status`/`site_id` fields, and the failure-mode swallowing
+      wasn't documented - both corrected rather than left to drift.)
 
 ## Open questions
 
