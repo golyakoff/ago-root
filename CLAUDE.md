@@ -59,6 +59,8 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
 9. **Never commit.** `git commit`, `git push`, `git commit --amend`, `git rebase` and anything that
    rewrites history are the author's, always. Make the file changes, report them, stop. Ask and wait
    for an explicit yes if a commit genuinely seems needed. Creating branches or `git init` is fine.
+   Draft commit messages never carry a `Co-Authored-By` trailer for an AI session — the author
+   commits, so the author is the sole author of record.
 10. **Work happens on a feature branch**, one branch per slice/backlog item. An MR is the branch
     *rebased onto `main`* with the full suite green **after** the rebase — never `main` merged into
     the branch (`docs/conventions/git-workflow.md`).

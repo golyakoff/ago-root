@@ -97,7 +97,3 @@ Runs in `Worker`. Claims unpublished rows with `FOR UPDATE SKIP LOCKED` in batch
 marks published. Multiple replicas run it concurrently and safely by construction. Latency of this
 loop is a measured number (it sits directly in the end-to-end p95), and is the reason the dispatcher
 is poll-with-notify rather than a naive fixed 1-second poll.
-
-The write side (staging an outbox/inbox row on a product's own `DbContext` so its own
-`SaveChangesAsync` persists it atomically) is generic platform code, not hand-rolled per product -
-`adr/0017`.
