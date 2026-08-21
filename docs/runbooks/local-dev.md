@@ -51,8 +51,21 @@ Local endpoints (all verified reachable):
 | MinIO console | http://localhost:9001 |
 | `Ago.Chat.Api` health | http://localhost:5009/healthz/live (port from `launchSettings.json`) |
 
-Each host also exposes `/healthz/live` and `/healthz/ready` - trivially healthy for now, since none
-of them have a real dependency wired up yet to report on (`architecture/edge.md`).
+`Ago.Chat.Worker`'s `/healthz/ready` is a real check as of `2-04` (Postgres + RabbitMQ reachable, not
+trivially healthy) - verified: started against the compose stack above, `/healthz/live` and
+`/healthz/ready` both `200`, and a row inserted directly into `outbox` was published and marked
+`published_at` within ~2s (`LISTEN`/`NOTIFY`, not the 5s poll fallback). `Ago.Chat.Api` and
+`Ago.Chat.Webhooks` still expose `/healthz/live` and `/healthz/ready` trivially healthy, since neither
+has a real dependency wired up yet to report on (`architecture/edge.md`).
+
+**Environment gotcha found while verifying `2-04`**: on this Docker Desktop/Windows setup, a raw AMQP
+connection to `localhost:5672` hangs for the full connection timeout instead of failing fast, because
+`RabbitMQ.Client` tries the `::1` (IPv6) resolution of `localhost` first and that address never
+completes the TCP handshake through Docker Desktop's port mapping, even though the container's IPv6
+port is listed as published. Plain HTTP requests to `localhost` (e.g. the management UI on `15672`)
+are unaffected - only raw AMQP sockets hit this. Fixed by pointing `Messaging:RabbitMq:HostName` at
+`127.0.0.1` explicitly in `Ago.Chat.Worker`'s `appsettings.Development.json`, sidestepping the
+resolution order entirely rather than trying to disable IPv6 for one client.
 
 ## Configuration
 

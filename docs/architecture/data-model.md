@@ -12,8 +12,10 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   built-in `xmin` system column (`1-04`), not an extra column of our own to keep in sync by hand.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
   `created_at`, `delivered_at?`, `read_at?`.
-- `outbox` - `id`, `occurred_at`, `type`, `payload` (jsonb), `partition_key`, `published_at?`,
-  `attempts`. See `adr/0005`.
+- `outbox` - `id`, `occurred_at`, `type`, `version`, `payload` (jsonb), `partition_key`,
+  `correlation_id`, `published_at?`, `attempts`. See `adr/0005`. `version`/`correlation_id` were
+  missing from the first cut - added once `2-04`'s dispatcher needed to reconstruct a complete
+  `EventEnvelope` from a claimed row, since dropping `correlation_id` silently defeats its purpose.
 - `inbox` - `message_id`, `consumer`, `processed_at`. The idempotency ledger for consumers.
 - `roles` - `id`, `site_id`, `name`, `permissions` (`text[]`) - the RBAC model `adr/0016` added,
   built in `1-04`. No management API yet; `1-05`'s seed script is the only writer.

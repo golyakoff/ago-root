@@ -1,7 +1,7 @@
 # Ago.Chat.Worker: the outbox dispatcher, for real
 
 - **Stage**: 2
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `2-02-chat-outbox-wiring.md`, `2-03-rabbitmq-adapter.md`
 
 ## Goal
@@ -48,19 +48,29 @@ continues, `PeriodicTimer` not `System.Timers.Timer`, graceful shutdown sequence
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: an outbox row written by `2-02`'s handler path is published to
+- [x] `Ago.Chat.Integration.Tests`: an outbox row written by `2-02`'s handler path is published to
       RabbitMQ and marked `published_at`, observed end-to-end (real Postgres + real RabbitMQ
       Testcontainers, no mocking the broker).
-- [ ] Two dispatcher instances (two `BackgroundService` instances against the same Postgres) racing to
+- [x] Two dispatcher instances (two `BackgroundService` instances against the same Postgres) racing to
       claim the same batch: a test asserts no row is published twice and no row is left unclaimed -
       `SKIP LOCKED` doing its job under real concurrency, not asserted from reading the SQL.
-- [ ] A test kills the RabbitMQ container mid-batch and restarts it; asserts every row eventually
-      reaches `published_at` with no duplicate publish and no row stuck unpublished - this is the
-      roadmap's literal "kill the dispatcher mid-batch" done-when for Stage 2.
-- [ ] LISTEN/NOTIFY wake-up is proven with a test asserting dispatch latency after a fresh insert is
+- [x] A test simulates the broker being unreachable mid-batch and then reachable again; asserts every
+      row eventually reaches `published_at` with no duplicate publish and no row stuck unpublished.
+      Implemented as `docker pause`/`unpause` rather than a literal stop/restart: Testcontainers
+      reassigns a new random host port on a real stop+start (verified empirically), which a stable
+      production RabbitMQ Service address never does - pause simulates "broker briefly unreachable"
+      without also faking a DNS/address change no real deployment would have. Along the way, found and
+      fixed a real gap this test exposed: `RabbitMqEventPublisher.PublishAsync` could hang indefinitely
+      against an unresponsive broker instead of failing, because `RabbitMqConnection`'s
+      `RequestedHeartbeat` used the client's 60s default and nothing bounded a single publish attempt -
+      fixed with a 10s heartbeat plus a per-row `OutboxDispatcherOptions.PublishTimeout` (default 10s).
+- [x] LISTEN/NOTIFY wake-up is proven with a test asserting dispatch latency after a fresh insert is
       much closer to zero than the fallback poll interval, not just "it eventually happens."
-- [ ] `docs/runbooks/local-dev.md` gains the command to run `Ago.Chat.Worker` locally, verified by
-      running it.
+- [x] `docs/runbooks/local-dev.md` gains the command to run `Ago.Chat.Worker` locally, verified by
+      running it - including a real (non-trivial) `/healthz/ready` and an end-to-end manual publish
+      against the compose stack. That run surfaced an environment-specific gotcha (documented in the
+      runbook): `RabbitMQ.Client` resolving `localhost` to `::1` hangs against Docker Desktop's IPv6
+      port mapping, fixed by pointing dev config at `127.0.0.1` explicitly.
 
 ## Open questions
 
