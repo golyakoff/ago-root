@@ -1,7 +1,7 @@
 # First real consumer: unread counters, proven idempotent
 
 - **Stage**: 2
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `2-04-worker-outbox-dispatcher.md`
 
 ## Goal
@@ -56,15 +56,19 @@ Concurrency row, `2-01`'s `IInboxChecker`.
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests` exists as a real project (not a placeholder), referenced from
+- [x] `Ago.Chat.Concurrency.Tests` exists as a real project (not a placeholder), referenced from
       `Ago.Chat.slnx`, running in CI per `testing.md`'s table.
-- [ ] Idempotency test: two deliveries of the same event, one increment, one inbox row - real
+- [x] Idempotency test: two deliveries of the same event, one increment, one inbox row - real
       Postgres + real RabbitMQ, not mocked.
-- [ ] Shutdown test: kill-mid-batch-and-restart leaves the counter exactly right, no double count, no
-      loss.
-- [ ] `Ago.Chat.Integration.Tests`: a message sent through the full `2-02`→`2-04` chain results in the
+- [x] Shutdown test: kill-mid-batch-and-restart leaves the counter exactly right, no double count, no
+      loss. Own, non-shared containers, same reasoning as `2-04`'s container-failure test: it forcibly
+      kills a connection mid-batch, and sharing infrastructure with the idempotency test caused
+      exactly the cross-test interference that precedent exists to avoid.
+- [x] `Ago.Chat.Integration.Tests`: a message sent through the full `2-02`→`2-04` chain results in the
       correct party's unread count incrementing, observed live (not by inspecting internal state).
-- [ ] `docs/architecture/data-model.md` updated with the unread-count column(s), matching how `1-04`
+      Also own, non-shared containers - the real `MessageAccepted` this test publishes was found
+      polluting `OutboxDispatcherTests`' exact-count assertions when run against the shared fixture.
+- [x] `docs/architecture/data-model.md` updated with the unread-count column(s), matching how `1-04`
       and `2-02` closed out their own schema additions.
 
 ## Open questions
