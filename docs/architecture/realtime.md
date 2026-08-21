@@ -5,9 +5,14 @@
 SignalR over WebSockets, with long-polling as the fallback the widget must tolerate (corporate
 proxies exist). Two hubs on `Ago.Chat.Api`:
 
-- `/hubs/visitor` - authenticated by a signed visitor token, scoped to one site.
-- `/hubs/operator` - authenticated by the operator's JWT, scoped to one site. Who issues that JWT,
-  and what it authorizes beyond identity, is an open question - `architecture/authorization.md`.
+- `/hubs/visitor` - authenticated by a signed visitor token (JWT), scoped to one site. Issued by
+  `POST /api/v1/visitor-sessions` on first contact - the real mechanism, not a stub (`1-06`).
+- `/hubs/operator` - authenticated by the operator's JWT, scoped to one site, carrying its
+  `adr/0016` role claims. Issued today by `POST /dev/operator-session`, a Development-only stub
+  (`1-06`) that trades an operator id for a token with no password - OIDC replaces it outright at
+  Stage 5, not by evolving it (`architecture/authorization.md`). Both schemes validate against the
+  same signing key with different audiences (`Visitor` / `Operator`), so a token minted for one hub
+  is rejected by the other.
 
 A hub method is transport, not logic: it maps arguments to a command, dispatches it, maps the result
 back. Anything else in a hub is a layering violation (`clean-architecture.md`).

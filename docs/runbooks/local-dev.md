@@ -21,10 +21,20 @@ docker compose -f deploy/docker/docker-compose.yml up -d
 export $(grep -v '^#' deploy/docker/.env | xargs) && AGO_CHAT_CONNECTION_STRING="Host=localhost;Port=5432;Database=$POSTGRES_DB;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD" \
   dotnet ef database update -p ../ago-chat/src/Ago.Chat.Infrastructure.Postgres
 bash deploy/seed/create-demo-tenant.sh   # after .env is sourced, per 1-05
-dotnet run --project ../ago-chat/src/Ago.Chat.Api
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project ../ago-chat/src/Ago.Chat.Api
 dotnet run --project ../ago-chat/src/Ago.Chat.Worker
 dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 ```
+
+`AGO_CHAT_CONNECTION_STRING` (already exported above) must stay set for `Ago.Chat.Api` too -
+`ChatModule.ConfigureServices` (`1-06`) reads it the same way the migration step did. With
+`ASPNETCORE_ENVIRONMENT=Development`, the API additionally serves `/dev-harness.html` (a plain
+HTML+SignalR page, not the real widget/console - `1-06`) and maps `POST /dev/operator-session`;
+neither exists outside Development. Verified against a real running instance: a visitor session
+(`POST /api/v1/visitor-sessions`), both hubs' JWT auth, `JoinAsync`/`JoinConversationAsync` against
+the seeded demo tenant, and a message's own sender receiving it back over the SignalR group. Live
+cross-tab delivery (the *other* party's tab receiving a reply) was not cleanly observed this round -
+`docs/backlog/1-06-api-realtime-and-wiring.md` has the detail; worth five minutes by hand to confirm.
 
 Local endpoints (all verified reachable):
 

@@ -90,5 +90,5 @@ configuration (issuer, audience, client id) - a secret in deployment, never in t
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
 - [ ] An ADR confirms or replaces the OIDC direction for operators (Stage 5).
-- [ ] `realtime.md` and `vision.md` are updated to state the chosen model as fact instead of pointing
-      here, once `1-06` ships the mechanism `adr/0016` describes.
+- [x] `realtime.md` updated to state the shipped mechanism as fact (`1-06`). `vision.md` did not need
+      a change - it never described an authorization model to begin with.
