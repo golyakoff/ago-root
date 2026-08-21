@@ -53,8 +53,12 @@ Local endpoints (all verified reachable):
 
 `Ago.Chat.Worker`'s `/healthz/ready` is a real check as of `2-04` (Postgres + RabbitMQ reachable, not
 trivially healthy) - verified: started against the compose stack above, `/healthz/live` and
-`/healthz/ready` both `200`, and a row inserted directly into `outbox` was published and marked
-`published_at` within ~2s (`LISTEN`/`NOTIFY`, not the 5s poll fallback). `Ago.Chat.Api` and
+`/healthz/ready` both `200`, and three rows inserted directly into `outbox` one at a time, each after
+the previous one was confirmed published, were each published and marked `published_at` within ~2s
+(`LISTEN`/`NOTIFY`, not the 5s poll fallback). Deliberately checked more than one insert, not just the
+first: a bug found afterward (`OutboxDispatcher`'s poll loop could permanently stall the first time a
+`NOTIFY` won its race against the poll timer - see `2-04`'s backlog entry) would have passed a
+single-insert check and then silently never dispatched anything again. `Ago.Chat.Api` and
 `Ago.Chat.Webhooks` still expose `/healthz/live` and `/healthz/ready` trivially healthy, since neither
 has a real dependency wired up yet to report on (`architecture/edge.md`).
 

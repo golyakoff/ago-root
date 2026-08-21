@@ -59,11 +59,24 @@ continues, `PeriodicTimer` not `System.Timers.Timer`, graceful shutdown sequence
       Implemented as `docker pause`/`unpause` rather than a literal stop/restart: Testcontainers
       reassigns a new random host port on a real stop+start (verified empirically), which a stable
       production RabbitMQ Service address never does - pause simulates "broker briefly unreachable"
-      without also faking a DNS/address change no real deployment would have. Along the way, found and
-      fixed a real gap this test exposed: `RabbitMqEventPublisher.PublishAsync` could hang indefinitely
-      against an unresponsive broker instead of failing, because `RabbitMqConnection`'s
-      `RequestedHeartbeat` used the client's 60s default and nothing bounded a single publish attempt -
-      fixed with a 10s heartbeat plus a per-row `OutboxDispatcherOptions.PublishTimeout` (default 10s).
+      without also faking a DNS/address change no real deployment would have.
+
+      This test was flaky for reasons that took three rounds to fully track down. Two real but minor
+      gaps were fixed along the way: `RabbitMqConnection`'s `RequestedHeartbeat` used the client's 60s
+      default (now 10s), and `RabbitMqEventPublisher` kept reusing its cached channel after a failed
+      publish even though `IChannel.IsOpen` was observed staying `true` for 60s+ after a real outage
+      genuinely ended (now discards it on any failure). Neither of those was the actual bug. The real
+      one: `OutboxDispatcher.ExecuteAsync`'s poll loop raced a shared `PeriodicTimer`'s
+      `WaitForNextTickAsync()` against the LISTEN/NOTIFY wake signal inside `Task.WhenAny`, once per
+      iteration. `PeriodicTimer` allows only one in-flight `WaitForNextTickAsync` call at a time - the
+      moment a notification won that race (which it reliably does, since a fresh insert's own NOTIFY
+      beats any real poll interval), the abandoned, still-pending timer call broke the *next*
+      iteration's call to the same timer, which then never completed - silently and permanently
+      stopping the dispatcher from claiming another batch, with no exception and no log line, since
+      the loop was blocked before reaching either. Confirmed with direct file-based tracing inside the
+      loop, since console/`ILogger` output through `dotnet test` did not surface in anything close to
+      real time for this. Fixed by replacing the shared `PeriodicTimer` with a fresh `Task.Delay` per
+      iteration, which has no such restriction.
 - [x] LISTEN/NOTIFY wake-up is proven with a test asserting dispatch latency after a fresh insert is
       much closer to zero than the fallback poll interval, not just "it eventually happens."
 - [x] `docs/runbooks/local-dev.md` gains the command to run `Ago.Chat.Worker` locally, verified by
