@@ -1,6 +1,6 @@
 # ADR-0015: `ago-chat`'s CI packs `ago-platform` from source, no hosted feed yet
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0018
 - **Date**: 2026-08-21
 - **Stage**: 0
 

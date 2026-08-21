@@ -58,11 +58,12 @@ Names are therefore `Ago.Chat.Api`, `Ago.Chat.Worker`, `Ago.Chat.Webhooks`.
   that gets merged must build against the published package version, and CI builds only that way.
   Leaving a `ProjectReference` in a merged branch is a defect — it would hide exactly the API break
   the package boundary exists to catch.
-- **CI has no hosted feed to restore from yet.** `ago-chat`'s workflow checks out `ago-platform`'s
-  `main` and packs it fresh, in the same job, into a throwaway local feed — proving the `.nupkg`
-  boundary and the version pin without a registry or any new secret. `ago-platform`'s own CI packs
-  and uploads a `.nupkg` on every push to `main` independently, as an artifact for a human to inspect.
-  `adr/0015` records the trade and what would justify moving to a real registry (GitHub Packages).
+- **CI restores from a real hosted feed**: `ago-platform`'s own CI publishes every package it packs
+  on `main` to this repository's GitHub Packages NuGet feed, using its own `GITHUB_TOKEN` — no new
+  secret to publish. `ago-chat`'s CI restores `Ago.Platform.*` from that feed, authenticated with a
+  `read:packages`-scoped PAT held as a repository secret (`AGO_PLATFORM_PACKAGES_TOKEN`) — GitHub does
+  not allow anonymous reads of NuGet packages even on a public repository. `adr/0018` (superseding
+  `adr/0015`, which packed from source instead) records the trade.
 
 ## Cross-repository changes
 

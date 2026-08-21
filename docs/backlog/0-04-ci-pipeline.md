@@ -5,7 +5,10 @@
   they use (restore, format check, build, test, pack). Surfaced and fixed one real pre-existing bug:
   two `Program.cs` files had stray CRLF line endings that `dotnet format --verify-no-changes` was
   never run against before. The CI package-flow question this item raised (no hosted NuGet feed
-  exists — where does `ago-chat`'s CI get `Ago.Platform.*` from?) is recorded in `adr/0015`.
+  exists — where does `ago-chat`'s CI get `Ago.Platform.*` from?) was recorded in `adr/0015`; that
+  decision was superseded in Stage 2 by `adr/0018`, once building `2-04` made the from-source
+  workaround's cost concrete — see the two "Delivered as" notes below, since both describe the
+  original, now-replaced mechanism.
 - **Depends on**: `0-01-repositories-and-skeleton.md`, `0-02-arch-tests.md`
 
 ## Goal
@@ -23,14 +26,19 @@ Per repository, since each is its own repository (`docs/adr/0012`):
 
 - Build, unit tests, arch tests on every push to any branch.
 - `ago-platform` additionally packs on `main` and publishes the package version from its changelog.
-  Delivered as: version read from `CHANGELOG.md`'s top heading, packed, uploaded as a workflow
-  artifact for a human to inspect — not pushed to a hosted registry (`adr/0015`; "publish" without
-  a registry is the open question that ADR answers).
+  Delivered (Stage 0) as: version read from `CHANGELOG.md`'s top heading, packed, uploaded as a
+  workflow artifact for a human to inspect — not pushed to a hosted registry (`adr/0015`; "publish"
+  without a registry was the open question that ADR answered). **Superseded in Stage 2**: also pushed
+  to this repository's GitHub Packages feed on every `main` push (`adr/0018`) — the artifact upload
+  stays too, as a no-credential fallback for a reviewer.
 - `ago-chat` builds against the published package, never a project reference — CI is what catches a
-  branch that left the dev override switched on. Delivered as: CI packs `ago-platform`'s current
-  `main` from source, in the same job, into a throwaway local feed (`adr/0015`) — not a restore
-  against `ago-platform`'s own CI artifact, since cross-repository artifact access needs the same
-  credential the registry option would have needed.
+  branch that left the dev override switched on. Delivered (Stage 0) as: CI packs `ago-platform`'s
+  current `main` from source, in the same job, into a throwaway local feed (`adr/0015`) — not a
+  restore against `ago-platform`'s own CI artifact, since cross-repository artifact access needed the
+  same credential the registry option would have needed. **Superseded in Stage 2**: CI now restores
+  from `ago-platform`'s real GitHub Packages feed, authenticated with a repository-secret PAT
+  (`adr/0018`) — the credential cost `adr/0015` deferred, paid once the from-source workaround's own
+  cost (no proof a published version survives unchanged, `main`-to-`main` coupling) became concrete.
 - Integration tests (Testcontainers) on branches and on `main`. No `Ago.Chat.Integration.Tests`
   project exists yet (`testing.md`; it arrives with Stage 2's outbox). Nothing extra was needed for
   when it does: `dotnet test Ago.Chat.slnx` already runs every test project the solution references,
