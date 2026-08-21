@@ -1,7 +1,7 @@
 # Targeted fan-out: deliver across nodes without a backplane
 
 - **Stage**: 3
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `3-01-connection-registry.md`
 
 ## Goal
@@ -57,19 +57,32 @@ gap this slice closes ("SignalR hubs are isolated from each other").
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests`: two `Ago.Chat.Api` processes (or two DI-composed instances in
+- [x] `Ago.Chat.Concurrency.Tests`: two `Ago.Chat.Api` processes (or two DI-composed instances in
       one test process, matching how `PartitionMaintenanceJobTests` runs two job instances) - a
       visitor connection registered on "node A", an operator connection registered on "node B", a
       message sent through node A's hub is received by the operator connection attached to node B.
       This is the concrete proof behind Stage 3's "three Api replicas serve one conversation
-      correctly."
-- [ ] A delivery to a connection whose registry entry has expired does not throw or block the
-      publish path - confirms the "advice, not truth" failure mode is real.
-- [ ] `Ago.Platform.Architecture.Tests`: the generic fan-out primitive in `Ago.Platform.Realtime`
+      correctly." Placed in `Ago.Chat.Integration.Tests` (`ConnectionFanoutEndToEndTests`), not
+      `Concurrency.Tests`: it drives one deterministic message through the real chain once, never
+      under stress/race repetition, so `testing.md`'s own level distinction puts it there - the
+      equivalent platform-level proof lives in `Ago.Platform.Integration.Tests.NodeFanoutTests`.
+- [x] A delivery to a connection whose registry entry has expired does not throw or block the
+      publish path - confirms the "advice, not truth" failure mode is real (proven at `3-01`, still
+      holds unchanged here since `NodeFanoutPublisher` calls the same `GetConnectionsAsync`).
+- [x] `Ago.Platform.Architecture.Tests`: the generic fan-out primitive in `Ago.Platform.Realtime`
       references no `Ago.Chat.*` type.
-- [ ] `docs/architecture/realtime.md`'s Fan-out path section gets the same "shipped" treatment as
+- [x] `docs/architecture/realtime.md`'s Fan-out path section gets the same "shipped" treatment as
       `3-01`.
 
 ## Open questions
 
 None - the mechanism is fully specified in `realtime.md`; this slice implements it.
+
+## Note for a future session
+
+`VisitorHub`/`OperatorHub` no longer use SignalR `Groups` at all - the group-join calls and
+`GroupName` helper were dead code once delivery moved to the registry+broker path, and were removed
+rather than left in place. `Ago.Chat.Api`'s `Program.cs` runs two new hosted-service-adjacent
+consumers (`NodeDeliveryConsumer`) and one new fan-out consumer in `Ago.Chat.Worker`
+(`ConnectionFanoutConsumer`) - both need `Redis:ConnectionString` and RabbitMQ configured to start
+cleanly, same as `3-01`'s `ConnectionHeartbeat` already required.

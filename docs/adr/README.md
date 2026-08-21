@@ -29,3 +29,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0017 | Outbox/inbox writer is generic over `DbContext`, not per-product | Accepted |
 | 0018 | `ago-platform` publishes to GitHub Packages; `ago-chat`'s CI restores from it | Accepted |
 | 0019 | Partitioning `messages` widens its unique index to include `created_at` | Accepted |
+| 0020 | Node-delivery fan-out publishes directly, bypassing the outbox | Accepted |

@@ -58,10 +58,35 @@ Rules that keep this from rotting:
 
 ## Fan-out path
 
-1. Consumer in `Ago.Chat.Worker` handles `MessageAccepted`.
-2. It resolves recipients (participants of the conversation) and looks up their connections.
-3. It groups by `node_id` and publishes a `DeliverToConnections` command-event per node.
-4. Each `Api` node consumes only its own queue/partition and pushes to local connections.
+**Shipped in `3-02`**: the mechanism is split exactly at the product/platform seam
+(`clean-architecture.md`'s qualifying rule) - resolving *who* and deciding *what payload* is
+product-specific; routing *where* is generic.
+
+1. `ConnectionFanoutConsumer` (`Ago.Chat.Worker`) handles `MessageAccepted` (`Competing`, same as
+   `UnreadCounterConsumer` - exactly one `Worker` replica per message) and calls
+   `ResolveMessageDeliveryTargetsHandler` (`Ago.Chat.Application`).
+2. That handler resolves the conversation's participants (visitor always, operator once assigned)
+   into `Ago.Platform.Abstractions`' opaque `PrincipalKey`s and fetches the message content, then
+   calls `INodeFanoutPublisher.PublishAsync` - the one call that hands off to the generic half.
+3. `NodeFanoutPublisher` (`Ago.Platform.Realtime`) resolves each principal's connections via
+   `IConnectionRegistry`, groups by `NodeId`, and publishes one `NodeDelivery` per node to that
+   node's own topic (`deliver-to-connections.{node_id}`, `NodeTopics`) - `Competing` mode, not
+   `Broadcast`: exactly one process ever subscribes to a given node's own topic, and `Competing`'s
+   stable queue name avoids leaking a fresh retry queue on every restart the way `Broadcast`'s
+   random-suffixed queue would (`NodeDeliveryConsumer`'s own comment has the detail). Publishes
+   directly via `IEventPublisher`, bypassing the outbox - `adr/0020` is why that is sound here and
+   not a violation of `adr/0005`.
+4. Each `Api` node's own `NodeDeliveryConsumer` consumes only its own topic and calls
+   `ILocalConnectionDispatcher.DispatchAsync` per connection - implemented by
+   `Ago.Chat.Api`'s `SignalRConnectionDispatcher`, the one place that knows a connection id belongs
+   to `VisitorHub` or `OperatorHub` (via `LocalConnectionTracker`, the same map `3-01`'s
+   `HubConnectionRegistration` populates on connect).
+
+The sender's own connection gets an immediate local echo (`Clients.Caller`) without waiting on this
+whole round trip - a latency optimisation, not a second delivery mechanism (`VisitorHub`'s
+`EchoToCallerAsync`). It also receives the real fan-out delivery again once that completes; nothing
+excludes it, and messaging.md's client-side dedupe-by-message-id already covers the duplicate the
+same way it covers a redelivered broker message.
 
 Why this instead of the standard **Redis backplane**: the backplane broadcasts every message to
 every node, which is fine at three nodes and wasteful at thirty, and it puts the delivery path in a
