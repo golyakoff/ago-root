@@ -17,6 +17,9 @@ and in `docs/`.
 | `load-test` | Before any performance claim; tuning batch sizes or worker counts; Stage 6. |
 | `adr-writer` | A decision was made between real alternatives, or a rule was deliberately bent. |
 | `embeddable-widget` | Any change to the script that runs on third-party sites. |
+| `commit-prep` | A slice of work is finished and ready to hand back for commit and push. |
+| `rebase-cleanup` | A branch looks wrong after a GitHub rebase-merge, or before deleting any branch. |
+| `context-resume` | The start of a session continuing after a `/compact` context refresh. |
 
 ## How they relate
 

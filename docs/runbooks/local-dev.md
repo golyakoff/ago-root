@@ -32,9 +32,12 @@ dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 HTML+SignalR page, not the real widget/console - `1-06`) and maps `POST /dev/operator-session`;
 neither exists outside Development. Verified against a real running instance: a visitor session
 (`POST /api/v1/visitor-sessions`), both hubs' JWT auth, `JoinAsync`/`JoinConversationAsync` against
-the seeded demo tenant, and a message's own sender receiving it back over the SignalR group. Live
-cross-tab delivery (the *other* party's tab receiving a reply) was not cleanly observed this round -
-`docs/backlog/1-06-api-realtime-and-wiring.md` has the detail; worth five minutes by hand to confirm.
+the seeded demo tenant, a message's own sender receiving it back over the SignalR group, and live
+cross-tab delivery (the *other* party's tab receiving a reply, in both directions, two separate
+tabs) confirmed twice by hand. That second round of manual testing found a real bug, not a tooling
+artifact: SignalR scopes `Clients.Group(...)` per hub *type*, so `VisitorHub` and `OperatorHub` never
+shared a group even under the same name - fixed by having each hub also broadcast through the other's
+`IHubContext<THub>` (`docs/backlog/1-06-api-realtime-and-wiring.md` has the detail).
 
 Local endpoints (all verified reachable):
 
@@ -46,7 +49,7 @@ Local endpoints (all verified reachable):
 | Redis | `localhost:6379` |
 | MinIO S3 API | `localhost:9000` |
 | MinIO console | http://localhost:9001 |
-| `Ago.Chat.Api` health | http://localhost:5299/healthz/live (port from `launchSettings.json`) |
+| `Ago.Chat.Api` health | http://localhost:5009/healthz/live (port from `launchSettings.json`) |
 
 Each host also exposes `/healthz/live` and `/healthz/ready` - trivially healthy for now, since none
 of them have a real dependency wired up yet to report on (`architecture/edge.md`).
