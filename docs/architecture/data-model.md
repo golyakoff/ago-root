@@ -8,8 +8,12 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 - `visitors` - `id`, `site_id`, `token_hash`, first/last seen. Anonymous, no PII by design.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
-  (`waiting|assigned|closed`), `last_sequence`, timestamps. Optimistic concurrency uses Postgres's
-  built-in `xmin` system column (`1-04`), not an extra column of our own to keep in sync by hand.
+  (`waiting|assigned|closed`), `last_sequence`, `visitor_unread_count`, `operator_unread_count`,
+  timestamps. Optimistic concurrency uses Postgres's built-in `xmin` system column (`1-04`), not an
+  extra column of our own to keep in sync by hand - which is also what lets the unread counters
+  (`2-05`) use a plain load-mutate-save through the aggregate instead of a raw atomic `UPDATE`: a
+  losing concurrent save throws rather than silently overwriting the other side's increment, and the
+  broker's own redelivery is the retry.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
   `created_at`, `delivered_at?`, `read_at?`.
 - `outbox` - `id`, `occurred_at`, `type`, `version`, `payload` (jsonb), `partition_key`,
@@ -55,8 +59,12 @@ designed, and `Ago.Chat.Integration.Tests` proves the unique `(conversation_id, 
 actually rejects a duplicate insert at the storage level. `Stage2AddOutboxAndInbox` (`2-02`) is
 verified the same way: `outbox` and `inbox` are real tables (`adr/0005`, `adr/0017`), mapped through
 `Ago.Platform.Persistence.Postgres`'s shared configuration rather than hand-rolled here - `outbox`
-already has a real writer (`2-02`'s handlers); `inbox` has the table and the ledger's unique
-constraint, but no writer until `2-05`'s consumer exists.
+already has a real writer (`2-02`'s handlers). `inbox` gained its first real writer in `2-05`:
+`UnreadCounterConsumer` stages its increment on the tracked `Conversation` and lets
+`IInboxChecker.TryRecordAndSaveAsync` commit both in one `SaveChangesAsync` - proven live (real
+Postgres, real RabbitMQ) that a redelivered event increments exactly once, not twice.
+`Stage2AddConversationUnreadCounts` (`2-05`) adds `visitor_unread_count`/`operator_unread_count` to
+`conversations`, both `integer not null default 0` - additive, reversible, no table rewrite.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
