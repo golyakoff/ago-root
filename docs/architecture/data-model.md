@@ -50,7 +50,11 @@ with hand-written SQL returning DTOs. Rationale and trade-offs: `adr/0004`.
 **Verified**: `Stage1CreateChatSchema` (`1-04`) applied cleanly to a real Postgres (both the
 `docker-compose` instance and a throwaway Testcontainers one), all tables/FKs/indexes landed as
 designed, and `Ago.Chat.Integration.Tests` proves the unique `(conversation_id, sequence)` constraint
-actually rejects a duplicate insert at the storage level.
+actually rejects a duplicate insert at the storage level. `Stage2AddOutboxAndInbox` (`2-02`) is
+verified the same way: `outbox` and `inbox` are real tables (`adr/0005`, `adr/0017`), mapped through
+`Ago.Platform.Persistence.Postgres`'s shared configuration rather than hand-rolled here - `outbox`
+already has a real writer (`2-02`'s handlers); `inbox` has the table and the ledger's unique
+constraint, but no writer until `2-05`'s consumer exists.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
