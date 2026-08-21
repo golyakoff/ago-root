@@ -19,21 +19,39 @@ back. Anything else in a hub is a layering violation (`clean-architecture.md`).
 
 ## Connection registry
 
-Any replica may accept any connection (`edge.md` - no sticky sessions). To deliver an event to a
-person, a node must know who is connected where:
+**Shipped in `3-01`**: any replica may accept any connection (`edge.md` - no sticky sessions). To
+deliver an event to a person, a node must know who is connected where. `IConnectionRegistry`
+(`Ago.Platform.Abstractions`) is deliberately domain-free - it knows connections, nodes and an
+opaque `PrincipalKey`, never a visitor or an operator (`clean-architecture.md`'s qualifying rule);
+`Ago.Chat.Application.Realtime.PrincipalKeys` is the one place chat maps its own identities onto
+that key (`visitor:{id}` / `operator:{id}`), reused by `VisitorHub`/`OperatorHub` today and by the
+fan-out consumer `3-02` adds. `Ago.Platform.Realtime`'s `RedisConnectionRegistry` implements it
+exactly on the schema below, with a `ConnectionHeartbeat` (`PeriodicTimer`, default 10s) refreshing
+every connection an `Ago.Chat.Api` node's `LocalConnectionTracker` still holds - `RegisterAsync` is
+the refresh, not a separate operation, so there is nothing to keep in sync between the two:
 
 ```
-conn:{connection_id}          -> node_id, site_id, principal        TTL, refreshed by heartbeat
+conn:{connection_id}          -> node_id, principal                 TTL, refreshed by heartbeat
 presence:visitor:{visitor_id} -> set of connection_ids
-presence:operator:{op_id}     -> set of connection_ids, status
+presence:operator:{op_id}     -> set of connection_ids
 node:{node_id}:conns          -> set, used for bulk cleanup on node death
 ```
+
+(`status` on the operator presence set and `site_id` on the connection entry are not part of the
+shipped shape - nothing built so far needs either; add them when a real caller does, rather than
+guessing at the second one now.)
 
 Rules that keep this from rotting:
 
 - Every key has a TTL and is refreshed by a heartbeat. A crashed node's entries expire on their own;
   cleanup is a fast path, not the correctness mechanism.
-- On graceful shutdown a node deletes its own entries.
+- On graceful shutdown a node deletes its own entries. `IConnectionRegistry.RemoveNodeAsync` does
+  this; wiring it to an actual shutdown hook is `3-06`'s job, not `3-01`'s - today nothing calls it
+  yet, so a killed `Api` pod relies entirely on TTL expiry, which is the documented, acceptable
+  fallback either way.
+- A registry call that fails (Redis unreachable, timed out) is swallowed and logged, never thrown
+  into a hub method - the same "advice, not truth" contract extended from staleness to errors
+  (`adr/0009`, this table's own "Redis unavailable" row below).
 - Registry contents are **advice**, not truth. Delivery to a stale entry fails harmlessly; the client
   reconnects and re-registers. Any logic that would corrupt data because the registry was stale is a
   bug in that logic.
