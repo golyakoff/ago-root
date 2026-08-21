@@ -1,23 +1,26 @@
 # Ago.Chat.Api: two hubs, visitor tokens, operator auth stub, real DI
 
 - **Stage**: 1
-- **Status**: done, with one verification gap disclosed below - 78 automated tests pass (25
-  Application, 30 Domain, 13 arch, 10 integration), and the mechanism was verified for real against a
-  running `Ago.Chat.Api` and the `docker-compose` Postgres: `POST /api/v1/visitor-sessions` and
-  `POST /dev/operator-session` both issue real JWTs; both hubs' JWT Bearer auth was proven both ways
-  (a missing/wrong-audience token gets `401`, a valid one completes the WebSocket handshake);
-  `VisitorHub.JoinAsync` starts and resumes real conversations against Postgres; `OperatorHub.JoinConversationAsync`
-  enforces `adr/0016`'s RBAC check against the seeded role before assigning; a sent message is
-  persisted and the sender's own connection receives it back via the SignalR group broadcast (checked
-  directly server-side: `Groups.AddToGroupAsync` completes for the joiner's connection id, and the
-  broadcast targets the identical group name).
-  **What was not cleanly observed**: a live two-tab *cross-party* delivery (operator's reply arriving
-  at the visitor's open tab) in the browser. Every attempt hit WebSocket transport instability
-  specific to this session's browser-automation tooling (`Failed to start the transport 'WebSockets'`,
-  `ERR_CONNECTION_REFUSED`, connections dropping between tool calls) - not a symptom of the hub code,
-  which the server-side evidence above already exercises up to and including the broadcast call
-  itself. Recorded here rather than silently claimed - a human running the same two tabs by hand
-  should confirm this cheaply, and update this note if it doesn't hold.
+- **Status**: done - 78 automated tests pass (25 Application, 30 Domain, 13 arch, 10 integration),
+  and the mechanism was verified for real against a running `Ago.Chat.Api` and the `docker-compose`
+  Postgres: `POST /api/v1/visitor-sessions` and `POST /dev/operator-session` both issue real JWTs;
+  both hubs' JWT Bearer auth was proven both ways (a missing/wrong-audience token gets `401`, a valid
+  one completes the WebSocket handshake); `VisitorHub.JoinAsync` starts and resumes real conversations
+  against Postgres; `OperatorHub.JoinConversationAsync` enforces `adr/0016`'s RBAC check against the
+  seeded role before assigning; a sent message is persisted and delivered live to both parties.
+  **A real bug was found and fixed during manual verification, not a tooling artifact**: the first
+  round of two-tab testing showed the sender always receiving their own broadcast but the *other*
+  party's open tab never receiving it, with no connection drops observed. Root cause: each `Hub`
+  subclass in SignalR owns its own `HubLifetimeManager<THub>`, so a group named `conversation:{id}`
+  in `VisitorHub` and a group of the identical name in `OperatorHub` are two entirely separate
+  groups - `Clients.Group(...)` inside a hub method only ever reaches connections that joined that
+  group through that same hub type. Broadcasting to the other party requires that party's hub's own
+  `IHubContext<THub>`, not `this.Clients`. Fixed by injecting `IHubContext<OperatorHub>` into
+  `VisitorHub` and `IHubContext<VisitorHub>` into `OperatorHub`, and broadcasting to both the own-hub
+  group and the counterpart hub's group on every send (`Hubs/VisitorHub.cs`, `Hubs/OperatorHub.cs`).
+  Re-verified live afterwards, twice, in genuinely separate browser tabs, both directions, each with
+  its own fresh conversation: operator→visitor and visitor→operator both arrived in the peer's tab
+  with no reload, in both runs.
 - **Depends on**: `1-02-application-use-cases.md`, `1-03-platform-system-clock.md`,
   `1-04-postgres-persistence.md`, `1-05-seed-demo-tenant.md`
 
@@ -65,9 +68,9 @@ check `/hubs/operator` methods must pass through before dispatching), `docs/arch
   `OperatorHub.JoinConversationAsync`. Unit-tested the same way as `1-02`'s other handlers.
 - Manual verification, documented with what was actually run (matching how `0-03`'s runbooks were
   verified): the HTTP endpoints, JWT auth on both hubs, `JoinAsync`/`JoinConversationAsync` against
-  real Postgres, and self-echo broadcast were all confirmed live. Live cross-party delivery in two
-  open tabs was attempted repeatedly and not cleanly observed - see Status above for why, and what
-  would still need a human's five minutes to close out.
+  real Postgres, self-echo broadcast, and live cross-party delivery in two genuinely separate browser
+  tabs (both directions, two independent runs) were all confirmed live - see Status above for the
+  hub-isolation bug this surfaced and the fix.
 
 ## Out of scope
 
@@ -79,16 +82,14 @@ check `/hubs/operator` methods must pass through before dispatching), `docs/arch
 
 ## Done when
 
-- [ ] Two browser tabs (or the test harness's two panes) — one as the visitor, one as the seeded
+- [x] Two browser tabs (or the test harness's two panes) — one as the visitor, one as the seeded
       demo operator — exchange messages in both directions through one running `Ago.Chat.Api`.
-      **Not cleanly confirmed this round** - see Status. The visitor→operator direction, the
-      resume/history-on-reload path, and the broadcast mechanism itself are each independently
-      verified (real hub calls, real Postgres, self-echo); only the live operator→visitor delivery
-      in two simultaneously-open tabs needs a human to confirm directly.
-- [ ] Reloading the visitor tab shows the same history via `GetConversationHistory`, not a fresh
+      Confirmed live in two genuinely separate tabs, both directions, two independent runs - see
+      Status for the hub-isolation bug this exercise found and the fix applied.
+- [x] Reloading the visitor tab shows the same history via `GetConversationHistory`, not a fresh
       conversation. Covered by `1-02`'s `StartConversationHandlerTests` (fakes) and `1-04`'s
-      `ConversationRepositoryTests` (real Postgres) at the layers below the hub; not independently
-      re-observed live in the browser this round for the same reason as above.
+      `ConversationRepositoryTests` (real Postgres) at the layers below the hub, and observed live:
+      tab-5's `Join` fetched the demo conversation's prior messages via history, not a new one.
 - [x] `Ago.Chat.Architecture.Tests` passes unchanged — nothing in `Ago.Chat.Module`/`Ago.Chat.Api`
       violates the existing rules (13/13, including the new `PersistenceBoundaryTests` from `1-04`).
 - [x] `docs/runbooks/local-dev.md` gains the real commands/URLs for this, verified by running them,
