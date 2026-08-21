@@ -41,10 +41,27 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 
 ## Partitioning
 
-`messages` is `PARTITION BY RANGE (created_at)`, monthly, with partitions created ahead of time by a
-maintenance job. Rationale: bounded index size, cheap retention (`DROP` a partition instead of a mass
-`DELETE`), and a concrete thing to demonstrate. Introduced in Stage 2, before data volume makes it
-awkward.
+**Shipped in `2-06`**: `messages` is `PARTITION BY RANGE (created_at)`, monthly. Rationale: bounded
+index size, cheap retention (`DROP` a partition instead of a mass `DELETE`), and a concrete thing to
+demonstrate.
+
+`Stage2PartitionMessages` converts the table (rename old, create the partitioned replacement plus
+the current month and the next two, copy every row across, drop the old table - Postgres cannot
+`ALTER TABLE` a regular table into a partitioned one, `Migrations` below has the reason this is
+marked one-way) and `PartitionMaintenanceJob` (`Ago.Chat.Worker`, `PeriodicTimer`, daily) keeps the
+current month plus the next two always present afterward, via `CREATE TABLE IF NOT EXISTS ...
+PARTITION OF` per partition - idempotent by construction, safe under a missed run or two `Worker`
+replicas racing to create the same one.
+
+**Consequence for the uniqueness guarantee** (`adr/0019`): Postgres requires every unique
+constraint on a partitioned table - primary key included - to include the partition column. The
+primary key becomes `(id, created_at)`, and the `(conversation_id, sequence)` unique index widens to
+`(conversation_id, sequence, created_at)`. This is a real weakening: two racing inserts that
+land in the same partition with different `created_at` values no longer collide at the storage
+level. It is an acceptable one because this index was always the *last* line of defence
+(`concurrency.md`) - the first is the `Conversation` aggregate's optimistic-concurrency
+load-mutate-save on `xmin`, which still rejects the race that matters (two saves computing the same
+`LastSequence`) regardless of what the `messages` index can see.
 
 ## Access strategy
 
@@ -65,6 +82,12 @@ already has a real writer (`2-02`'s handlers). `inbox` gained its first real wri
 Postgres, real RabbitMQ) that a redelivered event increments exactly once, not twice.
 `Stage2AddConversationUnreadCounts` (`2-05`) adds `visitor_unread_count`/`operator_unread_count` to
 `conversations`, both `integer not null default 0` - additive, reversible, no table rewrite.
+`Stage2PartitionMessages` (`2-06`) is verified against a real Postgres (`Ago.Chat.Integration.Tests`,
+via `PostgresFixture`'s from-scratch migration run): the rename-copy-drop conversion applies
+cleanly, an insert landing in the current month succeeds without `PartitionMaintenanceJob` having run
+first, and the widened `(conversation_id, sequence, created_at)` unique index still rejects a
+duplicate insert post-partitioning. Explicitly one-way (`Down` throws) - see the Partitioning section
+above for why reversing it is a data-recovery procedure, not a rollback.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
