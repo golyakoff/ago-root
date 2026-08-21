@@ -1,7 +1,7 @@
 # messages: partition by created_at, with ahead-of-time partition creation
 
 - **Stage**: 2
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `1-04-postgres-persistence.md` (independent of `2-01`..`2-05` - no messaging code
   touches this; can be done in parallel with the outbox chain)
 
@@ -46,18 +46,21 @@ for the maintenance job.
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests` (real Postgres): the migration applies cleanly to a fresh database,
+- [x] `Ago.Chat.Integration.Tests` (real Postgres): the migration applies cleanly to a fresh database,
       inserts landing in the current month succeed, and the `(conversation_id, sequence)` unique
-      constraint still rejects a duplicate insert after partitioning.
-- [ ] A test for `PartitionMaintenanceJob`: run it against a database missing next month's partition,
+      constraint still rejects a duplicate insert after partitioning. (`MessagePartitioningTests`,
+      `MessageUniqueSequenceTests` - the unique index widened to `(conversation_id, sequence,
+      created_at)`, a documented trade-off, `adr/0019`.)
+- [x] A test for `PartitionMaintenanceJob`: run it against a database missing next month's partition,
       assert the partition now exists; run it again immediately, assert no error and no duplicate
       partition (idempotency under a second, concurrent-simulated run).
-- [ ] `docs/architecture/data-model.md`'s Partitioning section updated from "introduced in Stage 2"
+      (`PartitionMaintenanceJobTests`.)
+- [x] `docs/architecture/data-model.md`'s Partitioning section updated from "introduced in Stage 2"
       (forward-looking) to a statement of what actually shipped, matching how `1-04` closed out schema
       documentation.
-- [ ] `docs/runbooks/local-dev.md` notes the maintenance job if it needs any local-dev-specific
-      handling (it should not, since `dotnet run --project Ago.Chat.Worker` already starts every
-      `BackgroundService` in that host).
+- [x] `docs/runbooks/local-dev.md` checked: no change needed, since `dotnet run --project
+      Ago.Chat.Worker` already starts every `BackgroundService` in that host, `PartitionMaintenanceJob`
+      included, once it is registered in `Program.cs`.
 
 ## Open questions
 
