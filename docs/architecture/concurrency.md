@@ -87,6 +87,29 @@ batch writer -> commit and ack in-flight work -> dispose. Kubernetes `preStop` a
 `terminationGracePeriodSeconds` are set to make this survivable, and Stage 7 verifies it by killing a
 pod mid-load and asserting zero acknowledged-but-lost messages.
 
+**`Ago.Chat.Api`'s connection half shipped in `3-06`**: `ConnectionDrainCoordinator`
+(`Ago.Platform.Realtime`, generic - reused as-is by any product hub) registers on
+`ApplicationStopping` in its constructor, not inside `ExecuteAsync` - `BackgroundService.StartAsync`
+returns as soon as `ExecuteAsync` is scheduled, not once it has run, so registering there raced a
+shutdown that started immediately after start (found by a real intermittent test failure under the
+full suite, not by inspection). `StopAsync` then tells every connection this node owns to reconnect
+(`ILocalConnectionDispatcher`, the same delivery path `3-02` built for messages, pushing `"Reconnect"`
+instead of `"MessageReceived"`), removes this node's `IConnectionRegistry` entries, and waits up to
+`DrainOptions.DrainTimeout` for connections to actually drop before letting the host stop.
+`VisitorHub`/`OperatorHub` additionally reject a new connection outright (`Context.Abort()`) the
+moment `DrainState.IsDraining` flips, closing the window between readiness going false and a new
+connection still landing on this node. Live-verified against the local 3-replica cluster: a visitor
+held one hub connection through a real `kubectl rollout restart deployment/ago-chat-api`, sent 25
+messages at the sustained rate limit (`3-05`), was disconnected exactly once as its pod cycled,
+reconnected and resumed via `lastKnownSequence`, and all 25 were confirmed present in the final
+history - zero acknowledged-but-lost, one clean reconnect. Two more real bugs only this multi-replica
+run could surface, both fixed in the same slice: each replica generated its own random JWT signing
+key at startup (any token failed validation the instant a request landed on a different pod under
+`least_conn` - see `edge.md`'s "no sticky sessions"), and a SignalR client that negotiates before
+connecting needs the negotiate response and the transport upgrade to land on the same pod, which the
+Gateway does not guarantee - `SkipNegotiation` + WebSockets-only transport removes the need for that
+affinity entirely rather than trying to add it back.
+
 ## What we will measure (Stage 7)
 
 Throughput and p50/p95/p99 for message ingest, end-to-end delivery, and assignment latency under a

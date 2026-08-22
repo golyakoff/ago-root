@@ -16,6 +16,16 @@ conversation," not "this browser may read conversation X." Handlers must not be 
 checked this until those items ship (`clean-architecture.md`: auth decisions are application code,
 never edge or infrastructure - `edge.md`, `naming-and-structure.md`).
 
+**Signing key sharing, `3-06`**: `Ago.Chat.Api`'s signing key was generated fresh per process
+(`Program.cs`) - correct for the single-instance `dotnet run` loop `local-dev.md` describes, but a
+token issued by one replica cannot be validated by another, which only matters once there is more
+than one replica. Found running the local overlay with 3 replicas for real: a token issued by pod A
+401'd the instant a request landed on pod B. `Auth:SigningKey` (bound from the same
+`infra-credentials` mechanism `docker/.env`'s Postgres/RabbitMQ passwords already use - gitignored,
+never committed) lets every replica share one key; its absence still falls back to the original
+random-per-process key. Still a throwaway dev value either way - Stage 5's OIDC direction replaces
+this signing story outright, it does not evolve from it (see below).
+
 ## The three actors, and what's already true about each
 
 | Actor | Identification today | Authorization today |
