@@ -7,6 +7,14 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 - `sites` - the tenant. `id`, `public_key`, `allowed_origins[]`, settings.
 - `visitors` - `id`, `site_id`, `token_hash`, first/last seen. Anonymous, no PII by design.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
+  **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
+  shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
+  see it; the only writer is the atomic compare-and-set
+  `UPDATE operators SET active_chats = active_chats + 1 WHERE id = @id AND active_chats < capacity`
+  (`concurrency.md`'s own statement, `OperatorCapacityStore`/`IOperatorCapacity`) and its symmetric
+  release. Nothing ever loads `Operator` through EF's change tracker and saves it back, so there is
+  no load-mutate-save path that could race the raw `UPDATE` - the shadow property is what makes that
+  true by construction, not by convention.
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
   (`waiting|assigned|closed`), `last_sequence`, `visitor_unread_count`, `operator_unread_count`,
   timestamps. Optimistic concurrency uses Postgres's built-in `xmin` system column (`1-04`), not an
@@ -36,6 +44,11 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   `WHERE conversation_id = @id AND sequence < @cursor ORDER BY sequence DESC LIMIT @n`.
   `OFFSET` is banned - it degrades exactly where this project is supposed to shine.
 - `conversations` partial index on `(site_id) WHERE state = 'waiting'` for the assignment queue.
+  **Shipped in `4-01`** (`ix_conversations_waiting`) - this replaced, not added to, EF's own default
+  foreign-key index on `site_id`; the only other query filtering by a bare `site_id` in the codebase
+  today is `roles`, an unrelated table, so nothing lost coverage. `WaitingConversationClaimQuery`
+  (`Ago.Chat.Worker`) is the first real reader, proven with two concurrently open transactions
+  actually skipping each other's locked rows, not just asserted from the SQL text.
 - `outbox` partial index on `(id) WHERE published_at IS NULL` - the dispatcher must never scan
   already-published rows.
 
@@ -88,6 +101,10 @@ cleanly, an insert landing in the current month succeeds without `PartitionMaint
 first, and the widened `(conversation_id, sequence, created_at)` unique index still rejects a
 duplicate insert post-partitioning. Explicitly one-way (`Down` throws) - see the Partitioning section
 above for why reversing it is a data-recovery procedure, not a rollback.
+`Stage4AddOperatorActiveChats`/`Stage4AddWaitingQueueIndex` (`4-01`) are both additive and reversible,
+verified from-scratch the same way: `active_chats` lands as a genuine EF-visible shadow property
+(confirmed by `OperatorCapacityStoreTests`' concurrent-claim proof actually reading/writing it), and
+`ix_conversations_waiting` replaces the default FK index cleanly with no query regression found.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
