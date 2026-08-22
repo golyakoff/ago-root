@@ -7,12 +7,17 @@ proxies exist). Two hubs on `Ago.Chat.Api`:
 
 - `/hubs/visitor` - authenticated by a signed visitor token (JWT), scoped to one site. Issued by
   `POST /api/v1/visitor-sessions` on first contact - the real mechanism, not a stub (`1-06`).
-- `/hubs/operator` - authenticated by the operator's JWT, scoped to one site, carrying its
-  `adr/0016` role claims. Issued today by `POST /dev/operator-session`, a Development-only stub
-  (`1-06`) that trades an operator id for a token with no password - OIDC replaces it outright at
-  Stage 5, not by evolving it (`architecture/authorization.md`). Both schemes validate against the
-  same signing key with different audiences (`Visitor` / `Operator`), so a token minted for one hub
-  is rejected by the other.
+- `/hubs/operator` - authenticated by the operator's JWT, scoped to one site. **Shipped in `5-05`**:
+  a real Keycloak-issued OIDC token, validated directly against Keycloak's own JWKS (`adr/0022`) -
+  `POST /dev/operator-session`, the Development-only stub that traded an operator id for a token with
+  no password (`1-06`), is removed outright, not evolved. Keycloak's token proves identity; it carries
+  no `OperatorId`/`SiteId`/`adr/0016` role information of its own (Keycloak has never heard of those
+  concepts) - `OperatorIdentityClaimsTransformation` resolves the validated token's `sub` against the
+  `operators` table and adds those claims after the fact, and role/permission resolution
+  (`PermissionChecker`) is unaffected, still a separate per-request lookup. The Visitor scheme is
+  unchanged: still a token `Ago.Chat.Api` signs itself, still validated against the local signing key,
+  since visitors were never behind the stub this item replaced - the two schemes' distinct audiences
+  are what still keeps a token minted for one hub from being accepted by the other.
 
 A hub method is transport, not logic: it maps arguments to a command, dispatches it, maps the result
 back. Anything else in a hub is a layering violation (`clean-architecture.md`).

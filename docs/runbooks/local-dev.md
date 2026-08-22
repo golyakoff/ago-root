@@ -29,8 +29,9 @@ dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 `AGO_CHAT_CONNECTION_STRING` (already exported above) must stay set for `Ago.Chat.Api` too -
 `ChatModule.ConfigureServices` (`1-06`) reads it the same way the migration step did. With
 `ASPNETCORE_ENVIRONMENT=Development`, the API additionally serves `/dev-harness.html` (a plain
-HTML+SignalR page, not the real widget/console - `1-06`) and maps `POST /dev/operator-session`;
-neither exists outside Development. Verified against a real running instance: a visitor session
+HTML+SignalR page, not the real widget/console - `1-06`); it never exists outside Development.
+**`POST /dev/operator-session` no longer exists (`5-05`)** - see "Getting a working operator session
+locally" below for its replacement. Verified against a real running instance: a visitor session
 (`POST /api/v1/visitor-sessions`), both hubs' JWT auth, `JoinAsync`/`JoinConversationAsync` against
 the seeded demo tenant, a message's own sender receiving it back over the SignalR group, and live
 cross-tab delivery (the *other* party's tab receiving a reply, in both directions, two separate
@@ -38,6 +39,29 @@ tabs) confirmed twice by hand. That second round of manual testing found a real 
 artifact: SignalR scopes `Clients.Group(...)` per hub *type*, so `VisitorHub` and `OperatorHub` never
 shared a group even under the same name - fixed by having each hub also broadcast through the other's
 `IHubContext<THub>` (`docs/backlog/1-06-api-realtime-and-wiring.md` has the detail).
+
+### Getting a working operator session locally
+
+**Shipped in `5-05`** (`adr/0022`): the API now validates a real Keycloak-issued token for
+`/hubs/operator`, so `dev-harness.html`'s Operator pane takes a pasted token instead of minting one
+itself. `deploy/seed/create-demo-tenant.sh` links the seeded demo operator to the demo-operator user
+`deploy/keycloak/ago-chat-realm.json` seeds into Keycloak by a fixed id - get a token for it with the
+direct (password) grant against Keycloak's own token endpoint, matching whichever hostname the
+running `Ago.Chat.Api`'s own `Auth:Keycloak:Authority` uses (issuer validation is an exact string
+match - `127.0.0.1` and `localhost` are different issuers to it even though they reach the same
+container):
+
+```
+curl -s -X POST http://127.0.0.1:8081/realms/ago-chat/protocol/openid-connect/token \
+  -d "grant_type=password&client_id=ago-console&username=demo-operator&password=demo-operator-password" \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
+```
+
+Paste the result into `dev-harness.html`'s Operator token field and Connect. This is not the flow the
+real console uses (`5-06`'s Authorization Code + PKCE, a browser redirect) - it is the pragmatic
+equivalent for a page that pastes a token in rather than driving a redirect itself, the same
+"password grant for a throwaway local test client" shape this runbook's own integration tests use
+against a real, disposable Keycloak.
 
 Local endpoints (all verified reachable):
 
@@ -49,6 +73,8 @@ Local endpoints (all verified reachable):
 | Redis | `localhost:6379` |
 | MinIO S3 API | `localhost:9000` |
 | MinIO console | http://localhost:9001 |
+| Keycloak (OIDC) | http://localhost:8081 (`5-05`) |
+| Keycloak health/management | http://localhost:8082 |
 | `Ago.Chat.Api` health | http://localhost:5009/healthz/live (port from `launchSettings.json`) |
 
 `Ago.Chat.Worker`'s `/healthz/ready` is a real check as of `2-04` (Postgres + RabbitMQ reachable, not
@@ -105,9 +131,10 @@ startup, so a wrong key fails fast instead of silently disabling a feature.
   `AGO_CHAT_CONNECTION_STRING`, never a hardcoded default (repositories.md - "no secrets, ever").
 - Create the attachments bucket: `deploy/seed/create-minio-bucket.sh` (verified; source
   `deploy/docker/.env` first).
-- Seed the demo site and operator: `deploy/seed/create-demo-tenant.sh` (verified, idempotent - `1-05`;
-  source `deploy/docker/.env` first). Prints the demo site's public key and the demo operator's id,
-  which `1-06`'s manual verification and its dev-only operator-auth stub both need.
+- Seed the demo site and operator: `deploy/seed/create-demo-tenant.sh` (verified, idempotent - `1-05`,
+  updated in `5-05` to link the operator row to Keycloak's own demo-operator user; source
+  `deploy/docker/.env` first). Prints the demo site's public key and the demo operator's id - "Getting
+  a working operator session locally" above is what actually turns that into a usable token now.
 - Stop and restart without losing data: `down` then `up -d` again - verified, comes back healthy
   with no manual fixes. Add `-v` to `down` to also wipe the named volumes for a truly clean slate
   (not run in this session - permission for a volume-destroying command was withheld; the command
