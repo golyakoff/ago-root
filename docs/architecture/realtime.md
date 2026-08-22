@@ -133,6 +133,25 @@ High-frequency, low-value events. Rules:
 - Presence is derived from the registry plus an explicit operator status, with a grace period so a
   page reload does not read as "went offline" and release their conversations.
 
+  **Shipped in `4-04`**: the first thing that actually *reads* presence for a real write decision,
+  not just tracks it (`adr/0007`'s "advice, not truth" caveat now has a real consequence to be
+  honest about). Two triggers publish the same `OperatorPresenceLost` signal: `OperatorHub`'s
+  query-at-disconnect fast path (`HubConnectionRegistration.OnDisconnectedAsync` now returns
+  whether the principal has zero connections left anywhere, not just on this node) and
+  `OperatorDisconnectSweepJob`'s periodic backstop (`Ago.Chat.Worker`, catches a disconnect that
+  never fired the fast path at all - a hard client-side process kill, or `Ago.Chat.Api` itself
+  dying mid-publish). `OperatorDisconnectGraceConsumer` waits the grace period, then checks presence
+  **exactly once more** before releasing anything - that single final check is the entire
+  "cancel a pending release on reconnect" mechanism, no per-operator timer state to track or cancel.
+
+  The honesty consequence: a stale-but-not-yet-expired registry entry biases toward "assume still
+  connected," never toward releasing early. Getting this wrong the other way - releasing a
+  still-connected operator's conversations - is the more damaging mistake (a visitor mid-conversation
+  loses their operator for no reason), so every read in this path leans conservative on purpose. The
+  registry's own TTL is still the ultimate backstop if a node crashes without ever deregistering -
+  this just adds a second, deliberate leaning-conservative layer on top for the common "graceful
+  disconnect, no reconnect" case that TTL alone would only catch late.
+
 ## Failure behaviour
 
 | Failure | Effect |

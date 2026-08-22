@@ -1,7 +1,7 @@
 # Release conversations on operator disconnect, with a grace period
 
 - **Stage**: 4
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `4-01-waiting-queue-and-capacity-model.md`, `4-02-assignment-engine-skip-locked.md`
   (needs a real assignment engine to observe a released conversation being re-claimed - the release
   half can be built and tested standalone, but the end-to-end story needs `4-02` to exist)
@@ -66,21 +66,44 @@ release path calls), `concurrency.md`'s `BackgroundService`/timer rules.
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests` or `Integration.Tests`: an operator with an assigned conversation
+- [x] `Ago.Chat.Concurrency.Tests` or `Integration.Tests`: an operator with an assigned conversation
       disconnects (last connection drops), the grace period elapses with no reconnect, the
       conversation is `Waiting` again and `active_chats` decremented - proven against real Redis and
       real Postgres (Testcontainers), not a mocked registry.
-- [ ] A reconnect *within* the grace period cancels the pending release - the conversation stays
+      `OperatorDisconnectGraceEndToEndTests.OperatorWithNoConnections_...` - real Postgres, RabbitMQ,
+      Redis; `OperatorConversationReleaserTests` additionally proves the atomic release claim in
+      isolation (multiple conversations, one operator, one transaction). Stable across 5+ consecutive
+      runs of the full three-test file, and across two full-suite passes.
+- [x] A reconnect *within* the grace period cancels the pending release - the conversation stays
       `Assigned`, capacity untouched. Proven, not just implemented (a race here - reconnect landing
       exactly as the timer fires - is exactly the kind of case this project's concurrency tests exist
       to catch, per `concurrency.md`'s own stress-test bar).
-- [ ] The released conversation is visible to `4-02`'s assignment engine on its next tick and gets
+      `OperatorDisconnectGraceEndToEndTests.OperatorReconnects_WithinTheGracePeriod_...` - registers
+      a new connection partway through the grace period, then waits past the full period; the
+      consumer's own single final presence check (not a cancelled timer - see realtime.md) finds the
+      reconnected operator and releases nothing.
+- [x] The released conversation is visible to `4-02`'s assignment engine on its next tick and gets
       reassigned - an end-to-end proof, not two separate unit tests that never meet.
-- [ ] `docs/architecture/realtime.md` gets a note that presence is now read for a real decision, not
+      `OperatorDisconnectGraceEndToEndTests.AReleasedConversation_...` - after a real release,
+      `SkipLockedAssignmentClaimer` (unmodified `4-02` code) picks the conversation back up.
+- [x] `docs/architecture/realtime.md` gets a note that presence is now read for a real decision, not
       only tracked, with the honesty caveat from `adr/0009` stated explicitly (a stale/expired
       registry entry biases toward "assume still connected" or "assume gone" - state which this item
       chose and why, since getting it wrong in either direction has a real cost: too eager releases a
       conversation from an operator who is actually fine; too slow leaves it stuck).
+      Chose "assume still connected" - releasing a connected operator's conversations is the more
+      damaging mistake. Documented in realtime.md's Presence section.
+
+A real test-isolation bug was found and fixed along the way, not itself part of production code:
+the end-to-end test's own "start consumer" helper leaked its `RabbitMqConnection` (never disposed) -
+harmless for a test file with one `[Fact]`, but this file has three, all subscribing to the same
+Competing-mode durable queue production hard-codes the name of. A leaked connection from an earlier
+test kept its consumer registration alive on the broker, silently intercepting a later test's own
+publish with no exception and no log, just a 15-second timeout on a delivery that had actually gone
+elsewhere. Fixed by disposing the connection alongside stopping the consumer. The same latent bug
+exists in two earlier fanout end-to-end test files (each currently has only one `[Fact]`, so it
+cannot manifest yet) - flagged as a separate follow-up rather than fixed here, to keep this branch
+focused.
 
 ## Open questions
 
