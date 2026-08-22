@@ -50,6 +50,24 @@ prefer it.
 `terminationGracePeriodSeconds` must exceed `preStop` + drain time, otherwise Kubernetes kills the
 pod mid-drain and the "no loss after ack" guarantee becomes a lie.
 
+**Shipped in `3-06`, `Ago.Chat.Api`** (`ago-deploy/k8s/base/api.yaml`): `preStop` sleeps 15s - the
+readiness probe's own worst case (`periodSeconds: 5` * `failureThreshold: 3`) before kubelet marks
+the pod `NotReady` and the Gateway stops routing to it - and `terminationGracePeriodSeconds` is 45s
+(15s `preStop` + `DrainOptions.DrainTimeout`'s 20s + a margin for the rest of the host to actually
+stop). Live-verified against the local 3-replica overlay: a real `kubectl rollout restart` cycled
+all three pods with zero acknowledged-but-lost messages and zero readiness/liveness flapping once
+each new pod was ready (`concurrency.md` has the full run).
+
+**No sticky sessions has a second consequence beyond connection placement**: a SignalR client that
+negotiates before connecting sends the negotiate request and the transport upgrade as two separate
+HTTP requests, and without affinity the Gateway can route them to two different pods - the second
+pod 404s, since it never saw the `connectionToken` the first one handed out. This only showed up
+once `3-06` actually ran 3 replicas; every earlier stage's single replica made the two requests
+land on the same process by definition. The fix keeps "no sticky sessions" true rather than
+special-casing around it: the client skips negotiation and connects with the WebSockets transport
+directly (`skipNegotiation: true`, `dev-harness.html`), so the entire handshake is one request and
+lands on exactly one pod by construction.
+
 ## What the edge is responsible for
 
 - TLS termination, HTTP/2 for REST (WebSockets stay on HTTP/1.1).

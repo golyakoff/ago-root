@@ -6,6 +6,13 @@
 > the detail, and "Known issues found this way" below for the one prerequisite worth knowing before
 > you hit it yourself. NGINX Gateway Fabric (`adr/0014`) was installed and its route to
 > `Ago.Chat.Api`'s health endpoint verified end to end, hostname matching included.
+>
+> **`3-06` re-verified with 3 `ago-chat-api` replicas**: `/api` and `/hubs` now actually route
+> through the Gateway too (the `HTTPRoute` only carried `/healthz` until this point - a stale
+> comment claimed `/api`/`/hubs` "arrive with Stage 1," but the route itself was never updated). A
+> real `kubectl rollout restart deployment/ago-chat-api` under synthetic load produced zero
+> acknowledged-but-lost messages; `least_conn` confirmed live in the Gateway's own generated NGINX
+> config (`concurrency.md`, `edge.md` have the full detail and the two bugs this surfaced).
 
 The cluster is **Docker Desktop's built-in Kubernetes** (Settings → Kubernetes → Enable, cluster
 type **Kubeadm** - not **kind**, which needs a separate image-loading step our
@@ -24,16 +31,28 @@ kubectl get pods -n ago-chat -w
 `kubectl kustomize deploy/k8s/overlays/local` renders the same manifests without needing a cluster
 connection at all - useful for reviewing a change before applying it.
 
+`ago-chat-api` runs 3 replicas here since `3-06` (`least_conn` across them, `edge.md`) - copy
+`deploy/k8s/overlays/local/.env.example` to `.env` first if this is a fresh checkout; it now also
+carries `AUTH_JWT_SIGNING_KEY`, needed so every replica validates the same tokens (`authorization.md`).
+
 ## Migrations and seeding
 
-Not yet re-verified against this cluster's own Postgres specifically - `1-04`/`1-05` verified the
-migration and the seed script against the `docker-compose` Postgres only (`local-dev.md`), which is
-what those items' own scope committed to. The same commands should work here too, against
-`svc/postgres` in the `ago-chat` namespace via `kubectl port-forward svc/postgres 15432:5432 -n
-ago-chat` from a machine with the .NET SDK and `dotnet-ef` installed - `Microsoft.EntityFrameworkCore.Design`
-is `PrivateAssets=all` (`Ago.Chat.Infrastructure.Postgres.csproj`), specifically so it never flows
-into `ago-chat-api`'s own image, so migrating from inside the cluster is not an option as-is. Saying
-so here rather than claiming coverage this session did not actually exercise.
+**Verified against this cluster's own Postgres, `3-06`** - the commands below were run for real, not
+assumed to match the `docker-compose` path `1-04`/`1-05` verified:
+
+```
+kubectl port-forward svc/postgres 15432:5432 -n ago-chat
+# from ago-chat, on a machine with the .NET SDK and the dotnet-ef tool installed -
+# Microsoft.EntityFrameworkCore.Design is PrivateAssets=all (Ago.Chat.Infrastructure.Postgres.csproj),
+# specifically so it never flows into ago-chat-api's own image, so migrating from inside the
+# cluster is not an option:
+AGO_CHAT_CONNECTION_STRING="Host=localhost;Port=15432;Database=ago_chat;Username=ago;Password=ago-local-dev" \
+  dotnet ef database update -p src/Ago.Chat.Infrastructure.Postgres -s src/Ago.Chat.Infrastructure.Postgres
+```
+
+`ago-deploy/seed/create-demo-tenant.sh` targets the `docker-compose` network by name and will not
+reach this cluster's Postgres as written - seed the same fixed-id rows with `kubectl exec -n ago-chat
+deploy/postgres -- psql -U ago -d ago_chat -c "..."` instead, using the script's own SQL block.
 
 ## Known issues found this way
 
@@ -81,19 +100,31 @@ curl -H "Host: ago-chat.localhost" http://localhost/healthz/live   # 200 Healthy
 curl http://localhost/healthz/live                                  # 404 - proves hostname routing, not just "anything on :80"
 ```
 
+`3-06` added `/api` and `/hubs` to the same `HTTPRoute` (only `/healthz` routed before that -
+`Ago.Chat.Api`'s actual endpoints had existed since Stage 1/2, the route just never caught up):
+
+```
+curl -H "Host: ago-chat.localhost" -H "Content-Type: application/json" \
+  -d '{"publicKey":"demo_site"}' http://localhost/api/v1/visitor-sessions   # 201, a visitor JWT
+```
+
 ## What to check after a change
 
 - `kubectl get pods -n ago-chat` — everything `Running` **and** ready.
 - Readiness must be false while a pod drains, and true only when it will accept traffic.
 - `kubectl rollout restart deployment/ago-chat-api -n ago-chat` under load is the cheapest way to
   test the drain path.
+- `least_conn` is genuinely wired, not just declared: exec into the Gateway's data-plane pod
+  (`kubectl exec -n ago-chat deploy/ago-chat-gateway-nginx -- grep -A6 'upstream ago-chat_ago-chat-api'
+  /etc/nginx/conf.d/http.conf`) and look for `least_conn;` and one `server` line per replica.
 
 ## Scale-out testing
 
 Only the cluster can answer these, so use it for them:
 
-- More than one Api replica and cross-node delivery (`adr/0007`).
-- Rolling deploy without losing acknowledged messages.
+- More than one Api replica and cross-node delivery (`adr/0007`) - **done, `3-06`**: 3 replicas,
+  live-verified (see the Status note above).
+- Rolling deploy without losing acknowledged messages - **done, `3-06`**.
 - Pod kill mid-load.
 - Ingress behaviour with WebSocket upgrades and idle timeouts.
 
