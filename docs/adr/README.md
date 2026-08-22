@@ -30,3 +30,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0018 | `ago-platform` publishes to GitHub Packages; `ago-chat`'s CI restores from it | Accepted |
 | 0019 | Partitioning `messages` widens its unique index to include `created_at` | Accepted |
 | 0020 | Node-delivery fan-out publishes directly, bypassing the outbox | Accepted |
+| 0021 | Operator assignment: `SKIP LOCKED` (default) vs. a per-operator Redis lock | Accepted |
