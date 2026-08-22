@@ -32,6 +32,16 @@ Task      RemoveAsync(CacheKey key, CancellationToken ct);
 implements stampede protection. Deliberately **not** `IDistributedCache`: its byte-array API pushes
 serialisation into callers and has no single-flight story.
 
+**`where T : class` on every method, added in `5-01` (`0.9.0`) after a real bug, not designed in from
+the start**: for an *unconstrained* generic parameter, C#'s `T?` return annotation has no runtime
+effect when `T` is instantiated with a value type - confirmed empirically, `default(T?)` for `T =
+bool` is `false`, not a distinguishable null - so `GetOrCreateAsync`'s own miss-check
+(`is { } hit`/`is null`) could not tell a cold key apart from a genuinely-cached `false`/`0`, and
+silently never called the factory at all for a legitimately falsy/zero result. Every caller up to
+that point avoided the bug by coincidence, only ever caching reference-type DTOs (this row's own
+`SiteLookupResult`); a caller that wants to cache a primitive now wraps it in a small record instead,
+which every real caller already did anyway.
+
 We do not use a generic `[Cacheable]` decorator over every handler. Caching is a per-use-case
 decision with a per-use-case invalidation story; an attribute hides exactly the part that has to be
 thought about.
