@@ -1,7 +1,7 @@
 # Waiting queue and capacity model
 
 - **Stage**: 4
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing - foundational for the rest of Stage 4
 
 ## Goal
@@ -83,19 +83,37 @@ not the thing this stage replaces.
 
 ## Done when
 
-- [ ] Migration applies cleanly to a real Postgres (Testcontainers, matching every prior
+- [x] Migration applies cleanly to a real Postgres (Testcontainers, matching every prior
       `Ago.Chat.Infrastructure.Postgres` migration's own verified bar) and is reversible.
-- [ ] `Ago.Chat.Integration.Tests`: concurrent `TryClaimAsync` calls against one operator at exactly
+      Two migrations, both additive/reversible: `Stage4AddOperatorActiveChats` (the column, as an EF
+      shadow property - see below) and `Stage4AddWaitingQueueIndex` (`ix_conversations_waiting`,
+      replacing EF's default FK index on `conversations.site_id` - see the finding below).
+- [x] `Ago.Chat.Integration.Tests`: concurrent `TryClaimAsync` calls against one operator at exactly
       their capacity - exactly `capacity` succeed, the rest return `false`, `active_chats` never
       exceeds `capacity` even under real parallel load (Testcontainers Postgres, real concurrent
       connections, not sequential awaits pretending to be concurrent).
-- [ ] `Ago.Chat.Domain.Tests`: `ReleaseToQueue` - valid transition from `Assigned`, invalid from
+      `OperatorCapacityStoreTests` - 20 real concurrent `TryClaimAsync` calls (separate pooled
+      connections, `Task.WhenAll`) against capacity 5: exactly 5 succeed, `active_chats` lands at
+      exactly 5. `ReleaseAsync` floors at zero under a duplicate/racing release. Stable across 5
+      consecutive runs.
+- [x] `Ago.Chat.Domain.Tests`: `ReleaseToQueue` - valid transition from `Assigned`, invalid from
       `Waiting`/`Closed`, `ConversationReleased` raised with the right payload.
-- [ ] `Ago.Chat.Architecture.Tests`: the capacity port's Postgres implementation lives only in
+- [x] `Ago.Chat.Architecture.Tests`: the capacity port's Postgres implementation lives only in
       `Ago.Chat.Infrastructure.Postgres` (same boundary `PersistenceBoundaryTests` already enforces
       for Npgsql/EF Core - confirm the raw-SQL path is covered by the same rule, not a gap in it).
-- [ ] `data-model.md` updated with `active_chats`, the compare-and-set statement, and the waiting-
+      **Real finding, not fixed here (flagged as a separate task)**: `PersistenceBoundaryTests`'
+      `AllProduct` list (`TestAssemblies.cs`) does not include `Ago.Chat.Worker` or `Ago.Chat.Api`,
+      even though the test's own class comment says the rule covers "Module and the hosts." This
+      slice's `WaitingConversationClaimQuery` uses raw Npgsql in `Ago.Chat.Worker` - the same
+      pre-existing pattern `OutboxDispatcher` (`2-04`) already established there, so this item stayed
+      consistent with the codebase rather than silently expanding scope to fix a Stage-2-era test gap
+      and everything it might newly catch.
+- [x] `data-model.md` updated with `active_chats`, the compare-and-set statement, and the waiting-
       queue claim query's actual location and shape.
+      Also corrected: `concurrency.md`'s original wording compared `active_chats` against a
+      `@capacity` *parameter* (implying a separate read); the shipped version compares against the
+      `capacity` column of the same row being updated instead - strictly safer, no read to race
+      against, and the doc now says so.
 
 ## Open questions
 

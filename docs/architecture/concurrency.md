@@ -59,12 +59,22 @@ capacity. Two mechanisms, both implemented, compared, and written up:
   same port, to demonstrate the trade-off (fencing tokens, clock skew, lock expiry vs work duration).
 
 Capacity is enforced with optimistic concurrency:
-`UPDATE operators SET active_chats = active_chats + 1 WHERE id = @id AND active_chats < @capacity`.
+`UPDATE operators SET active_chats = active_chats + 1 WHERE id = @id AND active_chats < capacity`.
 A row count of 0 means "lost the race", which is a normal outcome to retry, not an error to log at
 `Error` level.
 
 In-process, each Worker's assignment loop is single-threaded per shard, so intra-process contention
 is designed away rather than locked away.
+
+**Shipped in `4-01`**: `IOperatorCapacity`/`OperatorCapacityStore` (`Ago.Chat.Application.Abstractions`,
+`Ago.Chat.Infrastructure.Postgres`) is exactly this statement - `capacity` compared against the same
+row being updated, not a value read separately and passed as a parameter (the doc's own original
+wording implied a separate read; the shipped version has no such read to race against, which is
+strictly safer and is what the code actually does). `WaitingConversationClaimQuery`
+(`Ago.Chat.Worker`) is mechanism A's claim half, proven with two concurrently open transactions
+genuinely skipping each other's locked rows. Neither has a caller yet - the loop that ties claiming
+a conversation to claiming an operator's capacity is `4-02`; mechanism B (the Redis alternative) is
+`4-03`.
 
 ## Rules for every async code path
 
