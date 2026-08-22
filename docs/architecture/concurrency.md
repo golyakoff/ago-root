@@ -72,9 +72,42 @@ row being updated, not a value read separately and passed as a parameter (the do
 wording implied a separate read; the shipped version has no such read to race against, which is
 strictly safer and is what the code actually does). `WaitingConversationClaimQuery`
 (`Ago.Chat.Worker`) is mechanism A's claim half, proven with two concurrently open transactions
-genuinely skipping each other's locked rows. Neither has a caller yet - the loop that ties claiming
-a conversation to claiming an operator's capacity is `4-02`; mechanism B (the Redis alternative) is
-`4-03`.
+genuinely skipping each other's locked rows.
+
+**Shipped in `4-02`**: `ConversationAssignmentJob` (`Ago.Chat.Worker`, `PeriodicTimer`, 2s interval,
+20-conversation batch per site per tick - unmeasured starting points, Stage 7's job) is the loop that
+ties `4-01`'s two halves together. Per site, per tick, one Postgres transaction: claim up to
+`BatchSize` waiting conversations (`WaitingConversationClaimQuery`), then for each, select the
+least-`active_chats`-first `Online` operator at that site with room (`AsNoTracking`, no lock - the
+atomic claim right after it is what makes the decision safe, not a lock on the read) and attempt
+`IOperatorCapacity.TryClaimAsync` through the *same* `AgoChatDbContext`, built on the claim's own
+connection via `Database.UseTransactionAsync` - `OperatorCapacityStore` was refactored during `4-02`
+specifically for this (`ExecuteSqlInterpolatedAsync` against an ambient transaction instead of a
+standalone connection), because a capacity claim and the assignment it enables must commit
+atomically: crash between the two under the original design and a slot leaks forever, invisible to
+any future claim, with no assigned conversation to account for it. A conversation whose candidate
+loses the capacity race, or whose whole batch hits a transaction-level deadlock (below), is simply
+left `Waiting` - retried next tick, never a second candidate the same tick.
+
+**A real deadlock risk found live, not anticipated by this doc's original design**: a batch that
+assigns different claimed conversations to *different* operators holds more than one `operators` row
+lock at once (each successful `TryClaimAsync`) until it commits. Two replicas' batches touching the
+same site's operators in a different order can genuinely deadlock - Postgres detects the cycle and
+aborts one side (`SqlState 40P01`). Handled exactly like every other "lost the race" outcome here:
+caught per-site inside the tick, logged at `Debug`, retried next tick - one site's contention must
+not stall every other site's batch in the same tick.
+
+Both participants are notified through the same fan-out path `3-02` built:
+`ConversationAssignedToOperator` (a new integration event, named differently from the domain event
+`ConversationAssigned` - `Contracts`/`Domain` naming split established in `3-02` for the same
+`MessageAdded`/`MessageAccepted` reason) carries `VisitorId`/`OperatorId` directly, so
+`ConversationAssignmentFanoutConsumer`/`ResolveConversationAssignmentTargetsHandler` need no
+conversation load at all (unlike message delivery's own resolve step) before calling
+`INodeFanoutPublisher`. Proven end to end (`ConversationAssignmentFanoutEndToEndTests`): a real
+`ConversationAssignmentJob` tick against real Postgres/RabbitMQ/Redis reaches both the visitor's and
+the operator's own node.
+
+Mechanism B (the Redis alternative) is `4-03`.
 
 ## Rules for every async code path
 
