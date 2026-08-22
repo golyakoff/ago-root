@@ -62,6 +62,22 @@ A real bug found live while building this, unrelated to CORS itself but blocking
 constrains `where T : class` project-wide (`Ago.Platform.Abstractions`, `0.9.0`), and this layer's own
 positive/negative cache wraps its `bool` in a small reference-type result instead.
 
+**Shipped in `5-03`**: `AttachmentEndpoints` is the first HTTP endpoint file to translate a
+`Result<T>`/`Error` failure into an RFC 7807 response - `Ago.Chat.Api.Http.ErrorExtensions.ToProblem`
+maps `ConversationErrors`' stable codes (`Attachment.NotFound`, `Message.RateLimited`, ...) to a
+status code and a bare `type` slug (not a resolvable URL - `AuthEndpoints`' own precedent,
+`"rate-limited"` not `"https://.../rate-limited"`), plus `traceId` from `HttpContext.TraceIdentifier`.
+`AuthEndpoints` predates this: its own `Results.Problem` calls were built by hand because
+`Error`/`Result<T>` had no HTTP-facing consumer yet.
+
+It is also the first place two authentication schemes are accepted on one route
+(`RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtSchemes.Visitor, JwtSchemes.Operator)...)`) -
+every hub before this was single-role by construction (`VisitorHub` vs `OperatorHub`), but presigning
+an upload is something both a visitor and an operator legitimately do. The two schemes' `aud` claims
+are mutually exclusive, so exactly one ever authenticates a real token; a new `kind` JWT claim
+(`"visitor"`/`"operator"`, `JwtTokenService`) is how the handler tells them apart afterward, since
+`aud` alone answers "is this token valid for this route", not "which principal is this".
+
 ## Compatibility
 
 Additive changes only within a version: new optional fields are fine, renamed or removed fields are

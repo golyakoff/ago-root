@@ -1,7 +1,7 @@
 # Attachments: presign, verify, and the download path
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `5-02-file-storage-port-and-s3-adapter.md` (needs `IFileStorage` published and
   consumable), `5-01-per-site-cors.md` (the presign/confirm endpoints are widget-facing - CORS must
   already cover new endpoints generically, or this item extends the same policy explicitly)
@@ -62,30 +62,50 @@ presigned-GET cache (below) needs it.
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: the full upload flow against real Postgres + real MinIO - presign,
+- [x] `Ago.Chat.Integration.Tests`: the full upload flow against real Postgres + real MinIO - presign,
       PUT directly to the returned URL, confirm, verify the row is `ready` and its metadata matches
-      what storage actually holds (not what the client claimed).
-- [ ] Confirming an attachment whose bytes were never actually uploaded (or whose real
+      what storage actually holds (not what the client claimed). `AttachmentFixture` +
+      `AttachmentUploadFlowTests` (`FullFlow_PresignPutConfirm_EndsReadyWithMatchingMetadata`), same
+      "one fixture per genuinely-needed resource combination" shape as `SiteCachingFixture`.
+- [x] Confirming an attachment whose bytes were never actually uploaded (or whose real
       size/content-type mismatches the declared one) fails, and the row stays `pending` - proves the
       HEAD-verify step is load-bearing, not decorative.
-- [ ] Sending a message that references a `ready` attachment succeeds; referencing a `pending` one, a
+      `AttachmentUploadFlowTests.Confirm_WithoutEverPuttingTheObject_FailsAndStaysPending` and
+      `Confirm_WhenTheUploadedBytesDontMatchTheDeclaredSize_FailsAndStaysPending`, plus
+      `ConfirmAttachmentHandlerTests`' fake-storage equivalents for the content-type mismatch case.
+- [x] Sending a message that references a `ready` attachment succeeds; referencing a `pending` one, a
       `deleted` one, or one belonging to a different conversation fails with a clear error - proven at
       `MessageBatchWriter`'s level (a concurrency/integration test, matching `4-05`'s own test style),
-      not just at the HTTP layer.
-- [ ] A visitor/operator who is not a participant of the attachment's conversation cannot obtain a
-      download URL for it.
-- [ ] Per-site/per-visitor upload rate limits are enforced and tested, matching `3-05`'s own test
-      shape.
-- [ ] `data-model.md` gets the `attachments` table documented; `api-design.md` or `file-storage.md`
+      not just at the HTTP layer. Five new cases in `MessageBatchWriterTests` (real Postgres):
+      ready/pending/deleted/wrong-conversation/unknown-attachment. `Attachment.MarkDeleted()` was
+      added specifically so the `deleted` case is reachable at all - nothing in `5-03` itself calls it
+      outside tests (`5-04`'s orphan sweep is the intended real caller), same "the state exists before
+      its writer does" shape as `thumbnail_key` below.
+- [x] A visitor/operator who is not a participant of the attachment's conversation cannot obtain a
+      download URL for it. `GetAttachmentDownloadUrlHandlerTests` (both entry points) plus the
+      participant check itself mirrors `GetConversationHistoryHandler`'s exact shape.
+- [x] Per-site/per-visitor upload rate limits are enforced and tested, matching `3-05`'s own test
+      shape - widened to three buckets (`AttachmentRateLimitOptions`: per-visitor, per-operator,
+      per-site), since unlike sending a message, creating an attachment is something both sides do.
+      `CreateAttachmentHandlerTests` covers all three, including a `SelectiveFakeRateLimiter` proving
+      the per-site bucket specifically is consulted, not just that some bucket exists.
+- [x] `data-model.md` gets the `attachments` table documented; `api-design.md` or `file-storage.md`
       gets a "Shipped in `5-03`" note with the actual endpoint shapes chosen.
 
-## Open questions
+## Open questions - resolved
 
-**Needs the author's decision**: exact endpoint path/resource shape for presign+confirm+download
-(`/api/v1/attachments/...` standalone vs. nested under `/api/v1/conversations/{id}/attachments`) -
-either is defensible under `api-design.md`; nested reads more RESTfully correct given an attachment
-always belongs to a conversation, standalone is simpler for the confirm/download calls that only ever
-need the attachment's own id. Recommendation: nested for create (`POST
-/api/v1/conversations/{id}/attachments`, since creation needs the conversation context for the
-authorization/quota check anyway), standalone by attachment id for confirm/download (those calls
-already have the id and gain nothing from repeating the conversation id in the path).
+Endpoint shape went with the recommendation below exactly: `POST
+/api/v1/conversations/{conversationId}/attachments` (create), `POST /api/v1/attachments/{id}/confirm`,
+`GET /api/v1/attachments/{id}` (download). All three accept either a visitor or an operator token on
+one route (`AttachmentEndpoints`'s own remarks) - the first endpoints in this codebase to do that,
+disambiguated by a new `kind` JWT claim (`api-design.md`'s `5-03` note has the detail).
+
+**New gap surfaced, not closed here**: `GetAttachmentDownloadUrl` cannot set `Content-Disposition` or
+a CSP override on the presigned GET - `IFileStorage.CreateDownloadUrlAsync` has no override parameter,
+and adding one is a platform-repo change this branch cannot make alone. Left for a follow-up slice
+that touches `ago-platform`; `file-storage.md` carries the same note so it is not silently dropped.
+
+**New gap surfaced, not closed here**: nothing creates the real MinIO bucket in `ago-deploy` -
+`5-02`'s own gap, still open after `5-03`. See `file-storage.md`'s "The port" section for the
+recommended shape (an explicit tooling step, matching the migrations precedent) and why no session has
+written it yet.
