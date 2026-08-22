@@ -33,6 +33,18 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   built in `1-04`. No management API yet; `1-05`'s seed script is the only writer.
 - `operator_roles` - `operator_id`, `role_id` - the join table; an operator can hold more than one
   role even though Stage 1 only ever grants the single seeded `"Operator"` role.
+- `attachments` (**shipped in `5-03`**) - `id` (uuid v7), `site_id`, `conversation_id`, `message_id?`,
+  `object_key`, `content_type`, `size_bytes`, `state` (`pending|ready|deleted`), `created_at`. Its own
+  aggregate, not part of `Conversation` (`Ago.Chat.Domain.Attachment`'s own remarks) - it is created
+  and later confirmed in its own transaction, never inside the message-write transaction
+  (`MessageBatchWriter`, `4-05`), so folding it into `Conversation`'s aggregate boundary would break
+  "one aggregate per transaction" the moment a HEAD-verify confirm needed to save without touching the
+  conversation. `messages` gained a matching `attachment_id?` column the same change
+  (`file-storage.md`: "message references the attachment, not the reverse" - that column is the real
+  pointer a reader follows; `attachments.message_id?` is a denormalized second pointer that exists
+  only so `5-04`'s orphan sweep can ask "which attachments were never linked to a message" with a
+  plain `WHERE message_id IS NULL`, not an anti-join against `messages`). Neither column carries a
+  foreign key to the other table - see Keys and indexes below.
 
 ## Keys and indexes
 

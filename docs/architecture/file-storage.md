@@ -34,6 +34,29 @@ story in `concurrency.md` true.
 Steps 4-6 are the part that separates a real design from a demo. Getting them into the doc now means
 no session will "simplify" them away.
 
+**Shipped in `5-03`**: steps 1-5, in `ago-chat`. `POST /api/v1/conversations/{id}/attachments`
+(step 1-2 - nested under the conversation, since the participant/quota check needs that context),
+`POST /api/v1/attachments/{id}/confirm` (step 4, standalone by id), `GET /api/v1/attachments/{id}`
+(the read side of Access control below). Both routes accept either a visitor or an operator token on
+one endpoint - the first in this codebase to do that (every hub before this was single-role by
+construction) - disambiguated by a new `kind` JWT claim, since the two schemes' `aud` values alone
+answer "is this token valid for this route" but not "which principal is this handler talking to".
+Step 5 (`SendVisitorMessage`/`SendOperatorMessage` gaining an optional attachment reference,
+validated - exists, `Ready`, belongs to this conversation - inside `MessageBatchWriter`'s own
+transaction, `4-05`) is proven at the pipeline level, not the domain level: `Attachment` is its own
+aggregate (below), so the check runs read-only before either aggregate is touched, and only links the
+two (`Attachment.LinkToMessage`) once the message itself has actually landed - see
+`MessageBatchWriter`'s own remarks for why that ordering matters under a batch-wide rollback. Step 6
+(the orphan sweep) is explicitly **not** shipped - `5-04`'s job, per `5-03`'s own Out-of-scope list.
+Per-site/per-visitor/per-operator rate limits use the `3-05` two-bucket shape widened to three
+(`AttachmentRateLimitOptions`) - a visitor and an operator can both create attachments, so each gets
+its own budget on top of the shared per-site one.
+
+Not shipped by `5-03`, a real gap: `GetAttachmentDownloadUrl` never sets `Content-Disposition` or a
+response CSP override on the presigned GET, because doing so needs a platform-port change
+(`IFileStorage.CreateDownloadUrlAsync` has no override parameter today) that a single-repository
+`ago-chat` branch cannot make on its own. Deferred, not hidden.
+
 ## Access control
 
 Objects are private. Reads are served through short-lived presigned GET URLs issued by the API after
@@ -85,13 +108,26 @@ not `AmazonS3Config.UseHttp` - is what actually controls a presigned URL's own s
 alone still left presigned URLs as `https://` against a plain-HTTP local MinIO, failing the TLS
 handshake the moment a client tried to use one.
 
-Still open, not solved by `5-02`: nothing in `ago-deploy` creates the real bucket this adapter writes
-to yet (tests create their own via the S3 API directly) - `5-03` is expected to close this gap
-alongside adding the `attachments` table and the actual upload/confirm endpoints.
+Still open, not solved by `5-02` **or** `5-03`: nothing in `ago-deploy` creates the real bucket this
+adapter writes to yet - every test across both repositories still creates its own via the S3 API
+directly (`AttachmentFixture`, `MinioFixture`), and `5-03`'s own endpoints only ever read
+`S3StorageOptions.Bucket` from config, they never provision it. This mirrors the project's own
+established precedent for schema, not code: EF migrations are applied by an explicit
+`dotnet ef database update` tooling step (`k8s-local.md`'s "Migrations and seeding" section), never
+an app-startup side effect, because `Microsoft.EntityFrameworkCore.Design` is deliberately excluded
+from the shipped image. Bucket creation deserves the same "explicit operational step, not implicit
+app-startup magic" treatment - most likely an `ago-deploy` script or a `mc`/AWS-CLI one-shot alongside
+the existing seed scripts - but no session has actually written that step yet. Flagging it again here
+rather than silently carrying it forward a second time.
 
 ## Data model addition
 
 `attachments`: `id` (uuid v7), `site_id`, `conversation_id`, `message_id?`, `object_key`,
 `content_type`, `size_bytes`, `state` (`pending|ready|deleted`), `created_at`, `thumbnail_key?`.
 The message references the attachment, not the other way round, so an attachment can exist briefly
-before its message does.
+before its message does. **Shipped in `5-03`** (`Ago.Chat.Domain.Attachment`, its own aggregate -
+see that type's own remarks on why bundling it into `Conversation` would break "one aggregate per
+transaction"); `data-model.md` has the full column list and the reasoning for why neither
+`attachments.message_id` nor `messages.attachment_id` carries a real foreign key (`messages` is
+range-partitioned, so Postgres cannot target `messages(id)` alone). `thumbnail_key` is reserved by
+the column, not by any writer - `5-04`'s async thumbnail job is the intended one.
