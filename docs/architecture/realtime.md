@@ -99,10 +99,29 @@ recorded in `adr/0007` and measured in Stage 7.
 - Client sends `{ clientMessageId, conversationId, body, attachmentId? }`. `clientMessageId` is a
   client-generated uuid used for **echo suppression and retry deduplication** - a retried send after
   a flaky reconnect must not create a second message. The server maps it to the persisted id in the ack.
+  Not shipped yet - `SendMessageAsync` today takes only `(conversationId, body)`; `clientMessageId`
+  is still a design intent, not wired up (nothing in Stage 1-3 needed retry dedup badly enough to
+  force it, and forcing it in for `3-03` would have been solving a problem `3-03` was not asked to
+  solve).
 - Server assigns `sequence`; clients order by it and never by arrival time or client clock.
-- On reconnect the client sends its last known `sequence` per open conversation and receives the
-  delta. This makes reconnect cheap and makes "did we lose a message" answerable.
-- Server may send `reconnect(after: jitteredDelay)` before shutting down; clients obey it.
+- **Shipped in `3-03`**: on reconnect the client sends its last known `sequence` per open
+  conversation and receives exactly the delta - `VisitorHub.JoinAsync`/`OperatorHub`'s
+  `JoinConversationAsync` both take an optional `lastKnownSequence`, and when it is present (and the
+  conversation is not one this same call just created - nothing to have missed there)
+  `GetConversationHistoryHandler.HandleDeltaAsVisitorAsync`/`HandleDeltaAsOperatorAsync` answer with
+  every message strictly after it, oldest first, via `IConversationReadStore.GetDeltaAsync` - the
+  same access checks as the ordinary history page, a different cursor direction on the same read
+  store, not a new handler class. Unbounded rather than keyset-paginated the way the "load older
+  messages" direction is: the gap this closes is bounded by how long *one* client was disconnected,
+  not by the conversation's whole history. Client-side backoff is exponential with full jitter
+  (`edge.md`'s rolling-deploy scenario is exactly why - without jitter a mass reconnect becomes a
+  self-inflicted thundering herd), proven by hand against `Ago.Chat.Api/wwwroot/dev-harness.html`:
+  a dropped connection logs its jittered retry delays, reconnects, and resumes with exactly the
+  message sent while it was down - no gap, no duplicate, no full replay of the whole conversation.
+- Server may send `reconnect(after: jitteredDelay)` before shutting down; clients obey it. Stubbed in
+  `3-03` (`VisitorHub.ReconnectAsync`/`OperatorHub.ReconnectAsync` push the wire message; the harness
+  already listens for it) - `3-06` (graceful shutdown) is the real caller, since nothing runs the
+  drain sequence yet that would need to call it.
 
 ## Presence and typing
 

@@ -71,6 +71,25 @@ are unaffected - only raw AMQP sockets hit this. Fixed by pointing `Messaging:Ra
 `127.0.0.1` explicitly in `Ago.Chat.Worker`'s `appsettings.Development.json`, sidestepping the
 resolution order entirely rather than trying to disable IPv6 for one client.
 
+**Environment gotcha found while verifying `3-03`**: `Ago.Chat.Api` failed to start against the
+compose stack with `OptionsValidationException: ... 'HostName' ... 'UserName' ... 'Password' ...
+required` for `RabbitMqOptions`. `3-02` gave `Ago.Chat.Api` its first real reason to need RabbitMQ
+(`NodeDeliveryConsumer`), but `appsettings.Development.json` was never updated to configure it -
+only `Redis:ConnectionString` was there, left over from `3-01`. Fixed by adding the same
+`Messaging:RabbitMq` block `Ago.Chat.Worker`'s own `appsettings.Development.json` already has
+(`127.0.0.1`, not `localhost` - the same IPv6-resolution gotcha noted above for `Ago.Chat.Worker`
+applies here too). While debugging this, also enabled `EnableDetailedErrors` on `AddSignalR()` for
+Development - without it, a hub method's real exception is replaced with a generic "Failed to invoke
+'X' due to an error on the server" client-side, which is not enough to debug a `dev-harness.html`
+session by hand.
+
+**SignalR gotcha found the same session**: `dev-harness.html` originally omitted the argument for
+`JoinAsync`'s new optional `lastKnownSequence` parameter on its very first call
+(`invoke('JoinAsync')`). C#'s optional-parameter default does not help here - SignalR's client
+binder matches invocations by **argument count**, not by the target method's defaults, and throws
+`InvalidDataException: Invocation provides 0 argument(s) but target expects 1` for a short call.
+Fixed by always passing an explicit argument - `null` for "no known sequence" - never omitting it.
+
 ## Configuration
 
 `appsettings.Development.json` for defaults, `appsettings.Local.json` for anything machine-specific.
