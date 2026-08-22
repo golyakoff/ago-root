@@ -1,7 +1,7 @@
 # Per-site CORS from the database
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: in progress
 - **Depends on**: nothing (foundational - every widget-facing item in this stage needs cross-origin
   calls to actually work, not just pass same-origin tests)
 
@@ -24,24 +24,55 @@ the first thing that reads it for a real decision. `GetSiteConfigByPublicKeyHand
 existing precedent for "look up a site by its public key, cheaply, with caching" (`caching.md`) this
 item's origin check should reuse rather than duplicate.
 
+**A design constraint found while starting this item, not obvious from the docs above - read before
+writing any CORS policy code**: a browser's CORS preflight (`OPTIONS`) carries the `Origin` header and
+the target URL, but never the request body and never the *value* of any other header (only their
+*names*, via `Access-Control-Request-Headers`). `POST /api/v1/visitor-sessions` identifies its site by
+`PublicKey` in the JSON body - which means an `ICorsPolicyProvider` cannot resolve "which site is this
+request for" during preflight, because the one piece of data that would answer that question has not
+arrived yet. The same is true for any endpoint that identifies its tenant via a header value (a bearer
+token's `site_id` claim) rather than the URL or query string itself.
+
+The consequence, and the actual design this item must build: **CORS is not, and cannot be, the
+tenant-isolation boundary here** - it is a browser-side convenience that decides whether a page's own
+JavaScript gets to read the response, and it is well-established that `Origin` is trivially forgeable
+by any non-browser caller anyway. The real per-site boundary is an **in-application origin check**,
+made once the request has actually identified which site it is for (the body's `PublicKey`, or a
+token's `site_id` claim) - this is "in the app" exactly as `edge.md`/`api-design.md` already say, it
+just is not *inside the CORS policy resolution step* specifically. Two layers, not one:
+
+1. **CORS policy** (`ICorsPolicyProvider`): allows an `Origin` if *any* site's `AllowedOrigins` contains
+   it. Not a bulk "load every site" union - a new origin-keyed lookup (`ISiteRepository` gains an
+   `AnyAllowsOriginAsync(origin)` method translating to `WHERE @origin = ANY(allowed_origins)`, cheap
+   with an index on the array column), behind its own small Application handler that follows
+   `GetSiteConfigByPublicKeyHandler`'s exact cache-aside + negative-caching shape (`caching.md`), just
+   keyed by origin instead of public key - the same pattern, a new key, not a new mechanism. This is
+   what lets a legitimate widget's preflight succeed at all; it does not by itself prove the origin
+   belongs to *this* request's site.
+2. **In-app check**: once the handler (or the hub's `OnConnectedAsync`) has resolved which site the
+   request is actually for, it compares the request's `Origin` header (or, for a hub connection, the
+   value captured at connect time) against *that specific site's* `AllowedOrigins` and rejects
+   (`403`/aborts the connection) on a mismatch - this is the real multi-tenant boundary, and it holds
+   even against a caller that spoofs `Origin` and skips CORS entirely.
+
 ## Scope
 
-- A custom `ICorsPolicyProvider` (ASP.NET Core's extension point for a policy that cannot be known at
-  startup) that, for a request against a widget-facing endpoint, resolves the site from the request
-  (via the same public-key-or-token identification the handshake/hub endpoints already use) and
-  allows the request's `Origin` only if it is in that site's `AllowedOrigins` - never a wildcard.
-- The origin lookup goes through the existing site-config cache (`caching.md`), not a fresh Postgres
-  round trip per preflight - reuse `GetSiteConfigByPublicKeyHandler`'s underlying read path or its
-  cache entry directly rather than adding a second cache for the same data.
-- Applies to every widget-facing surface: the visitor-session endpoint, the SignalR hub's negotiate/
-  connect path (`Microsoft.AspNetCore.SignalR`'s own CORS requirements - credentials mode and origin
-  matter for WebSocket/long-polling fallback), and any attachment endpoints this stage adds later
-  (`5-03`) - state explicitly which endpoints are covered and confirm the policy applies to all of
-  them, not just the ones exercised by today's dev harness.
-- A negative test: a request from an origin *not* in a site's `AllowedOrigins` is rejected by CORS
-  (real browser CORS is enforced client-side from response headers, so the test asserts the
-  `Access-Control-Allow-Origin` header is absent/mismatched for that origin, the standard way to test
-  ASP.NET Core CORS server-side).
+- The per-origin `ICorsPolicyProvider` (layer 1 above), backed by its own cache-aside read
+  (`CheckCorsOriginHandler`), refreshed the same TTL-based way `GetSiteConfigByPublicKeyHandler`'s own
+  cache already is - no event-driven invalidation wired up yet, since `SiteSettingsChanged` has no
+  producer today either (`caching.md`).
+- The in-app origin check (layer 2 above), added at every point a site is resolved from caller-supplied
+  data: `AuthEndpoints.HandleVisitorSessionAsync` (after the existing `GetSiteConfigByPublicKeyHandler`
+  lookup), and the hub connection path (`VisitorHub`/`OperatorHub`'s `OnConnectedAsync`, or
+  `HubConnectionRegistration` if that is the more natural shared point - decide and state which,
+  reading the JWT's already-present `site_id` claim, no new claim needed).
+- Applies to every widget-facing surface: the visitor-session endpoint, both hubs, and any attachment
+  endpoints this stage adds later (`5-03`) - state explicitly which endpoints are covered.
+- A negative test for *each* layer, since they fail differently: an origin absent from *every* site's
+  list never gets a CORS-allow header at all (layer 1); an origin present for site A but used against a
+  request actually resolved to site B gets a CORS-allow header (browsers would let the JS read the
+  response) but the in-app check still rejects the request (layer 2) - prove both, since a test that
+  only covers layer 1 would pass even if layer 2 were never wired up.
 
 ## Out of scope
 
@@ -54,19 +85,57 @@ item's origin check should reuse rather than duplicate.
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: a request carrying an `Origin` header present in a seeded site's
-      `AllowedOrigins` receives a matching `Access-Control-Allow-Origin` response header; a request
-      from an origin not in that list does not.
-- [ ] The policy is proven against the visitor-session endpoint and the hub connection path, not just
-      one of the two.
-- [ ] `edge.md`/`api-design.md` gets a "Shipped in `5-01`" note confirming the mechanism (which
-      extension point, where the origin lookup's data comes from) matches what was documented in
-      advance.
+- [x] `Ago.Chat.Integration.Tests` (layer 1, CORS): a request carrying an `Origin` header present in
+      *any* seeded site's `AllowedOrigins` receives a matching `Access-Control-Allow-Origin` response
+      header; a request from an origin in *no* site's list does not.
+      `SiteOriginCorsPolicyProviderTests` - exercises `SiteOriginCorsPolicyProvider.GetPolicyAsync`
+      directly (real Postgres + real Redis), not through a full HTTP pipeline/`TestServer`: the
+      ASP.NET Core CORS *middleware* that turns a non-null `CorsPolicy` into real response headers is
+      framework code this project does not re-test, matching how every other endpoint here is proven
+      by calling its handler method directly.
+- [x] `Ago.Chat.Integration.Tests` (layer 2, in-app): two seeded sites, each with its own distinct
+      `AllowedOrigins` entry - a visitor-session request whose body names site A but whose `Origin`
+      header is site B's approved origin (present in *some* site's list, so layer 1 alone would let it
+      through) is rejected. Same proof against a hub connection using a token whose `site_id` claim
+      names one site while the connection's origin is another site's approved value.
+      `OriginAuthorizationTests` - both the visitor-session endpoint (`AuthEndpoints.
+      HandleVisitorSessionAsync`, called directly, matching `RateLimitingTests`' own precedent) and
+      `HubOriginValidator` (a real `HubCallerContext` fake carrying a real `IHttpContextFeature`, since
+      SignalR's `GetHttpContext()` extension is `Microsoft.AspNetCore.SignalR.GetHttpContextExtensions`
+      reading `Microsoft.AspNetCore.Http.Connections.Features.IHttpContextFeature` - SignalR's own
+      HttpConnections-specific feature, not the generic ASP.NET Core hosting one; found only by
+      reflecting the real assemblies after guessing wrong twice).
+- [x] Both layers proven against the visitor-session endpoint and both hubs, not just one surface.
+- [x] `edge.md`/`api-design.md` gets a "Shipped in `5-01`" note stating both layers explicitly - the
+      CORS-is-not-authorization finding is exactly the kind of thing a later session must not have to
+      rediscover.
+      Done in `api-design.md`'s "Widget-facing constraints"; `caching.md` also got a note (see the
+      real finding below).
 - [ ] Manually verified against the local cluster: `ago-chat/wwwroot/dev-harness.html` served from a
       *different* origin (a second static file server, or a `file://` origin) can complete the
-      handshake and open a hub connection only when its origin is seeded into `AllowedOrigins`.
+      handshake and open a hub connection when that origin is seeded into the relevant site's
+      `AllowedOrigins`, and cannot when it is not seeded anywhere at all (layer 1's own browser-visible
+      behaviour - the layer 2 cross-tenant case is proven by the automated test above, since
+      constructing it by hand would mean deliberately mis-seeding two real sites just to watch a
+      browser reject one).
+      **Not yet done** - needs a rebuilt/redeployed `ago-chat` image against the local cluster before
+      it can be exercised for real; deliberately left for the author to run or explicitly request,
+      rather than rebuilding/redeploying a live cluster unasked.
+
+A real finding, not part of this item's own scope, fixed along the way because it blocked layer 1
+outright: `Ago.Platform.Abstractions.ICache.GetOrCreateAsync<T>` silently never called its factory
+when caching a raw `bool` - an *unconstrained* generic `T?` has no runtime nullability for a
+value-type `T` (`default(T?)` for `T = bool` is `false`, confirmed empirically, not a distinguishable
+null), so the port's own miss-check treated a cold key as an already-cached `false` every time. Fixed
+at the source: `ICache` now constrains `where T : class` (`Ago.Platform.Abstractions`/
+`Ago.Platform.Caching.Redis`, `0.9.0`, `CHANGELOG.md`), and this item's own `CheckCorsOriginHandler`
+wraps its `bool` in a small reference-type result, the same pattern every existing cache caller
+(`SiteLookupResult`) already used. `RedisCacheTests` gained a regression test proving the
+reference-type case - a DTO wrapping a "falsy" value - still round-trips and still calls the factory
+exactly once.
 
 ## Open questions
 
-None - the mechanism (`ICorsPolicyProvider`, reusing the site-config cache) follows directly from
-`edge.md`/`api-design.md`'s existing constraints.
+None - the mechanism (a per-origin `ICorsPolicyProvider` plus a per-site in-app check) follows
+directly from `edge.md`/`api-design.md`'s existing constraints once the preflight-timing limitation is
+accounted for, above.

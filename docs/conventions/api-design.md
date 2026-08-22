@@ -35,6 +35,33 @@
   `429` with `Retry-After`, which the widget must honour with jittered backoff.
 - Payload ceilings are small and enforced; file bytes never come through the API (`adr/0008`).
 
+**Shipped in `5-01`**: two layers, not one - a browser's CORS preflight (`OPTIONS`) carries only the
+`Origin` header and the target URL, never the request body and never another header's *value* (only
+its *name*, via `Access-Control-Request-Headers`), so nothing at preflight time can say *which site*
+a request is for; `POST /api/v1/visitor-sessions` only learns that from its JSON body, and an
+authenticated call only learns it from a JWT claim.
+
+1. **CORS policy** (`SiteOriginCorsPolicyProvider`, a custom `ICorsPolicyProvider`): allows an
+   `Origin` if *any* site's `AllowedOrigins` contains it (`ISiteRepository.AnyAllowsOriginAsync`,
+   cache-aside behind `CheckCorsOriginHandler`, `caching.md`'s pattern reused with a new key). This
+   is what lets a legitimate widget's preflight succeed at all - it does **not** prove the origin
+   belongs to *this* request's site, only that it belongs to *some* site.
+2. **In-app origin check** (`AuthEndpoints.HandleVisitorSessionAsync`, `HubOriginValidator` for both
+   hubs): once a handler has actually resolved which site a request is for (the body's public key, or
+   a JWT's `site_id` claim), it compares the caller's `Origin` against *that specific site's*
+   `AllowedOrigins` and rejects on a mismatch. This is the real multi-tenant boundary - CORS is a
+   browser-side convenience (it controls whether a page's own JavaScript may read the response), not
+   an authorization mechanism, since `Origin` is trivially forgeable by any non-browser caller. For
+   the two SignalR hubs specifically, this in-app check is not defense-in-depth, it is the *only*
+   enforcement point: a WebSocket upgrade's `Origin` is not subject to the same preflight/policy
+   mechanism plain HTTP is.
+
+A real bug found live while building this, unrelated to CORS itself but blocking it: caching a raw
+`bool` through `ICache.GetOrCreateAsync<T>` silently never called the factory, because an
+*unconstrained* generic `T?` has no runtime nullability for a value-type `T` - `ICache` now
+constrains `where T : class` project-wide (`Ago.Platform.Abstractions`, `0.9.0`), and this layer's own
+positive/negative cache wraps its `bool` in a small reference-type result instead.
+
 ## Compatibility
 
 Additive changes only within a version: new optional fields are fine, renamed or removed fields are

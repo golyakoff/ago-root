@@ -1,7 +1,7 @@
 # Operator authentication: OIDC, replacing the dev stub
 
 - **Stage**: 5
-- **Status**: blocked
+- **Status**: ready
 - **Depends on**: nothing from this stage's other items (backend-only), but blocks `5-06`'s console
   login and is therefore on the critical path for anything console-side
 
@@ -71,11 +71,7 @@ Visitor scheme is untouched; visitors were never authenticated by this stub).
 
 ## Open questions
 
-**Needs the author's decision**: which IdP for local development and the demo deployment.
-Recommendation: **Keycloak** - realistic (a real, widely-deployed OIDC provider, not a test double),
-runs fine in the existing local k8s overlay alongside Postgres/RabbitMQ/Redis/MinIO, and its admin API
-makes seeding a demo operator account scriptable (matching `1-05`'s seed-script precedent) rather than
-requiring manual clicking. The lighter alternative (a mock IdP such as `oidc-server-mock`) would be
-simpler to run but is a test double pretending to be an IdP - given this project's own stated purpose
-is demonstrating patterns a reviewer would call correct, a real IdP is worth the extra operational
-weight. Either is defensible; state the choice in the ADR regardless of which way it goes.
+None - the author confirmed **Keycloak** for local development and the demo deployment (this file's
+own recommendation: a real, widely-deployed OIDC provider rather than a test double, runs fine
+alongside the existing local k8s overlay, and its admin API makes seeding a demo operator account
+scriptable). The ADR this item writes still records the reasoning in full, not just the outcome.
