@@ -1,7 +1,7 @@
 # Operator authentication: OIDC, replacing the dev stub
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing from this stage's other items (backend-only), but blocks `5-06`'s console
   login and is therefore on the critical path for anything console-side
 
@@ -55,23 +55,48 @@ Visitor scheme is untouched; visitors were never authenticated by this stub).
 
 ## Done when
 
-- [ ] `adr/00XX` written and accepted, naming the concrete IdP and why.
-- [ ] A real OIDC login (against the chosen IdP, local overlay) produces a token
-      `Ago.Chat.Api`'s Operator scheme accepts, and `/dev/operator-session` no longer exists.
-- [ ] `Ago.Chat.Integration.Tests`: a token from the real IdP resolves to the correct `OperatorId`/
-      `SiteId`/role claims end to end through a real hub connection - not just JWT-validation-in-
-      isolation, the same bar `1-06`'s original stub was proven against.
-- [ ] A token from the *wrong* issuer, or an expired one, is rejected - proven, not assumed from
-      `TokenValidationParameters`' defaults.
-- [ ] `authorization.md`'s "Done when nothing here is open anymore" checklist gets its OIDC line
+- [x] `adr/0022` written and accepted, naming the concrete IdP and why.
+- [x] A real OIDC login (against the chosen IdP, local overlay) produces a token
+      `Ago.Chat.Api`'s Operator scheme accepts, and `/dev/operator-session` no longer exists. Verified
+      live: docker-compose's real Keycloak, the real seeded demo operator, a token minted via the
+      direct grant, `Ago.Chat.Api` running for real, and a real SignalR connection to `/hubs/operator`
+      through `dev-harness.html` (now takes a pasted token instead of minting one) - "Connected."
+- [x] `Ago.Chat.Integration.Tests`: a token from the real IdP resolves to the correct `OperatorId`/
+      `SiteId` end to end through a real authentication pipeline (`OperatorOidcAuthenticationTests`,
+      a `TestServer` wired with exactly `Program.cs`'s Operator-scheme configuration against a real
+      Keycloak container, not a full `Ago.Chat.Api` host - that would need Postgres/RabbitMQ/Redis/
+      MinIO running just to prove authentication; the hub-connection mechanics an HTTP endpoint
+      doesn't exercise are unchanged by this item and already proven by `VisitorHub`'s own tests).
+      Role claims were never part of this path - `adr/0016`'s `PermissionChecker` resolves those
+      separately, unaffected by this item, so there was nothing new to prove there.
+- [x] A token from the *wrong* issuer, or an expired one, is rejected - proven, not assumed. Wrong
+      issuer: a second, genuinely separate Keycloak realm provisioned via the admin REST API (a
+      locally-forged token would only ever fail on signature, never isolating "wrong issuer" as the
+      reason). Expired: the test realm's access tokens live 5 seconds; the test waits 6 and sets
+      `ClockSkew = TimeSpan.Zero` (the 5-minute default would have silently swallowed the whole
+      premise - found live, the first version of this test passed a token that should have been
+      rejected).
+- [x] `authorization.md`'s "Done when nothing here is open anymore" checklist gets its OIDC line
       checked, and the "Working direction" section is rewritten as shipped fact.
-- [ ] `local-dev.md`/`k8s-local.md` updated with however a developer now gets a working operator
-      session locally (seeded test operator + the IdP's own local login, or whatever the ADR settles
-      on).
+- [x] `local-dev.md`/`k8s-local.md` updated with however a developer now gets a working operator
+      session locally - a "Getting a working operator session locally" section with the direct-grant
+      curl command against Keycloak's own token endpoint.
 
-## Open questions
+## Open questions - resolved
 
-None - the author confirmed **Keycloak** for local development and the demo deployment (this file's
-own recommendation: a real, widely-deployed OIDC provider rather than a test double, runs fine
-alongside the existing local k8s overlay, and its admin API makes seeding a demo operator account
-scriptable). The ADR this item writes still records the reasoning in full, not just the outcome.
+**Keycloak**, confirmed before implementation started (this file's own recommendation): a real,
+widely-deployed OIDC provider rather than a test double, runs fine alongside the existing local k8s
+overlay, and realm import makes seeding a demo operator account deterministic without any runtime
+admin-API call from the seed script. `adr/0022` records the full reasoning, not just the outcome -
+including two alternatives it also had to weigh: a token-exchange design (rejected - re-introduces a
+second self-issued token type Stage 5 was retiring) and pushing `OperatorId`/`SiteId` into Keycloak's
+own token via a protocol mapper (rejected - couples IdP configuration to this project's own schema in
+a place a reviewer reading the repository would never see).
+
+**New gap surfaced, not closed here**: Keycloak's realm-import JSON needed each user's `email`/
+`firstName`/`lastName` set, or Keycloak 26's declarative user-profile feature silently attaches an
+implicit `VERIFY_PROFILE` required action that the direct grant then rejects with "Account is not
+fully set up" - found live (Keycloak 21.1, used by the automated tests, did not enforce this the same
+way; the real docker-compose deployment on Keycloak 26.0 did). Both realm-import files now set all
+three fields; noted here since it is exactly the kind of Keycloak-version-behavior difference a later
+session bumping the pinned image tag should know to re-check.
