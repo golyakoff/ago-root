@@ -34,7 +34,9 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 - `operator_roles` - `operator_id`, `role_id` - the join table; an operator can hold more than one
   role even though Stage 1 only ever grants the single seeded `"Operator"` role.
 - `attachments` (**shipped in `5-03`**) - `id` (uuid v7), `site_id`, `conversation_id`, `message_id?`,
-  `object_key`, `content_type`, `size_bytes`, `state` (`pending|ready|deleted`), `created_at`. Its own
+  `object_key`, `content_type`, `size_bytes`, `state` (`pending|ready|deleted`), `created_at`,
+  `thumbnail_key?` (**writer shipped in `5-04`** - `AttachmentThumbnailConsumer`; the column itself
+  was reserved by `5-03`, unpopulated until then). Its own
   aggregate, not part of `Conversation` (`Ago.Chat.Domain.Attachment`'s own remarks) - it is created
   and later confirmed in its own transaction, never inside the message-write transaction
   (`MessageBatchWriter`, `4-05`), so folding it into `Conversation`'s aggregate boundary would break

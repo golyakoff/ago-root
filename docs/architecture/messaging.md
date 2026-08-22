@@ -72,12 +72,21 @@ supposed to prevent.
 | `MessageAccepted` | `conversation_id` | Fan-out to connections, unread counters |
 | `ConversationAssigned` / `Closed` | `conversation_id` | Fan-out, cache invalidation, metrics |
 | `OperatorStatusChanged` | `operator_id` | Assignment engine, cache invalidation |
-| `AttachmentUploaded` | `attachment_id` | Thumbnailer |
+| `AttachmentConfirmed` | `conversation_id` | Thumbnailer (image content types only) |
 | `CacheInvalidated` | key namespace | All nodes (fan-out to every replica, not competing consumers) |
 
 Note the last row is the one exception to competing-consumer semantics: every node must receive it.
 In RabbitMQ that is a per-node exclusive queue on a fanout exchange; in Kafka, a unique consumer
 group per node. The adapter hides this; the subscription declares intent as `Broadcast` vs `Competing`.
+
+**Shipped in `5-04`**: named `AttachmentConfirmed`, not the `AttachmentUploaded` this table originally
+planned - it fires from `Attachment.ConfirmReady` (the confirm step, after HEAD-verification), not
+from the client's own unverified "uploaded" claim, and the domain-event/contract naming split needed
+a name distinct from `Ago.Chat.Domain.AttachmentReady` regardless (the same
+`MessageAdded`/`MessageAccepted` split). Keyed by `conversation_id`, not `attachment_id` as originally
+planned - consistent with every other per-conversation event on this page, even though
+`AttachmentThumbnailConsumer` has no actual ordering requirement of its own (each attachment
+thumbnails independently); `attachment_id` would have worked exactly as well.
 
 ## Delivery guarantees and idempotency
 

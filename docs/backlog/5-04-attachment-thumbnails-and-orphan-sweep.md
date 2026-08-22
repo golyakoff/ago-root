@@ -1,7 +1,7 @@
 # Attachment thumbnails and orphan sweep
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `5-03-attachments-upload-and-download.md`
 
 ## Goal
@@ -47,21 +47,38 @@ consumer, not a job polling the `attachments` table directly. `concurrency.md`'s
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: confirming an image attachment (`5-03`'s flow) results in a real
+- [x] `Ago.Chat.Integration.Tests`: confirming an image attachment (`5-03`'s flow) results in a real
       thumbnail object in storage and `thumbnail_key` populated, against real Postgres/RabbitMQ/MinIO.
-- [ ] Redelivering the same `AttachmentReady` event twice results in exactly one thumbnail object, not
-      two, and no error - the idempotency proof.
-- [ ] `Ago.Chat.Integration.Tests`/`Concurrency.Tests`: a `pending` attachment older than the presign
-      lifetime is deleted (row and object) by the sweep; a `pending` attachment younger than that, and
-      a `ready` one of any age, are left alone.
-- [ ] A race proven, not just handled by inspection: an attachment confirmed *during* a sweep tick (the
-      sweep's own query already selected it as a candidate, the confirm lands before the delete runs)
-      is not deleted - state which ordering guarantee prevents this (e.g. the sweep re-checks state
-      immediately before deleting, inside the same transaction that would delete it) and prove it under
-      concurrency.
-- [ ] `file-storage.md` gets a "Shipped in `5-04`" note.
+      `AttachmentThumbnailEndToEndTests` - its own, non-shared containers (matching
+      `UnreadCounterEndToEndTests`' own reasoning), the real `OutboxDispatcher` and the real
+      `AttachmentThumbnailConsumer`, nothing stubbed.
+- [x] Redelivering the same event twice results in exactly one thumbnail object, not two, and no
+      error - the idempotency proof. `AttachmentThumbnailGeneratorTests.GenerateAsync_CalledTwiceForTheSameAttachment_IsIdempotent`
+      (real Postgres + MinIO), proving the actual guarantee (`ThumbnailKey is not null` skips
+      regeneration) directly rather than orchestrating a genuine RabbitMQ nack/redelivery.
+- [x] `Ago.Chat.Integration.Tests`: a `pending` attachment older than the presign lifetime is deleted
+      (row and object) by the sweep; a `pending` attachment younger than that, and a `ready` one of any
+      age, are left alone. `AttachmentOrphanSweepJobTests`, three cases.
+- [x] A race proven, not just handled by inspection: an attachment confirmed *during* a sweep tick is
+      not deleted. The ordering guarantee: `AttachmentOrphanSweepQuery` is a single atomic
+      `DELETE ... WHERE state = 'Pending' ... RETURNING` statement, not a select-then-delete - Postgres
+      evaluates that `WHERE` against committed state at execution time, and `FOR UPDATE SKIP LOCKED` in
+      the claiming subquery means a row an in-flight confirm is still updating (locked, uncommitted) is
+      skipped outright rather than blocked on. Proven with two manually sequenced transactions
+      (`AttachmentOrphanSweepJobTests.SweepAsync_SkipsARowLockedByAnInFlightConfirm_NeverDeletingIt`),
+      the same technique `WaitingConversationClaimQueryTests` uses for its own `SKIP LOCKED` proof.
+- [x] `file-storage.md` gets a "Shipped in `5-04`" note.
 
-## Open questions
+## Open questions - resolved
 
-None beyond `5-02`'s already-flagged thumbnail-library choice, which this item is what actually needs
-it decided.
+Thumbnail library: **SkiaSharp**, not the `5-02`-recommended `SixLabors.ImageSharp` - the author's own
+call once the two licenses were compared. `SkiaSharp` is MIT, unconditionally free for commercial use;
+`ImageSharp` is the "Six Labors Split License" (free under a $1M annual-revenue threshold for a direct
+dependency, paid above it, and as of `v4.0.0` requires a license file just to compile even under the
+free tier). Costs a native binding (heavier container image, a `SkiaSharp.NativeAssets.*` package per
+target platform) instead of ImageSharp's pure-managed one - accepted for the licensing certainty.
+
+**New gap surfaced, not closed here**: `Attachment.ConfirmReady`'s HEAD-verify trusts whatever
+Content-Type MinIO/S3 itself reports for the object, not true first-bytes content sniffing -
+`file-storage.md`'s "Validation and safety" section originally implied the latter; corrected in the
+same change as this close-out rather than left to look done.
