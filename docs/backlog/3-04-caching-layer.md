@@ -1,7 +1,7 @@
 # Caching layer: ICache, cache-aside for site config, stampede protection
 
 - **Stage**: 3
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `3-01-connection-registry.md`, loosely - reuses the `IConnectionMultiplexer`
   registration `3-01` introduces rather than opening a second Redis connection. No functional
   dependency otherwise; can be built in parallel with `3-02`/`3-03` once `3-01` merges.
@@ -51,17 +51,27 @@ circuit breaker + fallback-to-miss).
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests` (real Redis via Testcontainers): a cache miss populates from
+- [x] `Ago.Chat.Integration.Tests` (real Redis via Testcontainers): a cache miss populates from
       Postgres and returns the value; a subsequent read within the TTL never touches Postgres
-      (assert this, not just assume it from timing).
-- [ ] A concurrency test: N concurrent readers against a cold key each get the correct value, and
+      (assert this, not just assume it from timing). `SiteConfigCachingTests`, with a counting
+      decorator around the real `SiteRepository` as the assertion, not a timing assumption - covers
+      both the positive hit and the negative-cache ("site not found") case.
+- [x] A concurrency test: N concurrent readers against a cold key each get the correct value, and
       the backing store is hit once, not N times - the stampede-protection claim, proven under
       actual concurrency (`Ago.Chat.Concurrency.Tests`, matching how `2-05`/`2-06` proved their own
-      concurrency claims rather than asserting them).
-- [ ] A test that stops the Redis container mid-test and confirms reads still succeed (as cache
+      concurrency claims rather than asserting them). `SiteConfigCachingStampedeTests` - 30
+      concurrent readers, one Postgres hit. The platform-level primitive gets its own proof too,
+      one layer down: `Ago.Platform.Integration.Tests.RedisCacheTests` (in-process single-flight)
+      and `CacheInvalidationTests` (the broadcast plumbing, real Redis + real RabbitMQ).
+- [x] A test that stops the Redis container mid-test and confirms reads still succeed (as cache
       misses, correct but slower) rather than throwing - the `adr/0009` "FLUSHALL is survivable"
-      claim, exercised for real, not a thought experiment.
-- [ ] `docs/architecture/caching.md` gets the "shipped" treatment for the pieces this slice covers,
+      claim, exercised for real, not a thought experiment. `RedisCacheContainerFailureTests`
+      (platform) and `SiteConfigCachingContainerFailureTests` (product). Found and fixed a real bug
+      writing these: every Redis-touching call in `RedisCache` needed an explicit
+      `.WaitAsync(cancellationToken)` chained on top of Polly's own timeout, or a call against an
+      unreachable Redis ran ~20s instead of a fraction of a second - `RedisConnectionRegistry`
+      (`3-01`) already did this for the same reason, missed when writing this slice's own calls.
+- [x] `docs/architecture/caching.md` gets the "shipped" treatment for the pieces this slice covers,
       leaving the rest explicitly forward-looking (the same pattern `data-model.md` uses for
       partially-shipped sections).
 
@@ -74,3 +84,14 @@ single Polly policy, no new project) rather than standing up `Ago.Platform.Resil
 shared library at that point is a `git mv` and a namespace change, not a redesign, and building it
 now from exactly one caller would be a guess about the second one (`clean-architecture.md`'s
 qualifying rule).
+
+## Note for a future session
+
+`SiteSettingsChanged` (`Ago.Chat.Contracts`) has no producer yet - nothing changes a site's settings
+today, site administration is Stage 5. `SiteCacheInvalidationConsumer` is written and tested against
+the contract directly so invalidation already works the day a real producer exists, the same
+"documented, not yet wired" status `realtime.md`'s `clientMessageId` has. `GetSiteByPublicKeyHandler`
+was renamed to `GetSiteConfigByPublicKeyHandler` (command record too) before it ever compiled clean -
+a test file under `UseCases/GetSiteByPublicKey/` whose own namespace ends in `.GetSiteByPublicKey`
+shadowed the plain name; the folder/namespace stayed `GetSiteByPublicKey`, only the type got the more
+specific name (`RecordUnread`/`RecordUnreadMessage`'s own precedent).
