@@ -107,7 +107,28 @@ conversation load at all (unlike message delivery's own resolve step) before cal
 `ConversationAssignmentJob` tick against real Postgres/RabbitMQ/Redis reaches both the visitor's and
 the operator's own node.
 
-Mechanism B (the Redis alternative) is `4-03`.
+**Shipped in `4-03`**: mechanism B, a per-operator `RedisDistributedLock`
+(`Ago.Platform.Caching.Redis`, public and deliberately fail-closed - unlike `3-04`'s `RedisLock`,
+which fails open, correctly, for cache-stampede protection). Both mechanisms now sit behind
+`IAssignmentClaimer` (`Ago.Chat.Application.Abstractions`), chosen once at startup by
+`AssignmentEngine:Mechanism` config (default `SkipLocked`) - `ConversationAssignmentJob` itself
+knows nothing about either implementation, just runs the tick loop and calls the claimer.
+`RedisLockAssignmentClaimer` does a plain, non-locking read of waiting conversations (no `SKIP
+LOCKED` at all), then for each tries candidate operators in least-loaded order until one's lock is
+free, attempting the capacity claim and the conversation assignment in one Postgres transaction so
+a losing attempt's capacity claim rolls back with it.
+
+**The lock does not, by itself, prevent a double-assignment race on the conversation row** - only
+`SKIP LOCKED` does that structurally. Two replicas can both read the same waiting conversation and
+attempt it through two different operators' locks at once; correctness rests on the `Conversation`
+aggregate's own `xmin` optimistic-concurrency check catching the losing `SaveChangesAsync` - the
+same "last line of defense" principle `data-model.md` already generalizes from the partitioned
+`messages` unique index, not a gap patched after the fact. `adr/0021` compares both mechanisms in
+full, including this finding and the real transaction-level deadlock risk mechanism A carries that
+mechanism B's per-operator locking sidesteps by construction. Proven under the same real-concurrency
+bar as mechanism A (`RedisLockAssignmentConcurrencyTests`) and fail-closed for real
+(`RedisLockAssignmentContainerFailureTests`: a stopped Redis assigns nothing, never throws, never a
+false-positive claim).
 
 ## Rules for every async code path
 

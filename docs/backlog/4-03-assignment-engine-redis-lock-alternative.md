@@ -1,7 +1,7 @@
 # Assignment engine: Redis distributed-lock alternative
 
 - **Stage**: 4
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `4-02-assignment-engine-skip-locked.md`
 
 ## Goal
@@ -63,21 +63,42 @@ the work, not as an afterthought.
 
 ## Done when
 
-- [ ] The same `Ago.Chat.Concurrency.Tests` contention scenario `4-02` proved (N waiting
+- [x] The same `Ago.Chat.Concurrency.Tests` contention scenario `4-02` proved (N waiting
       conversations, M operators, multiple concurrent claimers, repeated runs) passes with the
       Redis-lock strategy selected instead - same guarantees, same "no operator ever exceeds
       capacity" bar, not a weaker one.
-- [ ] A test that kills Redis mid-run (Testcontainers) and confirms the stated failure mode actually
+      `RedisLockAssignmentConcurrencyTests` - identical scenario to `4-02`'s own test (30 waiting
+      conversations, 3 operators at capacity 5, 3 concurrent replicas, 5 ticks): exactly 15 assigned,
+      zero operator ever above capacity, `assigned.Count` exactly equals the sum of every operator's
+      `active_chats`. Stable across 6 consecutive runs.
+- [x] A test that kills Redis mid-run (Testcontainers) and confirms the stated failure mode actually
       happens (fail-closed: no claims attempted while Redis is unreachable, not a silent fall-through
       to unlocked claiming) - the failure mode is a design claim, not just a comment, until a test
       forces it to happen for real.
-- [ ] The ADR is written, compares both mechanisms on their actual trade-offs (not a restatement of
+      `RedisLockAssignmentContainerFailureTests` - a stopped Redis: zero assignments, no exception,
+      the conversation genuinely still `Waiting`, the operator's `active_chats` genuinely still 0.
+      Stable across 2 consecutive runs. (`RedisDistributedLockTests`/
+      `RedisDistributedLockContainerFailureTests`, `ago-platform`, prove the lock primitive itself -
+      exclusivity and fail-closed acquire failure - independently of the claimer built on it.)
+- [x] The ADR is written, compares both mechanisms on their actual trade-offs (not a restatement of
       `concurrency.md`'s existing one-line summary), and states which is the project's default and
       why.
-- [ ] `docs/architecture/concurrency.md` gets a "Shipped in `4-03`" note.
+      `adr/0021` - includes the real transaction-level deadlock risk mechanism A carries (found while
+      building `4-02`) that mechanism B's per-operator locking sidesteps by construction, and the
+      finding that mechanism B's lock does not itself prevent a conversation-row double-assign race
+      (only `SKIP LOCKED` does structurally) - correctness there rests on `xmin` optimistic
+      concurrency, the same "last line of defense" principle `adr/0019` already established.
+- [x] `docs/architecture/concurrency.md` gets a "Shipped in `4-03`" note.
+
+A real design decision was made and documented along the way, not fully specified upstream: the
+`IAssignmentClaimer` port (`Ago.Chat.Application.Abstractions`) is "attempt to assign up to N waiting
+conversations for one site, return how many succeeded" - `ConversationAssignmentJob` was refactored
+to depend on this abstraction (choosing the concrete implementation once at startup by config) rather
+than knowing about `SKIP LOCKED` directly, so mechanism A's own logic moved unchanged into
+`SkipLockedAssignmentClaimer` with no behavioural change (`4-02`'s own tests, adjusted only for the
+new constructor shape, still pass identically).
 
 ## Open questions
 
-- Site-level or global config switch for which mechanism is active - default to global unless the
-  author wants per-tenant comparison data; either is a small change, but pick one before writing the
-  option-binding code so it is not redone.
+None - global config switch chosen (`AssignmentEngine:Mechanism`, default `SkipLocked`), per the
+author's own guidance to default to global unless per-tenant comparison data is wanted.
