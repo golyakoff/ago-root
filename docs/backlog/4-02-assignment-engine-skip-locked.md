@@ -1,7 +1,7 @@
 # Assignment engine: SKIP LOCKED batch claiming
 
 - **Stage**: 4
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `4-01-waiting-queue-and-capacity-model.md`
 
 ## Goal
@@ -70,22 +70,52 @@ event, if `ConversationAssigned` does not already have one), the `vertical-slice
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests`: N waiting conversations, M operators with limited total capacity,
+- [x] `Ago.Chat.Concurrency.Tests`: N waiting conversations, M operators with limited total capacity,
       **multiple job instances running concurrently against the same Postgres** (not one instance
       called twice sequentially - the actual claim is what needs proving) - every conversation ends
       up assigned to exactly one operator or still waiting, no operator's `active_chats` ever exceeds
       its `capacity`, and re-running the same scenario repeatedly stays green (`concurrency.md`'s own
       test description: "fires K messages from M threads... asserts... repeated under stress" is the
       bar for this test too, applied to claims instead of message sequences).
-- [ ] Both the visitor and the operator receive a `ConversationAssigned` notification through the
+      `ConversationAssignmentConcurrencyTests` - 3 concurrent `ConversationAssignmentJob` instances
+      (simulating 3 `Worker` replicas), 30 waiting conversations, 3 operators at capacity 5 each (15
+      total slots, deliberately fewer than demand), 5 concurrent ticks. Result every run: exactly 15
+      assigned, exactly `min(demand, capacity)`, zero operator ever above capacity, `assigned.Count`
+      exactly equals the sum of every operator's `active_chats` (no leaked claim). Stable across 6
+      consecutive runs, and across the full-suite run twice more.
+- [x] Both the visitor and the operator receive a `ConversationAssigned` notification through the
       existing SignalR fan-out path, proven live or by an integration test exercising the real outbox
       -> dispatcher -> fan-out chain, not asserted from the domain event alone.
-- [ ] `Ago.Chat.Architecture.Tests` stay green - the raw-SQL claim query and the job itself live in
+      `ConversationAssignmentFanoutEndToEndTests` - a real `ConversationAssignmentJob` tick against
+      real Postgres/RabbitMQ/Redis, through `ConversationAssignedToOperator` ->
+      `ConversationAssignmentFanoutConsumer` -> `ResolveConversationAssignmentTargetsHandler` ->
+      `NodeFanoutPublisher`, reaches both the visitor's node and the operator's node. Stable across 4
+      consecutive runs.
+- [x] `Ago.Chat.Architecture.Tests` stay green - the raw-SQL claim query and the job itself live in
       `Ago.Chat.Worker`/`Ago.Chat.Infrastructure.Postgres` exactly as `4-01` and `adr/0004` place them.
-- [ ] `docs/architecture/concurrency.md` gets a "Shipped in `4-02`" note under "Operator assignment"
+      13/13 green. `InternalsVisibleTo` added to `Ago.Chat.Worker` (matching
+      `Ago.Chat.Infrastructure.Postgres`'s existing precedent) so `RunOnceAsync` stays `internal` but
+      the concurrency tests can drive one tick directly.
+- [x] `docs/architecture/concurrency.md` gets a "Shipped in `4-02`" note under "Operator assignment"
       recording the actual batch size/interval chosen and the operator-selection ordering, with the
       unmeasured caveat stated.
-- [ ] `docs/vision.md`'s assignment sequence (lines ~55-59) confirmed still accurate, or corrected.
+      Also records a real deadlock risk found live (not anticipated by the doc's original design):
+      a batch assigning different operators holds more than one `operators` row lock at once until
+      commit, so two replicas' batches touching the same site's operators in a different order can
+      genuinely deadlock (`SqlState 40P01`) - handled per-site, exactly like any other "lost the
+      race" outcome.
+- [x] `docs/vision.md`'s assignment sequence (lines ~55-59) confirmed still accurate, or corrected.
+      Confirmed accurate as written - no change needed.
+
+A real correctness gap was found and fixed along the way, not anticipated by `4-01`'s own design:
+`OperatorCapacityStore` originally opened its own standalone `NpgsqlDataSource` connection, meaning a
+capacity claim and the conversation assignment it enables committed as two *independent* atomic
+operations rather than one - a crash or exception between the two would leak a capacity slot
+forever, with no assigned conversation to account for it. Fixed by refactoring the store to issue its
+`UPDATE` through the caller's own `AgoChatDbContext` (`ExecuteSqlInterpolatedAsync`, which
+participates in `Database.CurrentTransaction` automatically when one is open, and still works
+standalone otherwise) - `4-01`'s own tests needed no change beyond constructing a fresh `DbContext`
+per concurrent attempt instead of sharing one non-thread-safe instance.
 
 ## Open questions
 
