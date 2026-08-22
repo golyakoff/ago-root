@@ -1,7 +1,7 @@
 # File storage port and S3/MinIO adapter
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing (a platform-level primitive; no product code changes)
 
 ## Goal
@@ -67,20 +67,45 @@ pick one without correcting the doc that disagrees.
 
 ## Done when
 
-- [ ] `Ago.Platform.Integration.Tests`: a real MinIO container (Testcontainers) - presign a PUT, upload
+- [x] `Ago.Platform.Integration.Tests`: a real MinIO container (Testcontainers) - presign a PUT, upload
       bytes directly to the presigned URL (no `IFileStorage` call in between, proving the URL is
       genuinely usable by a bare HTTP client the way a browser would use it), then `GetMetadataAsync`
       confirms real size/content-type against what was actually stored.
-- [ ] A presigned GET URL, used directly, returns the uploaded bytes.
-- [ ] `DeleteAsync` against a real object, then `GetMetadataAsync` returns `null` - proves the sweeper
+      `S3FileStorageTests.CreateUploadAsync_ThenPuttingDirectlyToTheUrl_MakesTheObjectReadableViaGetMetadata`,
+      plus a test proving the declared content type is pinned into the signature (a mismatched PUT is
+      rejected) and a "never uploaded" case returning `null`.
+- [x] A presigned GET URL, used directly, returns the uploaded bytes.
+      `CreateDownloadUrlAsync_UsedDirectly_ReturnsTheUploadedBytes`.
+- [x] `DeleteAsync` against a real object, then `GetMetadataAsync` returns `null` - proves the sweeper
       `5-04` will build on a real delete, not an assumed one.
-- [ ] A container-failure test (MinIO stopped): every method fails cleanly (a typed exception or a
+      `DeleteAsync_ThenGetMetadataAsync_ReturnsNull`, plus `DeleteAsync` against an object that was
+      never uploaded not throwing (S3's own DELETE idempotency, `5-04`'s "tolerate already-gone" need).
+- [x] A container-failure test (MinIO stopped): every method fails cleanly (a typed exception or a
       documented sentinel - decide and state which, matching this project's existing "advice vs throw"
       precedents for platform ports), never a raw SDK exception leaking through the port.
-- [ ] `file-storage.md`'s "The port" section is corrected to say `Ago.Platform.Abstractions`, and a
+      Chose throw, unlike `ICache`'s always-degrade-to-miss or `RedisDistributedLock`'s fail-closed
+      null: there is no sensible fallback for "could not presign an upload". `IFileStorage` throws
+      `FileStorageUnavailableException` (never the AWS SDK's own exception type) once retry+timeout+
+      circuit-breaker are exhausted - `S3FileStorageContainerFailureTests`, a stopped MinIO, real
+      exception type asserted, resolves well inside the test's own bound (not because the test's
+      timeout fired).
+- [x] `file-storage.md`'s "The port" section is corrected to say `Ago.Platform.Abstractions`, and a
       short note added explaining why (the ownership-direction reasoning above).
-- [ ] `CHANGELOG.md` bumped; `ago-chat`'s `Directory.Packages.props` updated once `5-03` actually
+      Done, plus the resilience/failure-mode design and the `GetPreSignedUrlRequest.Protocol` finding
+      below.
+- [x] `CHANGELOG.md` bumped; `ago-chat`'s `Directory.Packages.props` updated once `5-03` actually
       consumes the package (this item only needs the package to build and publish cleanly on its own).
+      `0.10.0`, packed and verified locally; `ago-chat` not touched, as scoped - `5-03` is the first
+      real consumer.
+
+A real AWS SDK quirk found live, not anticipated by this item's own Scope: `AmazonS3Config.UseHttp`
+governs the client's own outgoing calls (`GetObjectMetadataAsync`, `DeleteObjectAsync`) but **not**
+the presigned-URL builder, which has its own separate scheme decision defaulting to `https://`
+regardless - against a real, plain-HTTP MinIO container this produced presigned URLs a bare HTTP
+client's TLS handshake immediately rejected. Fixed by setting `GetPreSignedUrlRequest.Protocol`
+explicitly on every presign call, driven by the same `ServiceUrl` scheme `S3ClientFactory` already
+reads, so the two settings can never disagree (`S3FileStorage`'s own remarks; `file-storage.md`'s
+"Shipped in `5-02`" note carries the summary).
 
 ## Open questions
 

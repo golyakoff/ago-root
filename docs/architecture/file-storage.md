@@ -57,7 +57,13 @@ chat history render of 20 images is one round trip's worth of signing, not 20.
 
 ## The port
 
-`IFileStorage` in `Application/Abstractions`:
+`IFileStorage` in `Ago.Platform.Abstractions` - **corrected in `5-02`**: earlier drafts of this doc
+said "`Application/Abstractions`" (i.e. a product's own project), which cannot be right - a product
+repository cannot declare a port whose only implementation ships from a platform *package* it merely
+depends on, ownership runs the other way, the same as `ICache`/`IEventPublisher`
+(`clean-architecture.md`'s qualifying rule). `ObjectKey` is a plain string wrapper, the same shape as
+`CacheKey` and for the same reason: the port never knows a product's own namespacing scheme
+(`site/{site_id}/conv/{conversation_id}/{uuid7}{ext}`, below), only the finished key.
 
 ```
 Task<PresignedUpload> CreateUploadAsync(ObjectKey key, UploadConstraints constraints, CancellationToken ct);
@@ -66,9 +72,22 @@ Task<ObjectMetadata?> GetMetadataAsync(ObjectKey key, CancellationToken ct);
 Task                  DeleteAsync(ObjectKey key, CancellationToken ct);
 ```
 
-Implemented in `Ago.Platform.Storage.S3` (AWS SDK, pointed at MinIO locally). No `AmazonS3Client`,
-no bucket name, and no SDK type ever appears above the Infrastructure boundary - the use case knows
-"a place to put a file", which is the entire reason the port exists.
+**Shipped in `5-02`**: `Ago.Platform.Storage.S3` (AWS SDK, pointed at MinIO locally via
+`S3StorageOptions.ServiceUrl` - MinIO is S3-API-compatible, so no MinIO-specific client exists or is
+needed). No `AmazonS3Client`, no bucket name, and no SDK type ever appears above the Infrastructure
+boundary - the use case knows "a place to put a file", which is the entire reason the port exists.
+Every call runs through a shared `ResiliencePipeline` (retry, per-attempt timeout, circuit breaker -
+`resilience.md`'s S3/MinIO row) and throws `FileStorageUnavailableException` once that is exhausted -
+unlike `ICache` there is no sensible fallback for "could not presign an upload"; `GetMetadataAsync`
+treats a `404` as the expected "does not exist" outcome, excluded from both retry and the breaker's
+failure count, not a failure. A real AWS-SDK quirk found live: `GetPreSignedUrlRequest.Protocol` -
+not `AmazonS3Config.UseHttp` - is what actually controls a presigned URL's own scheme; `UseHttp`
+alone still left presigned URLs as `https://` against a plain-HTTP local MinIO, failing the TLS
+handshake the moment a client tried to use one.
+
+Still open, not solved by `5-02`: nothing in `ago-deploy` creates the real bucket this adapter writes
+to yet (tests create their own via the S3 API directly) - `5-03` is expected to close this gap
+alongside adding the `attachments` table and the actual upload/confirm endpoints.
 
 ## Data model addition
 
