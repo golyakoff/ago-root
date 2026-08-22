@@ -34,6 +34,22 @@ story in `concurrency.md` true.
 Steps 4-6 are the part that separates a real design from a demo. Getting them into the doc now means
 no session will "simplify" them away.
 
+**Shipped in `5-04`**: step 6, `AttachmentOrphanSweepJob` (`Ago.Chat.Worker`) - a `PeriodicTimer`
+sweep, same shape as `OperatorDisconnectSweepJob` (`4-04`). Not a load-then-decide: a single atomic
+`DELETE ... WHERE state = 'Pending' AND created_at < @cutoff ... RETURNING` statement is the ordering
+guarantee itself - Postgres evaluates that `WHERE` against the row's committed state at the moment the
+statement executes, so a confirm that commits first is already excluded, and `FOR UPDATE SKIP LOCKED`
+in the claiming subquery means a row an in-flight confirm is still updating (locked, uncommitted) is
+skipped outright rather than blocking on it. Proven under real concurrency
+(`AttachmentOrphanSweepJobTests`, two manually sequenced transactions, the same technique
+`WaitingConversationClaimQueryTests` uses for its own `SKIP LOCKED` proof), not just by inspection.
+Also **shipped in `5-04`**: image attachments get a thumbnail via `AttachmentThumbnailConsumer`,
+reacting to the new `AttachmentConfirmed` integration event `ConfirmAttachmentHandler` now stages in
+the same transaction as the state change (`messaging.md`'s own "Shipped in `5-04`" note has the wire
+details). Idempotent by a plain read-then-write check (`ThumbnailKey is not null` skips regeneration),
+safe because `Competing` mode never delivers the same message to two consumers simultaneously - proven
+end to end against real Postgres, RabbitMQ, and MinIO (`AttachmentThumbnailEndToEndTests`).
+
 **Shipped in `5-03`**: steps 1-5, in `ago-chat`. `POST /api/v1/conversations/{id}/attachments`
 (step 1-2 - nested under the conversation, since the participant/quota check needs that context),
 `POST /api/v1/attachments/{id}/confirm` (step 4, standalone by id), `GET /api/v1/attachments/{id}`
@@ -71,10 +87,17 @@ chat history render of 20 images is one round trip's worth of signing, not 20.
 
 - Size ceiling per file and per conversation, enforced at presign time and re-verified after upload.
 - Content type sniffed from the first bytes server-side for images, not trusted from the client.
+  **Not actually shipped as written**: `5-03`'s HEAD-verify trusts whatever Content-Type MinIO/S3
+  itself reports for the object (an improvement over trusting the client's own pre-upload claim, since
+  it reflects what the PUT request's own header declared to the object store) - it does not decode the
+  first bytes to confirm the file is genuinely a PNG/JPEG/etc. True magic-byte sniffing is unbuilt;
+  noted here rather than left to look done.
 - Images get a thumbnail generated asynchronously in `Worker` (a broker-driven job, so it is a
   natural second consumer with a different scaling profile from the message consumer).
+  **Shipped in `5-04`** - see the Upload flow section's own note.
 - Downloads are served with `Content-Disposition: attachment` and a restrictive `Content-Security-Policy`
-  so a stored HTML file can never execute in the site's origin.
+  so a stored HTML file can never execute in the site's origin. **Not shipped** - the Upload flow
+  section's own "not shipped by `5-03`" note has the reason (needs a platform-port change).
 - Malware scanning is out of scope, and `vision.md` says so explicitly rather than leaving a reviewer
   wondering whether we forgot.
 
