@@ -31,6 +31,44 @@ hub method --> [bounded Channel<InboundMessage>] --> N pipeline workers --> [bat
   the one to have numbers for (per-row insert vs batch, at several concurrency levels).
 - A caller waiting on the ack is completed via a `TaskCompletionSource` carried with the queued item.
 
+**Shipped in `4-05`**: `ChannelMessagePipeline`/`MessagePipelineWorkerHost`/`ConversationSequencer`/
+`BatchAccumulator`/`BatchFlusherService` (`Ago.Chat.Module.Pipeline`) plus `MessageBatchWriter`/
+`InboundMessage` (`Ago.Chat.Infrastructure.Postgres.Pipeline` - `PersistenceBoundaryTests` forbids
+Npgsql/EF Core outside `Infrastructure.Postgres`, so the one piece that actually opens a connection
+lives there, not beside the rest of the pipeline in `Module`) are exactly this diagram, built for
+real. Defaults (`MessagePipelineOptions`): 4 workers, 1000-capacity channel, 5s enqueue timeout,
+50-row/50ms batch, 20s shutdown drain timeout - unmeasured starting points, Stage 7's job, same as
+every other tuning knob in this stage.
+
+`SendVisitorMessageHandler`/`SendOperatorMessageHandler` (`Ago.Chat.Application`) still run every
+synchronous check they always did (rate limits, RBAC, body shape) and still return exactly the same
+`Result<int>` a caller sees - only the write itself (conversation load, `AddVisitorMessage`/
+`AddOperatorMessage`, outbox insert, `SaveChangesAsync`) moved off the hub call's own thread, into
+`MessageBatchWriter`, batched. `IMessagePipeline` (`Ago.Chat.Application.Abstractions`) is the port;
+`ChannelMessagePipeline` is its only implementation, registered once in `ChatModule` for every host
+(only `Ago.Chat.Api` ever actually drains it - the same "registered everywhere, resolved where it
+matters" shape `4-04`'s `OperatorPresencePublisher` established, needed here because `ChatModule`
+cannot depend on `Ago.Chat.Api`).
+
+`ConversationSequencer` is a ref-counted per-conversation gate (`ConcurrentDictionary<ConversationId,
+Gate>`, `Gate` wrapping a `SemaphoreSlim` plus a ref count) - not the bare
+`ConcurrentDictionary<ConversationId, SemaphoreSlim>` with opportunistic removal-on-release this
+section originally implied, which has a real removal-vs-acquire race (found while designing this, not
+from a failing test): removing an entry the instant its semaphore frees can race a new caller already
+mid-`GetOrAdd` on that same instance, letting a third caller create and acquire a *different*
+semaphore for the same conversation and defeat the guarantee entirely. The ref count makes "safe to
+remove" exact - an entry exists only while genuinely in use, so the dictionary never grows unbounded
+either.
+
+Batching is proven with Postgres's own `xmin` system column, not an instrumentation hook: several
+messages for different conversations, sent concurrently, land with the same `xmin` when one flush
+covers all of them (`MessagePipelineTests.BatchWriter_ActuallyBatches...`). Shutdown drain is proven
+live: messages already past `EnqueueAsync` when `ApplicationStopping` fires are still committed before
+`MessagePipelineWorkerHost`/`BatchFlusherService` finish stopping - `ChannelMessagePipeline`'s
+constructor completes the inbound channel on that signal (the same "register in the constructor, not
+`ExecuteAsync`" lesson `3-06` learned), and the whole drain cascades through channel completion rather
+than reacting to a cancellation token directly, so nothing already queued is aborted mid-flight.
+
 ## Per-conversation ordering under parallel consumers
 
 Parallel consumers are required for throughput and destroy ordering by default. Approach:

@@ -1,7 +1,7 @@
 # In-process message pipeline: bounded channel, batch writer, ConversationSequencer
 
 - **Stage**: 4
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing from `4-01`-`4-04` (orthogonal hot path); sequenced last in this stage so
   it does not stack a second large architectural change onto the same files `4-01`-`4-04` are not
   touching but a reviewer would still be tracking two big changes in flight at once
@@ -74,21 +74,49 @@ this level looks like.
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests`: K messages fired from M threads into one conversation through the
+- [x] `Ago.Chat.Concurrency.Tests`: K messages fired from M threads into one conversation through the
       pipeline - the persisted `sequence` is a gap-free ascending run, repeated under stress
       (`concurrency.md`'s own test description, applied to the new pipeline instead of the broker
       consumer it originally described).
-- [ ] A test proving the batch writer actually batches - e.g. asserting fewer round trips / fewer
+      `MessagePipelineTests.GapFreeAscendingSequence_UnderConcurrentSendsToOneConversation_
+      RepeatedUnderStress` - 50 messages from 50 concurrent tasks into one conversation, 3 iterations,
+      real Postgres. `ConversationSequencer`'s per-conversation gate is what makes this hold even
+      though `MessagePipelineWorkerHost` runs 8 workers reading the same channel.
+- [x] A test proving the batch writer actually batches - e.g. asserting fewer round trips / fewer
       transactions than messages sent, under concurrent load, not just correctness of the end state.
-- [ ] A backpressure test: filling the bounded channel causes the documented behaviour (block with
+      `MessagePipelineTests.BatchWriter_ActuallyBatches_FewerTransactionsThanMessagesSent_
+      UnderConcurrentLoad` - 30 messages, 30 different conversations (so `ConversationSequencer`
+      never serialises them), sent concurrently; asserts `COUNT(DISTINCT xmin)` over the resulting
+      rows is less than 30 - Postgres's own transaction id, not an added instrumentation hook.
+- [x] A backpressure test: filling the bounded channel causes the documented behaviour (block with
       timeout, or reject) rather than unbounded growth or a silent drop.
-- [ ] A shutdown test: messages already queued when `ApplicationStopping` fires are drained and
+      `MessagePipelineTests.Backpressure_WhenTheChannelStaysFull_BlocksUpToTheTimeout_
+      ThenFailsExplicitly` - capacity-1 channel, no worker started, a second concurrent send blocks
+      for close to the configured `EnqueueTimeout` then returns `Message.Unavailable`, timed with a
+      stopwatch to prove it actually waited rather than failing immediately.
+- [x] A shutdown test: messages already queued when `ApplicationStopping` fires are drained and
       committed (or the caller's `TaskCompletionSource` is failed cleanly) before the host stops -
       matching `concurrency.md`'s "drain the pipeline channel -> flush the batch writer" shutdown
       step, which this item is what makes real for the first time (today there is no pipeline to
       drain).
-- [ ] `docs/architecture/concurrency.md`'s "In-process pipeline (Api)" section gets a "Shipped in
+      `MessagePipelineTests.Shutdown_MessagesAlreadyQueuedWhenApplicationStoppingFires_
+      AreDrainedAndCommitted_BeforeTheHostStops` - 20 messages enqueued, `ApplicationStopping` fired
+      moments later while they are still mid-flight, `MessagePipelineWorkerHost`/`BatchFlusherService`
+      stopped, then every ack is asserted successful and all 20 rows are confirmed persisted.
+- [x] `docs/architecture/concurrency.md`'s "In-process pipeline (Api)" section gets a "Shipped in
       `4-05`" note with the actual worker count/batch config chosen.
+      Done - includes the `ConversationSequencer` ref-counting finding and the `xmin` batching-proof
+      technique.
+
+A real finding, not anticipated by this item's own Scope: `MessageBatchWriter` (the one piece that
+actually opens a Postgres connection) cannot live beside the rest of the pipeline in `Ago.Chat.Module`
+- `PersistenceBoundaryTests` (`adr/0004`) forbids anything outside `Ago.Chat.Infrastructure.Postgres`
+from referencing Npgsql/EF Core directly, and `Ago.Chat.Module` is not exempt (only
+`Infrastructure.Postgres` is). `MessageBatchWriter`/`InboundMessage` moved there;
+`Infrastructure.Postgres`'s own `InternalsVisibleTo` was extended to `Ago.Chat.Module` so the rest of
+the pipeline can still reach them. `ConversationErrors` (`Ago.Chat.Application.UseCases`) also had to
+go from `internal` to `public` for the same reason - a Host/Infrastructure-tier writer needs the exact
+same error vocabulary the synchronous handlers used to build directly, or the two could silently drift.
 
 ## Open questions
 
