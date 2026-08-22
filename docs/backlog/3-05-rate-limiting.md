@@ -1,7 +1,7 @@
 # Rate limiting: per-site and per-visitor token buckets
 
 - **Stage**: 3
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `3-04-caching-layer.md` - same external technology (Redis), same
   `Ago.Platform.Caching.Redis` project (`clean-architecture.md`'s "one project per external
   technology" rule), reuses its connection setup.
@@ -44,15 +44,37 @@ here because they need domain knowledge the edge does not have).
 
 ## Done when
 
-- [ ] `Ago.Chat.Concurrency.Tests`: N concurrent requests against one bucket - exactly the
+- [x] `Ago.Chat.Concurrency.Tests`: N concurrent requests against one bucket - exactly the
       configured capacity succeeds, the rest are denied with a retry-after, at any concurrency
       level (the atomic-check-and-decrement claim, proven the same way `2-05`'s idempotency and
       `3-04`'s stampede protection are proven: real concurrency, not a sequential loop).
-- [ ] A denied request's retry-after is honoured: waiting that long and retrying succeeds.
-- [ ] `Ago.Chat.Integration.Tests`: both call sites (send, handshake) are actually wired to a
-      limiter check, not just the port existing unused.
-- [ ] `docs/architecture/caching.md`'s Rate limiting section gets the "shipped" treatment.
+      `RateLimitingConcurrencyTests` - 30 concurrent `SendVisitorMessageHandler` calls against one
+      visitor's bucket (capacity 5), each its own conversation so the proof is about the limiter's
+      atomicity, not `Conversation`'s own optimistic-concurrency behaviour under many simultaneous
+      writers to one aggregate (a real, separate, pre-existing concern this test deliberately does
+      not exercise). The platform-level primitive gets its own proof too, one layer down:
+      `Ago.Platform.Integration.Tests.RedisRateLimiterTests` (50 concurrent checks, exactly capacity
+      allowed).
+- [x] A denied request's retry-after is honoured: waiting that long and retrying succeeds.
+      `RateLimitingConcurrencyTests.ADeniedRequest_RetryAfterIsHonoured...` and
+      `RedisRateLimiterTests.CheckAsync_AfterTheRetryAfterElapses_AllowsAgain`.
+- [x] `Ago.Chat.Integration.Tests`: both call sites (send, handshake) are actually wired to a
+      limiter check, not just the port existing unused. `RateLimitingTests` - real Redis, real
+      Postgres. The handshake endpoint (`AuthEndpoints.HandleVisitorSessionAsync`) is a named method,
+      not an inline lambda, specifically so it is directly callable from a test with hand-built
+      dependencies (`DefaultHttpContext` + a minimal `IServiceProvider` for `Result.ExecuteAsync`) -
+      the same "construct it directly, no hosting pipeline" seam `3-03` used for `VisitorHub`.
+- [x] `docs/architecture/caching.md`'s Rate limiting section gets the "shipped" treatment.
 
 ## Open questions
 
 None.
+
+## Note for a future session
+
+`ConversationErrors.RateLimited`'s retry-after formatting must use `CultureInfo.InvariantCulture` -
+found by running the full test suite: the default `:F1` interpolation format used the machine's
+current culture, and on a machine whose culture writes a decimal point as a comma, "5.0s" became
+"5,0s" and broke an exact-string assertion. A reminder that any user-or-machine-facing formatted
+number in this codebase needs the same explicit-culture treatment `date-and-time.md` already
+requires for timestamps.

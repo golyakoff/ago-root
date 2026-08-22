@@ -102,6 +102,27 @@ as a token bucket in a Redis Lua script (atomic check-and-decrement in one round
 `IRateLimiter` port. Application code asks "may this visitor send?" and gets a decision plus a
 retry-after; it never knows Redis exists.
 
+**Shipped in `3-05`** for the first two of the three named targets - message sends and widget
+handshakes, the only two that exist as real endpoints today; file-upload initiation follows the
+same pattern once Stage 5's presigned-upload flow (`file-storage.md`) exists, not before.
+`IRateLimiter`/`RateLimitKey`/`RateLimitRule`/`RateLimitDecision` live in
+`Ago.Platform.Abstractions`, `RedisRateLimiter` in `Ago.Platform.Caching.Redis` alongside
+`RedisCache` - same technology, same project, sharing its `IConnectionMultiplexer` and
+`ResiliencePipeline`. The Lua script reads time from Redis's own `TIME` command, not the caller's
+clock - two `Ago.Chat.Api`/`Ago.Chat.Worker` replicas racing the same bucket must agree on how much
+time has passed, and their own clocks can disagree. A failed check (Redis unreachable) fails open
+(`Allowed: true`) rather than throwing or denying - `adr/0009` already named this: "a counter whose
+loss is acceptable (rate limits fail open to the next window)."
+
+`SendVisitorMessageHandler` checks per-visitor first (cheapest, no database work yet), then
+per-site once the conversation load has revealed which site. `POST /api/v1/visitor-sessions` checks
+per-site only, keyed by the public key itself, before the site lookup - there is no visitor id yet,
+that is what the endpoint is about to mint. A denied hub-method send throws `HubException` (a hub
+cannot return an HTTP status); a denied handshake returns `429` with a `Retry-After` header. Bucket
+capacity/refill defaults are hardcoded in configuration (`MessageSendRateLimitOptions`,
+`VisitorSessionRateLimitOptions`) - a starting point, not measured or load-tested, per-site
+overrides deferred until an admin API exists to set them.
+
 Ingress-level rate limiting also exists (`overview.md`) but is a blunt instrument: it protects the
 cluster, while this protects a tenant.
 
