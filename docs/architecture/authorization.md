@@ -54,21 +54,14 @@ Discussed while writing `1-02`/`1-06`, decided to defer rather than build specul
 (`clean-architecture.md`: an abstraction with one caller is a guess about the second one). Recorded
 here so a later session designing Stage 4 or Stage 5 does not have to rediscover the reasoning:
 
-- **A supervisor/admin role** - sees every conversation for a site (not just its own assigned ones),
-  and holds `site:configure` / `site:manage_operators` (including granting the `"Operator"` role
-  itself - `adr/0016` left this ungranted by anything but the `1-05` seed script). Natural home:
-  **Stage 5**, alongside the console - that is the first point anything actually needs to *use* an
-  admin role rather than just assert one exists.
 - **`conversation:transfer`** - an operator hands off their *own already-assigned* conversation to a
   named colleague (escalation, shift change, wrong expertise). Distinct from `conversation:assign`,
   which claims an unassigned conversation out of the waiting queue - transfer moves an assigned one
   directly between two operators, no queue involved. Natural home: **Stage 4**, next to the real
   assignment engine, since both are "who is allowed to move a conversation between operators" and
-  benefit from being designed together rather than transfer arriving as an afterthought.
-- **`attachment:delete`** - a moderation action (remove an inappropriate or malicious upload),
-  naturally paired with the admin role above rather than granted to every operator. Home: wherever the
-  admin role lands (Stage 5), and after `architecture/file-storage.md`'s Stage 5 upload path exists to
-  delete from.
+  benefit from being designed together rather than transfer arriving as an afterthought. **Still
+  open** - confirmed while shipping `5-08` (the admin role and `attachment:delete`, below) that Stage
+  4 never actually built this; it stays deferred here, not silently dropped.
 - **`attachment:upload`/`attachment:view` as separate permissions from `conversation:send`/`read`** -
   considered and rejected for now: nothing in `vision.md` calls for an operator who can read a
   conversation's text but not its files (or vice versa). If a real compliance scenario needs that
@@ -102,9 +95,50 @@ Consequence this pinned down early, now realised: `Ago.Chat.Api` holds OIDC conf
 neither confidential), but Keycloak's own admin credentials are, and stay in `infra-credentials`
 alongside every other local-dev password (`repositories.md` - "no secrets, ever").
 
+## Admin/supervisor role and `attachment:delete`: shipped in `5-08`
+
+**Shipped in `5-08`** - no longer deferred, a fact. `Permission.SiteConfigure`
+(`"site:configure"`), `Permission.SiteManageOperators` (`"site:manage_operators"`), and
+`Permission.AttachmentDelete` (`"attachment:delete"`) all exist now (`Ago.Chat.Domain.Permission`,
+matching `adr/0016`'s `resource:action` naming convention exactly). A second built-in role,
+`"Admin"`, holds all three - seeded the same way `1-05`'s `"Operator"` role was
+(`deploy/seed/create-demo-tenant.sh`), granted only via that script. **Who can grant a role is still
+answered only by the seed script** - this item considered and explicitly rejected building a
+role-assignment surface now: `adr/0016`'s Consequences already named a general role-editor UI as
+future work, not a Stage 5 deliverable, and nothing in this item's own scope forced the question open
+sooner. The demo tenant now seeds two operators - `demo-operator` (`"Operator"` only) and
+`demo-admin` (`"Operator"` + `"Admin"`, so it can also be assigned conversations and exercise
+`attachment:delete` on its own thread, not just view the site-wide list) - specifically so "an admin
+sees every conversation for a site, an ordinary operator does not" is something a session can verify
+against two real accounts, not just assert.
+
+The admin role's distinguishing feature - seeing every conversation for a site - is gated on
+`Permission.SiteConfigure`, checked by `GetAllConversationsForSiteHandler`
+(`Ago.Chat.Application`) the same way every other permission check in this codebase already is
+(`IPermissionChecker`, no new mechanism). Deliberately narrower than it might first sound: this item
+does **not** extend `JoinConversationAsync`/`GetConversationHistoryHandler`'s participant checks to
+let an admin open the full message thread of a conversation assigned to someone else - the console's
+admin view is read-only summary data (visitor, state, assigned operator, started, unread count), not
+a way to browse into another operator's conversation. Extending message-level read access site-wide
+was judged materially bigger than this item's own scope (a second, riskier change to the
+assignment/read-access model this item was never asked to make) and is flagged here, explicitly, as
+follow-up work for whichever session actually needs it, rather than half-built silently. The
+attachment-delete action itself has no such restriction - `DeleteAttachmentHandler` checks
+`attachment.SiteId` against the caller's own site, not conversation assignment, so an admin can
+moderate any attachment on their site regardless of who it is assigned to; the console UI just cannot
+*navigate* to an arbitrary conversation's thread to reach it today.
+
+`attachment:delete` deletes the row (`Attachment.MarkDeleted`, terminal) and both storage objects -
+the main upload and, if `5-04`'s thumbnail job already produced one, the thumbnail too. Found live
+while manually verifying this item: an early version only deleted the main object, leaving a real
+orphaned thumbnail behind in MinIO on every delete - `DeleteAttachmentHandler`'s own remarks have the
+detail. Same "tolerate already-gone" reasoning `5-04`'s orphan sweeper uses for the storage side,
+extended to the row itself: a retried delete is idempotent, not an error.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
 - [x] An ADR confirms the OIDC direction for operators - `adr/0022`, Keycloak (`5-05`).
 - [x] `realtime.md` updated to state the shipped mechanism as fact (`1-06`, `5-05`). `vision.md` did
       not need a change - it never described an authorization model to begin with.
+- [x] The admin/supervisor role and `attachment:delete` ship - `5-08`, above.

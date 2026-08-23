@@ -1,7 +1,7 @@
 # Console: attachments UI and the admin/supervisor role
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `5-03-attachments-upload-and-download.md`, `5-04-attachment-thumbnails-and-orphan-
   sweep.md`, `5-07-console-conversation-experience.md`
 
@@ -52,17 +52,17 @@ same-origin content).
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`/`Application.Tests`: the new permission(s) and role are seeded and
+- [x] `Ago.Chat.Integration.Tests`/`Application.Tests`: the new permission(s) and role are seeded and
       checked the same way `PermissionCheckerTests` already proves the existing ones.
-- [ ] `attachment:delete` actually deletes (row + storage object via `IFileStorage.DeleteAsync`, same
+- [x] `attachment:delete` actually deletes (row + storage object via `IFileStorage.DeleteAsync`, same
       "tolerate already-gone" reasoning `5-04`'s sweeper uses) and is denied to an operator without the
       permission.
-- [ ] Manually verified against the local cluster: an admin account sees every conversation for its
+- [x] Manually verified against the local cluster: an admin account sees every conversation for its
       site; an ordinary operator account does not; an admin can delete an attachment an ordinary
       operator cannot.
-- [ ] Manually verified: uploading an attachment from the console, sending it, and viewing it (with
+- [x] Manually verified: uploading an attachment from the console, sending it, and viewing it (with
       thumbnail) works end to end against the real backend chain (`5-02`-`5-04`).
-- [ ] `authorization.md`'s admin-role and `attachment:delete` bullets get a "Shipped in `5-08`" note,
+- [x] `authorization.md`'s admin-role and `attachment:delete` bullets get a "Shipped in `5-08`" note,
       moved out of the "deliberately deferred" list.
 
 ## Open questions
