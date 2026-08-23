@@ -1,7 +1,7 @@
 # Webhook dispatcher: signed delivery, per-endpoint breaker, per-tenant bulkhead, DLQ
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `6-01` (`Ago.Platform.Resilience`), `6-02` (a real `ConversationClosed` to react
   to), `6-03` (endpoints to deliver to, `webhook_deliveries` to write), `6-04` (something real to
   point at while building and testing this), `5-11` (this item adds a *second* topic with two
@@ -60,22 +60,34 @@ own schema and ADR for exactly what to sign and how.
 
 ## Done when
 
-- [ ] Against `6-04`'s fake CRM: `succeeds` delivers and is recorded `delivered`; `5xxs` retries the
+- [x] Against `6-04`'s fake CRM: `succeeds` delivers and is recorded `delivered`; `5xxs` retries the
       configured number of times then dead-letters with the real response captured;
       `hangs` (30s) is cut off by the total timeout, not left to hang the consumer thread; `disappears`
       fails fast (connection refused) and does not retry as aggressively as a transient 5xx would
       (a refused connection is not "try again in 100ms," `resilience.md`'s own retry-predicate
       reasoning already established in `6-01`'s S3 adapter).
-- [ ] Breaker proven per-endpoint, not global: two endpoints for the same site, one pointed at
+- [x] Breaker proven per-endpoint, not global: two endpoints for the same site, one pointed at
       `5xxs`, one at `succeeds` - the failing one's breaker opens and stops attempting, the succeeding
       one keeps delivering the whole time, proven concurrently, not sequentially.
-- [ ] Bulkhead proven per-tenant: many endpoints across two sites, one site's endpoints all `hangs` -
+- [x] Bulkhead proven per-tenant: many endpoints across two sites, one site's endpoints all `hangs` -
       the *other* site's deliveries are not measurably slowed, proven with real timing, not asserted
       from the config.
-- [ ] Idempotency proven: a redelivered `ConversationClosed` (forced via a duplicate outbox row or a
+- [x] Idempotency proven: a redelivered `ConversationClosed` (forced via a duplicate outbox row or a
       requeue) does not produce a second delivery to an already-succeeded endpoint.
-- [ ] `5-11` (the shared-queue Competing-consumer bug) confirmed fixed and this item's own two
+- [x] `5-11` (the shared-queue Competing-consumer bug) confirmed fixed and this item's own two
       consumers pass its regression test too, not just inherit the fix by luck.
+
+Shipped in `6-05`. Three real bugs found and fixed, not just "tests passed": (1) the fan-out handler
+shared one `AgoChatDbContext` across concurrent per-endpoint tasks - a real crash for any site with 2+
+active endpoints, fixed with a `SemaphoreSlim` gating only the DB calls, HTTP stays concurrent; (2)
+`.NET` sometimes nests `SocketException` deeper than one `InnerException` level
+(`HttpRequestException` → `IOException` → `SocketException`) - the exception-chain walk now checks the
+full chain, not one level; (3) a composition-order bug - `Timeout` wrapping `CircuitBreaker` meant the
+breaker only ever saw `OperationCanceledException` (excluded by design) before Polly converted it to
+`TimeoutRejectedException` one layer further out, so the breaker could never open for a genuinely
+hanging endpoint regardless of config - fixed by making the breaker outermost. One honest gap: connect-
+timeout enforcement is implemented but not exercised by any test (no `6-04` personality is slow-to-
+connect specifically).
 
 ## Open questions
 
