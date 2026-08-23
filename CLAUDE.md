@@ -56,11 +56,22 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
    a load-test run in `load/` and a number in the report — not an assertion.
 8. **Never cache what a write decision depends on.** Capacity checks, sequences, and any
    compare-and-set read come from the database inside the transaction (`docs/architecture/caching.md`).
-9. **Never commit.** `git commit`, `git push`, `git commit --amend`, `git rebase` and anything that
-   rewrites history are the author's, always. Make the file changes, report them, stop. Ask and wait
-   for an explicit yes if a commit genuinely seems needed. Creating branches or `git init` is fine.
-   Draft commit messages never carry a `Co-Authored-By` trailer for an AI session — the author
-   commits, so the author is the sole author of record.
+9. **Ordinary commits, pushes, and opening PRs on feature branches may be done directly by the
+   managing Claude Code session**, without asking first each time, once a slice's own done-when
+   criteria are verified and the local build/test suite is green. This delegation is narrow:
+   - It does not extend to background workers spawned to implement a slice — a worker still hands
+     back a commit-prep block for the managing session to review and execute; it never runs
+     `git commit`/`git push` itself.
+   - **Never push directly to `main`.** Every change reaches `main` only through a PR the author
+     merges by hand. Opening a PR is not merging it — **merging is always the author's action, no
+     exception**, exactly as before this rule changed.
+   - `git push --force`, `git commit --amend`, `git rebase` on an already-pushed branch, and
+     anything else that rewrites history remain the author's exclusively — unchanged.
+   - Draft commit messages never carry a `Co-Authored-By` trailer for an AI session — whoever is
+     named in the local git identity is the author of record, regardless of who typed the command.
+   (Decided 2026-08-23, after this had been running as a manager-session-drives-background-workers
+   workflow for a while and the per-commit ask had become the actual bottleneck; scope is deliberately
+   the managing session only, not every session or every worker, and merge stays manual regardless.)
 10. **Work happens on a feature branch**, one branch per slice/backlog item. An MR is the branch
     *rebased onto `main`* with the full suite green **after** the rebase — never `main` merged into
     the branch (`docs/conventions/git-workflow.md`).
