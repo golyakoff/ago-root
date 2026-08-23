@@ -1,7 +1,7 @@
 # Console framework decision and scaffold
 
 - **Stage**: 5
-- **Status**: blocked
+- **Status**: ready
 - **Depends on**: `5-05-operator-oidc-authentication.md` for the login flow specifically (the
   scaffold/build-tooling/routing shell can start in parallel, but this item is not "done" until login
   actually works end to end)
@@ -62,10 +62,9 @@ reasoning that justified giving it its own repository at all.
 
 ## Open questions
 
-**Needs the author's decision**: React or Angular. Recommendation: **React** - the wider ecosystem
-around SignalR client bindings and realtime-UI patterns (optimistic updates, virtualized message lists)
-has more prior art to draw on for a solo-maintained portfolio project, and its component model maps
-directly onto this app's shape (conversation list, message thread, presence indicators as independent,
-composable pieces) without Angular's heavier DI/module ceremony for an app this size. Angular is a
-perfectly defensible choice too (stronger opinions out of the box, less decision fatigue on tooling) -
-state the reasoning either way in the ADR.
+None - resolved. **React**, `adr/0023`. Decided once the console's own expected scope widened beyond
+the operator console alone to include tenant self-service configuration (`6-03`) and an internal
+operations view (customer/tier/abuse visibility) - two conventional admin-dashboard surfaces where
+React's ecosystem (`react-admin`/`Refine`-shaped tooling) meaningfully outweighs Angular's
+batteries-included advantage. The ADR has the full reasoning, including why the realtime console
+itself was close to a wash between the two.
