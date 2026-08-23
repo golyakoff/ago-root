@@ -149,3 +149,21 @@ inferred. The only real design choice (a `consumerName` string vs. deriving it a
 handler's own type name via reflection) is an implementation detail, resolved as a required, explicit
 parameter - fails loudly if forgotten, rather than silently deriving something that could collide
 again in a different way.
+
+## Operational note found later (2026-08-23, during `6-06`'s load run)
+
+This fix changes queue *names* (bare topic -> `topic.consumerGroup`), but RabbitMQ does not delete a
+queue just because the code that declared it stops naming it. Any broker that was already running
+before this fix shipped keeps its old bare-named queues, still bound to the exchange, still receiving
+a full copy of every event published to that topic - with zero consumers, forever, since nothing binds
+to the old name anymore. `6-06`'s load run surfaced this by accident (a bare `ConversationAssignedToOperator`
+queue holding 4,000+ unconsumed messages); checking the same local broker afterward found three more of
+the same shape (`MessageAccepted`, `OperatorPresenceLost`, `AttachmentConfirmed`) that the load run
+never happened to sample. All four were stale test/dev traffic, purged from the local compose broker
+via the management API (`DELETE /api/queues/%2f/<name>`) - safe here because nothing consumes them and
+the data was disposable local test traffic. **This is a real migration hazard for any cluster that
+predates this fix**, including a future real deployment: rolling this fix out to an already-running
+cluster needs an explicit step to delete the old bare-named queues, not just deploy new code and assume
+the broker cleans up after itself. Not filed as a new backlog item since there is no such cluster yet
+to migrate - noted here so it isn't rediscovered from scratch when Stage 8 (public deployment) makes it
+real.
