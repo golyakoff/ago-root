@@ -235,6 +235,17 @@ binder matches invocations by **argument count**, not by the target method's def
 `InvalidDataException: Invocation provides 0 argument(s) but target expects 1` for a short call.
 Fixed by always passing an explicit argument - `null` for "no known sequence" - never omitting it.
 
+**RabbitMQ gotcha found while running `6-06`'s load proof**: a long-lived local compose broker that
+predates `5-11`'s queue-naming fix accumulates orphaned queues under the old bare topic names
+(`MessageAccepted`, `ConversationAssignedToOperator`, `OperatorPresenceLost`, `AttachmentConfirmed`) -
+still bound to the exchange, still silently collecting a full copy of every event, with zero consumers
+since no code names them anymore. Not a code bug - RabbitMQ doesn't delete a queue just because nothing
+declares it anymore - but it looks alarming in the management UI and skews queue-depth checks. If a
+bare-named queue shows message counts growing with no consumers, purge it:
+`curl -u ago:ago-local-dev -X DELETE http://127.0.0.1:15672/api/queues/%2f/<queue-name>` (safe on a dev
+box - the data is disposable). See `docs/backlog/5-11-fix-competing-consumer-queue-collision.md`'s
+"Operational note" for why this happens and why it will matter again on a real deployed cluster.
+
 ## Configuration
 
 `appsettings.Development.json` for defaults, `appsettings.Local.json` for anything machine-specific.
