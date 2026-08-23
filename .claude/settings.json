@@ -25,6 +25,15 @@
       "Bash(git reset --hard:*)",
       "Bash(kubectl delete:*)",
       "Bash(docker compose down -v:*)"
+    ],
+    "additionalDirectories": [
+      "../ago-platform",
+      "../ago-chat",
+      "../ago-console",
+      "../ago-widget",
+      "../ago-deploy",
+      "../ago-business",
+      "../ago-root-planning"
     ]
   }
 }
