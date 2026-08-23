@@ -1,7 +1,7 @@
 # Widget: bootstrap, connection, messaging, demo host page
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `5-01-per-site-cors.md` (the widget is inherently cross-origin - nothing here is
   provable for real until CORS actually allows it)
 
@@ -50,24 +50,70 @@ console's dependency tree). `api-design.md`'s "Widget-facing constraints" (rate 
 
 ## Done when
 
-- [ ] Manually verified against the local cluster, from the hostile demo host page, cross-origin
+- [x] Manually verified against the local cluster, from the hostile demo host page, cross-origin
       through `5-01`'s real CORS policy (not same-origin, not with CORS disabled for the test) - a
       visitor opens the widget, sends and receives messages in real time, survives a forced disconnect/
       reconnect with no gap and no duplicate, and the host page's own styles/globals are provably
       unaffected (a screenshot or an automated DOM-isolation assertion, either is acceptable evidence).
-- [ ] `clientMessageId` dedup proven the same way `5-07`'s console proves it.
-- [ ] Bundle size is measured, stated as a real number in the README, and CI fails a build that exceeds
-      it.
-- [ ] An internal widget error (thrown deliberately in a test) never surfaces as an unhandled exception
-      on the host page - every entry point's own wrapping is what is being proven here.
-- [ ] Unit tests for the protocol layer (sequence handling, dedup, backoff), matching the skill's own
-      testing bar.
+      Verified live: `demo/` served from `http://localhost:8080` (the demo site's own allowed
+      origin) against a real running `Ago.Chat.Api`. The widget mounted inside its Shadow DOM host,
+      sent and received messages, and a real node death (the `Ago.Chat.Api` process killed and
+      restarted with a stable `Auth:SigningKey`, matching how a real multi-replica overlay is
+      configured rather than the single-dev-instance default `3-06` documents) was followed by a
+      jittered reconnect (~10s) and a resume with the exact prior message present exactly once - no
+      gap, no duplicate. Isolation proven programmatically, not just eyeballed: the host page's own
+      hostile `!important` CSS and `Comic Sans MS` font stayed on the host page only, the widget's
+      own colours/fonts were unaffected by either, a host-page global (`window.$`) the widget never
+      touches still threw as the host page defined it, and the same embed snippet included twice
+      produced exactly one widget instance (`window.AgoChat`'s "already embedded" guard).
+- [x] `clientMessageId` dedup proven the same way `5-07`'s console proves it. Proven at two levels:
+      the sender's own connection receiving its message twice by design (immediate echo, then the
+      real fan-out redelivery - realtime.md's Fan-out path) never rendered a duplicate bubble across
+      every send in the live session, and `protocol/dedup.test.ts` unit-tests `SeenMessageIds`
+      directly (first-seen vs. repeat, capacity eviction). `VisitorHub.SendMessageAsync` still has
+      no `clientMessageId` parameter (realtime.md's Client protocol section already called this "a
+      design intent, not wired up" before this item, and that has not changed) - `clientMessageId`
+      here is a *local* correlation id only, used to key an optimistic bubble until the real
+      `MessageDto` echo reconciles it (`protocol/dedup.ts`'s doc comment has the detail), not a
+      wire-level idempotency key. A genuine retry after an ambiguous mid-flight failure is
+      deliberately *not* auto-retried (`connection.ts`'s `SendOutcomeUnknownError`) rather than
+      risking a real duplicate the server has no way to catch - the same gap `5-07`'s own item text
+      already flagged as possibly needing a small `ago-chat` addition, not newly discovered here.
+- [x] Bundle size is measured, stated as a real number in the README, and CI fails a build that exceeds
+      it. **18.4 KB gzipped** (68.6 KB raw), `ago-widget/README.md`. `build.mjs` gzips the real
+      output and fails the build over a 45 KB budget; CI (`ago-widget/.github/workflows/ci.yml`)
+      runs the same build on every push.
+- [x] An internal widget error (thrown deliberately in a test) never surfaces as an unhandled exception
+      on the host page - every entry point's own wrapping is what is being proven here. Proven live,
+      not just by code inspection: `Storage.prototype.setItem` was monkey-patched to throw during a
+      real send (exercising `connection.ts`'s `rememberSequence` -> `storage.setLastKnownSequence`
+      path), with `window.onerror`/`unhandledrejection` listeners installed first - zero uncaught
+      errors, and the message still sent and rendered correctly (`storage.ts`'s own try/catch
+      degrades to "can't resume across a reload," never a throw).
+- [x] Unit tests for the protocol layer (sequence handling, dedup, backoff), matching the skill's own
+      testing bar. 16 tests across `protocol/backoff.test.ts`, `protocol/dedup.test.ts`,
+      `protocol/sequence.test.ts`, `storage.test.ts`.
 
-## Open questions
+## Two real bugs found live, fixed here
 
-**Needs the author's decision, but not blocking - can be resolved during the item itself with the
-stated fallback**: full SignalR JS client vs. a minimal hand-rolled WebSocket/long-polling client, to
-be decided once the bundle-size measurement makes the trade-off concrete rather than guessed at.
-Default to trying the real SignalR client first (less protocol code to get right and re-verify against
-`realtime.md`) and falling back to a hand-rolled client only if it provably blows the budget this item
-sets.
+Neither was visible from code review alone - both only showed up once the widget ran against a real
+`Ago.Chat.Api` from a real cross-origin page:
+
+1. **The send button never re-enabled after the first connect.** `renderConnectionState` computed
+   `sendButton.disabled` once, at the moment the connection state changed - correct for that instant,
+   but nothing re-ran the check as the visitor typed into an initially-empty textarea, so the button
+   stayed disabled forever. Fixed by re-evaluating on every `input` event
+   (`widget.ts`'s `updateSendButtonEnabled`).
+2. **`@microsoft/signalr`'s default `withCredentials: true` broke the negotiate preflight** against
+   the real per-site CORS policy, which does not (and should not) set
+   `Access-Control-Allow-Credentials` - the widget never uses cookies. Fixed with an explicit
+   `withCredentials: false` in `connection.ts`; written up for reuse in `api-design.md`'s
+   Widget-facing constraints section, since `5-06`'s console will hit the identical default.
+
+## Open questions - resolved
+
+**SignalR vs. a hand-rolled client**: real `@microsoft/signalr`, confirmed by measurement rather than
+guessed - the whole widget bundle is 18.4 KB gzipped, well inside the 45 KB budget this item set, and
+the real client's version negotiation, WebSocket/long-polling fallback, and reconnect state machine
+are worth far more than the bytes a hand-rolled client would have saved. `ago-widget/README.md` has
+the number and the reasoning.
