@@ -1,7 +1,7 @@
 # Metrics: RED, pipeline internals, and resilience state, all in one Meter surface
 
 - **Stage**: 7
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `7-01` (shared OTel SDK bootstrap and resource attributes in `Ago.Platform.Hosting`
   — metrics reuse it rather than a second bootstrap), `6-01` (`Ago.Platform.Resilience` — breaker-state
   and bulkhead-rejection instruments live inside the shared pipeline builder, which does not exist
@@ -66,16 +66,29 @@ to the pipeline builder itself, not a new pipeline per boundary).
 
 ## Done when
 
-- [ ] Every metric in `nfr.md`'s Observability requirements section (RED per endpoint/hub/consumer;
+- [x] Every metric in `nfr.md`'s Observability requirements section (RED per endpoint/hub/consumer;
       queue depth; channel occupancy; batch histogram; outbox lag; DLQ count; cache hit ratio; breaker
       state; connections per node; assignment attempts vs. conflicts) has a named instrument, listed in
-      the PR description with its exact name and tags.
-- [ ] Unit/integration tests proving at least one real value change per instrument (enqueue N messages
+      the PR description with its exact name and tags. 18 custom instruments, see `Shipped in` below.
+- [x] Unit/integration tests proving at least one real value change per instrument (enqueue N messages
       and assert the channel-occupancy gauge moves; force a cache miss then a hit and assert the ratio
-      counter moves; etc.) — not just "the instrument was registered."
-- [ ] `CHANGELOG.md` entry and version bump in `ago-platform`.
-- [ ] `nfr.md`'s Observability requirements section gets a one-line pointer to where the metric
+      counter moves; etc.) — not just "the instrument was registered." Every instrument has at least
+      one test reading a real recorded value back via OTel's own in-memory exporter.
+- [x] `CHANGELOG.md` entry and version bump in `ago-platform` — `[0.14.0]`.
+- [x] `nfr.md`'s Observability requirements section gets a one-line pointer to where the metric
       catalogue is documented, so the doc does not go stale the moment a metric is renamed.
+
+## Shipped in
+
+`feat/7-02-metrics-instrumentation` (`ago-platform` `0.14.0` + `ago-chat`). Metrics fold into the same
+`AddPlatformObservability` call `7-01` already wired per host (one `MeterProvider`, not a second method
+to remember). `Ago.Platform.Resilience`'s per-pipeline breaker-state/bulkhead-rejection instruments
+cover `6-05`'s `Webhooks` pipeline automatically, no per-consumer change needed — same "generic adapter
+boundary" shape used for RabbitMQ's own per-consumer RED/DLQ counters. `Ago.Chat.Contracts.ChatMetrics`
+mirrors `ChatTracing`'s placement exactly. Full metric-name/tag table lives in the PR description (both
+repos) and in the source files themselves (`ChatMetrics`, `ResilienceMetrics`, `CachingMetrics`,
+`RealtimeMetrics`, `RabbitMqMetrics`) — `7-03` gives it a Grafana home. Full test suites: `ago-platform`
+76/76, `ago-chat` 385/385.
 
 ## Open questions
 
