@@ -189,7 +189,33 @@ Deliverables:
 
 ---
 
-## Stage 10 — AGO Ads: the second product
+## Stage 10 — AGO Chat: self-service, billing, and production readiness
+
+**Goal:** turn AGO Chat from a seeded demo into a product a real customer can sign up for, pay for,
+and depend on. Reprioritised ahead of Stage 11 (2026-08-23) — the author wants this before the second
+product.
+
+Deliverables:
+- Self-service account/tenant registration, replacing `1-05`'s seed-script-only provisioning: a
+  visitor becomes a paying (or free-tier) account holder with a first site and a first operator,
+  without anyone running a script by hand.
+- Account & billing management surface in `ago-console`: current tier, seats used, upgrade/downgrade.
+- Entitlement enforcement matching the tiers and cost-containment criterion already decided in the
+  private `ago-business` repo (seat count at minimum; attachments/history/site-count caps as those
+  business decisions land) — DB-sourced checks, never cached, per `architecture/caching.md`'s "never
+  cache what a write decision depends on."
+- Subscription payment via ЮKassa: recurring/autopay billing, MIR-card-capable, checkout hosted by
+  the provider so card data never touches AGO's own servers, payment-state confirmation via webhook
+  through the existing outbox pattern (`architecture/messaging.md`) rather than trusting the
+  redirect alone.
+
+**Done when:** a real card can subscribe a self-registered account to a paid tier through ЮKassa,
+entitlements enforce that tier's limits, and no part of the signup-to-paid-conversation flow still
+depends on the seed script.
+
+---
+
+## Stage 11 — AGO Ads: the second product
 
 **Goal:** prove the platform claim by building on it, not by asserting it.
 
