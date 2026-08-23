@@ -32,3 +32,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0020 | Node-delivery fan-out publishes directly, bypassing the outbox | Accepted |
 | 0021 | Operator assignment: `SKIP LOCKED` (default) vs. a per-operator Redis lock | Accepted |
 | 0022 | OIDC via Keycloak replaces the operator dev-auth stub | Accepted |
+| 0023 | React for `ago-console` | Accepted |
