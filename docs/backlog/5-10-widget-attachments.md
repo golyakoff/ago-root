@@ -1,7 +1,7 @@
 # Widget: attachment upload and view
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `5-03-attachments-upload-and-download.md`, `5-04-attachment-thumbnails-and-orphan-
   sweep.md`, `5-09-widget-bootstrap-and-messaging.md`
 
@@ -42,15 +42,56 @@ runtime shares code with the other.
 
 ## Done when
 
-- [ ] Manually verified against the local cluster, same hostile demo host page as `5-09`: a visitor
+- [x] Manually verified against the local cluster, same hostile demo host page as `5-09`: a visitor
       attaches an image, sees real upload progress, the message sends with the attachment referenced,
       and the operator side (console, `5-08`) receives and can view it - and the reverse direction,
       an operator-sent attachment appears correctly in the widget.
-- [ ] A forced upload failure (storage unreachable, or a deliberately oversized file) surfaces a visible
-      error and never an unhandled exception on the host page.
-- [ ] Bundle-size budget (`5-09`) is re-measured with this feature included and still enforced in CI -
-      confirm the addition did not silently blow past it.
+
+      Verified with a real caveat, not silently glossed over: `5-08`'s console does not exist yet, so
+      the operator side was exercised through `dev-harness.html` plus direct REST calls with a real
+      Keycloak-issued operator token - the same substitution `5-05`'s own verification used before a
+      console existed. The visitor -> operator direction (an image, sent by the widget) was proven
+      fully live: real presigned upload against real MinIO, real progress, correct inline `<img>`
+      render, correct dedup of the sender's own echo. The operator -> visitor direction (a PDF, sent
+      via REST + the harness's operator connection) surfaced a **real, separate bug** in the
+      real-time push path - not this item's own code - documented in `messaging.md` and tracked as
+      `5-11`; ten operator-sent messages were sent, zero arrived as a live push. Rather than stop
+      there, the same messages were proven to arrive **correctly** - correct body, correct
+      `contentType`-based rendering (a plain "📎 Download attachment" link for the non-image PDFs,
+      matching the spec), correct presigned URLs - via the resume-by-sequence path (`5-09`) that
+      `5-11`'s bug does not touch, once the widget reconnected. This proves the widget's own
+      attachment-rendering code is correct for an operator-authored message; it does not (yet) prove
+      the live-push hop, which is `5-11`'s job to fix and re-verify.
+- [x] A forced upload failure (storage unreachable, or a deliberately oversized file) surfaces a visible
+      error and never an unhandled exception on the host page. Proven live, twice: a courtesy-rejected
+      file type (`window.onerror`/`unhandledrejection` listeners installed first, zero uncaught, a
+      visible system note shown) and a forced PUT failure (the presigned-URL step redirected to an
+      unreachable host mid-upload - same zero-uncaught result, bubble marked "Couldn't send the
+      attachment.").
+- [x] Bundle-size budget (`5-09`) is re-measured with this feature included and still enforced in CI -
+      confirm the addition did not silently blow past it. **19.9 KB gzipped** (73.7 KB raw), up from
+      `5-09`'s 18.4 KB - still well under the 45 KB budget. `ago-widget/README.md` updated with the
+      new number.
+
+## A small `ago-chat` addition, and two unrelated live-discovered config gaps
+
+`GET /api/v1/attachments/{id}` gained `contentType` and `thumbnailUrl` (nullable) alongside the
+presigned `url` it already returned - the widget has no other way to know whether to render an inline
+image or a download link without guessing from the URL's own file extension, and `file-storage.md`'s
+own Access-control section already caches this exact read, so the addition is one extra presign inside
+an existing cache entry, not a new round trip. `GetAttachmentDownloadUrlHandlerTests` covers both the
+with- and without-thumbnail cases.
+
+Two things unrelated to attachments blocked verifying this item locally and were fixed as part of it,
+since they made the fan-out path impossible to test at all: `Ago.Chat.Worker` crashed at startup
+locally with `Set Redis:ConnectionString` (`4-04`'s presence consumers need `IConnectionRegistry`;
+neither `Ago.Chat.Worker/appsettings.Development.json` nor `k8s/base/worker.yaml` were ever updated
+when `4-04` shipped) - fixed in both files. `k8s/base/api.yaml`/`worker.yaml` are also both missing
+`Storage__S3__*` entirely - **not** fixed here (needs the same secret-naming reasoning `api.yaml`'s
+existing Postgres/RabbitMQ env vars already worked out, more than this item's scope justifies), noted
+in `file-storage.md` instead.
 
 ## Open questions
 
-None - scope follows directly from the skill's own already-written "Uploads" section.
+None going in - scope followed directly from the skill's own already-written "Uploads" section. One
+surfaced during the work and is tracked separately, not left blocking here: see `5-11`.
