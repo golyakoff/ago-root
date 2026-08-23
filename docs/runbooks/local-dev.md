@@ -139,8 +139,35 @@ Two registrations both have to know about port `5173`, or this fails before reac
 
 Verified this way: real login through the local Keycloak, real redirect back through `/callback`,
 real token handed to `/hubs/operator`, connection state genuinely reaching `Connected` in the browser
-- not inferred from the code. `automaticSilentRenew` is deliberately not enabled yet; a session
-outlives only as long as the access token does, until `5-07` gives it its own verified renewal.
+- not inferred from the code. `automaticSilentRenew` is still deliberately not enabled - `5-07`
+hit the access-token-expiry gap this note already called out (Keycloak's default token lifetime is a
+few minutes, well inside one manual test session), and confirmed the current behaviour is exactly what
+was documented here: no crash, no confusing partial state, just a `401` on the next hub negotiate and
+the operator has to sign in again. Wiring real silent renewal stays a deliberate, stated gap, not
+something `5-07` was scoped to close.
+
+**Shipped in `5-07`**: the console's real conversation experience verified end to end against this
+same bring-up sequence - operator login, a visitor conversation started from `dev-harness.html`,
+automatic assignment (`4-02`) surfacing it in the console's queue view, both sides exchanging messages
+live, a mid-conversation `Ago.Chat.Api` process kill-and-restart (same fixed `Auth__SigningKey`
+approach as `5-09`'s note below) resuming with no gap and no duplicate on both the operator and visitor
+sides, and `clientMessageId` retry-dedup proven directly over the wire (two `SendMessageAsync`
+invocations with the same `clientMessageId` returned the identical `sequence`, exactly one row in
+`messages`). Two real, unrelated bugs found live while doing this, both fixed in the same change:
+
+- `dev-harness.html`'s `sendVisitorMessage()`/`sendOperatorMessage()` had been calling
+  `SendMessageAsync` with only 2 positional arguments since `1-06`, silently broken the moment `5-03`
+  added a third parameter (`attachmentId`) - the same SignalR argument-count gotcha this file already
+  documents for `JoinAsync` above, just never hit on this call path because nothing had exercised a
+  real visitor send against a post-`5-03` server since. Fixed by passing explicit `null`s, same as the
+  existing `JoinConversationAsync` call already does.
+- `ago-console`'s `OperatorConnectionProvider` called `connection.stop()` in its effect's cleanup
+  function. In development, React StrictMode's synthetic mount -> cleanup -> remount cycle raced that
+  `stop()` against the still-negotiating `start()` from the same mount, permanently breaking the
+  connection (`HubConnection` never recovered on its own). Fixed by not stopping the connection on this
+  cleanup at all - the provider sits at a layout-route level specifically so it survives every in-app
+  navigation, so there is no legitimate in-app unmount to clean up after; a real end of session is
+  already handled by the browser tearing down the socket itself.
 
 Local endpoints (all verified reachable):
 

@@ -46,6 +46,34 @@ node:{node_id}:conns          -> set, used for bulk cleanup on node death
 shipped shape - nothing built so far needs either; add them when a real caller does, rather than
 guessing at the second one now.)
 
+**Shipped in `5-07`**: the first caller that reads presence *for* an operator, not just tracks an
+operator's own. Building the console's queue view found two real gaps, both closed with the smallest
+addition that used what already existed rather than new infrastructure:
+
+- **Presence had no operator-facing query.** `IConnectionRegistry.GetConnectionsAsync` (this file's
+  own port) had tracked visitor connections since `3-01`, but nothing had ever called it on an
+  operator's behalf - `OperatorPresencePublisher` only *publishes* the operator's own presence loss,
+  one-directional, to the visitor. `GetVisitorPresenceHandler` (`Ago.Chat.Application`) is the
+  addition: loads the conversation, checks `conversation:read`, confirms the caller is the assigned
+  operator, then answers from the same registry query the fan-out path already trusts. Exposed as
+  `OperatorHub.GetVisitorPresenceAsync(conversationId) -> bool` - a snapshot the console re-polls
+  (every 10s), not a push, matching the registry's own "advice, not truth" contract: a stale answer
+  is a harmless wrong-looking dot in the UI, not worth a new push mechanism to avoid.
+- **Nothing let an operator learn "what's waiting, what's mine" except a live push.** `4-02`'s
+  assignment engine notifies a *connected* operator of a new assignment over the hub
+  (`"ConversationAssigned"`), but an operator who was offline when it happened, or who just opened
+  the console, had no way to ask. `GetOperatorQueueHandler` answers it from
+  `IConversationRepository.GetWaitingForSiteAsync` (new) and `GetAssignedToOperatorAsync` (`4-04`'s
+  existing method, reused) - exposed as `GET /api/v1/conversations/queue`
+  (`Ago.Chat.Api.Conversations.ConversationsEndpoints`), a plain authenticated REST read rather than a
+  hub method, since it is an ordinary query, not connection-scoped or high-frequency (api-design.md).
+  The "waiting" half only refreshes on the console's own poll and on load - nothing broadcasts "a new
+  conversation started waiting" to every operator of a site (only the operator it eventually gets
+  assigned to ever hears about it), and since the waiting list is read-only situational awareness in
+  `docs/vision.md`'s automatic-assignment model, not something an operator acts on directly, a short
+  poll was judged a reasonable, stated limit rather than a reason to build a new fan-out broadcast this
+  item was never scoped to need.
+
 Rules that keep this from rotting:
 
 - Every key has a TTL and is refreshed by a heartbeat. A crashed node's entries expire on their own;
@@ -104,10 +132,29 @@ recorded in `adr/0007` and measured in Stage 7.
 - Client sends `{ clientMessageId, conversationId, body, attachmentId? }`. `clientMessageId` is a
   client-generated uuid used for **echo suppression and retry deduplication** - a retried send after
   a flaky reconnect must not create a second message. The server maps it to the persisted id in the ack.
-  Not shipped yet - `SendMessageAsync` today takes only `(conversationId, body)`; `clientMessageId`
-  is still a design intent, not wired up (nothing in Stage 1-3 needed retry dedup badly enough to
-  force it, and forcing it in for `3-03` would have been solving a problem `3-03` was not asked to
-  solve).
+  **Shipped in `5-07`**: `SendMessageAsync(conversationId, body, attachmentId?, clientMessageId?)` on
+  both hubs - `clientMessageId` appended *last*, after `attachmentId`, not inserted between the
+  existing parameters, so every caller built before this shipped (`dev-harness.html`, `ago-widget`'s
+  `VisitorConnection`) keeps binding correctly with it simply omitted (SignalR's client binder matches
+  by argument count and position, not by name - inserting it earlier would have silently reinterpreted
+  an existing 3-argument call's `attachmentId` as a `clientMessageId`). The actual dedup mechanism
+  lives in `Conversation.AddMessage` (`Ago.Chat.Domain`): a repeated `clientMessageId` returns the
+  *original* `Message` unchanged, the same no-op-on-repeat shape `AssignTo` already established -
+  checked against the aggregate's own already-loaded `Messages` (free, and catches a same-batch
+  duplicate a database index alone cannot), backed by a partition-widened unique index
+  (`(conversation_id, client_message_id, created_at)`, mirroring `adr/0019`'s reasoning for the
+  neighbouring `sequence` index) as the storage-level backstop for two processes racing the same
+  retry concurrently. Proven live: two `SendMessageAsync` invocations with the same `clientMessageId`
+  returned the identical `sequence` both times, and exactly one row landed in `messages`. `ago-widget`
+  itself was not updated to send one - a real, low-cost follow-up, not done here since `5-07`'s own
+  scope is the console.
+  - **Found live in `5-07`**: `MessageDto` was missing a `conversationId` field entirely. The fan-out
+    delivery path (`ConnectionFanoutConsumer` -> `NodeFanoutPublisher` -> `SignalRConnectionDispatcher`)
+    delivers straight to a connection with no SignalR group involved, so a `"MessageReceived"` push for
+    *any* conversation an operator is assigned to lands on their one connection - harmless for the
+    widget (a visitor only ever has one conversation) but genuinely ambiguous for an operator handling
+    several at once, who would have no way to tell which open thread a push belonged to. Added as an
+    additive field (a DTO's wire shape has no positional constraint the way a hub method's arguments do).
 - Server assigns `sequence`; clients order by it and never by arrival time or client clock.
 - **Shipped in `3-03`**: on reconnect the client sends its last known `sequence` per open
   conversation and receives exactly the delta - `VisitorHub.JoinAsync`/`OperatorHub`'s
@@ -127,6 +174,27 @@ recorded in `adr/0007` and measured in Stage 7.
   `3-03` (`VisitorHub.ReconnectAsync`/`OperatorHub.ReconnectAsync` push the wire message; the harness
   already listens for it) - `3-06` (graceful shutdown) is the real caller, since nothing runs the
   drain sequence yet that would need to call it.
+  **Doc correction, `5-07`**: there is no `ReconnectAsync` hub *method* on either hub, and never was -
+  the real mechanism is `Ago.Platform.Realtime.ConnectionDrainCoordinator` (a generic platform
+  `BackgroundService.StopAsync` override, not product code), which on graceful shutdown pushes a
+  `"Reconnect"` event with `{ after }` to every locally-tracked connection via the same
+  `ILocalConnectionDispatcher` fan-out delivery uses. A client listens for the *event*
+  (`connection.on("Reconnect", ...)`), it never calls a method named that.
+
+**Shipped in `5-07`**: `OperatorHub.JoinConversationAsync` calling into `AssignConversationHandler`
+unconditionally on every join (its own doc comment: making `Conversation.AssignTo`'s same-operator
+no-op load-bearing) means any operator holding `conversation:assign` who calls it against a
+still-`Waiting` conversation *does* directly claim it - the same primitive `4-02`'s automatic engine
+uses, reachable by a client the engine never authorized. `docs/vision.md`'s assignment model is
+automatic-only (no manual claim), so
+this is a latent capability the product was never meant to expose, not a feature - `ago-console`
+(this item) avoids it structurally by construction: the queue view's "Waiting" list is read-only and
+non-navigable, only "Assigned to me" rows link anywhere, so the console itself never calls
+`JoinConversationAsync` against a conversation still `Waiting`. Worth a future guard
+(`AssignConversationHandler` rejecting a claim attempt against a conversation the caller was not
+already assigned unless the caller genuinely has a supervisor-style override) if `5-08`'s admin view
+ever lets an operator browse conversations outside their own queue - out of scope here since nothing
+in `5-07` needed it.
 
 ## Presence and typing
 
