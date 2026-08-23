@@ -143,6 +143,21 @@ app-startup magic" treatment - most likely an `ago-deploy` script or a `mc`/AWS-
 the existing seed scripts - but no session has actually written that step yet. Flagging it again here
 rather than silently carrying it forward a second time.
 
+**Also still open, found live while verifying `5-10`**: neither `k8s/base/api.yaml` nor
+`k8s/base/worker.yaml` sets any `Storage__S3__*` env var at all, even though `minio.yaml` deploys the
+service both hosts need it for - the full k8s-cluster deployment path (`k8s-local.md`) has never
+actually exercised an attachment upload, only the docker-compose fast loop has (`local-dev.md`, where
+each host's own `appsettings.Development.json` supplies it locally). Unrelated but found the same way:
+`k8s/base/worker.yaml` was also missing `Redis__ConnectionString` - `Ago.Chat.Worker` crashed at
+startup with `Set Redis:ConnectionString` the moment it was actually run locally, since `4-04`'s
+`OperatorDisconnectGraceConsumer`/`OperatorDisconnectSweepJob` need `IConnectionRegistry` and
+`ChatModule` wires that up unconditionally for every host - fixed in that file and in
+`Ago.Chat.Worker/appsettings.Development.json` as part of `5-10`'s own live verification, since it
+blocked verifying the fan-out path at all. The `Storage__S3__*` gap is not fixed here - it needs the
+same secret-naming reasoning (`MINIO_ROOT_USER`/`PASSWORD` vs. `AccessKey`/`SecretKey`) `api.yaml`'s
+existing env vars already had to work out for Postgres/RabbitMQ, which is more than this item's own
+scope justifies taking on.
+
 ## Data model addition
 
 `attachments`: `id` (uuid v7), `site_id`, `conversation_id`, `message_id?`, `object_key`,

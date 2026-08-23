@@ -79,6 +79,19 @@ Note the last row is the one exception to competing-consumer semantics: every no
 In RabbitMQ that is a per-node exclusive queue on a fanout exchange; in Kafka, a unique consumer
 group per node. The adapter hides this; the subscription declares intent as `Broadcast` vs `Competing`.
 
+**Real, currently-shipping bug, found live while verifying `5-10`, tracked in `5-11`**: `Competing`
+mode is only correct when exactly one logical consumer *type* subscribes to a topic - `MessageAccepted`
+above has two ("Fan-out to connections, unread counters" = `ConnectionFanoutConsumer` +
+`UnreadCounterConsumer`), and `Ago.Platform.Messaging.RabbitMq/RabbitMqEventConsumer.cs` names a
+`Competing` queue after the bare topic with no consumer-identity component, so both consumer types
+end up bound to the *same* queue and RabbitMQ round-robins each message to one or the other, never
+both. In practice this has meant real-time message delivery has been unreliable since `3-02` - proven
+live: ten operator-sent messages, zero delivered as a real-time push to the visitor, all ten present
+and correctly delivered only once the widget reconnected and used the resume-by-sequence path instead
+(which reads Postgres directly, bypassing this broken path entirely). `5-11` has the full diagnosis,
+the fix (a required consumer-group parameter on `IEventConsumer.SubscribeAsync`), and the regression
+test that should have caught this originally.
+
 **Shipped in `5-04`**: named `AttachmentConfirmed`, not the `AttachmentUploaded` this table originally
 planned - it fires from `Attachment.ConfirmReady` (the confirm step, after HEAD-verification), not
 from the client's own unverified "uploaded" claim, and the domain-event/contract naming split needed
