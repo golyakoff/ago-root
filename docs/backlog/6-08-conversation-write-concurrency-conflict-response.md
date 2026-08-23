@@ -1,7 +1,7 @@
 # Translate conversation-close/assign concurrency conflicts to a clean 409, not a raw 500
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing — a real bug found under `6-06`'s load run, independent of that item's own
   webhook scope
 
@@ -40,13 +40,28 @@ where one currently isn't handled at all.
 
 ## Done when
 
-- [ ] `DbUpdateConcurrencyException` on conversation close and on assign no longer surfaces as a raw
+- [x] `DbUpdateConcurrencyException` on conversation close and on assign no longer surfaces as a raw
       `500` — either a single transparent retry succeeds, or a clean `409 Conflict` (RFC 7807 shape) is
-      returned.
-- [ ] A test reproduces the race against a real concurrent write and proves the new behaviour, not
-      merely asserting the exception type is caught.
-- [ ] `api-design.md`'s error-response table, if it doesn't already list `409` for this case, updated to
-      name it.
+      returned. Retry-once chosen for both (safe because `Close()`/`AssignTo()` re-validate their own
+      invariant against fresh data on reload — a genuine business conflict still surfaces as the
+      existing error, never silently papered over); a second conflict inside the retry becomes
+      `Conversation.ConcurrencyConflict`, mapped to `409`.
+- [x] A test reproduces the race against a real concurrent write and proves the new behaviour, not
+      merely asserting the exception type is caught. `ConversationConcurrencyConflictTests` (3 tests,
+      real Postgres container) injects a genuine, already-committed concurrent write via a second
+      `DbContext` at the exact moment the handler under test calls `SaveAsync`.
+- [x] `api-design.md`'s error-response table, if it doesn't already list `409` for this case, updated to
+      name it. Added as a "Shipped in `6-08`" note, matching the file's existing narrative convention.
+
+## Shipped in
+
+`feat/6-08-conversation-write-concurrency-conflict-response` (`ago-chat`). New
+`ConversationConcurrencyConflictException` declared at `IConversationRepository`'s own port boundary
+(`Ago.Chat.Application.Abstractions`) rather than letting EF Core's exception type leak past the
+dependency rule. A real bug found and fixed via the test itself: the first retry attempt silently
+returned the same stale, already-mutated tracked entity on reload (EF's identity map hands back the
+tracked instance rather than re-querying after a failed `SaveChangesAsync`) — fixed with
+`db.ChangeTracker.Clear()` in the adapter's catch block. Full test suite: 374/374 passing.
 
 ## Open questions
 

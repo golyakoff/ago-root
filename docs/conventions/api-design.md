@@ -90,6 +90,14 @@ correct and needed no change. Any other SignalR client this project adds (`5-06`
 `/hubs/operator`) starts from the same default and needs the same explicit override unless it
 genuinely intends to authenticate via a cookie instead of a bearer token.
 
+**Shipped in `6-08`**: `CloseConversationHandler`/`AssignConversationHandler` each catch a concurrent-
+write conflict on the conversation row (`6-06`'s finding: a message send bumps `conversations.xmin`)
+and reload-and-retry once, safe because `Close()`/`AssignTo()` re-validate their own invariant against
+fresh data. A second conflict inside that retry becomes `Conversation.ConcurrencyConflict`, mapped to
+`409` - never the raw `500` every caller got before. Translated at the persistence port's own boundary
+(`ConversationConcurrencyConflictException`, `Ago.Chat.Application.Abstractions`), not with EF Core's
+own exception type, since `Ago.Chat.Application` may not reference EF Core.
+
 ## Compatibility
 
 Additive changes only within a version: new optional fields are fine, renamed or removed fields are
