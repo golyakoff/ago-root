@@ -1,7 +1,7 @@
 # A fake CRM with three personalities: hangs, 5xxs, disappears
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing - a standalone test double, built before `6-05` needs it so the dispatcher
   can be developed against real misbehaviour from day one, not bolted on after
 
@@ -53,14 +53,22 @@ applied here to an HTTP server instead of an S3-compatible store.
 
 ## Done when
 
-- [ ] All four personalities proven with a real HTTP client hitting a real running instance (not an
+- [x] All four personalities proven with a real HTTP client hitting a real running instance (not an
       in-process `TestServer` shortcut that never touches a real socket) - `hangs` genuinely blocks
       for the configured duration, `disappears` genuinely refuses the connection (a `SocketException`
       on the caller's side, not a fast HTTP error).
-- [ ] Signature verification proven: a request with a tampered body or a stale timestamp is rejected
+- [x] Signature verification proven: a request with a tampered body or a stale timestamp is rejected
       by the harness's own check, matching whatever `6-03`'s ADR specifies for replay-window length.
-- [ ] A short README (or this file's own close-out) states exactly how `6-05`/`6-06` are expected to
+- [x] A short README (or this file's own close-out) states exactly how `6-05`/`6-06` are expected to
       point at it - command to run it, the header/path convention for selecting a personality.
+
+Shipped in `6-04`: `tests/Ago.Chat.FakeCrm/` (standalone process, not an xUnit-hosted `TestServer` -
+`6-05`/`6-06` need to point real network traffic at a running instance), `X-Fake-Crm-Behavior` header
+selecting `succeeds`/`5xx`/`hang(-<seconds>)`/refuse via a separate raw-socket listener for the
+"disappears" case. **Flag for `6-03`**: this item's own ADR wasn't readable yet when `6-04` shipped, so
+the fake CRM's signature verification picked its own replay tolerance (300s, Stripe's default) and
+rejection status (401) - reconcile against `6-03`'s actual ADR once it lands, both are isolated in
+`FakeCrmOptions` for easy adjustment.
 
 ## Open questions
 
