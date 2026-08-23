@@ -61,6 +61,11 @@ Everything above must be visible without attaching a debugger:
 - Queue depth, channel occupancy, batch size histogram, outbox lag, DLQ count.
 - Cache hit ratio per key namespace, breaker state.
 - Connection count per node, assignment attempts vs conflicts.
+  (`7-02` — every bullet above is a real, tagged, tested OTel instrument; queue depth and channel
+  occupancy are the same metric, `concurrency.md`'s pipeline has exactly one bounded channel. Full
+  metric-name/tag catalogue: `Ago.Chat.Contracts.ChatMetrics` and `Ago.Platform.*.{ResilienceMetrics,
+  CachingMetrics, RealtimeMetrics, RabbitMqMetrics}` are the source of truth; `7-03` gives them a
+  Grafana home.)
 - Traces spanning hub -> handler -> DB -> outbox -> broker -> consumer -> delivery, one trace id
   end to end (`7-01`, proven by `Ago.Chat.Integration.Tests.TracingEndToEndTests` against an
   in-memory exporter — a live Jaeger is `7-03`'s job). This is what makes the p95 numbers
