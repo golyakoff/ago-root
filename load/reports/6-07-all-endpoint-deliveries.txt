@@ -1,0 +1,73 @@
+      event_type       |    status    |                  response_snippet                  |          created_at           
+-----------------------+--------------+----------------------------------------------------+-------------------------------
+ conversation.closed   | DeadLettered | Rejected by per-tenant concurrency limit.          | 2026-08-23 20:52:10.77079+00
+ conversation.closed   | DeadLettered | Rejected by per-tenant concurrency limit.          | 2026-08-23 20:52:10.810459+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.445887+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.446519+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.446949+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.447391+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.447938+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.448504+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.44907+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.449509+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.450108+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.45074+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.45125+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.45179+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.452406+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.452756+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.453115+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.453628+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.454008+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.492488+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.492555+00
+ conversation.closed   | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:12.618447+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.731117+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.734282+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.736354+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.739155+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.742015+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.744196+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.746828+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.749239+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.751245+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.753678+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.75581+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.757936+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.761316+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.7638+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.766239+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.768786+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.771503+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.774129+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:48.776308+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:50.644762+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:52:50.942225+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:18.66559+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:18.66569+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:18.665777+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:18.667347+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:20.713328+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.728776+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.731432+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.734148+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.736307+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.738839+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.74139+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.74403+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.746751+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.749733+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.752169+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.75487+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.75708+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.759869+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.762473+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.764845+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.767723+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.770673+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.773436+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:48.781401+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:50.638901+00
+ conversation.assigned | DeadLettered | The circuit is now open and is not allowing calls. | 2026-08-23 20:53:50.822323+00
+(69 rows)
+

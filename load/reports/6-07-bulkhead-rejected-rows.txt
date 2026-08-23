@@ -1,0 +1,6 @@
+     event_type      |    status    |             response_snippet              |          created_at           
+---------------------+--------------+-------------------------------------------+-------------------------------
+ conversation.closed | DeadLettered | Rejected by per-tenant concurrency limit. | 2026-08-23 20:52:10.77079+00
+ conversation.closed | DeadLettered | Rejected by per-tenant concurrency limit. | 2026-08-23 20:52:10.810459+00
+(2 rows)
+
