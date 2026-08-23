@@ -1,7 +1,7 @@
 # Console framework decision and scaffold
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `5-05-operator-oidc-authentication.md` for the login flow specifically (the
   scaffold/build-tooling/routing shell can start in parallel, but this item is not "done" until login
   actually works end to end)
