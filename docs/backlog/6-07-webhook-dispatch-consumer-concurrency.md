@@ -1,7 +1,7 @@
 # Give the webhook-dispatch consumers genuine concurrent processing
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `6-06` (this is the backlog item that run's own bulkhead gap recommended)
 
 ## Goal
@@ -66,13 +66,27 @@ that doesn't let two workers race on the same conversation's events out of order
 
 ## Done when
 
-- [ ] A bounded worker pool (or equivalent real concurrency mechanism) is in place for the webhook-
-      dispatch consumers, with per-conversation ordering preserved and proven by a test.
-- [ ] A new or updated `Ago.Chat.Concurrency.Tests` (or `Ago.Platform.Messaging.RabbitMq` test) proves
+- [x] A bounded worker pool (or equivalent real concurrency mechanism) is in place for the webhook-
+      dispatch consumers, with per-conversation ordering preserved and proven by a test. Shipped as
+      `ConcurrentWebhookDispatchPump` — a bounded local `Channel<T>` plus a per-partition-key FIFO
+      dispatcher (`PartitionSequencer`), entirely inside `Ago.Chat.Webhooks`, no `ago-platform` change.
+- [x] A new or updated `Ago.Chat.Concurrency.Tests` (or `Ago.Platform.Messaging.RabbitMq` test) proves
       more than one delivery for the same site can be in flight at once, and that same-conversation
-      events still process in order.
-- [ ] `6-06`'s burst scenario re-run against the fix: a real `BulkheadRejected` observed and recorded in
-      a new `load/reports/` entry, closing the gap `6-06` left open.
+      events still process in order. `ConcurrentWebhookDispatchPumpTests` (3 tests) — also caught a real
+      ordering bug in the first draft (a `SemaphoreSlim`-per-key design doesn't wake waiters FIFO),
+      fixed before landing.
+- [x] `6-06`'s burst scenario re-run against the fix: a real `BulkheadRejected` observed and recorded in
+      a new `load/reports/` entry, closing the gap `6-06` left open. Two genuine `BulkheadRejected`
+      deliveries observed — the first time this outcome has ever appeared, after `6-06`'s own three
+      attempts produced zero. See `load/reports/2026-08-23-webhook-dispatch-consumer-concurrency.md`.
+
+## Shipped in
+
+`feat/6-07-webhook-dispatch-consumer-concurrency` (`ago-chat`). Chose the narrower of the two Scope
+alternatives — fixing only the two webhook-dispatch consumer registrations, not `ago-platform`'s shared
+`RabbitMqEventConsumer` — to avoid a cross-repo change, a package version bump, and any risk to the
+other `Competing` consumers in the codebase that share that platform type. Full test suite: 374/374
+passing.
 
 ## Open questions
 
