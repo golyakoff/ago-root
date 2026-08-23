@@ -1,7 +1,7 @@
 # Self-service signup: identity flow and Keycloak provisioning
 
 - **Stage**: 10
-- **Status**: blocked
+- **Status**: ready
 - **Depends on**: nothing new architecturally — reuses `5-05-operator-oidc-authentication.md`'s
   Keycloak realm-import mechanism and `adr/0022`'s shared-realm, resolve-at-request-time claims model
   unchanged. The new pieces are a realm setting and one new authorization policy, not a new identity
@@ -88,10 +88,9 @@ protect.
 - Configuring Keycloak's reCAPTCHA (or any other bot-detection) authenticator on the registration flow
   — a real, named deferral (see Scope above), not forgotten. Purely realm configuration; adding it
   later touches nothing in `Ago.Chat.Api` or `ago-console`.
-- Deciding email verification's actual requirement — that is this item's own blocking Open question
-  below, not something scoped around it. The realm-import change this item makes is written so that
-  toggling Keycloak's "Verify Email" required action is a one-line config change either way, not a
-  redesign, once the author decides.
+- Any email-sending/deliverability setup (SMTP config, templates) beyond enabling Keycloak's built-in
+  "Verify Email" required action — Keycloak's own default flow handles sending; a custom sender or
+  template is a separate concern this item does not scope.
 
 ## Done when
 
@@ -99,8 +98,8 @@ protect.
       and stating explicitly why `RequireKeycloakIdentity` and `RequireOperatorIdentity` must remain
       two distinct policies rather than one relaxed into the other.
 - [ ] Keycloak realm-import config: `registrationAllowed` enabled, required profile fields set to avoid
-      `5-05`'s `VERIFY_PROFILE` gotcha, and the email-verification setting matching the Open question's
-      resolution below.
+      `5-05`'s `VERIFY_PROFILE` gotcha, and the "Verify Email" required action enabled (author's
+      decision, 2026-08-23).
 - [ ] `Ago.Chat.Integration.Tests`: a token minted for a freshly self-registered Keycloak user (a `sub`
       absent from `operators`) is accepted by `RequireKeycloakIdentity` and rejected by the existing
       `RequireOperatorIdentity` — proving the two policies are genuinely distinct enforcement points,
@@ -114,12 +113,9 @@ protect.
 
 ## Open questions
 
-- **Email verification before the account is usable.** Two real options: Keycloak's "Verify Email"
-  required action gates the caller from reaching `10-02`'s bootstrap endpoint until confirmed, or
-  verification is not enforced at signup and a visitor gets full access immediately. `roadmap.md`'s
-  "everyone starts on the free tier" framing suggests low friction matters, but nothing in this
-  repository states the author's actual trust-versus-friction preference for a real signup flow, and
-  this is a genuine product decision — it changes what a real visitor experiences, not just an
-  implementation detail hidden behind a toggle. **Blocking**: this item does not start implementation
-  until the author answers it, since the realm-import config and this item's own Done-when both depend
-  on which answer wins.
+None — resolved by the author (2026-08-23): **email verification is required before the account is
+usable.** Keycloak's "Verify Email" required action gates the caller from reaching `10-02`'s bootstrap
+endpoint until the visitor confirms their address. The realm-import config in Scope enables it
+explicitly, and the `RequireKeycloakIdentity`-vs-`RequireOperatorIdentity` distinction still holds
+regardless: a token that passed Keycloak's own email-verification gate is still not an operator until
+`10-02` creates the row.
