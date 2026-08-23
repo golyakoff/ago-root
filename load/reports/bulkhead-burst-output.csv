@@ -1,0 +1,21 @@
+kind,client_message_id,sent_utc,latency_ms,phase
+error,,,,burst 39 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 25 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 35 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 24 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 14 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 31 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 12 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 32 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 36 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 30 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 11 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 23 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 13 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 33 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 20 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 28 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 29 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 34 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 38 failed: Response status code does not indicate success: 429 (Too Many Requests).
+error,,,,burst 37 failed: Response status code does not indicate success: 429 (Too Many Requests).

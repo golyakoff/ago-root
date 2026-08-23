@@ -1,7 +1,7 @@
 # Stage 6 capstone: prove the bulkhead under load, not by configuration reading
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done (partial pass, honestly reported - see Done-when)
 - **Depends on**: `6-01` through `6-05` - this item adds no new product code, only the proof
 
 ## Goal
@@ -49,12 +49,39 @@ was met.
 
 ## Done when
 
-- [ ] A real run, with real numbers, published in a short report: chat message latency (p50/p95)
-      during the hung-CRM window, compared explicitly against `nfr.md`'s targets.
-- [ ] Breaker-open and bulkhead-saturation observed and reported, not merely "should have happened
-      per the config."
-- [ ] The verdict is stated plainly: met the bar, or did not - and if not, exactly which mechanism
+- [x] A real run, with real numbers, published in a short report: chat message latency (p50/p95)
+      during the hung-CRM window, compared explicitly against `nfr.md`'s targets. Isolation held - every
+      hung-CRM-window number was *lower* than baseline, not higher (read as flat, warm-up artifact, not
+      "faster because of the outage"). `nfr.md`'s own p50/p95 cluster-scale targets were missed on this
+      dev-laptop topology, as expected and stated up front - that measurement is Stage 7's job.
+- [x] Breaker-open and bulkhead-saturation observed and reported, not merely "should have happened
+      per the config." Breaker: real evidence, 217 dead-lettered deliveries, opens fast and correctly
+      cycles open/half-open for the whole run. Bulkhead: **not observed** despite three deliberate burst
+      attempts - see verdict below.
+- [x] The verdict is stated plainly: met the bar, or did not - and if not, exactly which mechanism
       failed to hold, handed back as a new backlog item rather than silently patched inside this one.
+      **Isolation: met. Breaker: met, with real evidence. Bulkhead: not met** - root-caused to
+      `Ago.Platform.Messaging.RabbitMq.RabbitMqEventConsumer` awaiting each delivery handler inline,
+      capping real per-tenant webhook concurrency at ~1-2 regardless of burst size, well short of the
+      configured `MaxConcurrency=4`/`MaxQueuedActions=16`. Not a bug in the Polly bulkhead policy itself
+      - the caller never offers it enough concurrent work to gate. New backlog item recommended: give
+      the webhook-dispatch consumers genuine concurrent processing (bounded worker pool draining a
+      local channel, matching `4-05`'s existing in-process pipeline shape), then re-run this same burst
+      to observe a real rejection.
+
+## Shipped in
+
+`feat/6-06-webhooks-load-proof` (`ago-chat`) - `tests/Ago.Chat.LoadDriver` (real SignalR client traffic
+driver) and `tests/Ago.Chat.WebhookDispatchRunner` (real dispatch code minus the delivery-time SSRF
+recheck, needed to target a fake CRM on a private dev-box address from a dev laptop - documented in the
+report). Also fixed a pre-existing `Directory.Packages.props` staleness (`Ago.Platform.*` pinned to
+0.11.0 against `ago-platform`'s actual current 0.12.0) that was blocking every build in the repo, not
+just this item's. Full report: `load/reports/2026-08-23-webhooks-load-proof.md` (this repo). Also
+surfaced two unrelated real findings, each recommended as its own future backlog item rather than
+patched here: `DbUpdateConcurrencyException` surfacing as a raw 500 instead of a clean 409 on
+conversation close/assign under concurrent load (~5% of calls in this run), and an unexplained
+4,129-message backlog on a consumer-less `ConversationAssignedToOperator` queue, unrelated to this
+item's own consumers, worth checking separately.
 
 ## Open questions
 
