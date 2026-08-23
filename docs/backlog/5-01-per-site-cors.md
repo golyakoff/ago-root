@@ -1,7 +1,7 @@
 # Per-site CORS from the database
 
 - **Stage**: 5
-- **Status**: in progress
+- **Status**: done
 - **Depends on**: nothing (foundational - every widget-facing item in this stage needs cross-origin
   calls to actually work, not just pass same-origin tests)
 
@@ -111,16 +111,32 @@ just is not *inside the CORS policy resolution step* specifically. Two layers, n
       rediscover.
       Done in `api-design.md`'s "Widget-facing constraints"; `caching.md` also got a note (see the
       real finding below).
-- [ ] Manually verified against the local cluster: `ago-chat/wwwroot/dev-harness.html` served from a
+- [x] Manually verified against the local cluster: `ago-chat/wwwroot/dev-harness.html` served from a
       *different* origin (a second static file server, or a `file://` origin) can complete the
       handshake and open a hub connection when that origin is seeded into the relevant site's
       `AllowedOrigins`, and cannot when it is not seeded anywhere at all (layer 1's own browser-visible
       behaviour - the layer 2 cross-tenant case is proven by the automated test above, since
       constructing it by hand would mean deliberately mis-seeding two real sites just to watch a
       browser reject one).
-      **Not yet done** - needs a rebuilt/redeployed `ago-chat` image against the local cluster before
-      it can be exercised for real; deliberately left for the author to run or explicitly request,
-      rather than rebuilding/redeploying a live cluster unasked.
+
+      Done, after fixing a real blocker found along the way: `dev-harness.html`'s every network call
+      (`fetch('/api/v1/visitor-sessions', ...)`, both `HubConnectionBuilder().withUrl('/hubs/...')`
+      calls) was root-relative, resolving against whatever origin serves the HTML file itself - serving
+      it from a second static server 404'd the visitor-session call immediately, never reaching the
+      real Api's CORS policy at all. Fixed with an `?api=http://host:port` override
+      (`const API_BASE = new URLSearchParams(location.search).get('api') || ''`, defaulting to the
+      existing same-origin behaviour `local-dev.md` already documents, so nothing already using this
+      harness breaks).
+
+      Verified live with two throwaway static servers over the demo site's real seeded config
+      (`http://localhost:8080`/`:5009` already allowed, `http://localhost:8095` added for this test,
+      `:8096` deliberately left unseeded): from `:8095?api=http://localhost:5009` the visitor-session
+      POST completed (`OPTIONS` preflight `204`, `POST` `201`) and `JoinAsync` opened a real hub
+      connection - a genuine cross-origin success, not same-origin masquerading as one. From
+      `:8096?api=http://localhost:5009`, the browser itself rejected it: `Access to fetch ...  has been
+      blocked by CORS policy: ... No 'Access-Control-Allow-Origin' header is present on the requested
+      resource` - the exact browser-enforced behaviour this Done-when item asks for, not inferred from
+      server logs.
 
 A real finding, not part of this item's own scope, fixed along the way because it blocked layer 1
 outright: `Ago.Platform.Abstractions.ICache.GetOrCreateAsync<T>` silently never called its factory

@@ -30,6 +30,11 @@ dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 `ChatModule.ConfigureServices` (`1-06`) reads it the same way the migration step did. With
 `ASPNETCORE_ENVIRONMENT=Development`, the API additionally serves `/dev-harness.html` (a plain
 HTML+SignalR page, not the real widget/console - `1-06`); it never exists outside Development.
+**Shipped in `5-01`**: every call in the harness now goes through `?api=http://host:port` (default
+empty - same-origin, unchanged from before) instead of a root-relative path, so the page can be
+served from a *second* static server to prove per-site CORS for real - `http://host:8095/dev-harness?api=http://localhost:5009`
+against a seeded origin completes the handshake; an unseeded origin gets a real browser-enforced
+`blocked by CORS policy` rejection. Same-origin usage below is unaffected.
 **`POST /dev/operator-session` no longer exists (`5-05`)** - see "Getting a working operator session
 locally" below for its replacement. Verified against a real running instance: a visitor session
 (`POST /api/v1/visitor-sessions`), both hubs' JWT auth, `JoinAsync`/`JoinConversationAsync` against
