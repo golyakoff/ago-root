@@ -78,6 +78,18 @@ are mutually exclusive, so exactly one ever authenticates a real token; a new `k
 (`"visitor"`/`"operator"`, `JwtTokenService`) is how the handler tells them apart afterward, since
 `aud` alone answers "is this token valid for this route", not "which principal is this".
 
+**Shipped in `5-09`**: the widget's `@microsoft/signalr` client defaults to `withCredentials: true`
+on its HTTP transport (negotiate, long-polling), which sends the browser's cookie jar cross-origin
+and then requires the server's CORS policy to answer with `Access-Control-Allow-Credentials: true`
+for the request to succeed at all. Found live: the real per-site CORS policy (`5-01`) does not set
+that header - deliberately, since nothing in this protocol was ever meant to use cookies (the
+widget's own storage rule: "No cookies on the host domain," `embeddable-widget` skill) - so every
+negotiate call failed its preflight until `VisitorConnection` (`ago-widget/src/connection.ts`) set
+`withCredentials: false` explicitly. The fix is client-only; the server's CORS policy was already
+correct and needed no change. Any other SignalR client this project adds (`5-06`'s console, against
+`/hubs/operator`) starts from the same default and needs the same explicit override unless it
+genuinely intends to authenticate via a cookie instead of a bearer token.
+
 ## Compatibility
 
 Additive changes only within a version: new optional fields are fine, renamed or removed fields are

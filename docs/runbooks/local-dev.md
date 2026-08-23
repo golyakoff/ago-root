@@ -63,6 +63,40 @@ equivalent for a page that pastes a token in rather than driving a redirect itse
 "password grant for a throwaway local test client" shape this runbook's own integration tests use
 against a real, disposable Keycloak.
 
+### Running the widget demo locally
+
+**Shipped in `5-09`**: `ago-widget/demo/` is a deliberately hostile host page proving the widget's
+Shadow DOM isolation for real, not by inspection. It needs `Ago.Chat.Api` and the demo tenant from
+the bring-up sequence above, plus the widget's own build:
+
+```
+cd ago-widget
+npm ci
+AGO_API_BASE_URL=http://localhost:5009 npm run build
+npx serve -l 8080 .          # whole repo, not just demo/ - the demo page's dist/ reference needs both
+```
+
+Serving on port `8080` specifically matters: `create-demo-tenant.sh` only allows the origin
+`http://localhost:8080` in the demo site's `AllowedOrigins`, and the whole point of this demo page is
+a real cross-origin request through `5-01`'s CORS policy, not one disabled for the test. Open
+`http://localhost:8080/demo/`.
+
+**Testing a real reconnect (node death) locally**: the fast loop's single `dotnet run` instance uses a
+random per-process signing key by default (`3-06`'s finding, above) - killing and restarting *that*
+process invalidates every visitor token, which reads as an auth failure, not a resume. To prove a
+genuine "node died, a replacement resumed the session" reconnect the way a real multi-replica overlay
+would, restart with an explicit, stable key instead:
+
+```
+Auth__SigningKey="<any base64 32-byte value>" ASPNETCORE_ENVIRONMENT=Development \
+  dotnet run --project ../ago-chat/src/Ago.Chat.Api
+```
+
+Verified this way (`5-09`): killing the process and restarting it with the *same* `Auth__SigningKey`
+reconnected in ~10s (jittered backoff) and resumed with the exact prior message present exactly once
+- no gap, no duplicate. Restarting *without* the fixed key reproduces the expected 401, which is
+`3-06`'s already-documented limitation of the single-dev-instance loop, not a new bug.
+
 Local endpoints (all verified reachable):
 
 | Endpoint | Address |
