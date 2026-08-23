@@ -1,7 +1,7 @@
 # Fix: Competing-mode consumers of the same topic silently steal each other's messages
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing - `ago-platform` only, no product-side prerequisite
 
 ## Goal
@@ -84,28 +84,68 @@ this race far more often in practice than a coin flip would predict.
 
 ## Done when
 
-- [ ] A test reproduces the bug against a real broker (Testcontainers RabbitMQ, matching this
+- [x] A test reproduces the bug against a real broker (Testcontainers RabbitMQ, matching this
       project's own precedent): two distinct `Competing` consumer types subscribed to the same topic,
       N messages published, and the test asserts **both** consumer types received **all** N messages -
       failing against the current code, passing after the fix.
-- [ ] `IEventConsumer.SubscribeAsync`'s new parameter is threaded through every real call site listed
-      in Scope; `Ago.Chat.Architecture.Tests` (or a new platform-side equivalent) catches a future
-      addition that forgets it, if a sensible automated check exists - otherwise this is a code-review
-      discipline note, stated as such rather than pretended into a passing test.
-- [ ] Manually re-verified against the local cluster: the exact scenario that found this (an operator
+      `RabbitMqPublishConsumeTests.Competing_TwoDifferentConsumerTypes_BothReceiveEveryMessageIndependently` -
+      confirmed failing before the fix (by construction: two `SubscribeAsync` calls with different
+      names collapsed to the same bare-topic queue name pre-fix), passing after. The existing
+      `Competing_TwoConsumers_EachMessageGoesToExactlyOne` test was renamed
+      `..._TwoReplicasOfTheSameConsumer_...` and updated to pass the *same* `consumerName` to both
+      subscriptions - it was accidentally proving the opposite scenario's own correct behaviour
+      (replicas sharing a queue) under a name that suggested it covered this bug too.
+- [x] `IEventConsumer.SubscribeAsync`'s new parameter is threaded through every real call site -
+      9 in total, more than this item's own Scope list first named (`Ago.Platform.Caching.Redis`'s
+      `CacheInvalidationConsumer` and 3 `Ago.Chat.Integration.Tests` call sites were found only by
+      actually building with the new required parameter and fixing every resulting compile error, not
+      by re-reading the Scope list). The parameter being *required* means the compiler itself is the
+      "catches a future addition that forgets it" mechanism promised below - a distinctness mistake
+      (two consumer types accidentally passed the same name) is not something an architecture test can
+      catch without deeper semantic analysis, and stays a code-review discipline note, not a passing
+      test pretending otherwise.
+- [x] Manually re-verified against the local cluster: the exact scenario that found this (an operator
       sends several messages in quick succession; the visitor's already-open widget/harness connection
-      receives every one live, no reload needed) - proven, not assumed, the same way this item's own
-      "How this was found" section proved the bug.
-- [ ] `messaging.md` updated: the `Competing` mode description states the consumer-group requirement
-      as shipped fact, and this item's own finding is referenced from there rather than only living in
-      this backlog file.
-- [ ] `Ago.Platform.Abstractions` and `Ago.Platform.Messaging.RabbitMq`'s `CHANGELOG.md` entries added,
-      version bumped (`repositories.md`'s SemVer rule - this is a breaking port signature change).
+      receives every one live, no reload needed) - proven, not assumed. First attempt after the queue
+      fix alone still failed differently: messages *arrived* (`RabbitMqPublishConsumeTests` already
+      proved the queue-collision fix itself) but every field read `undefined` client-side - a second,
+      independent bug this same verification pass surfaced, see below. After both fixes: 7 operator
+      messages sent in a row, all 7 received live by the visitor, correctly populated, in order, zero
+      reload.
+- [x] `messaging.md` updated: the `Competing` mode description states the consumer-group requirement
+      as shipped fact, referencing this item rather than only living in this backlog file.
+      `adr/0006` also amended - the new parameter reads at first glance like the consumer-group
+      *mechanism* that ADR explicitly kept out of the port; the amendment states why it isn't (identity
+      vs. mechanism) rather than leaving that tension unresolved for a future reader.
+- [x] `Ago.Platform.Abstractions` and `Ago.Platform.Messaging.RabbitMq`'s `CHANGELOG.md` entry added
+      (one shared `ago-platform` `CHANGELOG.md`, `[0.11.0]`), version bumped per `repositories.md`'s
+      SemVer rule - a breaking port signature change, minor-bumped per this project's own established
+      pre-1.0 precedent (`0.9.0`'s `ICache` constraint took the same path).
+
+## A second, independent bug found while proving this one - fixed in the same change
+
+Fixing the queue collision let messages reach the browser for the first time under real conditions,
+which immediately surfaced a second bug the first one had been masking: every field arrived
+`undefined`. Root cause, confirmed by reading the code, not guessed: `Ago.Chat.Api`'s SignalR hub
+protocol uses `camelCase` property names by default (no `AddJsonProtocol` override), which a hub
+method sending a real POCO (`VisitorHub`/`OperatorHub`'s own local-echo `SendAsync(method, dto, ...)`)
+gets for free. `ResolveMessageDeliveryTargetsHandler` and `ResolveConversationAssignmentTargetsHandler`
+instead pre-serialize the DTO to a JSON *string* for the outbox/broker hop with a plain
+`JsonSerializer.Serialize(dto)` (default options - PascalCase), and `SignalRConnectionDispatcher`
+re-parses that string into a `JsonElement` before handing it to SignalR - a `JsonElement` re-emits its
+own already-baked-in property names verbatim, never consulting the hub protocol's naming policy again.
+Fixed with a shared `Ago.Chat.Contracts.WireJsonOptions` (`PropertyNamingPolicy = CamelCase`), used at
+both call sites; a pre-existing test's own plain `Deserialize<MessageDto>` on the payload broke as a
+direct, expected consequence and was updated to match, plus a new
+`HandleAsync_PublishesThePayloadWithCamelCasePropertyNames` regression test. Not filed as a separate
+backlog item - discovered, diagnosed, and fixed within the scope of proving *this* item's own live
+verification, and fixing it here is what let that verification actually complete rather than stall on
+a second, adjacent bug.
 
 ## Open questions
 
 None - the bug, its root cause, and the fix shape are all confirmed by reading the actual source, not
-inferred. The only real design choice (a `consumerGroup` string vs. deriving it automatically from the
-handler's own type name via reflection) is an implementation detail for whoever picks this up, not a
-blocking question - a required, explicit parameter is the safer default (fails loudly if forgotten,
-rather than silently deriving something that could collide again in a different way).
+inferred. The only real design choice (a `consumerName` string vs. deriving it automatically from the
+handler's own type name via reflection) is an implementation detail, resolved as a required, explicit
+parameter - fails loudly if forgotten, rather than silently deriving something that could collide
+again in a different way.

@@ -26,6 +26,20 @@ what `concurrency.md` depends on.
 - Cost: Kafka-specific strengths (compaction, long retention, replay-driven rebuilds) are unavailable
   through the port. Anything needing replay must be rebuildable from PostgreSQL instead.
 
+## Amendment (`5-11`)
+
+`IEventConsumer.SubscribeAsync` gained a required `consumerName` parameter - at first glance a
+consumer group re-entering the port this Decision explicitly kept out. It is not: this Decision's
+"consumer groups stay inside the adapters" was about the *mechanism* (offsets, partition assignment,
+rebalancing), which still stays hidden. `consumerName` is the caller declaring *identity* - "which
+logical consumer am I" - and `Competing` mode cannot mean anything correct on **either** broker
+without it: RabbitMQ needs it to decide whether two subscriptions share a queue or get one each;
+Kafka's own consumer-group id is exactly the same requirement by a different name. The bug this
+amendment fixes (`messaging.md`'s own note, `5-11`) is what happens when that identity is missing -
+two independent consumer types silently shared one RabbitMQ queue and split messages between them.
+Declaring subscription mode was always "intent," per this ADR's own Decision text; `consumerName` is
+the other half of the same intent, not a new leak.
+
 ## Alternatives considered
 
 - **A generic `IMessageBus.Send(object)`** - looks cleaner, hides ordering and acknowledgement, and

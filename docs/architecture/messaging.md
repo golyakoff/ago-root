@@ -79,18 +79,23 @@ Note the last row is the one exception to competing-consumer semantics: every no
 In RabbitMQ that is a per-node exclusive queue on a fanout exchange; in Kafka, a unique consumer
 group per node. The adapter hides this; the subscription declares intent as `Broadcast` vs `Competing`.
 
-**Real, currently-shipping bug, found live while verifying `5-10`, tracked in `5-11`**: `Competing`
-mode is only correct when exactly one logical consumer *type* subscribes to a topic - `MessageAccepted`
-above has two ("Fan-out to connections, unread counters" = `ConnectionFanoutConsumer` +
-`UnreadCounterConsumer`), and `Ago.Platform.Messaging.RabbitMq/RabbitMqEventConsumer.cs` names a
-`Competing` queue after the bare topic with no consumer-identity component, so both consumer types
-end up bound to the *same* queue and RabbitMQ round-robins each message to one or the other, never
-both. In practice this has meant real-time message delivery has been unreliable since `3-02` - proven
-live: ten operator-sent messages, zero delivered as a real-time push to the visitor, all ten present
-and correctly delivered only once the widget reconnected and used the resume-by-sequence path instead
-(which reads Postgres directly, bypassing this broken path entirely). `5-11` has the full diagnosis,
-the fix (a required consumer-group parameter on `IEventConsumer.SubscribeAsync`), and the regression
-test that should have caught this originally.
+**`Competing` requires a consumer-identity name, shipped in `5-11`**: `Competing` mode is only correct
+when every logical consumer *type* subscribed to a topic is distinguishable from every other one -
+`MessageAccepted` above has two (`ConnectionFanoutConsumer` and `UnreadCounterConsumer`), and until
+`5-11`, `Ago.Platform.Messaging.RabbitMq/RabbitMqEventConsumer.cs` named a `Competing` queue after the
+bare topic with no consumer-identity component, so both silently shared one queue and RabbitMQ
+round-robined each message to one or the other, never both - real-time message delivery had been
+unreliable since `3-02` as a result. `IEventConsumer.SubscribeAsync` now takes a required
+`consumerName`: every replica of one logical consumer passes the *same* name (correctly sharing a
+queue - `Competing`'s actual purpose, horizontal scaling), two different consumer types pass different
+names (correctly getting one queue each). This is not `adr/0006`'s consumer-group *mechanism* leaking
+through the port - it is the caller declaring identity, which `Competing` cannot mean anything without
+on either broker (see that ADR's own amendment). Found live while verifying `5-10`: ten operator-sent
+messages, zero delivered as a real-time push to the visitor, all ten present and correctly delivered
+only once the widget reconnected and used the resume-by-sequence path instead (which reads Postgres
+directly, bypassing the broken path entirely) - `RabbitMqPublishConsumeTests.Competing_TwoDifferentConsumerTypes_BothReceiveEveryMessageIndependently`
+reproduces the bug against a real broker and is the regression test that should have caught this
+originally.
 
 **Shipped in `5-04`**: named `AttachmentConfirmed`, not the `AttachmentUploaded` this table originally
 planned - it fires from `Attachment.ConfirmReady` (the confirm step, after HEAD-verification), not
