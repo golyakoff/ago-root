@@ -61,6 +61,22 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 - Verify health and reachability from *outside* the deployment — a real request from a machine not
   on the same network as the host, matching `k8s-local.md`'s own "verified means actually run"
   standard, not `kubectl get pods` alone.
+- **Note added 2026-08-25, author's own reminder — resolve when this item actually starts, not before**:
+  every `Ago.Chat.*` host's shared `Dockerfile` currently builds its final stage from
+  `mcr.microsoft.com/dotnet/aspnet:10.0` (Debian-based). For a real public deployment, switch to a
+  smaller production base image before shipping — current .NET guidance (verified 2026-08-25, not
+  assumed) leans toward **Ubuntu Chiseled** (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`) as
+  the default for production with no special requirements — smaller than Alpine's own musl-based image
+  in practice, no shell/package manager (smallest attack surface), and glibc-based so it avoids the
+  musl-compatibility risk Alpine carries for native dependencies. **Alpine**
+  (`mcr.microsoft.com/dotnet/aspnet:10.0-alpine`) is the fallback if Chiseled's own lack of a shell
+  breaks something this project's `Dockerfile`/entrypoint actually needs, or if a native dependency in
+  this project's stack (Npgsql, StackExchange.Redis, RabbitMQ.Client) turns out not to be musl-clean —
+  verify against the real image before deciding, not assumed clean either way. Chiseled images drop ICU
+  by default (no globalization support) unless the `-extra` variant is used — check whether this
+  project's own `DateTimeOffset`-only, UTC-everywhere convention (`docs/conventions/date-and-time.md`)
+  means culture-specific formatting was never a real dependency here, before pulling in the larger
+  `-extra` variant just to be safe.
 
 ## Out of scope
 
