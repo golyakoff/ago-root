@@ -10,6 +10,9 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git branch:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout -b:*)",
       "Bash(kubectl get:*)",
       "Bash(kubectl describe:*)",
       "Bash(kubectl logs:*)",
@@ -18,8 +21,6 @@
       "Bash(docker compose logs:*)"
     ],
     "deny": [
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
       "Bash(git rebase:*)",
       "Bash(git reset --hard:*)",
       "Bash(kubectl delete:*)",
