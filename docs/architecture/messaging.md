@@ -70,7 +70,8 @@ supposed to prevent.
 | Event | Key | Consumers |
 |---|---|---|
 | `MessageAccepted` | `conversation_id` | Fan-out to connections, unread counters |
-| `ConversationAssigned` / `Closed` | `conversation_id` | Fan-out, cache invalidation, metrics |
+| `ConversationAssigned` | `conversation_id` | Fan-out, cache invalidation, metrics |
+| `ConversationClosed` (wire contract `ConversationEnded` - `6-02`'s own "contract gets a different bare name than its domain event" convention) | `conversation_id` | Fan-out, cache invalidation, metrics, `6-05`'s webhook dispatch |
 | `OperatorStatusChanged` | `operator_id` | Assignment engine, cache invalidation |
 | `AttachmentConfirmed` | `conversation_id` | Thumbnailer (image content types only) |
 | `CacheInvalidated` | key namespace | All nodes (fan-out to every replica, not competing consumers) |

@@ -1,7 +1,7 @@
 # Ago.Platform.Resilience: a real shared package, not ad hoc Polly per project
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing - `ago-platform` only
 
 ## Goal
@@ -54,16 +54,16 @@ not a tuned number.
 
 ## Done when
 
-- [ ] `Ago.Platform.Resilience` ships with unit tests for each policy in isolation (a retry that
+- [x] `Ago.Platform.Resilience` ships with unit tests for each policy in isolation (a retry that
       gives up after N attempts, a timeout that actually cancels, a breaker that opens after the
       configured failure ratio and half-opens after `BreakDuration`, a bulkhead that rejects beyond
       its concurrency limit) - `Polly`'s own test doubles/fault injection, no real network needed.
-- [ ] `Ago.Platform.Caching.Redis` and `Ago.Platform.Storage.S3` both build on the shared package;
+- [x] `Ago.Platform.Caching.Redis` and `Ago.Platform.Storage.S3` both build on the shared package;
       their own existing tests still pass unchanged (proving behaviour didn't shift).
-- [ ] `Ago.Platform.Architecture.Tests` (or a new equivalent) asserts no infrastructure project builds
+- [x] `Ago.Platform.Architecture.Tests` (or a new equivalent) asserts no infrastructure project builds
       its own `ResiliencePipelineBuilder` directly - the shared package is the only place that type
       name may appear outside `Ago.Platform.Resilience` itself.
-- [ ] `CHANGELOG.md` entry, version bump (`repositories.md`'s SemVer rule) - this is new public API.
+- [x] `CHANGELOG.md` entry, version bump (`repositories.md`'s SemVer rule) - this is new public API.
 
 ## Open questions
 

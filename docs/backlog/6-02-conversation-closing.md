@@ -1,7 +1,7 @@
 # Wire up conversation closing - a real trigger, not a dead domain method
 
 - **Stage**: 6
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing - unblocks `6-05`'s `Closed` webhook trigger, but stands on its own
 
 ## Goal
@@ -51,14 +51,20 @@ recommendation" shape `5-06` used for its own framework choice.
 
 ## Done when
 
-- [ ] `CloseConversationHandler` unit-tested (happy path, wrong-operator forbidden, already-closed
+- [x] `CloseConversationHandler` unit-tested (happy path, wrong-operator forbidden, already-closed
       rejected - `Conversation.Close()`'s own existing invariant, now actually reachable through a
       real call path for the first time).
-- [ ] `ConversationClosedMapper` tested the same way every other mapper in `Mapping/` already is.
-- [ ] Integration test: closing a conversation produces a real, durable `outbox` row with the mapped
+- [x] `ConversationClosedMapper` tested the same way every other mapper in `Mapping/` already is.
+- [x] Integration test: closing a conversation produces a real, durable `outbox` row with the mapped
       contract, verified against real Postgres (`Ago.Chat.Integration.Tests`, matching `2-02`'s own
       "outbox already has a real writer" verification bar).
-- [ ] `messaging.md` updated: `ConversationClosed` is its own real row, not folded into a placeholder.
+- [x] `messaging.md` updated: `ConversationClosed` is its own real row, not folded into a placeholder.
+
+Shipped in `6-02`: `POST /api/v1/conversations/{id}/close`, `Permission.ConversationClose`
+(`conversation:close`, dedicated permission per the recommendation above), `CloseConversationHandler`
++ `ConversationClosedMapper` (wire contract named `ConversationEnded`, following this codebase's
+established "contract gets a different bare name than its domain event" convention so the mapper
+referencing both types never collides).
 
 ## Open questions
 

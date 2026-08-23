@@ -32,6 +32,17 @@ out of the Domain.
 - Each test isolates itself by tenant (`site_id`) or by truncation - never by ordering.
 - Assert observable behaviour, not table internals, except where the schema *is* the guarantee
   (unique `(conversation_id, sequence)`, outbox rows in the same transaction).
+- **Every fixture that starts Testcontainers acquires `DockerResourceLock` first and releases it only
+  after every one of its containers is disposed** (`Ago.Chat.Integration.Tests/DockerResourceLock.cs`).
+  Testcontainers already isolates each fixture correctly (dynamic ports, separate containers) - this
+  lock exists purely to bound how many container fleets are alive on the local Docker daemon at once,
+  since parallel work (multiple background workers, each in their own git worktree, running
+  integration tests at the same time) is a real CPU/memory contention risk that isolation alone
+  doesn't address. Deliberate trade-off: this makes container lifetimes fully sequential machine-wide,
+  even within a single test run that would otherwise start several collections' containers at once -
+  correct under the assumption that avoiding Docker contention matters more than single-run
+  parallelism; revisit (a small bounded concurrency count instead of strict 1) if that assumption
+  stops holding.
 
 ## Concurrency tests
 
