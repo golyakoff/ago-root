@@ -68,6 +68,19 @@ equivalent for a page that pastes a token in rather than driving a redirect itse
 "password grant for a throwaway local test client" shape this runbook's own integration tests use
 against a real, disposable Keycloak.
 
+**`5-08`**: a second seeded operator, `demo-admin`, holds the `"Admin"` role (`site:configure`,
+`site:manage_operators`, `attachment:delete`) alongside `"Operator"` - `demo-operator` still holds
+only `"Operator"`. Signing into the real console (below) as each in turn is how the admin views and
+the attachment-delete action get manually verified: `demo-admin` sees every conversation for the site
+and can delete an attachment, `demo-operator` sees only its own assigned conversations and gets a 403
+attempting the same delete. Same direct-grant shape as above, different credentials:
+
+```
+curl -s -X POST http://127.0.0.1:8081/realms/ago-chat/protocol/openid-connect/token \
+  -d "grant_type=password&client_id=ago-console&username=demo-admin&password=demo-admin-password" \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
+```
+
 ### Running the widget demo locally
 
 **Shipped in `5-09`**: `ago-widget/demo/` is a deliberately hostile host page proving the widget's
