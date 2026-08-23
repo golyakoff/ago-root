@@ -192,8 +192,9 @@ Deliverables:
 ## Stage 10 — AGO Chat: self-service, billing, and production readiness
 
 **Goal:** turn AGO Chat from a seeded demo into a product a real customer can sign up for, pay for,
-and depend on. Reprioritised ahead of Stage 11 (2026-08-23) — the author wants this before the second
-product.
+and depend on. Reprioritised ahead of AGO Ads (2026-08-23) — the author wants this before the second
+product; Ads itself moved to Stage 20 the same day, freeing Stages 11-19 for further AGO Chat/AGO
+Platform work.
 
 Deliverables:
 - Self-service account/tenant registration, replacing `1-05`'s seed-script-only provisioning: a
@@ -215,7 +216,15 @@ depends on the seed script.
 
 ---
 
-## Stage 11 — AGO Ads: the second product
+## Stages 11-19 — reserved for AGO Chat and AGO Platform
+
+Not yet planned. Reserved (2026-08-23) so that further `ago-chat`/`ago-platform` work started after
+Stage 10 doesn't collide with AGO Ads' stage number - Ads is intentionally pushed out to Stage 20 to
+leave this whole range free.
+
+---
+
+## Stage 20 — AGO Ads: the second product
 
 **Goal:** prove the platform claim by building on it, not by asserting it.
 
