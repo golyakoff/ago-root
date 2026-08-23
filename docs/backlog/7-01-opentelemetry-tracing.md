@@ -1,7 +1,7 @@
 # OpenTelemetry tracing: one trace id, hub to delivery
 
 - **Stage**: 7
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing — instruments already-shipped code (Stages 1-4); the webhook dispatcher
   (`6-05`) is not on the traced path `roadmap.md` names for this item, so it is not a prerequisite
 
@@ -64,16 +64,30 @@ trace backend: "OpenTelemetry → Prometheus/Grafana/Jaeger" — Jaeger is not a
 
 ## Done when
 
-- [ ] An integration test (Testcontainers: Postgres + RabbitMQ, real `Ago.Chat.Api` + `Ago.Chat.Worker`
+- [x] An integration test (Testcontainers: Postgres + RabbitMQ, real `Ago.Chat.Api` + `Ago.Chat.Worker`
       hosts) sends one message and asserts every span in an in-memory exporter shares one trace id, in
       the right hub → handler → DB → outbox → broker → consumer → delivery order (by span kind/name,
-      not just count).
-- [ ] `Ago.Platform.Hosting`'s new extension has its own unit tests (resource attributes set correctly,
+      not just count). `TracingEndToEndTests` (`Ago.Chat.Integration.Tests`).
+- [x] `Ago.Platform.Hosting`'s new extension has its own unit tests (resource attributes set correctly,
       config binding validated at startup like every other options class in this codebase).
-- [ ] `adr/00XX` written and accepted.
-- [ ] `CHANGELOG.md` entry and version bump in `ago-platform` (new public API in `Ago.Platform.Hosting`).
-- [ ] `nfr.md`'s Observability requirements trace bullet can be checked off with a link to the test
+      `PlatformObservabilityTests`.
+- [x] `adr/0025` written and accepted — direct OTLP export to Jaeger, no collector.
+- [x] `CHANGELOG.md` entry and version bump in `ago-platform` (new public API in `Ago.Platform.Hosting`)
+      — `[0.13.0]`.
+- [x] `nfr.md`'s Observability requirements trace bullet can be checked off with a link to the test
       above, not left as an assertion.
+
+## Shipped in
+
+`feat/7-01-opentelemetry-tracing` (`ago-platform` `0.13.0` + `ago-chat`). `Ago.Platform.Hosting.
+AddPlatformObservability` wires the OTel SDK once per host; trace context propagates through the outbox
+via an explicit `traceContext` parameter on `IOutboxWriter.Enqueue` (not read from ambient
+`Activity.Current`, since `Ago.Chat`'s batch writer can commit several unrelated messages in one write)
+and through the broker via a W3C `traceparent` header the RabbitMQ adapter injects/extracts — every
+consumer on the platform gets a correctly-parented processing span for free, from one adapter-level
+change. `VisitorHub`/`OperatorHub` start the trace root; `MessageBatchWriter`'s own DB-write span uses
+`ActivityLink`s for the rest of a multi-message batch, since only one sender's trace can be a true
+parent. Full test suite green in both repos (`ago-platform`: 70/70, `ago-chat`: 372/372).
 
 ## Open questions
 

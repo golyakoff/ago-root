@@ -62,4 +62,6 @@ Everything above must be visible without attaching a debugger:
 - Cache hit ratio per key namespace, breaker state.
 - Connection count per node, assignment attempts vs conflicts.
 - Traces spanning hub -> handler -> DB -> outbox -> broker -> consumer -> delivery, one trace id
-  end to end. This is what makes the p95 numbers explainable instead of merely reportable.
+  end to end (`7-01`, proven by `Ago.Chat.Integration.Tests.TracingEndToEndTests` against an
+  in-memory exporter — a live Jaeger is `7-03`'s job). This is what makes the p95 numbers
+  explainable instead of merely reportable.
