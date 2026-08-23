@@ -1,20 +1,28 @@
 # Widget branding: does "styles/theme" extend beyond color and position?
 
 - **Stage**: 11
-- **Status**: blocked
-- **Depends on**: `11-01-widget-config-data-model-and-api.md` if it proceeds (would extend the same
-  `WidgetConfig` value object and migration rather than starting a new one)
+- **Status**: done (resolved as no further scope)
+- **Depends on**: nothing — closed out, not built
 
-## Goal
+## Resolution (2026-08-23, author's decision)
 
-Stage 11's roadmap text lists three things: "colors, styles/theme, position on the host page."
-`11-01`/`11-02`/`11-03` ship exactly two of the words in that list, on the reading that "styles/theme"
-describes what the primary color drives (the visual theme *is* the color, in a small fixed-field
-system), not a third, independent axis of configuration. That reading is defensible — Stage 11's own
-done-when text tests only "changes color/position," nothing else — but it is a reading, not something
-the roadmap or any architecture doc actually confirms. This item exists to hold the real question open
-rather than let the narrower scope quietly become the permanent definition of "widget customization" by
-default.
+**No logo/avatar image.** The author's reasoning: a site's logo is already part of the site itself
+(the page the widget is embedded on) — duplicating it inside the support chat window reads as
+redundant, not as branding. The widget stays visually part of the host page through color and
+launcher position only, not a second copy of the site's own identity.
+
+`11-01` through `11-03`'s scope — primary color and launcher position — is the full, permanent
+definition of "widget customization" for Stage 11. The roadmap's "styles/theme" wording is read as
+describing what the primary color drives, not a third independent axis.
+
+The other two candidates this item raised (a second color; a light/dark mode toggle) were not
+separately addressed by the author and are not decided in or out — they stay genuinely open, unlike
+the logo question. Either is cheap to add later as a small extension of `11-01`'s existing fixed-field
+`WidgetConfig` pattern, precisely because that pattern was built to be extended (named, validated
+fields — never free-form CSS, per `11-01`'s own ADR). Nothing about this resolution forecloses them;
+they simply were not asked for now, so no new backlog item is opened for them today.
+
+## Original open question (for context, not active)
 
 ## Context to read first
 
@@ -43,46 +51,27 @@ position `11-01` through `11-03` already ship:
   presumably a new `site_id`-scoped object rather than a conversation attachment), a size/format
   ceiling, and a decision about whether this needs any moderation given it renders automatically on
   every visitor's page rather than being reviewed the way a chat message attachment implicitly is by an
-  operator seeing it first.
+  operator seeing it first. **Resolved: no — see Resolution above.**
 - A **second color** (background, or a text color independent of the primary accent) — a small,
   low-risk extension of `11-01`'s existing fixed-field pattern if wanted, cheap to add later regardless
-  of when it's decided.
+  of when it's decided. **Not decided — remains genuinely open, revisit if ever wanted.**
 - A **light/dark mode toggle**, independent of the primary color — a real design decision (does the
   widget compute contrast against an arbitrary primary color and pick text colors automatically, or does
-  the tenant pick a whole named theme) that `11-01`'s two fields do not attempt to answer.
+  the tenant pick a whole named theme) that `11-01`'s two fields do not attempt to answer. **Not
+  decided — remains genuinely open, revisit if ever wanted.**
 - **Nothing further** — the roadmap's "styles/theme" was loosely worded, and `11-01`'s color +
-  position is the intended full scope of Stage 11.
+  position is the intended full scope of Stage 11. **This is the resolution for the logo question
+  specifically; the two smaller candidates above are simply not requested today, not ruled out.**
 
 Any answer keeps `11-01`'s own "no arbitrary CSS" constraint — a wider field set is still a wider set of
 *named, validated* fields, never free-form styling injected into the shadow tree.
 
-## Why this is blocked and not guessed
-
-The backlog's own discipline (`docs/backlog/README.md`) is that an item with a real, unanswered question
-does not get started — and this genuinely is unanswered: nothing in `vision.md`, `roadmap.md`, or any
-ADR states whether logo/branding-image support is in or out of AGO Chat's scope, and the project's own
-commercial intent (this is meant to go past portfolio-only, toward real paying tenants) is exactly the
-kind of context that could tip this either way without more actually being knowable from the repository
-alone. Scoping it out silently would under-deliver against the roadmap's own wording without saying so;
-guessing it in would add a real, non-trivial feature (file upload, a new trust boundary) nobody asked
-for. Neither is this planning session's call to make.
-
-## Out of scope
-
-- Nothing yet — this item has no scope until the question above is answered. Once it is, whatever gets
-  decided either folds into a widened `11-01`/`11-02`/`11-03` (if small, e.g. a second color) or becomes
-  its own new backlog item with its own number (if large, e.g. logo upload, which would need its own
-  data-model/API/console/widget split the same way `11-01`-`11-03` did).
-
 ## Done when
 
-- [ ] The author has answered the question above; this file is rewritten (or split, or closed as "no
-      further scope") to reflect the answer, and its `Status` changes to `ready` or the work is folded
-      into the appropriate other item.
+- [x] The author has answered the question above (2026-08-23): no logo/avatar. Second color and
+      dark-mode remain open but undecided, not blocking anything — no further work item opened for
+      either until wanted.
 
 ## Open questions
 
-**Blocking**: does "styles/theme" in Stage 11's roadmap text mean anything beyond the primary color and
-launcher position already shipped in `11-01`-`11-03` — specifically, is a custom logo/avatar image in
-scope for this stage, and if so, does it need any content-safety review given it renders unattended on
-every visitor's page? Author's decision needed; no default is assumed here.
+None — resolved.
