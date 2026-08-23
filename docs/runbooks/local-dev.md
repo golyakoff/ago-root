@@ -102,6 +102,46 @@ reconnected in ~10s (jittered backoff) and resumed with the exact prior message 
 - no gap, no duplicate. Restarting *without* the fixed key reproduces the expected 401, which is
 `3-06`'s already-documented limitation of the single-dev-instance loop, not a new bug.
 
+### Running the console locally
+
+**Shipped in `5-06`**: `ago-console` is a normal SPA (Vite + React, `adr/0023`), not a script embedded
+on a page it doesn't control, so it's built once per environment rather than configured per-embed
+the way `ago-widget` is. It needs `Ago.Chat.Api` and Keycloak from the bring-up sequence above, plus
+its own env file and dev server:
+
+```
+cd ago-console
+cp .env.example .env.local        # first time only - defaults already match the fast loop above
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. `RequireAuth` redirects straight to Keycloak's own login page
+(Authorization Code + PKCE, `oidc-client-ts`); sign in as `demo-operator` (`5-05`'s seeded user), and
+Keycloak redirects back to `/callback`, which exchanges the code for tokens and lands on the queue
+page showing "Operator hub: Connected" once the SignalR connection to `/hubs/operator` opens with the
+resulting access token.
+
+Two registrations both have to know about port `5173`, or this fails before reaching the app at all:
+
+- **Keycloak's `ago-console` client** needs `http://localhost:5173/*` in both `redirectUris` and
+  `webOrigins` (`deploy/k8s/base/keycloak-realm-import.json`). Keycloak only imports a realm that
+  doesn't already exist yet, so an existing local install needs this applied by hand once (Admin
+  console, or a REST API `PUT` on the client) in addition to the committed file, which only takes
+  effect on a fresh realm.
+- **The demo site's `AllowedOrigins`** (`5-01`'s CORS policy) needs `http://localhost:5173` alongside
+  the widget demo's `:8080`, or the console's very first API call fails CORS before Keycloak is even
+  reached. `deploy/seed/create-demo-tenant.sh` seeds both origins and now `DO UPDATE`s
+  `allowed_origins` on conflict rather than `DO NOTHING`, specifically so re-running it against an
+  already-seeded local install picks up a newly-added origin like this one. Flush Redis after
+  re-running it - the CORS-origin cache has no event-driven invalidation wired up yet (`5-01`'s
+  documented scope limit).
+
+Verified this way: real login through the local Keycloak, real redirect back through `/callback`,
+real token handed to `/hubs/operator`, connection state genuinely reaching `Connected` in the browser
+- not inferred from the code. `automaticSilentRenew` is deliberately not enabled yet; a session
+outlives only as long as the access token does, until `5-07` gives it its own verified renewal.
+
 Local endpoints (all verified reachable):
 
 | Endpoint | Address |
