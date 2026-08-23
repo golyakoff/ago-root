@@ -1,0 +1,273 @@
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 2 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
+      Webhook delivery to endpoint ed623999-d002-4b79-a6d2-11dd1d3efaf2 dead-lettered after 1 attempt(s) (BreakerOpen).
+      Polly.CircuitBreaker.BrokenCircuitException: The circuit is now open and is not allowing calls.
+       ---> Ago.Chat.Webhooks.WebhookResponseHeadersTimeoutException: The webhook endpoint did not send response headers within the configured timeout.
