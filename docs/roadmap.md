@@ -189,38 +189,81 @@ Deliverables:
 
 ---
 
-## Stage 10 — AGO Chat: self-service, billing, and production readiness
+## Stage 10 — Self-service signup
 
-**Goal:** turn AGO Chat from a seeded demo into a product a real customer can sign up for, pay for,
-and depend on. Reprioritised ahead of AGO Ads (2026-08-23) — the author wants this before the second
-product; Ads itself moved to Stage 20 the same day, freeing Stages 11-19 for further AGO Chat/AGO
-Platform work.
+**Goal:** a visitor becomes an AGO Chat account holder without the author running a script.
+Reprioritised ahead of AGO Ads (2026-08-23) — the author wants AGO Chat production-ready before the
+second product; Ads itself moved to Stage 20 the same day, freeing Stages 11-19 for further AGO
+Chat/AGO Platform work. Split (2026-08-23) from a single combined stage into four, in the order the
+author actually wants them built — signup first, billing last, not bundled together.
 
 Deliverables:
 - Self-service account/tenant registration, replacing `1-05`'s seed-script-only provisioning: a
-  visitor becomes a paying (or free-tier) account holder with a first site and a first operator,
-  without anyone running a script by hand.
-- Account & billing management surface in `ago-console`: current tier, seats used, upgrade/downgrade.
+  visitor becomes an account holder with a first site and a first operator, without anyone running a
+  script by hand.
+- Everyone starts on the free tier - paid tiers aren't reachable yet, since billing (Stage 13) hasn't
+  landed.
+
+**Done when:** a new account, site, and operator can be created end to end by a real visitor, with
+zero seed-script involvement.
+
+---
+
+## Stage 11 — Widget customization
+
+**Goal:** a site owner can make the embedded widget look like their own site, not a generic AGO one.
+
+Deliverables:
+- Per-site widget configuration: colors, styles/theme, position on the host page.
+- Console surface to edit that configuration.
+- Widget bootstrap reads and applies the configuration live - no rebuild or redeploy of the widget
+  bundle needed per site.
+
+**Done when:** a site owner changes color/position from the console and sees it reflected in the
+embedded widget on their own page without touching code.
+
+---
+
+## Stage 12 — Owner admin panel
+
+**Goal:** the author, as platform owner, can see across every tenant - not just the per-site
+visibility `5-08`'s "Admin" role already gives a site's own operators.
+
+Deliverables:
+- Internal operations view: every account/tenant, its tier, usage and abuse signals - the surface
+  `adr/0023` already named as a reason React won the console framework decision, now actually built.
+- Explicitly distinct from `5-08`'s site-scoped "Admin" role - this is platform-level, owner-only.
+
+**Done when:** the owner can see every account, its tier, and its usage from one view, without
+querying the database by hand.
+
+---
+
+## Stage 13 — Billing
+
+**Goal:** turn a self-service account into a paying customer.
+
+Deliverables:
 - Entitlement enforcement matching the tiers and cost-containment criterion already decided in the
   private `ago-business` repo (seat count at minimum; attachments/history/site-count caps as those
   business decisions land) — DB-sourced checks, never cached, per `architecture/caching.md`'s "never
   cache what a write decision depends on."
+- Account & billing management surface in `ago-console`: current tier, seats used, upgrade/downgrade.
 - Subscription payment via ЮKassa: recurring/autopay billing, MIR-card-capable, checkout hosted by
   the provider so card data never touches AGO's own servers, payment-state confirmation via webhook
   through the existing outbox pattern (`architecture/messaging.md`) rather than trusting the
   redirect alone.
 
-**Done when:** a real card can subscribe a self-registered account to a paid tier through ЮKassa,
-entitlements enforce that tier's limits, and no part of the signup-to-paid-conversation flow still
-depends on the seed script.
+**Done when:** a real card can subscribe a self-registered account to a paid tier through ЮKassa, and
+entitlements enforce that tier's limits.
 
 ---
 
-## Stages 11-19 — reserved for AGO Chat and AGO Platform
+## Stages 14-19 — reserved for AGO Chat and AGO Platform
 
 Not yet planned. Reserved (2026-08-23) so that further `ago-chat`/`ago-platform` work started after
-Stage 10 doesn't collide with AGO Ads' stage number - Ads is intentionally pushed out to Stage 20 to
-leave this whole range free.
+Stage 13 doesn't collide with AGO Ads' stage number - Ads is intentionally pushed out to Stage 20 to
+leave this range free.
 
 ---
 
