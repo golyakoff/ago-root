@@ -90,7 +90,12 @@ protect.
   later touches nothing in `Ago.Chat.Api` or `ago-console`.
 - Any email-sending/deliverability setup (SMTP config, templates) beyond enabling Keycloak's built-in
   "Verify Email" required action — Keycloak's own default flow handles sending; a custom sender or
-  template is a separate concern this item does not scope.
+  template is a separate concern this item does not scope. **Corrected 2026-08-25**: "Keycloak's own
+  default flow handles sending" was wrong in one load-bearing respect — it sends through the realm's
+  `smtpServer`, and there is none, so registration fails with `SEND_VERIFY_EMAIL_ERROR ...
+  email_send_failed` and the required action never lifts. Still not this item's job;
+  `10-05-transactional-email-delivery.md` owns it, and until that lands the admin-API shortcut in
+  `runbooks/local-dev.md` is the only way past this gate.
 
 ## Done when
 
@@ -100,11 +105,14 @@ protect.
 - [x] Keycloak realm-import config: `registrationAllowed` enabled, required profile fields set to avoid
       `5-05`'s `VERIFY_PROFILE` gotcha, and the "Verify Email" required action enabled (author's
       decision, 2026-08-23) — landed in `ago-chat`'s own test realm-import
-      (`tests/Ago.Chat.Integration.Tests/keycloak-realm-import.json`). **Known gap**: the identical
-      change still needs to land in `ago-deploy/k8s/base/keycloak-realm-import.json` (the real local-
-      dev/demo Keycloak) — `ago-deploy` was outside this dispatch's own worktree scope
-      (`long-term/stage-10` on `ago-root`/`ago-chat` only), flagged in `local-dev.md` rather than
-      silently assumed done.
+      (`tests/Ago.Chat.Integration.Tests/keycloak-realm-import.json`). ~~**Known gap**~~ **closed
+      2026-08-25**: the identical change has since landed in
+      `ago-deploy/k8s/base/keycloak-realm-import.json` (`ago-deploy` commit `3910fa1`, "enable
+      self-registration on the Keycloak realm-import") — it was outside this dispatch's own worktree
+      scope (`long-term/stage-10` on `ago-root`/`ago-chat` only) and was flagged rather than silently
+      assumed done. Verified directly against that file: `registrationAllowed: true`,
+      `verifyEmail: true`. What is *not* there is `smtpServer`, which is
+      `10-05-transactional-email-delivery.md`'s subject.
 - [x] `Ago.Chat.Integration.Tests`: a token minted for a freshly self-registered Keycloak user (a `sub`
       absent from `operators`) is accepted by `RequireKeycloakIdentity` and rejected by the existing
       `RequireOperatorIdentity` — proving the two policies are genuinely distinct enforcement points,

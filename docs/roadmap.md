@@ -223,9 +223,17 @@ Deliverables:
   script by hand.
 - Everyone starts on the free tier - paid tiers aren't reachable yet, since billing (Stage 13) hasn't
   landed.
+- A transactional email path (`10-05`, added 2026-08-25). Not in this stage's original scope, and
+  discovered to be load-bearing for it: the realm ships `registrationAllowed: true` with
+  `verifyEmail: true` and `smtpServer: null`, so Keycloak accepts a registration and then cannot send
+  the verification mail (`SEND_VERIFY_EMAIL_ERROR ... email_send_failed`, found live and recorded in
+  `runbooks/local-dev.md`). The account exists, the required action never lifts, the visitor is stuck.
+  Email had been deferred by `10-01` and then again by `13-01`, each pointing at the other, with no
+  item owning it - the same shape of chain the console's design pass turned out to be in.
 
 **Done when:** a new account, site, and operator can be created end to end by a real visitor, with
-zero seed-script involvement.
+zero seed-script involvement - and with no admin-API step standing in for a verification mail that
+cannot be sent, which is what "end to end by a real visitor" has to mean here.
 
 ---
 
@@ -415,6 +423,27 @@ Deliverables:
 **Done when:** both open questions above have a real, argued answer recorded (an ADR for each, since
 both are genuine "a reviewer would ask why" decisions per `adr/README.md`), and at least one of them
 ships end to end against the local cluster.
+
+---
+
+## Order: items deliberately pulled ahead of their stage
+
+Stage numbers are the order, with one recorded exception. Three items belong to stages sequenced after
+Stage 12 but describe things that are wrong on the live deployment *now*, and waiting for their stage's
+turn would mean knowingly leaving them broken through Stages 12, 13 and 14. Named here rather than
+renumbering stages, which would move every cross-reference for nothing (added 2026-08-25):
+
+- **`10-05`** (transactional email) and **`15-01`** (Keycloak's persistent user store). Both are
+  prerequisites of Stage 10 being *true* rather than merely built: today a self-registered visitor
+  cannot receive a verification mail, and any account that did get created is destroyed by the next
+  pod restart. Stage 10 is otherwise finished, which is exactly why these two should not wait.
+- **`6-09`** (release operator capacity on close). A live functional defect found by `7-04`'s load run:
+  an operator's usable capacity decays with every conversation they close until their connection drops
+  entirely, which on a public deployment means the waiting queue quietly stops being served.
+
+Everything else in Stage 15 stays in Stage 15. Backups, alerting, retention and capacity are
+insurance against a future failure; these three are present-tense breakage, and the distinction is
+what keeps "pull it forward" from becoming a way to reorder the whole roadmap by preference.
 
 ---
 
