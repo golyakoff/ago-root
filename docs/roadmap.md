@@ -173,7 +173,7 @@ Deliverables:
 - `Ago.Chat.*` hosts switched to a minimal production base image before anything ships publicly
   (`8-00`).
 - Deployment to a k3s VPS (chosen over a managed Kubernetes offering, `8-01`'s own ADR records why)
-  under `*.reserve-me.ru`; TLS; seeded demo tenant.
+  under `*.ago.golyakov.net`; TLS; seeded demo tenant.
 - A demo page with the widget plus a public operator console with a throwaway login.
 - README rewritten for the reviewer audience: what it is, the architecture in one diagram, the
   numbers from Stage 7, the ADR index, and an honest "what I would do differently" section.
@@ -204,7 +204,11 @@ Deliverables:
 Reprioritised ahead of AGO Ads (2026-08-23) — the author wants AGO Chat production-ready before the
 second product; Ads itself moved to Stage 20 the same day, freeing Stages 11-19 for further AGO
 Chat/AGO Platform work. Split (2026-08-23) from a single combined stage into four, in the order the
-author actually wants them built — signup first, billing last, not bundled together.
+author actually wants them built — signup first, billing last, not bundled together. **AGO Ads was
+replaced by AGO Calendar as the second product (2026-08-24)** — Stage 20 below is now AGO Calendar,
+and Stage 14 of the range this note freed up is now AGO Inbox; the reprioritisation reasoning that
+put Chat's own production-readiness ahead of the second product is otherwise unchanged, which is why
+this note is corrected in place rather than rewritten.
 
 Deliverables:
 - Self-service account/tenant registration, replacing `1-05`'s seed-script-only provisioning: a
@@ -268,27 +272,96 @@ entitlements enforce that tier's limits.
 
 ---
 
-## Stages 14-19 — reserved for AGO Chat and AGO Platform
+## Stage 14 — AGO Inbox: channels and always-on responses
 
-Not yet planned. Reserved (2026-08-23) so that further `ago-chat`/`ago-platform` work started after
-Stage 13 doesn't collide with AGO Ads' stage number - Ads is intentionally pushed out to Stage 20 to
-leave this range free.
+**Goal:** a visitor can reach AGO Chat through more than the embedded widget, and gets a real response
+even when no operator is available - without any of this becoming a third product. Placed here, first
+in the range Stage 10 freed up for further AGO Chat work, because it genuinely is further AGO Chat
+work: `adr/0027` settles that its channel-routing target is AGO Chat's own `Operator`, so it belongs in
+`Ago.Chat.*`, not a new repository, and nothing in its own scope depends on AGO Calendar existing yet
+(unlike Stage 21, which does and is sequenced after Stage 20 for exactly that reason).
+
+Deliverables:
+- A new domain concept - an external channel identity (which external chat-id/phone-number maps to
+  which visitor/conversation) - and a channel-adapter port behind `Ago.Platform.Resilience`'s existing
+  timeout/retry/breaker/bulkhead mechanism, reused unchanged per provider (`14-01`).
+- Two concrete channel adapters that need no legal or reliability spike first: MAX, chosen deliberately
+  as the first one built (an open Bot API, no known regulatory friction, `14-02`), and SMS (`14-03`).
+- Offline auto-reply: a tenant-toggleable, off-by-default scripted keyword reply for when no operator is
+  available, on any connected channel including the widget itself (`14-04`).
+- Telegram and WhatsApp explicitly gated behind their own spike/legal-review prerequisites, not built
+  speculatively ahead of either (`14-05`, blocked).
+
+**Done when:** a real message sent via MAX or SMS reaches an operator through the same console queue a
+widget conversation already does, and a visitor gets an automatic reply when no operator is online, on
+at least one connected channel - proven live, the same bar every other stage's "done when" already
+holds itself to.
 
 ---
 
-## Stage 20 — AGO Ads: the second product
+## Stages 15-19 — reserved for further AGO Chat and AGO Platform work
 
-**Goal:** prove the platform claim by building on it, not by asserting it.
+Not yet planned. Stage 14 (above) is the first item to actually use the range Stage 10 froze open
+(2026-08-23); the rest stays reserved so later `ago-chat`/`ago-platform` work does not collide with
+Stage 20's own number.
+
+---
+
+## Stage 20 — AGO Calendar: the second product
+
+**Goal:** prove the platform claim by building on it, not by asserting it - with a real product this
+time, not a load-shape exercise (`vision.md`; replaces AGO Ads in this slot, 2026-08-24, `adr/0027`).
 
 Deliverables:
-- `Ago.Ads.*` module: contextual ad serving through the same embedded script and ingest path.
-- Impression/click ingest as a high-volume, low-value-per-event stream — deliberately a different
-  load shape from chat, which is what makes it a real test of the platform.
-- No edits to `Ago.Platform.*` beyond additive extension points; every one that *was* needed gets
-  written down, because that list is the honest measure of how good the platform boundary was.
+- A new repository, `ago-calendar` (`Ago.Calendar.*`), consuming `Ago.Platform.*` packages exactly the
+  way `ago-chat` does - own hosts (`Ago.Calendar.Api`, `Ago.Calendar.Worker`), own arch tests, no
+  `ProjectReference` into `ago-chat` ever (`20-00`).
+- Domain: `Tenant`, `Worker`, `Service`, `Calendar`, `Customer`, `WorkingHoursRule`, `Event` - `Event`
+  is the one real row a booking transitions through (`Available → PendingConfirmation → Booked`, or
+  `Cancelled`/`NoShow`), never a computed slot (`20-01`).
+- Availability materialised in advance from each `WorkingHoursRule` out to a rolling horizon, with
+  already-materialised days directly editable by the tenant rather than described as exceptions
+  against the rule (`20-02`).
+- Booking as an atomic compare-and-set claim on an `Available` row, with a real customer lead card
+  upserted by phone number, no account (`20-03`).
+- A periodic confirmation-sweep job flipping expired `PendingConfirmation` rows to `Booked` - the same
+  architectural shape as `Ago.Chat.Worker`'s own `ConversationAssignmentJob`/`OutboxDispatcher`, not a
+  new mechanism - plus operator reject, manual cancellation, and a no-show flag, all through one shared
+  pending-bookings queue across a tenant's operators (`20-04`).
+- SMS booking-confirmation delivery through a new `ISmsSender` port and an outbox-published integration
+  event, vendor choice left as a real, named open question rather than an invented number (`20-05`).
+- A tenant/operator console and a public, embeddable booking widget, reusing AGO Chat's own per-site
+  CORS and Keycloak/OIDC patterns rather than inventing new ones (`20-06`).
 
-**Done when:** both products run in the same cluster from the same hosts, and the diff shows the
-platform barely changed.
+**Done when:** both products run in the same cluster from the same hosts, a real booking can be made
+and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
+platform barely changed - every extension point that *was* needed gets written down, because that list
+is the honest measure of how good the platform boundary was.
+
+---
+
+## Stage 21 — AGO Inbox × AGO Calendar: unattended booking and the unified queue
+
+**Goal:** the two hard integration questions Stage 14 and Stage 20 each named but deliberately did not
+solve on their own, now that both products actually exist to integrate. Sequenced after both because
+it structurally depends on both - unlike Stage 14, which needed neither Calendar nor a later stage to
+ship for real.
+
+Deliverables:
+- **Unattended booking through a channel with no rich UI** (`21-01`) - a visitor reaching AGO
+  Calendar's own booking flow from plain SMS or a bare-buttons Telegram bot, with none of the widget's
+  slot-grid UI available. Genuinely unsolved, on purpose: a step-by-step text Q&A tree, a
+  channel-adaptive UX, and free-text natural-language understanding are three real candidate
+  directions, none chosen here - this item stays `blocked` until the author picks one, rather than
+  guessing.
+- **A real unified operator queue across AGO Chat and AGO Calendar** (`21-02`) - `adr/0027` deliberately
+  left this as deferred integration work rather than a structural consequence of a shared `Operator`
+  entity; this item is where the actual stitching mechanism (console-side dual-API merge, or a
+  lighter cross-product notification path) gets decided and built, not before.
+
+**Done when:** both open questions above have a real, argued answer recorded (an ADR for each, since
+both are genuine "a reviewer would ask why" decisions per `adr/README.md`), and at least one of them
+ships end to end against the local cluster.
 
 ---
 

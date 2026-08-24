@@ -11,7 +11,8 @@ mess:
 1. **Layers** (vertical): Domain -> Application -> Infrastructure -> Hosts. Enforced by the
    dependency rule.
 2. **Platform vs product** (horizontal): AGO Platform is the reusable substrate; AGO Chat is the
-   first product on it. AGO Ads will be the second.
+   first product on it. AGO Calendar will be the second (`adr/0027` on why its Operator is not
+   `Ago.Chat.Domain.Operator` reused, even though the two look similar).
 
 A file's location is the intersection: "product Chat, layer Application" or "platform, layer
 Infrastructure".
@@ -69,8 +70,12 @@ A candidate is platform only if **all** of these hold:
 
 Otherwise it stays in the product, even if it feels generic. The failure mode of a platform is
 premature generalisation: an abstraction extracted from exactly one caller is a guess about the
-second one. Until AGO Ads exists, treat anything ambiguous as product code and promote it later -
-promotion is cheap, and the arch tests make the illegal direction impossible to introduce quietly.
+second one. Until a real second product exists, treat anything ambiguous as product code and
+promote it later - promotion is cheap, and the arch tests make the illegal direction impossible to
+introduce quietly. AGO Calendar (Stage 20) is now that second caller for real, and `adr/0027` is a
+worked example of the test above rejecting a tempting-looking promotion (a shared `Operator`
+aggregate) even with a genuine second caller in hand - a second caller makes promotion *possible*,
+not automatically correct.
 
 ## Layer by layer
 
