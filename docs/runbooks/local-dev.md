@@ -303,13 +303,26 @@ startup, so a wrong key fails fast instead of silently disabling a feature.
   PROJECT_NAME=Ago.Chat.Api|Worker|Webhooks -t ago-chat-api:local .` from `ago-chat`'s own root
   (`Dockerfile`'s own header comment has the full reasoning for the shared-file/build-arg shape).
   `8-00`: the final stage is `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, not the full
-  Debian image - ~43% smaller for Api/Webhooks, ~15% for Worker (`docker image ls`, `8-00`'s own
-  report has the exact numbers), verified live against this same compose stack (real
+  Debian image - ~43% smaller for Api/Webhooks, ~15% for Worker at the time (`docker image ls`,
+  `8-00`'s own report has the exact numbers), verified live against this same compose stack (real
   `/api/v1/visitor-sessions` call, real `/healthz/ready` checks, real webhook-delivery DB writes on
   all three hosts, no ICU/globalization exception). One harmless warning to expect and not chase:
   `Cannot load library libgssapi_krb5.so.2` in Worker's startup log - Npgsql's optional GSSAPI-auth
   probe not finding that library on the minimal image, falling back cleanly since this compose
   Postgres doesn't use GSSAPI auth anyway.
+  `8-04`: the build stage's `dotnet restore`/`dotnet publish` are now RID-restricted to `linux-x64`
+  (`--self-contained false` kept - still framework-dependent, only the RID is pinned, since the build
+  stage's own base image and every deploy target are always Linux). Before this, a RID-agnostic
+  publish shipped every RID's native assets for every native-asset NuGet package in the dependency
+  closure - almost entirely SkiaSharp (`Ago.Chat.Worker`'s attachment-thumbnail dependency, `5-04`),
+  which alone put ~440MB of win-x64/win-arm64/osx/linux-arm64/linux-musl-\*/etc. binaries under
+  `/app/runtimes` that this container could never load. Real sizes (`docker image ls`, same three
+  images, same day): Api 140MB -> 140MB, Webhooks 139MB -> 139MB (neither carries a multi-RID native
+  package, so no change), Worker 599MB -> 151MB (~75% smaller) - the RID-specific publish now places
+  `libSkiaSharp.so` directly under `/app` with no `runtimes/` tree at all. Re-verified live the same
+  way as `8-00`: all three hosts' `/healthz/live` and `/healthz/ready` return 200 against this compose
+  stack, and a real `POST /api/v1/visitor-sessions` against the RID-restricted Api image still returns
+  201 with a real token.
 
 ## When something is wrong
 
