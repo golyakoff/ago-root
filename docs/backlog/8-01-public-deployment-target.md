@@ -1,9 +1,9 @@
 # Public deployment target: hosting, TLS, seeded demo tenant
 
 - **Stage**: 8
-- **Status**: in progress — design/prep done (`adr/0026`, `runbooks/public-deploy.md`,
-  `ago-deploy/k8s/overlays/demo/`), live deployment not yet done. See "Done when" below for exactly
-  which boxes this covers and which still need a real VPS.
+- **Status**: done — live and verified 2026-08-24. `https://chat.reserve-me.ru`/`https://auth.
+  reserve-me.ru` are real, reachable, TLS-terminated, and seeded; see "Shipped in" below for the seven
+  real bugs found and fixed live along the way.
 - **Depends on**: `8-00` (base image, sequenced first per the author's own explicit instruction) —
   otherwise nothing new architecturally, reusing `1-05-seed-demo-tenant.md`'s seed script and
   `5-05-operator-oidc-authentication.md`'s Keycloak realm-import verbatim, pointed at a new
@@ -94,34 +94,74 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
       see `adr/0026`'s "Post-decision update"), the image-delivery mechanism (build-on-VPS,
       import into containerd), and the TLS approach (cert-manager + Let's Encrypt, HTTP-01) are this
       ADR's own contribution, argued with alternatives.
-- [ ] A real request (`curl`, or a browser) from a network unrelated to the deployment reaches the
+- [x] A real request (`curl`, or a browser) from a network unrelated to the deployment reaches the
       public HTTPS URL, receives a valid certificate with no browser warning, and `/healthz/live`
-      returns 200 — verified live, not asserted from the manifests. **Not done — no real VPS exists
-      yet for this session to deploy to.** `runbooks/public-deploy.md` §11 has the exact commands a
-      future session with real VPS access should run to close this box; leaving it unchecked here
-      rather than asserting it from the manifests, matching Stage 6/7's own load-report honesty
-      discipline.
-- [ ] The seeded demo site's public key and demo operator's Keycloak credentials work against this
+      returns 200 — verified live, not asserted from the manifests. **Done 2026-08-24**:
+      `curl https://chat.reserve-me.ru/healthz/live` → `200`, body `Healthy`, real Let's Encrypt
+      certificate, run from a machine outside the VPS's own network. `runbooks/public-deploy.md` §11
+      has the full transcript.
+- [x] The seeded demo site's public key and demo operator's Keycloak credentials work against this
       environment exactly as `local-dev.md`'s "Getting a working operator session locally" section
       describes for local — verified with the same direct-grant curl pattern, pointed at the public
-      Keycloak issuer instead of `127.0.0.1:8081`. **Not done — same reason as above**; the
-      direct-grant command against `auth.reserve-me.ru` is written and ready in
-      `runbooks/public-deploy.md` §11, not run.
+      Keycloak issuer instead of `127.0.0.1:8081`. **Done 2026-08-24**: the direct-grant call against
+      `auth.reserve-me.ru` returned a real signed JWT (issuer correctly `https://auth.reserve-me.ru`,
+      confirming the `--hostname` patch works), and that token was accepted by
+      `https://chat.reserve-me.ru/api/v1/operators/me` with `200`, resolving to the seeded
+      `demo-operator` row — the full chain proven, not just the token mint step.
 - [x] A new runbook section (in `runbooks/k8s-local.md` or a new `runbooks/public-deploy.md` —
       whichever this item finds reads more honestly once written) covers bring-up, where secrets
       live, and how to redeploy after a change, to the same "a session with no memory can repeat
       this" bar every other runbook is held to. **`runbooks/public-deploy.md`**, new file — a
       dedicated runbook reads more honestly than folding this into `k8s-local.md`, since large parts
       of it (provisioning, DNS, secret generation) are steps only the author can perform, marked
-      **(you)** throughout, distinct from the **(session)** steps a future session with real SSH
-      access can run directly. Its own status line states plainly that it has not been run against a
-      real node yet.
+      **(you)** throughout, distinct from the **(session)** steps a session with real SSH access can
+      run directly. **Fully run live end to end 2026-08-24** — its own status line now says so, with
+      the seven real bugs found along the way documented in place at the step each was found.
 - [x] No secret value appears in any file this item commits — the same audit this repository already
       applies everywhere (`repositories.md`). `k8s/overlays/demo/.env.example` and `tls.yaml`'s ACME
       `email` field carry placeholder text only (`<generate-a-real-password-do-not-commit>`, a
       non-real `letsencrypt-admin@reserve-me.ru` address under the domain itself, never the author's
       own personal inbox) — audited by re-reading every new/changed file in this pass before
       handback.
+
+## Shipped in
+
+`https://chat.reserve-me.ru`, `https://auth.reserve-me.ru`, `https://console.reserve-me.ru`
+(`8-02`'s own future backend), `https://grafana.reserve-me.ru` (author's own call, mid-deployment —
+public over TLS + Grafana's own real generated password, gated the same way console/chat are, not
+kept SSH-tunnel-only) — all TLS-terminated via a real Let's Encrypt certificate, all live on a real
+Fornex VPS (`217.177.74.184`). Full bring-up in `runbooks/public-deploy.md`, real numbers/decisions in
+`adr/0026` including its own "Post-decision update" for where the live purchase (Fornex Cloud NVMe 6,
+domain `reserve-me.ru`) differs from the ADR's original recommendation (Timeweb MSK 80,
+`*.ago.golyakov.net`).
+
+**Six real bugs found and fixed live**, each documented in place in `runbooks/public-deploy.md` at the
+step it was found, not just listed here:
+
+1. `kubectl kustomize <remote-github-url>` hit its own hardcoded 27s timeout on this VPS's network
+   path to GitHub — not blocked, genuinely slower than that timeout for a real data-transfer fetch
+   (confirmed: `git ls-remote` was instant, a real `git clone` took ~39s). Worked around with a local
+   clone, no VPN needed.
+2. `dotnet pack` without `-p:Version=...` silently used `Directory.Build.props`'s stale placeholder
+   version (`0.2.2`) instead of the real, CI-matching, `CHANGELOG.md`-derived version (`0.14.0`) —
+   every image build failed `NU1102` until packed the same way `ago-platform`'s own CI does.
+3. `docker.io`'s Ubuntu package ships without BuildKit's `buildx` component; `build-images.sh`'s
+   `--build-context` flag needs it. Fixed: `sudo apt-get install -y docker-buildx` (not
+   `docker-buildx-plugin` — that package name doesn't exist).
+4. `keycloak`'s Deployment got the `imagePullPolicy: Never` patch by mistake (copied from the three
+   `ago-chat-*` entries) — real upstream image, never built locally, `ErrImageNeverPull` until removed.
+5. `keycloak`'s default `RollingUpdate` strategy deadlocked its own embedded H2 database (single-
+   writer exclusive lock, old+new pod briefly co-running) on any rollout — fixed with
+   `strategy: { type: Recreate }`.
+6. `keycloak`'s liveness probe (`initialDelaySeconds: 20`) was far too aggressive for a real first
+   boot (~23s of Quarkus augmentation alone, measured live, plus a schema migration and realm import
+   after that) — Kubernetes killed the pod mid-startup on every attempt (`exit 143`, not an internal
+   crash) until the delay was raised to 90s. A long-running local-dev Keycloak pod never re-exercises
+   a cold first boot, so this was never hit before a real cluster start.
+7. (a seventh, cert-manager rather than `ago-deploy`) cert-manager's plain static-manifest install
+   does not enable Gateway API support by default — every ACME challenge failed
+   (`gateway api is not enabled`) until the controller was patched live with
+   `--enable-gateway-api=true`. One-time cluster-level flag, not part of any committed manifest.
 
 ## Open questions — resolved 2026-08-24, author's own decision
 
