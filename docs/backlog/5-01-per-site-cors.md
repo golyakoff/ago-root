@@ -150,6 +150,37 @@ wraps its `bool` in a small reference-type result, the same pattern every existi
 reference-type case - a DTO wrapping a "falsy" value - still round-trips and still calls the factory
 exactly once.
 
+## Addendum (`10-04`)
+
+`10-04` proved this mechanism end-to-end for a site created through `10-02`'s real self-registration
+path (not only the pre-seeded fixtures this item's own tests used) and explicitly answered the
+negative-cache timing question this item's TTL-only invalidation note raises: could a request that
+checked an origin *before* a site claiming it existed strand a real new site behind a cached "no site
+allows this origin" answer until `CheckCorsOriginHandler`'s 30-second negative TTL expires?
+
+**Not for self-registration specifically.** `CheckCorsOriginHandler`'s per-origin cache key
+(`cors-origin:{origin}`) can only hold a stale negative for a soon-to-be-registered origin if some
+earlier request actually carried that exact `Origin` header before the site existed - and for a
+self-registered site that is impossible by construction: the origin is a value the registering user
+types into `10-03`'s signup form and only becomes `Site.AllowedOrigins` once `RegisterSiteHandler`
+commits it, so nothing upstream of that moment knows the value to send as an `Origin` header; the
+registration call itself (`POST /api/v1/sites`) is made from the console's own origin, never the
+customer's; and the one caller who could type that origin early - the registering user - has no public
+key yet to make a widget request with, and no widget script on their page to send one from, until
+`10-02`'s response hands them the public key *after* registration. `10-04`'s own
+`SelfRegisteredSiteOriginTests.RegisterThenImmediateWidgetHandshake_FromTheRegisteredOrigin_PassesBothCorsLayers`
+proves the real flow (register, then immediately check both CORS layers from that exact origin)
+succeeds with no wait and no gap.
+
+The underlying TTL-only-invalidation limitation itself is real and unfixed (unchanged from this item's
+own scope, which never wired up event-driven invalidation) - `10-04`'s own
+`AnOriginCheckedBeforeAnySiteClaimsIt_StaysNegativelyCachedThroughARaceRegistration` demonstrates it
+directly by deliberately doing the one thing no real self-registration caller ever does (checking the
+origin before the site exists), so the boundary is proven, not just asserted. No fix was needed because
+no reachable gap exists for self-registration; if a future feature ever lets an origin be freed and
+immediately reclaimed by a different site (`10-04`'s own "Out of scope" - editing `allowed_origins`
+after signup - is the likely trigger), that feature is the one that would need to revisit this note.
+
 ## Open questions
 
 None - the mechanism (a per-origin `ICorsPolicyProvider` plus a per-site in-app check) follows

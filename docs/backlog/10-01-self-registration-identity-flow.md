@@ -1,7 +1,7 @@
 # Self-service signup: identity flow and Keycloak provisioning
 
 - **Stage**: 10
-- **Status**: ready
+- **Status**: done (`long-term/stage-10`, relaxed-mode background dispatch, 2026-08-24)
 - **Depends on**: nothing new architecturally — reuses `5-05-operator-oidc-authentication.md`'s
   Keycloak realm-import mechanism and `adr/0022`'s shared-realm, resolve-at-request-time claims model
   unchanged. The new pieces are a realm setting and one new authorization policy, not a new identity
@@ -94,21 +94,27 @@ protect.
 
 ## Done when
 
-- [ ] `adr/00XX` written and accepted, naming the chosen provisioning path (A or B) and the reasoning,
+- [x] `adr/0028` written and accepted, naming the chosen provisioning path (A) and the reasoning,
       and stating explicitly why `RequireKeycloakIdentity` and `RequireOperatorIdentity` must remain
       two distinct policies rather than one relaxed into the other.
-- [ ] Keycloak realm-import config: `registrationAllowed` enabled, required profile fields set to avoid
+- [x] Keycloak realm-import config: `registrationAllowed` enabled, required profile fields set to avoid
       `5-05`'s `VERIFY_PROFILE` gotcha, and the "Verify Email" required action enabled (author's
-      decision, 2026-08-23).
-- [ ] `Ago.Chat.Integration.Tests`: a token minted for a freshly self-registered Keycloak user (a `sub`
+      decision, 2026-08-23) — landed in `ago-chat`'s own test realm-import
+      (`tests/Ago.Chat.Integration.Tests/keycloak-realm-import.json`). **Known gap**: the identical
+      change still needs to land in `ago-deploy/k8s/base/keycloak-realm-import.json` (the real local-
+      dev/demo Keycloak) — `ago-deploy` was outside this dispatch's own worktree scope
+      (`long-term/stage-10` on `ago-root`/`ago-chat` only), flagged in `local-dev.md` rather than
+      silently assumed done.
+- [x] `Ago.Chat.Integration.Tests`: a token minted for a freshly self-registered Keycloak user (a `sub`
       absent from `operators`) is accepted by `RequireKeycloakIdentity` and rejected by the existing
       `RequireOperatorIdentity` — proving the two policies are genuinely distinct enforcement points,
-      not the same check under a different name.
-- [ ] `docs/runbooks/local-dev.md` gains a short section: how to complete Keycloak's self-registration
+      not the same check under a different name. `KeycloakIdentityPolicyTests` — run for real against
+      Testcontainers Postgres/Keycloak, passing.
+- [x] `docs/runbooks/local-dev.md` gains a short section: how to complete Keycloak's self-registration
       form against the local realm (or mint an equivalent token directly, matching `5-05`'s own
       "Getting a working operator session locally" curl-based precedent) for testing `10-02`/`10-03`
       without a real browser flow every time.
-- [ ] `docs/architecture/authorization.md`'s actor table gets a note once this item ships, matching how
+- [x] `docs/architecture/authorization.md`'s actor table gets a note once this item ships, matching how
       every other authentication change to this table has been recorded as fact once shipped.
 
 ## Open questions
