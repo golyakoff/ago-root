@@ -4,11 +4,19 @@
 
 | Traffic | Balanced by (local k8s) | Balanced by (demo deploy) |
 |---|---|---|
-| Widget script `widget.js` | Gateway -> static file service | CDN, long-cached, versioned filename |
+| Widget script `ago-chat.js` | Gateway -> static file service | Gateway -> static file service (nginx, `8-02`) - **not** a CDN, see note below |
 | REST API calls | NGINX Gateway Fabric -> `Ago.Chat.Api` Service | same, behind the cloud L4 LB |
 | WebSocket / SignalR | NGINX Gateway Fabric (HTTP/1.1 upgrade) -> `Ago.Chat.Api` Service | same |
 | File upload / download bytes | **nothing** - straight to object storage | same (`file-storage.md`) |
 | Internal API -> Worker | nothing - they never call each other synchronously; the broker is the boundary | same |
+
+**Widget script row, updated by `8-02`**: this table originally predicted a CDN for the demo
+deployment's copy of the widget bundle. `adr/0026` (accepted after this row was first written)
+decided against adding a CDN at all - a new external dependency this single-node, build-on-VPS,
+no-registry deployment does not need (the same "no new dependency" instinct that ADR also applied to
+image delivery and TLS). `8-02` followed that decision through for the widget script specifically: it
+ships from the same kind of lightweight nginx static-file Service the local-k8s column already
+named, not a CDN - `ago-widget/Dockerfile`, `ago-deploy/k8s/overlays/demo/demo-shop1-static.yaml`.
 
 On Docker Desktop the entry point is **NGINX Gateway Fabric**, configured through the Gateway API
 (`Gateway`, `HTTPRoute`) rather than a legacy `Ingress` resource, reachable on `localhost`. Nothing in
