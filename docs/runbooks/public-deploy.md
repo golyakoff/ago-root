@@ -1,48 +1,71 @@
 # Runbook: public deployment (k3s VPS)
 
-> **Status: design only, not live-verified.** This runbook was written by a session with no VPS to
-> deploy to (`8-01`'s own worker scope) — every command below is believed correct against the real
-> manifests it references (`k8s/overlays/demo/`) and against `k8s-local.md`'s own already-verified
-> install steps where this deployment reuses them unchanged, but nothing here has been run against a
-> real Timeweb Cloud node. The next session with real VPS access should run this end to end, fix
-> whatever it finds wrong, and update this status line the same way `k8s-local.md`'s own header was
-> updated once `0-03` actually ran it. `adr/0026` has the reasoning behind every choice named here;
-> this file is the "how", not the "why".
+> **Status: live — steps 1, 2, and the SSH-hardening part of step 3 actually executed and verified**
+> (2026-08-24) against a real VPS. This runbook was originally written by a session with no VPS to
+> deploy to (`8-01`'s own worker scope, "design only" as of its first version); the managing session
+> then executed it live once the author provisioned the real server. Remaining steps (k3s/NGF/cert-
+> manager install, image build, secrets, seeding, external verification) are next. `adr/0026`
+> (including its own "Post-decision update") has the reasoning behind every choice named here,
+> including where the live purchase differs from the original recommendation; this file is the "how".
 
 Every step below is marked **(you)** if it can only be done by the author by hand — buying the VPS,
 touching a domain registrar's panel, generating and holding real secret values — or **(session)** if a
-future Claude Code session with SSH access to the real VPS can run it directly. Nothing in this
-runbook can be executed by the worker that wrote it: there is no real VPS in this worktree's reach.
+Claude Code session with SSH access to the real VPS can run it directly.
 
-## 1. Provision the VPS **(you)**
+## 1. Provision the VPS **(you) — done 2026-08-24**
 
-- Buy a Timeweb Cloud **MSK 80** instance (4 vCPU / 8 GB RAM / 80 GB NVMe, Moscow region,
-  annual billing ≈1 800 ₽/month — `adr/0026`'s sizing math). Russian-issued cards work directly with
-  this provider; a Western provider would need a third-party intermediary (`adr/0026`'s context).
-- OS image: **Ubuntu 24.04 LTS** ("Noble") — the mainstream Debian-family LTS, and the same distro
-  family `8-00`'s Ubuntu Chiseled base image already targets, keeping the base OS and the container
-  base image from the same upstream.
-- Note the VPS's public IPv4 address — every step below needs it.
-- Add an SSH key during provisioning (Timeweb Cloud's own panel) rather than a password login.
+**Actually purchased**: Fornex, "Cloud NVMe 6" tier (4 vCPU / **6 GB RAM** / 80 GB NVMe, Russia
+location, Ubuntu 24.04 LTS) — not the Timeweb Cloud MSK 80 originally recommended below; the author
+independently shopped and bought before applying the recommendation verbatim. `adr/0026`'s own
+"Post-decision update" has the real memory-headroom tradeoff of 6 GB vs. the recommended 8 GB, accepted
+knowingly, not silently. Public IPv4: **`217.177.74.184`**.
 
-## 2. DNS records **(you)**
+*(Original recommendation, kept for the reasoning trail: Timeweb Cloud MSK 80, 4 vCPU / 8 GB RAM /
+80 GB NVMe, Moscow region, ≈1 800 ₽/month, annual billing — Russian-issued cards work directly with
+Timeweb; Fornex, a Spain-registered provider with a Russia-region line, also worked for the author's
+own card without a third-party intermediary, per `adr/0026`'s updated payment-constraint note.)*
 
-In `golyakov.net`'s own registrar/DNS panel, add four `A` records pointed at the VPS's IPv4 address:
+**SSH hardening — done and verified 2026-08-24**: a non-root sudo user `ago` was created with
+`NOPASSWD:ALL` (a personal single-admin demo box, not multi-tenant — password-gated sudo was skipped
+deliberately) and the session's own SSH public key installed to its `authorized_keys`; root SSH login
+and password authentication were then disabled in `/etc/ssh/sshd_config`
+(`PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`), **verified live
+before reporting done**: `ago` login confirmed working from the new key location, *then* `root` login
+confirmed refused (`Permission denied (publickey,password)`) — in that order, specifically to avoid a
+lockout. The private key lives at `~/.ssh/ago-vps-ed25519` on the machine running the managing
+session — not committed to any repository (`repositories.md`: "no secrets, ever").
+
+## 2. DNS records **(you) — done 2026-08-24**
+
+Domain: **`reserve-me.ru`**, bought via reg.ru specifically for this deployment (not a subdomain of a
+personal domain — see `adr/0026`'s "Post-decision update" for the full account of the change from the
+original `*.ago.golyakov.net` plan). Configured at reg.ru as: apex (`@`) as an `A` record to the VPS
+IP (so the domain itself is reachable, not only its subdomains), the five subdomains below as `CNAME`
+records pointing at the apex rather than five separate `A` records (the author's own established
+pattern — one record to update if the IP ever changes, instead of five; `CNAME` is not valid at the
+apex itself, which is exactly why `@` stays `A`), and the registrar's own default `www` record left
+untouched (unused today, may be repurposed later, doesn't conflict with anything here):
 
 | Host | Type | Value |
 |---|---|---|
-| `chat.ago.golyakov.net` | A | `<vps-ip>` |
-| `auth.ago.golyakov.net` | A | `<vps-ip>` |
-| `console.ago.golyakov.net` | A | `<vps-ip>` |
-| `demo-shop1.ago.golyakov.net`, `demo-shop2.ago.golyakov.net` | A | `<vps-ip>` (reserved now, unrouted until `8-02`) |
+| `reserve-me.ru` (apex) | A | `217.177.74.184` |
+| `chat.reserve-me.ru` | CNAME | `reserve-me.ru` |
+| `auth.reserve-me.ru` | CNAME | `reserve-me.ru` |
+| `console.reserve-me.ru` | CNAME | `reserve-me.ru` |
+| `demo-shop1.reserve-me.ru` | CNAME | `reserve-me.ru` (reserved now, unrouted until `8-02`) |
+| `demo-shop2.reserve-me.ru` | CNAME | `reserve-me.ru` (reserved now, unrouted until `8-02`) |
 
-Give DNS time to propagate before step 6 (cert-manager's HTTP-01 challenge needs the hostname to
-already resolve to this node) — a few minutes is typical, occasionally longer.
+**Propagation, checked live** (2026-08-24, against `8.8.8.8` to bypass any local cache):
+`chat.`/`auth.`/`console.reserve-me.ru` resolved to `217.177.74.184` within minutes of being added —
+the three hostnames `tls.yaml`'s `Certificate` actually needs for step 6's HTTP-01 challenge.
+`demo-shop1`/`demo-shop2`/the bare apex had not resolved yet at last check — not a blocker (neither is
+routed by any `HTTPRoute` yet; both are `8-02`'s own future work), left to finish propagating in the
+background.
 
-## 3. Install k3s, disabling the bundled Traefik **(session, once SSH access exists)**
+## 3. Install k3s, disabling the bundled Traefik **(session)**
 
 ```bash
-ssh <user>@<vps-ip>
+ssh -i ~/.ssh/ago-vps-ed25519 ago@217.177.74.184
 curl -sfL https://get.k3s.io | sh -s - --disable traefik
 sudo k3s kubectl get nodes   # confirms the node is Ready before anything else
 ```
@@ -138,7 +161,7 @@ Paste each result into `.env` in place of its `<generate-a-real-password-do-not-
 your behalf inside a transcript that might be read back later defeats the entire point of the
 distinction `.env.example`'s own header comment draws. Also edit `k8s/overlays/demo/tls.yaml`'s
 `ClusterIssuer.spec.acme.email` to a real, reachable address before applying — the committed
-placeholder (`letsencrypt-admin@golyakov.net`) is intentionally not one you should actually use as-is.
+placeholder (`letsencrypt-admin@reserve-me.ru`) is intentionally not one you should actually use as-is.
 
 ## 8. Apply the demo overlay **(session)**
 
@@ -187,21 +210,21 @@ Keycloak itself, same as local.
 This is the step `8-01`'s own Done-when insists on actually running, not asserting from the manifests:
 
 ```bash
-curl -v https://chat.ago.golyakov.net/healthz/live      # expect: 200, a certificate chain with no warning
-curl -v https://auth.ago.golyakov.net/realms/ago-chat    # expect: 200, Keycloak's realm discovery JSON
+curl -v https://chat.reserve-me.ru/healthz/live      # expect: 200, a certificate chain with no warning
+curl -v https://auth.reserve-me.ru/realms/ago-chat    # expect: 200, Keycloak's realm discovery JSON
 ```
 
 Then the same direct-grant pattern `local-dev.md`'s "Getting a working operator session locally"
 section already documents, pointed at the public issuer instead of `127.0.0.1:8081`:
 
 ```bash
-curl -s -X POST https://auth.ago.golyakov.net/realms/ago-chat/protocol/openid-connect/token \
+curl -s -X POST https://auth.reserve-me.ru/realms/ago-chat/protocol/openid-connect/token \
   -d "grant_type=password&client_id=ago-console&username=demo-operator&password=demo-operator-password" \
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
 ```
 
-A token from this call should be accepted by `wss://chat.ago.golyakov.net/hubs/operator` (`dev-
-harness.html`'s Operator pane, pointed at `?api=https://chat.ago.golyakov.net` — `5-01`'s own
+A token from this call should be accepted by `wss://chat.reserve-me.ru/hubs/operator` (`dev-
+harness.html`'s Operator pane, pointed at `?api=https://chat.reserve-me.ru` — `5-01`'s own
 `?api=` query-param support already handles a non-same-origin backend).
 
 ## Redeploying after a change
@@ -222,7 +245,7 @@ manual sequence is the whole story until a later item decides differently.
 
 - **HTTP is never redirected to HTTPS** — `gateway.yaml`'s own comment names this: a permanent
   redirect is a small addition (Gateway API's `RequestRedirect` HTTPRoute filter) this item did not
-  add without a live server to verify it against. A visitor hitting `http://chat.ago.golyakov.net`
+  add without a live server to verify it against. A visitor hitting `http://chat.reserve-me.ru`
   today gets a 404 from the Gateway (no HTTPRoute matches the `http` listener), not a redirect.
 - **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
   inherited unchanged from the local realm import, per this item's own instruction to reuse `5-05`'s
@@ -232,9 +255,9 @@ manual sequence is the whole story until a later item decides differently.
 - **Keycloak runs in `start-dev` mode publicly**, not its own hardened `start` production mode —
   `adr/0026`'s own "Consequences" section names this a deliberate, stated gap: a demo IdP for one
   seeded operator, not a production identity provider.
-- **`console.ago.golyakov.net`'s `HTTPRoute` has no real backend yet** — `ago-console`'s Service is
+- **`console.reserve-me.ru`'s `HTTPRoute` has no real backend yet** — `ago-console`'s Service is
   `8-02`'s own job. Requests to this hostname will fail until that item lands and creates it.
-- **`demo-shop1`/`demo-shop2.ago.golyakov.net` have DNS records reserved but no Gateway resources at
+- **`demo-shop1`/`demo-shop2.reserve-me.ru` have DNS records reserved but no Gateway resources at
   all** — same reason, `8-02`'s own scope.
 - **The `k3s ctr -n k8s.io images import` step (§6) is unverified** — the one command in this runbook
   this session is least confident about, named explicitly rather than presented as proven.

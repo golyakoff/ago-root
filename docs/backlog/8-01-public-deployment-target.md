@@ -90,7 +90,8 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 - [x] An ADR names the hosting choice and the reasoning (cost, manifest reuse, the one-node
       reality), accepted before any manifest work in this item starts. **`adr/0026`**, written and
       accepted in this pass — hosting/domain were the author's own prior calls; the VPS tier
-      (Timeweb Cloud MSK 80, with real sizing math), the image-delivery mechanism (build-on-VPS,
+      (Timeweb Cloud MSK 80 recommended, real sizing math; Fornex Cloud NVMe 6 actually purchased —
+      see `adr/0026`'s "Post-decision update"), the image-delivery mechanism (build-on-VPS,
       import into containerd), and the TLS approach (cert-manager + Let's Encrypt, HTTP-01) are this
       ADR's own contribution, argued with alternatives.
 - [ ] A real request (`curl`, or a browser) from a network unrelated to the deployment reaches the
@@ -104,7 +105,7 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
       environment exactly as `local-dev.md`'s "Getting a working operator session locally" section
       describes for local — verified with the same direct-grant curl pattern, pointed at the public
       Keycloak issuer instead of `127.0.0.1:8081`. **Not done — same reason as above**; the
-      direct-grant command against `auth.ago.golyakov.net` is written and ready in
+      direct-grant command against `auth.reserve-me.ru` is written and ready in
       `runbooks/public-deploy.md` §11, not run.
 - [x] A new runbook section (in `runbooks/k8s-local.md` or a new `runbooks/public-deploy.md` —
       whichever this item finds reads more honestly once written) covers bring-up, where secrets
@@ -118,7 +119,7 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 - [x] No secret value appears in any file this item commits — the same audit this repository already
       applies everywhere (`repositories.md`). `k8s/overlays/demo/.env.example` and `tls.yaml`'s ACME
       `email` field carry placeholder text only (`<generate-a-real-password-do-not-commit>`, a
-      non-real `letsencrypt-admin@golyakov.net` address under the domain itself, never the author's
+      non-real `letsencrypt-admin@reserve-me.ru` address under the domain itself, never the author's
       own personal inbox) — audited by re-reading every new/changed file in this pass before
       handback.
 
@@ -129,19 +130,22 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
   item's own ADR — **now written, `adr/0026`** — covers the provisioning work `k8s-local.md` never
   had to (Ubuntu 24.04 LTS, the k3s install command with Traefik disabled, confirming the Gateway
   API's NGINX Gateway Fabric install from `k8s-local.md` transfers onto k3s unchanged) in
-  `runbooks/public-deploy.md`; the tier itself (Timeweb Cloud MSK 80) and the reasoning are in the
-  ADR.
-- **Domain: the author's own `golyakov.net`**, with `*.ago.golyakov.net` subdomains — `chat.ago.
-  golyakov.net` (Api/hub traffic), `console.ago.golyakov.net` (operator console), `demo-shop1.ago.
-  golyakov.net` / `demo-shop2.ago.golyakov.net` (seeded demo tenant sites for the widget to embed
-  on), with the author open to adding more subdomains under the same `*.ago.golyakov.net` pattern for
-  any further tool this stage or a later one needs. No separate domain purchase needed. This item's
-  ADR — **`adr/0026`** — records the exact subdomain-to-service mapping, including one addition the
-  original plan above did not name: `auth.ago.golyakov.net` for Keycloak, required by `5-05`'s own
-  exact-issuer-match validation and `8-02`'s planned browser redirect, neither of which works against
-  an internal-only Keycloak hostname. DNS is not yet actually configured (no VPS exists to point it
-  at) — the ADR's table is the plan `runbooks/public-deploy.md` §2 hands to the author to apply by
-  hand once a VPS exists.
+  `runbooks/public-deploy.md`; the tier itself (recommended: Timeweb Cloud MSK 80; actually purchased:
+  Fornex Cloud NVMe 6, 6 GB not 8 GB — `adr/0026`'s own "Post-decision update" has the real tradeoff)
+  and the reasoning are in the ADR.
+- **Domain: `reserve-me.ru`** — a dedicated domain purchased via reg.ru specifically for this
+  deployment (2026-08-24), superseding the original plan's `*.ago.golyakov.net` subdomain-of-a-personal-
+  domain approach (`adr/0026`'s own "Post-decision update" has the full account of the change).
+  Subdomains: `chat.reserve-me.ru` (Api/hub traffic), `console.reserve-me.ru` (operator console),
+  `demo-shop1.reserve-me.ru` / `demo-shop2.reserve-me.ru` (seeded demo tenant sites for the widget to
+  embed on), with room to add more subdomains under the same pattern for any further tool this stage
+  or a later one needs. This item's ADR — **`adr/0026`** — records the exact subdomain-to-service
+  mapping, including one addition the original plan above did not name: `auth.reserve-me.ru` for
+  Keycloak, required by `5-05`'s own exact-issuer-match validation and `8-02`'s planned browser
+  redirect, neither of which works against an internal-only Keycloak hostname. The real VPS now exists
+  (Fornex, `217.177.74.184`) and DNS records for all five subdomains above are being added at reg.ru
+  as this item's own live deployment work proceeds — `runbooks/public-deploy.md` §2 has the exact
+  records.
 
 Both answered — this item is no longer blocked. Status changed to `ready`; still depends on `8-00`
 landing first per the author's own explicit sequencing. Design/prep work in this pass (`adr/0026`,

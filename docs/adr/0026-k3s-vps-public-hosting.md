@@ -1,4 +1,4 @@
-# ADR-0026: k3s VPS hosting, `*.ago.golyakov.net` domain plan, VM sizing, and TLS
+# ADR-0026: k3s VPS hosting, `*.reserve-me.ru` domain plan, VM sizing, and TLS
 
 - **Status**: Accepted
 - **Date**: 2026-08-24
@@ -20,7 +20,7 @@ that were still genuinely open:
 - **Hosting: a k3s VPS**, chosen over a managed Kubernetes offering for lower cost, accepting that
   `deploy/k8s/base/`'s manifests transfer with zero new surface only on a managed offering — the VPS
   path needs its own bring-up work this ADR designs.
-- **Domain: `golyakov.net`** (the author's own), with `*.ago.golyakov.net` subdomains — no new
+- **Domain: `reserve-me.ru`** (the author's own), with `*.reserve-me.ru` subdomains — no new
   purchase, and the pattern is left open for more subdomains later.
 
 What this ADR still had to resolve, because nothing upstream picked an answer: the concrete
@@ -30,12 +30,45 @@ store, and the TLS mechanism.
 
 ### Real payment constraint behind the provider choice
 
-Timeweb Cloud, a Russian hosting provider, is the candidate evaluated below — not Hetzner,
-DigitalOcean, or another Western provider, because the author's payment cards are Russian-issued.
-Visa/Mastercard/Amex cards issued by Russian banks stopped clearing at Western merchants after 2022;
-paying a Western VPS provider directly is not possible without a third-party intermediary, which adds
-cost, friction, and a dependency this ADR would rather avoid than route around. This is a real
-constraint on the option set, not a preference.
+Timeweb Cloud, a Russian hosting provider, was the candidate evaluated below at the time this ADR was
+first written — not Hetzner, DigitalOcean, or another Western provider, because the author's payment
+cards are Russian-issued. Visa/Mastercard/Amex cards issued by Russian banks stopped clearing at
+Western merchants after 2022; paying a Western VPS provider directly is not possible without a
+third-party intermediary, which adds cost, friction, and a dependency this ADR would rather avoid than
+route around. This is a real constraint on the option set, not a preference. **The author ended up
+purchasing from Fornex instead (a Spain-registered European provider with a Russia-region VPS line and
+working direct payment) — see "Post-decision update" below**; the constraint and the reasoning that
+led to evaluating Timeweb first stay accurate, they just did not end up naming the actual provider
+used.
+
+### Post-decision update — actual purchase differs from this ADR's own recommendation (2026-08-24)
+
+The author independently shopped and purchased before this ADR's own recommendation was applied
+verbatim. Recorded here rather than silently edited into the analysis above, so the reasoning trail
+stays honest about what was actually decided versus what was actually bought:
+
+- **Provider/tier actually purchased: Fornex, "Cloud NVMe 6"** (4 vCPU / **6 GB RAM** / 80 GB NVMe,
+  Russia location, Ubuntu 24.04 LTS) — not Timeweb Cloud MSK 80 as recommended below. Fornex's own
+  Russia-region tier was not part of the original comparison (only Timeweb was evaluated); the sizing
+  math below still applies to it directly since it targets the same workload regardless of provider.
+- **6 GB vs. the recommended 8 GB — real, stated tradeoff, not silently accepted**: the sizing math
+  below puts the *typical steady-state* footprint (requests floor + k3s/NGF/cert-manager/OS overhead)
+  at ≈3.65–4.25 GiB, leaving ≈1.75–2.35 GiB of headroom on 6 GB — comfortable for a demo cluster opened
+  occasionally, matching `nfr.md`'s own "not an uptime SLA" framing for this deployment. What 6 GB does
+  **not** cover is the full *worst-case* scenario in the table below (every pod simultaneously at its
+  configured memory limit, ≈6.3–6.6 GiB before k3s/NGF/cert-manager/OS overhead, ≈7–7.5 GiB after) — a
+  genuine, accepted OOM risk in that specific unlikely-but-possible scenario, not a risk this ADR's own
+  math says doesn't exist. 8 GB (Timeweb MSK 80 or an equivalent-spec Fornex tier, if one exists) would
+  close that gap; the author chose 6 GB anyway, informed by this exact number, not despite it.
+- **Domain actually purchased: `reserve-me.ru`** (via reg.ru), **not** a subdomain of the author's own
+  `golyakov.net` as originally planned — a dedicated domain bought specifically for this project, not
+  a shared personal one, so the `*.ago.` isolation prefix the original plan used (to avoid colliding
+  with anything else on a multi-purpose personal domain) is dropped: subdomains are `chat.reserve-me.ru`,
+  `auth.reserve-me.ru`, `console.reserve-me.ru`, `demo-shop1.reserve-me.ru`, `demo-shop2.reserve-me.ru`
+  directly, not `*.ago.reserve-me.ru`. Every reference to the domain elsewhere in this ADR and in
+  `runbooks/public-deploy.md`/`ago-deploy/k8s/overlays/demo/` has been updated to match — this is a
+  find-and-replace of the domain value, not a re-litigation of the subdomain-to-service mapping
+  decided below, which stays exactly as reasoned.
 
 ## Decision
 
@@ -43,12 +76,12 @@ constraint on the option set, not a preference.
 
 | Subdomain | Routes to | Owner |
 |---|---|---|
-| `chat.ago.golyakov.net` | `Ago.Chat.Api` — REST + both SignalR hubs | this item |
-| `auth.ago.golyakov.net` | Keycloak (OIDC issuer + login UI) | this item — **new, not named in the backlog's own subdomain list** |
-| `console.ago.golyakov.net` | `ago-console` static bundle | routing designed here; the Service and bundle are `8-02`'s job |
-| `demo-shop1.ago.golyakov.net`, `demo-shop2.ago.golyakov.net` | seeded demo tenant sites the widget embeds on | reserved in this plan; no backend exists yet, so no Gateway resource is created for them in this item — that is `8-02`'s static-page work |
+| `chat.reserve-me.ru` | `Ago.Chat.Api` — REST + both SignalR hubs | this item |
+| `auth.reserve-me.ru` | Keycloak (OIDC issuer + login UI) | this item — **new, not named in the backlog's own subdomain list** |
+| `console.reserve-me.ru` | `ago-console` static bundle | routing designed here; the Service and bundle are `8-02`'s job |
+| `demo-shop1.reserve-me.ru`, `demo-shop2.reserve-me.ru` | seeded demo tenant sites the widget embeds on | reserved in this plan; no backend exists yet, so no Gateway resource is created for them in this item — that is `8-02`'s static-page work |
 
-**`auth.ago.golyakov.net` is this ADR's own addition to the plan**, not a re-litigation of the
+**`auth.reserve-me.ru` is this ADR's own addition to the plan**, not a re-litigation of the
 domain/subdomain-pattern decision. The backlog's subdomain list covered API, console, and the two demo
 shops, but Keycloak was never given a public name of its own — `Ago.Chat.Api`'s Operator JWT scheme
 validates a token's `iss` claim by exact string match (`5-05`'s own documented gotcha:
@@ -57,7 +90,7 @@ validates a token's `iss` claim by exact string match (`5-05`'s own documented g
 visitor's own browser, not only from inside the cluster. Both requirements are unmet by routing
 `Auth:Keycloak:Authority` at the internal `keycloak` Service, so a public hostname for Keycloak is not
 optional — it falls out of mechanics `5-05`/`5-06` already built, not a new feature this item invents.
-Same `*.ago.golyakov.net` pattern, so it costs nothing beyond one more DNS record and one more
+Same `*.reserve-me.ru` pattern, so it costs nothing beyond one more DNS record and one more
 `HTTPRoute`/`Certificate` DNS name.
 
 ### VPS tier: Timeweb Cloud MSK 80 (4 vCPU / 8 GB RAM / 80 GB NVMe, ≈1 800 ₽/month, annual billing)
@@ -148,19 +181,19 @@ documented manual runbook (this item's own scope), not for one that redeploys on
 NGINX Gateway Fabric remains the edge component (`adr/0014`, unchanged by this item). `edge.md`'s
 "Balanced by (demo deploy)" column already named cert-manager + Let's Encrypt as this item's own
 prediction; this ADR confirms it and picks the challenge type: **HTTP-01**, not DNS-01. DNS-01 would
-need a DNS-provider API credential for `golyakov.net`'s registrar wired into the cluster as a secret —
+need a DNS-provider API credential for `reserve-me.ru`'s registrar wired into the cluster as a secret —
 a new credential and a new integration this single-node, HTTP-reachable deployment does not need.
 HTTP-01 only needs port 80 open and DNS already pointed at the node, both true here. cert-manager's
 `gatewayHTTPRoute` ACME solver (stable since cert-manager 1.5) drives the challenge directly through
 the Gateway API `Gateway`/`HTTPRoute` this project already uses, with no `Ingress` resource involved.
 
 `ago-deploy-8-01/k8s/overlays/demo/tls.yaml` carries the `ClusterIssuer` (Let's Encrypt production
-directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.ago.golyakov.net` via
+directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.reserve-me.ru` via
 `dnsNames`) resources — full detail in that file, not restated here.
 
 ## Consequences
 
-- A public Keycloak endpoint (`auth.ago.golyakov.net`) is new attack surface this ADR's own domain
+- A public Keycloak endpoint (`auth.reserve-me.ru`) is new attack surface this ADR's own domain
   plan did not originally carry — mitigated by Keycloak already being designed to be internet-facing
   (it is a mainstream IdP, not a project-internal tool), and by `8-00`'s minimal base image work
   covering the `Ago.Chat.*` hosts, not Keycloak's own upstream image, which is out of this item's
@@ -180,7 +213,7 @@ directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.a
   itself (its own `start` production mode, its own TLS) is a deliberately named gap, not silently
   skipped: a demo IdP serving one seeded operator does not carry the same stakes as a production
   identity provider, and hardening it is not named anywhere in this item's scope.
-- `k8s/base/keycloak-realm-import.json`'s `ago-console` client gains `https://console.ago.golyakov.net/*`
+- `k8s/base/keycloak-realm-import.json`'s `ago-console` client gains `https://console.reserve-me.ru/*`
   alongside its existing local `redirectUris`/`webOrigins` entries — a shared base file, so this is a
   small, deliberate deviation from "reuse `5-05`'s realm-import verbatim": the array is *extended*, not
   changed, and the addition is inert for the local overlay (Keycloak simply allows one more origin it
@@ -201,7 +234,7 @@ directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.a
   node, port 80 reachable).
 - **GHCR/Docker Hub image registry** — see "Image delivery" above; rejected for the credential and
   scope reasons stated there, not restated here.
-- **A single subdomain with path-based routing** (e.g. `chat.golyakov.net/api`, `/console`) instead of
+- **A single subdomain with path-based routing** (e.g. `chat.reserve-me.ru/api`, `/console`) instead of
   per-service subdomains — would need one fewer DNS record and one fewer TLS SAN. Rejected: path-based
   routing at the edge for functionally separate services (API/hub traffic vs. a static SPA bundle vs.
   an IdP) invites exactly the kind of edge-side routing logic `edge.md`'s "What the edge must not be

@@ -35,4 +35,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0023 | React for `ago-console` | Accepted |
 | 0024 | Webhook HMAC-SHA256 signing; secret stored as AES-256-GCM ciphertext, not hashed | Accepted |
 | 0025 | Direct OTLP export to Jaeger, no collector | Accepted |
-| 0026 | k3s VPS hosting, `*.ago.golyakov.net` domain plan, VM sizing, and TLS | Accepted |
+| 0026 | k3s VPS hosting, `*.reserve-me.ru` domain plan, VM sizing, and TLS | Accepted |
