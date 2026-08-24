@@ -1,7 +1,7 @@
 # Stage 7 capstone: nfr.md, answered with numbers
 
 - **Stage**: 7
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `7-01` through `7-05` — this item adds no new instrumentation or scenarios, only the
   synthesis
 
@@ -53,13 +53,33 @@ discipline, applied system-wide.
 
 ## Done when
 
-- [ ] `load/reports/<date>-stage-7-summary.md` exists, covers every table/bullet in `nfr.md`, and every
+- [x] `load/reports/<date>-stage-7-summary.md` exists, covers every table/bullet in `nfr.md`, and every
       number in it traces to a specific `load/reports/*.md` file from `7-04`/`7-05` — a citation, not a
       restated assertion.
-- [ ] Every missed target is named as missed, with a stated suspect and (where warranted) a linked
+- [x] Every missed target is named as missed, with a stated suspect and (where warranted) a linked
       follow-up backlog item — none are quietly dropped or reworded into a pass.
-- [ ] `roadmap.md`'s Stage 7 section double-checked against what was actually built; corrected in this
+- [x] `roadmap.md`'s Stage 7 section double-checked against what was actually built; corrected in this
       same change if it drifted, left untouched if it didn't.
+
+## Shipped in
+
+`ago-root`: `load/reports/2026-08-24-stage-7-summary.md` — synthesizes all nine `7-04`/`7-05` scenario
+reports against every `nfr.md` table/bullet (Scale, Latency, Correctness under stress, Resource budgets,
+Availability behaviour, Observability requirements), a "what was tuned" section aggregating every config
+knob any of the nine reports changed, and a "what regressed or fell short" section naming every missed
+target with a suspect and, where one exists, a linked follow-up (`6-09`, confirmed still open — not yet
+merged — by re-reading its own backlog file as part of this synthesis).
+
+**`roadmap.md`'s Stage 7 section corrected**: its deliverables list named "k6 scenarios" and only seven
+scenario names, while all nine scenarios actually ran on `Ago.Chat.LoadDriver` (k6 was uninstallable in
+every unsupervised session that attempted these runs) and two real, shipped scenarios — assignment
+contention and attachment presign throughput — were missing from the list entirely. Both corrected in
+the same change; the "Done when" line now also names this report and its headline findings.
+
+**Two real gaps surfaced by reading all nine reports side by side, not previously named anywhere**: no
+scenario measures the history-page (keyset) latency target, and no scenario explicitly asserts
+message-delivery ordering under concurrent senders — both flagged in the capstone as candidates for a
+future load scenario, not filled in here (out of this item's own scope to run anything new).
 
 ## Open questions
 
