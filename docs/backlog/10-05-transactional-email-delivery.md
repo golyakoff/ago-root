@@ -101,3 +101,7 @@ to the port question this item deliberately does not answer (see Out of scope).
   several of the obvious international providers are awkward or unavailable from it. The author's
   call, the same way `15-02`'s backup destination and `20-05`'s SMS vendor are. Everything else in
   this item — the local relay, the flows, the DNS records, the verification — can be built first.
+  **Constrained since 2026-08-25** by `architecture/personal-data.md`: every message this provider
+  handles carries an account holder's email address, so the choice is a data-residency decision as well
+  as a cost one — which sharpens rather than loosens the "several obvious providers are awkward from
+  here" observation already made above. `16-01` records the constraint.

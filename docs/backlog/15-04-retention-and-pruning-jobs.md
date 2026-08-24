@@ -75,3 +75,8 @@ invent a second one.
 
 None for the mechanism. The one genuinely open question in this area — free-tier history retention —
 belongs to `13-05` and is deliberately left there rather than answered here as a side effect.
+
+Note added 2026-08-25: `architecture/personal-data.md` records that message content is the bulk of the
+personal data here and the part that cannot be minimised by choosing fields, which makes this item's
+machinery the mechanism behind the strongest privacy lever available — not only a way to keep a 2Gi
+volume alive. The scope boundary above is unchanged; the reason to build it well is larger.
