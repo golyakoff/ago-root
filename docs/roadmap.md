@@ -32,6 +32,7 @@ before anything below it, and within a band the order is a judgement call rather
 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart. Stage 10's entire premise is runtime-created users |
 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — registration is accepted and the mail can never be sent, so no real visitor can finish signing up |
 | `16-01` personal-data map and residency | Not breakage, but two vendor questions due imminently (`10-05`'s provider, `15-02`'s backup destination) both move personal data somewhere, and answering either without the constraint is how a residency problem gets acquired |
+| `5-14` + `17-02` the hub access token | Both SignalR clients print the negotiated WebSocket URL — token included — to the browser console on every connect (`5-14`, confirmed live). Whether the same URL also reaches the edge access log and the trace spans is unverified (`17-02`), and that is the half that would matter: a token on disk outlives one in a devtools pane |
 | `6-09` release operator capacity on close | A live defect from `7-04`'s load run: an operator's usable capacity decays until their connection drops, so the waiting queue quietly stops being served |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
@@ -510,6 +511,10 @@ Deliverables:
 - `17-01` — every tenant-scoped operation proven to reject a caller from another tenant, and a
   systematic guard so a new one cannot be added without that proof, in the spirit of the arch tests
   that already make layering violations fail rather than rely on review.
+- `17-02` — a definite answer to whether a live bearer token is persisted server-side. `5-14` (Stage 5,
+  where the finding was made) fixes the browser clients that print it; this item checks the edge access
+  log and the trace spans, neither of which has ever been looked at, and neither of which is covered by
+  the API's own logging configuration being clean.
 
 Named, not yet scoped, and explicitly *not* bundled into `17-01`: secret handling and rotation,
 dependency and container scanning, VPS and cluster hardening, authentication bypass and token

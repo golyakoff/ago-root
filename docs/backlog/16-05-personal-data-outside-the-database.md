@@ -28,7 +28,11 @@ noticed" is not a deadline anybody can meet.
 
 - **Audit what is actually emitted**: run the system, capture real traces, logs and metrics, and check
   span attributes, log messages and metric labels for message bodies, email addresses, visitor tokens,
-  access tokens and IP addresses. Written up as findings, not as a claim that it was checked.
+  access tokens and IP addresses. Written up as findings, not as a claim that it was checked. **Note
+  added 2026-08-25**: `17-02` chases one specific instance to a definite answer — the hub access token,
+  which travels in the WebSocket URL's query string — through the edge access log and the trace spans.
+  Take its findings and its method rather than re-deriving either; it is the worked example of what
+  this sweep looks for everywhere else.
 - Fix whatever the audit finds, and add a guard where a guard is possible — a test that fails if a
   known-sensitive value appears in a log scope is worth more than a convention nobody re-reads.
 - **Edge access-log retention**: define it, apply it, and record the number. IPs kept forever by
