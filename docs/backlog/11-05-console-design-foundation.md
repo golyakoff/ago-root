@@ -131,10 +131,23 @@ with `/admin` and `/settings/widget` typed in directly still rendering their ref
 `role="alert"` preserved. Focus was measured on a real keyboard `Tab` driven over CDP in headless
 Chrome: `2px solid #4b3aff` at 2px offset, and the skip link genuinely slides into view.
 
-One gap, stated rather than papered over: the *populated* states of the two `site:configure` screens
-(the admin conversation table, the widget-config form) were exercised only through their code paths
-and the build, not observed live, because that needs a second interactive login. Their empty and
-refusal states were observed live. Worth five minutes at the next opportunity.
+The implementing pass left one gap and named it rather than papering over it: the *populated* states
+of the two `site:configure` screens were exercised only through their code paths and the build, since
+reaching them needs a second interactive login. **Closed afterwards by the managing session**, signed
+in as the real `demo-admin` against the same running stack:
+
+- **Admin conversation table**: rendered **50 real rows** from the live API through the new `Table`
+  component — headers `Visitor / State / Assigned operator / Started / Unread`, first row
+  `01a032a6 | Waiting | Unassigned | 24.08.2026, 10:23:10 | 7`, computed font `Manrope`. Not an empty
+  state, not a skeleton.
+- **Widget-config form**: loaded the site's **real** stored values (`#E8590C` / `BottomRight` — set
+  earlier through this same screen during `11-02`'s own verification, so the retrofit demonstrably
+  still reads through `11-01`'s API rather than rendering defaults), both controls carrying real
+  `<label for>` associations, computed font `Manrope`.
+- The shell's navigation showed all three entries (`Queue`, `All conversations`, `Widget appearance`)
+  plus the identity block (`demo-admin`, `site 00000000`) for this operator — the same nav that showed
+  only `Queue` for `demo-operator`, so the permission gate was observed live in **both** directions,
+  not just the negative one.
 
 ## Open questions
 
