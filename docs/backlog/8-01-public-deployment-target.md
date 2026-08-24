@@ -1,7 +1,9 @@
 # Public deployment target: hosting, TLS, seeded demo tenant
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: in progress — design/prep done (`adr/0026`, `runbooks/public-deploy.md`,
+  `ago-deploy/k8s/overlays/demo/`), live deployment not yet done. See "Done when" below for exactly
+  which boxes this covers and which still need a real VPS.
 - **Depends on**: `8-00` (base image, sequenced first per the author's own explicit instruction) —
   otherwise nothing new architecturally, reusing `1-05-seed-demo-tenant.md`'s seed script and
   `5-05-operator-oidc-authentication.md`'s Keycloak realm-import verbatim, pointed at a new
@@ -85,37 +87,64 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 
 ## Done when
 
-- [ ] An ADR names the hosting choice and the reasoning (cost, manifest reuse, the one-node
-      reality), accepted before any manifest work in this item starts.
+- [x] An ADR names the hosting choice and the reasoning (cost, manifest reuse, the one-node
+      reality), accepted before any manifest work in this item starts. **`adr/0026`**, written and
+      accepted in this pass — hosting/domain were the author's own prior calls; the VPS tier
+      (Timeweb Cloud MSK 80, with real sizing math), the image-delivery mechanism (build-on-VPS,
+      import into containerd), and the TLS approach (cert-manager + Let's Encrypt, HTTP-01) are this
+      ADR's own contribution, argued with alternatives.
 - [ ] A real request (`curl`, or a browser) from a network unrelated to the deployment reaches the
       public HTTPS URL, receives a valid certificate with no browser warning, and `/healthz/live`
-      returns 200 — verified live, not asserted from the manifests.
+      returns 200 — verified live, not asserted from the manifests. **Not done — no real VPS exists
+      yet for this session to deploy to.** `runbooks/public-deploy.md` §11 has the exact commands a
+      future session with real VPS access should run to close this box; leaving it unchecked here
+      rather than asserting it from the manifests, matching Stage 6/7's own load-report honesty
+      discipline.
 - [ ] The seeded demo site's public key and demo operator's Keycloak credentials work against this
       environment exactly as `local-dev.md`'s "Getting a working operator session locally" section
       describes for local — verified with the same direct-grant curl pattern, pointed at the public
-      Keycloak issuer instead of `127.0.0.1:8081`.
-- [ ] A new runbook section (in `runbooks/k8s-local.md` or a new `runbooks/public-deploy.md` —
+      Keycloak issuer instead of `127.0.0.1:8081`. **Not done — same reason as above**; the
+      direct-grant command against `auth.ago.golyakov.net` is written and ready in
+      `runbooks/public-deploy.md` §11, not run.
+- [x] A new runbook section (in `runbooks/k8s-local.md` or a new `runbooks/public-deploy.md` —
       whichever this item finds reads more honestly once written) covers bring-up, where secrets
       live, and how to redeploy after a change, to the same "a session with no memory can repeat
-      this" bar every other runbook is held to.
-- [ ] No secret value appears in any file this item commits — the same audit this repository already
-      applies everywhere (`repositories.md`).
+      this" bar every other runbook is held to. **`runbooks/public-deploy.md`**, new file — a
+      dedicated runbook reads more honestly than folding this into `k8s-local.md`, since large parts
+      of it (provisioning, DNS, secret generation) are steps only the author can perform, marked
+      **(you)** throughout, distinct from the **(session)** steps a future session with real SSH
+      access can run directly. Its own status line states plainly that it has not been run against a
+      real node yet.
+- [x] No secret value appears in any file this item commits — the same audit this repository already
+      applies everywhere (`repositories.md`). `k8s/overlays/demo/.env.example` and `tls.yaml`'s ACME
+      `email` field carry placeholder text only (`<generate-a-real-password-do-not-commit>`, a
+      non-real `letsencrypt-admin@golyakov.net` address under the domain itself, never the author's
+      own personal inbox) — audited by re-reading every new/changed file in this pass before
+      handback.
 
 ## Open questions — resolved 2026-08-24, author's own decision
 
 - **Hosting target: k3s VPS**, not a managed Kubernetes offering — the author's explicit call,
   choosing lower cost over `deploy/k8s/base/`'s manifests transferring with zero new surface. This
-  item's own ADR (not yet written) must therefore cover the provisioning work `k8s-local.md` never
-  had to (OS choice, k3s install, whether the Gateway API's NGINX Gateway Fabric install from
-  `k8s-local.md` transfers unchanged onto k3s or needs its own verification step) — this is real,
-  undocumented ground, not a formality.
+  item's own ADR — **now written, `adr/0026`** — covers the provisioning work `k8s-local.md` never
+  had to (Ubuntu 24.04 LTS, the k3s install command with Traefik disabled, confirming the Gateway
+  API's NGINX Gateway Fabric install from `k8s-local.md` transfers onto k3s unchanged) in
+  `runbooks/public-deploy.md`; the tier itself (Timeweb Cloud MSK 80) and the reasoning are in the
+  ADR.
 - **Domain: the author's own `golyakov.net`**, with `*.ago.golyakov.net` subdomains — `chat.ago.
   golyakov.net` (Api/hub traffic), `console.ago.golyakov.net` (operator console), `demo-shop1.ago.
   golyakov.net` / `demo-shop2.ago.golyakov.net` (seeded demo tenant sites for the widget to embed
   on), with the author open to adding more subdomains under the same `*.ago.golyakov.net` pattern for
   any further tool this stage or a later one needs. No separate domain purchase needed. This item's
-  ADR records the exact subdomain-to-service mapping once DNS is actually configured, not just this
-  plan.
+  ADR — **`adr/0026`** — records the exact subdomain-to-service mapping, including one addition the
+  original plan above did not name: `auth.ago.golyakov.net` for Keycloak, required by `5-05`'s own
+  exact-issuer-match validation and `8-02`'s planned browser redirect, neither of which works against
+  an internal-only Keycloak hostname. DNS is not yet actually configured (no VPS exists to point it
+  at) — the ADR's table is the plan `runbooks/public-deploy.md` §2 hands to the author to apply by
+  hand once a VPS exists.
 
 Both answered — this item is no longer blocked. Status changed to `ready`; still depends on `8-00`
-landing first per the author's own explicit sequencing.
+landing first per the author's own explicit sequencing. Design/prep work in this pass (`adr/0026`,
+`runbooks/public-deploy.md`, `ago-deploy/k8s/overlays/demo/`) does not itself require `8-00` to have
+landed — nothing here builds an image — but the live bring-up in `public-deploy.md` does need
+whichever base image `8-00` ships, per this item's own "Depends on" line above.
