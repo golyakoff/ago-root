@@ -39,3 +39,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0027 | Operator identity across products: separate entities, unified only through Keycloak | Accepted |
 | 0028 | Keycloak-native self-registration; `RequireKeycloakIdentity` stays distinct from `RequireOperatorIdentity` | Accepted |
 | 0029 | Widget config is fixed fields, read at bootstrap | Accepted |
+| 0030 | Design tokens and a closed hand-rolled component set for the console, not a component library | Accepted |
