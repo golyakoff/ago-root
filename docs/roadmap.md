@@ -33,14 +33,17 @@ before anything below it, and within a band the order is a judgement call rather
 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — registration is accepted and the mail can never be sent, so no real visitor can finish signing up |
 | `16-01` personal-data map and residency | Not breakage, but two vendor questions due imminently (`10-05`'s provider, `15-02`'s backup destination) both move personal data somewhere, and answering either without the constraint is how a residency problem gets acquired |
 | `5-14` + `17-02` the hub access token | Both SignalR clients print the negotiated WebSocket URL — token included — to the browser console on every connect (`5-14`, confirmed live). Whether the same URL also reaches the edge access log and the trace spans is unverified (`17-02`), and that is the half that would matter: a token on disk outlives one in a devtools pane |
-| `6-09` release operator capacity on close | A live defect from `7-04`'s load run: an operator's usable capacity decays until their connection drops, so the waiting queue quietly stops being served |
+| `5-15` unread count never clears | `OperatorUnreadCount` only ever increments — no decrement, no reset, no `MarkRead` anywhere in the aggregate. `11-06`'s badge and title count are a session-local approximation over a number that never goes down, and they over-report after a reload. Found while building the workspace that now depends on it |
+| `6-09` release operator capacity on close | A live defect from `7-04`'s load run: an operator's usable capacity decays until their connection drops, so the waiting queue quietly stops being served. Now also blocks verification of shipped work: `11-06`'s two-way-exchange check in a newly assigned conversation could not be completed because of it |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
-`11-06` (the operator workspace — `11-05`'s design foundation landed 2026-08-25 with `adr/0030`, so
-this is what is left of Stage 11 besides the notice field `16-04` adds later), `10-03` (console signup
-UI, which only becomes real once `10-05` lands), `15-02` (backup and a restore drill), `15-03`
-(alerting), `5-13` (presigned upload size never enforced by storage).
+`10-03` (console signup UI, which only becomes real once `10-05` lands), `15-02` (backup and a
+restore drill), `15-03` (alerting), `5-13` (presigned upload size never enforced by storage).
+
+Stage 11 is finished as a stage: `11-05` and `11-06` both landed 2026-08-25, leaving only the notice
+field `16-04` adds later. Both surfaced live defects on the way out — `5-14` and `5-15` — which is
+what a real verification pass is for.
 
 ### After — in roughly this order, each already scoped
 
