@@ -173,7 +173,7 @@ Deliverables:
 - `Ago.Chat.*` hosts switched to a minimal production base image before anything ships publicly
   (`8-00`).
 - Deployment to a k3s VPS (chosen over a managed Kubernetes offering, `8-01`'s own ADR records why)
-  under `*.ago.golyakov.net`; TLS; seeded demo tenant.
+  under `*.reserve-me.ru`; TLS; seeded demo tenant.
 - A demo page with the widget plus a public operator console with a throwaway login.
 - README rewritten for the reviewer audience: what it is, the architecture in one diagram, the
   numbers from Stage 7, the ADR index, and an honest "what I would do differently" section.

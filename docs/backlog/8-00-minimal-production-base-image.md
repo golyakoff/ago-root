@@ -3,7 +3,7 @@
 - **Stage**: 8
 - **Status**: done
 - **Depends on**: nothing — pure Dockerfile/build change, no relation to `8-01`'s hosting/domain
-  decision (both now resolved: k3s VPS, `*.ago.golyakov.net`), verified only against the local
+  decision (both now resolved: k3s VPS, `*.reserve-me.ru`), verified only against the local
   compose loop, not the public deployment
 
 ## Goal
@@ -63,7 +63,7 @@ confirmed as a real, concrete blocker to resolve, not a hypothetical one.
 ## Out of scope
 
 - Anything about the actual public VPS deployment, DNS, or TLS - that is `8-01`'s own job, now
-  unblocked (k3s VPS, `*.ago.golyakov.net` subdomains) but not started by this item.
+  unblocked (k3s VPS, `*.reserve-me.ru` subdomains) but not started by this item.
 - `ago-platform`/`ago-console`/`ago-widget`'s own build/deploy shape - this item is `ago-chat`'s three
   hosts only, the ones the note was attached to.
 - Re-architecting the shared single-Dockerfile-with-build-arg approach itself - only the final stage's
