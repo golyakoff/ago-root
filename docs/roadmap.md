@@ -173,13 +173,16 @@ Deliverables:
 - `Ago.Chat.*` hosts switched to a minimal production base image before anything ships publicly
   (`8-00`).
 - Deployment to a k3s VPS (chosen over a managed Kubernetes offering, `8-01`'s own ADR records why)
-  under `*.ago.golyakov.net`; TLS; seeded demo tenant.
-- A demo page with the widget plus a public operator console with a throwaway login.
+  under `*.reserve-me.ru` (`adr/0026`'s own "Post-decision update" - the domain actually purchased
+  differs from that ADR's original recommendation); TLS; two independent seeded demo tenants
+  (`8-02`, `8-05` - a second tenant added specifically to show live tenant isolation).
+- A demo page with the widget plus a public operator console with a throwaway login, per tenant.
 - README rewritten for the reviewer audience: what it is, the architecture in one diagram, the
   numbers from Stage 7, the ADR index, and an honest "what I would do differently" section.
 
 **Done when:** a stranger with the link can hold a conversation with the operator console, and the
-README answers "why" before they have to ask.
+README answers "why" before they have to ask. **Done, live and verified** (2026-08-24) — every
+item `8-00` through `8-05`.
 
 ---
 
