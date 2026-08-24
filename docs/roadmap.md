@@ -150,12 +150,18 @@ Deliverables:
 - Metrics: RED per endpoint/hub/consumer, queue depth, channel occupancy, batch histogram, outbox
   lag, DLQ count, cache hit ratio, connections per node, assignment conflicts.
 - Grafana dashboards checked into `deploy/`.
-- k6 scenarios: steady ingest, burst, connection storm, reconnect storm, cold-cache stampede,
-  pod-kill during load, and a hanging third-party endpoint (the bulkhead claim from Stage 6).
+- Load scenarios: steady ingest, burst, connection storm, reconnect storm, assignment contention,
+  attachment presign throughput, cold-cache stampede, pod-kill during load, and a hanging third-party
+  endpoint (the bulkhead claim from Stage 6) — run via `Ago.Chat.LoadDriver`, a real `.NET SignalR
+  client`, not k6 (k6 remained uninstallable in every unsupervised session that attempted these runs;
+  see `load/reports/2026-08-24-*.md`).
 - **A written report** in `load/reports/` with method, hardware, numbers, and what was tuned.
 
 **Done when:** the report exists with real p50/p95/p99 numbers against the targets, and any target
-that was missed is explained rather than quietly dropped.
+that was missed is explained rather than quietly dropped. Done via `load/reports/2026-08-24-stage-7-
+summary.md` — nine scenario reports at ~1-3% of `nfr.md`'s stated scale (one, pod-kill, did not run —
+blocked by a tool permission denial), one real bug found (`6-09`, still open) and one Stage 6 regression
+confirmed fixed (the webhook bulkhead).
 
 ---
 
