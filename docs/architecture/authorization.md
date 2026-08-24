@@ -147,6 +147,17 @@ orphaned thumbnail behind in MinIO on every delete - `DeleteAttachmentHandler`'s
 detail. Same "tolerate already-gone" reasoning `5-04`'s orphan sweeper uses for the storage side,
 extended to the row itself: a retried delete is idempotent, not an error.
 
+## `site:configure` gates a second, distinct thing: shipped in `11-01`
+
+`Permission.SiteConfigure` was granted for exactly one caller until now (`GetAllConversationsForSiteHandler`'s
+site-wide conversation view, `5-08` above). `11-01` gives it a second, unrelated caller:
+`GetWidgetConfigHandler`/`UpdateWidgetConfigHandler` (`Ago.Chat.Application`), gating read/write access
+to a site's widget appearance (`adr/0029`). Same mechanism, no new permission - `site:configure` reads
+as "configure this site" broadly enough to cover both without inventing a narrower permission for
+widget appearance specifically, the same `resource:action` naming judgment `adr/0016` already applies
+elsewhere. Both callers are still `IPermissionChecker`-checked the ordinary way; nothing about this
+widens who holds the permission - only the "Admin" role, seeded the same way as before.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

@@ -38,3 +38,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0026 | k3s VPS hosting, `*.reserve-me.ru` domain plan, VM sizing, and TLS | Accepted |
 | 0027 | Operator identity across products: separate entities, unified only through Keycloak | Accepted |
 | 0028 | Keycloak-native self-registration; `RequireKeycloakIdentity` stays distinct from `RequireOperatorIdentity` | Accepted |
+| 0029 | Widget config is fixed fields, read at bootstrap | Accepted |

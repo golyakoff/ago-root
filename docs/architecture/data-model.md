@@ -7,7 +7,15 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 - `sites` - the tenant. `id`, `public_key`, `allowed_origins[]`, `name` (**added in `10-02`** - a real
   gap that item's own scope anticipated: its Goal takes a site display name as a required
   registration input, but no such column existed before this stage. `text not null default ''`,
-  additive/reversible - `Stage10AddSiteName`, `ago-chat`), settings.
+  additive/reversible - `Stage10AddSiteName`, `ago-chat`). **Shipped in `11-01`**: the `settings`
+  placeholder named above was never actually built (the Stage 1 migration shipped `id`/`public_key`/
+  `allowed_origins` only) - it is now two concrete columns, `widget_primary_color_hex text NULL` and
+  `widget_position text NOT NULL DEFAULT 'bottom-right'`, added by `Stage11AddSiteWidgetConfig`
+  (`Ago.Chat.Domain.WidgetConfig`, `adr/0029`'s two fixed fields). `widget_position` carries a `CHECK`
+  constraint restricting it to `'bottom-right'`/`'bottom-left'` - cheap storage-level backstop for the
+  `Position` enum, matching this table's own `Ago.Chat.Domain.Position`/`PositionConverter` mapping
+  (kebab-case in the column, the CLR enum's own member names on the wire - the two boundaries are free
+  to differ).
 - `visitors` - `id`, `site_id`, `token_hash`, first/last seen. Anonymous, no PII by design.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
