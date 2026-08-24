@@ -180,6 +180,13 @@ recorded in `adr/0007` and measured in Stage 7.
   `"Reconnect"` event with `{ after }` to every locally-tracked connection via the same
   `ILocalConnectionDispatcher` fan-out delivery uses. A client listens for the *event*
   (`connection.on("Reconnect", ...)`), it never calls a method named that.
+  **Shipped in `11-06`**: `ago-console` is the first client that does anything with the event beyond
+  receiving it. It is the console's only *honest* source for a "degraded" connection indicator - the
+  connection is up and still usable, and the server has said it is about to go away - which is why the
+  workspace shows a distinct "Server restarting" state for it and shows nothing at all for the other
+  degradations in this file's failure table: a client whose cross-node delivery is degraded because
+  Redis is unavailable sees a perfectly healthy WebSocket and simply receives a message later, so an
+  indicator claiming otherwise would be inventing a state the system does not report.
 
 **Shipped in `5-07`**: `OperatorHub.JoinConversationAsync` calling into `AssignConversationHandler`
 unconditionally on every join (its own doc comment: making `Conversation.AssignTo`'s same-operator
