@@ -80,8 +80,17 @@ lands on exactly one pod by construction.
 
 - TLS termination, HTTP/2 for REST (WebSockets stay on HTTP/1.1).
 - Coarse, cluster-protecting rate limits and connection caps per IP. Per-tenant limits live in the
-  application (`caching.md`) because they need domain knowledge.
-- Request size ceilings - trivially small, since bytes do not flow through the API.
+  application (`caching.md`) because they need domain knowledge. **Live on the public deployment**
+  (`k8s/overlays/demo/gateway.yaml`, `gateway.nginx.org/v1alpha1` `RateLimitPolicy`): 30 requests/s
+  per IP, burst 60, keyed by `$binary_remote_addr` on the whole Gateway - this stayed a stated
+  intent, not an enforced one, until the demo actually went public and a real request-flood test
+  confirmed nothing was stopping one (verified live: a 150-request burst from one IP got real `503`s
+  once the burst allowance was spent, normal single-request traffic unaffected). Deliberately looser
+  than any single application-level limiter (`caching.md`'s `MessageSendRateLimitOptions` etc.),
+  since this one fires on every request to every route, not just a specific operation.
+- Request size ceilings - trivially small, since bytes do not flow through the API. **Live**
+  (`ClientSettingsPolicy`, same file): 1MiB cap on the whole Gateway, verified live with a real 2MB
+  body returning `413`.
 - Forwarding real client IP (`X-Forwarded-For`), which the app must be configured to trust, or every
   per-IP limit silently applies to the ingress itself.
 
