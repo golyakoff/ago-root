@@ -1,7 +1,7 @@
 # Per-site widget configuration: data model and API
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing new architecturally — reuses `adr/0016`'s RBAC (`site:configure`, already
   seeded onto the `"Admin"` role by `5-08`), `3-04`'s cache-aside/stampede/invalidation machinery
   unchanged, and the outbox/integration-event pattern every write handler in this codebase already
@@ -135,28 +135,53 @@ this is the first thing that uses it for what its name literally says. `docs/con
 
 ## Done when
 
-- [ ] `adr/00XX` written and accepted: fixed fields over arbitrary CSS/theme injection, and
-      read-at-bootstrap over live-push, both with the reasoning above.
-- [ ] `Stage11AddSiteWidgetConfig` migration applies cleanly to a real Postgres from scratch
+- [x] `adr/0029` written and accepted: fixed fields over arbitrary CSS/theme injection, and
+      read-at-bootstrap over live-push, both with the reasoning above. Renumbered twice before landing
+      — `0027` was already claimed by both the not-yet-merged `long-term/stage-10` branch's own ADR and
+      (independently) `main`'s `operator-identity-across-products`; `0028` was then also claimed when
+      `long-term/stage-10`'s ADR was itself renumbered to `0028` while reconciling that stage's own
+      numbering collision. `0029` is the number that actually landed, confirmed against `main`'s real
+      ADR index at merge time, not assumed from an earlier check.
+- [x] `Stage11AddSiteWidgetConfig` migration applies cleanly to a real Postgres from scratch
       (`db-migration` skill's own bar), additive and reversible, `CHECK` constraint proven to reject an
-      invalid `widget_position` value.
-- [ ] `Ago.Chat.Domain.Tests`: `Site.UpdateWidgetConfig` rejects a malformed hex color, accepts a valid
+      invalid `widget_position` value — verified by hand against a real local Postgres (`\d sites`
+      showed the expected columns/default/constraint; inserting `widget_position='diagonal'` was
+      rejected with the expected error) as well as by every integration test in this item applying
+      migrations from scratch via Testcontainers.
+- [x] `Ago.Chat.Domain.Tests`: `Site.UpdateWidgetConfig` rejects a malformed hex color, accepts a valid
       one, accepts both position values, and raises the mapped domain event exactly once per call.
-- [ ] `Ago.Chat.Integration.Tests`: `PUT /api/v1/sites/{siteId}/widget-config` persists the change and
+- [x] `Ago.Chat.Integration.Tests`: `PUT /api/v1/sites/{siteId}/widget-config` persists the change and
       writes a `SiteSettingsChanged` outbox row in the same transaction (asserted directly, matching
       `2-02`'s own "outbox row in the same transaction" proof shape); `GET` returns the current values;
-      an operator without `site:configure` gets a clean `403` on both.
-- [ ] `Ago.Chat.Integration.Tests`: a config write, followed by a fresh `POST /api/v1/visitor-sessions`
+      an operator without `site:configure` gets a clean `403` on both (`UpdateWidgetConfigOutboxTests`,
+      exercising the handlers directly against real Postgres — this codebase's own established shape
+      for an HTTP-adjacent integration test, matching `CloseConversationOutboxTests`; no
+      `WebApplicationFactory` is used anywhere in this suite).
+- [x] `Ago.Chat.Integration.Tests`: a config write, followed by a fresh `POST /api/v1/visitor-sessions`
       handshake for that site, returns the new values — proving the cache was actually invalidated
       end-to-end (real Postgres + real Redis + real RabbitMQ, not asserted from the handler's logic
-      alone), not merely eventually correct once a 5-minute TTL expires.
-- [ ] `docs/architecture/caching.md`'s Site config row gets a "shipped" note for the invalidation half,
+      alone), not merely eventually correct once a 5-minute TTL expires
+      (`WidgetConfigCacheInvalidationEndToEndTests`, wiring the real `OutboxDispatcher` ->
+      `SiteCacheInvalidationConsumer` -> `Ago.Platform.Caching.Redis.CacheInvalidationConsumer` chain
+      by hand, the same way `TracingEndToEndTests` wires its own pipeline stages).
+- [x] `docs/architecture/caching.md`'s Site config row gets a "shipped" note for the invalidation half,
       matching the pattern every other now-real row in that table already follows.
-- [ ] `docs/architecture/data-model.md`'s `sites` bullet is updated to the real column shape, replacing
+- [x] `docs/architecture/data-model.md`'s `sites` bullet is updated to the real column shape, replacing
       the placeholder `settings` mention.
-- [ ] `docs/architecture/authorization.md` gets a short note that `site:configure` now gates a second,
+- [x] `docs/architecture/authorization.md` gets a short note that `site:configure` now gates a second,
       distinct thing (widget config, alongside `5-08`'s site-wide conversation view) — same pattern
       every other authorization change to that file already follows once shipped.
+
+**Handoff note**: the Domain layer (`Site.WidgetConfig`, `Site.UpdateWidgetConfig`,
+`SiteWidgetConfigUpdated`) and most of the Application layer (`ISiteRepository.SaveAsync`, the
+`GetWidgetConfig`/`UpdateWidgetConfig` use cases, the `SiteConfigDto` extension, the EF mapping) were
+built by an earlier session on this same branch that died mid-task (network error, not a logic
+failure) before committing; that work was reviewed, found sound, and built on rather than redone. One
+real gap from that partial state: three `ISiteRepository` implementers (`FakeSiteRepository` and two
+test-local `CountingSiteRepository` decorators) did not yet implement the newly-added `SaveAsync`
+member, leaving the whole solution unbuildable — fixed as the first step of this session before
+anything else. Everything from the EF Core migration onward (HTTP endpoints, DI wiring, the handshake
+extension, the full test suite, and this ADR/doc pass) is new in this session.
 
 ## Open questions
 
