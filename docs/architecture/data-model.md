@@ -16,7 +16,12 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   `Position` enum, matching this table's own `Ago.Chat.Domain.Position`/`PositionConverter` mapping
   (kebab-case in the column, the CLR enum's own member names on the wire - the two boundaries are free
   to differ).
-- `visitors` - `id`, `site_id`, `token_hash`, first/last seen. Anonymous, no PII by design.
+- `visitors` - `id`, `site_id`, `token_hash`, first/last seen. No name, email or contact detail by
+  design - the row identifies a returning browser, not a named person. **Qualified 2026-08-25**: that
+  is true of these columns and misleading about the dataset, since `messages` next to it holds whatever
+  the visitor typed, which in a support product routinely includes their own name and phone number. See
+  `personal-data.md` for what the system actually holds and where; a `token_hash` that reliably singles
+  out a returning individual is also not the same thing as anonymous data.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
   shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
@@ -109,6 +114,15 @@ level. It is an acceptable one because this index was always the *last* line of 
 (`concurrency.md`) - the first is the `Conversation` aggregate's optimistic-concurrency
 load-mutate-save on `xmin`, which still rejects the race that matters (two saves computing the same
 `LastSequence`) regardless of what the `messages` index can see.
+
+## Personal data
+
+`personal-data.md` maps which of the tables above hold personal data, and is the file a schema change
+updates when it adds a column that holds something about a person. Two properties recorded there are
+load-bearing for erasure and are easy to break from here without noticing: `outbox.payload` and
+`webhook_deliveries.payload` hold no message bodies, so message content exists in exactly two places
+(`messages.body` and the object store) rather than in every copy an event-driven system would
+otherwise scatter.
 
 ## Access strategy
 

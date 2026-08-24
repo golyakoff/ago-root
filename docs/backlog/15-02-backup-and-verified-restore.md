@@ -71,3 +71,13 @@ on-the-box reality any restore has to work within. `docs/runbooks/` — where th
 - **Where the off-node copies live.** A real choice with a real monthly cost, and the author's to make
   — the same class of decision `adr/0026` made for the host itself. This item can be started on
   everything else; the destination must be settled before the first scheduled backup is switched on.
+  **Constrained since 2026-08-25** by `architecture/personal-data.md`: a backup is a complete copy of
+  every personal-data store in the system, so the destination is a data-residency decision and not only
+  a cost one. `16-01` records the constraint; this question is answered against it, not measured
+  against it afterwards.
+
+- **The retention window is now load-bearing beyond storage cost.** `16-02` defines deletion as
+  complete when the last backup holding the data has aged out — the deliberate alternative to a
+  deletion journal, which would itself be a list of people who asked to be forgotten. Whatever number
+  this item picks is the number the privacy policy will state, so it is chosen with that in mind and
+  stated once, not twice with two values.

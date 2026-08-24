@@ -384,11 +384,59 @@ because everything it builds only matters on the day it is needed.
 
 ---
 
-## Stages 16-19 — reserved for further AGO Chat and AGO Platform work
+## Stage 16 — Personal data: erasure, export, and knowing what is held
 
-Not yet planned. Stage 14 (above) was the first item to use the range Stage 10 froze open
-(2026-08-23) and Stage 15 the second (2026-08-24); the rest stays reserved so later
-`ago-chat`/`ago-platform` work does not collide with Stage 20's own number.
+**Goal:** the project can say what personal data it holds, remove it on request, and hand it over on
+request. None of those three is possible today — a repository-wide search finds no account deletion,
+no export, and, until this stage's own `personal-data.md`, no inventory to check either against.
+
+Two facts frame this stage, and they point in opposite directions (added 2026-08-25). Almost none of
+this data is AGO's own: the operator profile is the small part, and the bulk is `messages.body` —
+free text typed by a visitor on somebody else's site, which a support product exists to store and
+cannot design away. But erasure is nevertheless tractable, by earlier decisions that were not made
+for privacy reasons: `MessageAccepted` carries no message body and webhook payloads carry none either,
+so the outbox and the delivery log hold no copies. Content lives in two places, not eight.
+
+Deliverables:
+- `architecture/personal-data.md` — what is held, where, why, and how it is removed; plus data
+  residency as a standing constraint on vendor choices rather than a fact rediscovered per item
+  (`16-01`, **pulled ahead of this stage** — see the Order section below).
+- Tenant account deletion and per-conversation deletion on a visitor's request, reaching every store
+  in that map, as resumable Worker jobs and proven by a test that asserts emptiness across Postgres,
+  MinIO and Keycloak (`16-02`).
+- Tenant data export — streamed, rate-limited, and provably unable to reach another tenant's data
+  (`16-03`).
+- A tenant-configurable processing notice in the widget, and an ADR recording the controller/processor
+  split behind it: AGO answers for its own account holders, and acts on the tenant's instruction for
+  their visitors' conversations (`16-04`).
+- The two stores nobody has looked inside — traces and logs — audited against real traffic, edge
+  access-log retention defined, and an incident procedure that depends on `15-03` actually detecting
+  things (`16-05`).
+
+Deliberately not here: the legal determinations. Whether a notice suffices or consent is required,
+what the published policy and offer say, the processing clause in the tenant agreement, and whether a
+given incident is notifiable — all belong in the private `ago-business` repository and need a lawyer,
+the same gate `ago-business` already applies to Meta's Business API. This stage builds the mechanisms
+any of those answers would need and stops short of asserting which answer is right.
+
+Also decided here rather than left implicit: **no operator avatar** (author, 2026-08-25). An image of
+a person's face is a further category of data plus another upload path with its own deletion, quota
+and moderation surface, for a benefit initials already provide.
+
+**Done when:** a tenant can delete their account and everything in it, and prove it is gone; a tenant
+can export their data; the widget can carry a notice the tenant controls; and `personal-data.md`
+describes the system as it actually is, with no unverified row left in it.
+
+---
+
+## Stages 17-19 — reserved for further AGO Chat and AGO Platform work
+
+Not yet planned. Stage 14 was the first item to use the range Stage 10 froze open (2026-08-23),
+Stage 15 the second (2026-08-24) and Stage 16 the third (2026-08-25); the rest stays reserved so
+later `ago-chat`/`ago-platform` work does not collide with Stage 20's own number. One named candidate
+is already waiting for it: operator-productivity work — canned responses, search across conversations,
+transfer between operators, notes and tags, shortcuts, notifications — named in `11-06`'s out-of-scope
+as wanting a stage of its own rather than being a tail of a stage about appearance.
 
 ---
 
@@ -461,13 +509,21 @@ renumbering stages, which would move every cross-reference for nothing (added 20
   prerequisites of Stage 10 being *true* rather than merely built: today a self-registered visitor
   cannot receive a verification mail, and any account that did get created is destroyed by the next
   pod restart. Stage 10 is otherwise finished, which is exactly why these two should not wait.
+- **`16-01`** (the personal-data map and the residency constraint). Not breakage, but a dependency
+  with a deadline: `10-05`'s email provider and `15-02`'s backup destination are both open questions
+  about moving personal data somewhere, and both are due soon. Answering either without the constraint
+  written down is how a system acquires a residency problem it then has to migrate out of. The item is
+  deliberately small — documentation and cross-references, no mechanism — so it can land early without
+  pulling the rest of Stage 16 with it.
 - **`6-09`** (release operator capacity on close). A live functional defect found by `7-04`'s load run:
   an operator's usable capacity decays with every conversation they close until their connection drops
   entirely, which on a public deployment means the waiting queue quietly stops being served.
 
-Everything else in Stage 15 stays in Stage 15. Backups, alerting, retention and capacity are
-insurance against a future failure; these three are present-tense breakage, and the distinction is
-what keeps "pull it forward" from becoming a way to reorder the whole roadmap by preference.
+Everything else stays where it is. Backups, alerting, retention and capacity are insurance against a
+future failure, and the rest of Stage 16 is real work that needs its own stage's room; what is pulled
+forward is present-tense breakage plus one small document another item is about to need. That
+distinction is what keeps "pull it forward" from becoming a way to reorder the whole roadmap by
+preference.
 
 ---
 

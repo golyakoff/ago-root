@@ -58,7 +58,11 @@ Not yet defined — cannot be, without the answers below.
   2026-08-24: Stage 15's `15-04-retention-and-pruning-jobs.md` builds a *configurable* pruning mechanism
   (bounded-batch deletes, partition drops) and sets an operational default sized to keep a 2Gi volume
   alive. That default is explicitly not an answer to this question, and this item is not unblocked by it
-  — but whatever is decided here will be a configuration value rather than new machinery. Stated
+  — but whatever is decided here will be a configuration value rather than new machinery. **Second note,
+  2026-08-25**: `architecture/personal-data.md` reframes this question as more than a tier lever. Message
+  content is the bulk of the personal data in the system and the one part AGO cannot minimise by field
+  choice, so how long it is kept is the strongest privacy control in the backlog. That does not answer
+  the question either, but it changes what answering it is worth. Stated
   explicitly, for this stage's own planning: **this is genuinely unresolved, not just unbuilt** — it is
   not decided anywhere in this repository, and it is not decided in the private business repository either
   (confirmed directly by the author while this stage was being planned, not inferred). This is the
