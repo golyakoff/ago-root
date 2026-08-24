@@ -1,7 +1,7 @@
 # Public demo page and operator console, throwaway login
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `8-01-public-deployment-target.md` — needs a live, TLS-terminated public API and
   Keycloak instance to point the widget and console builds at; nothing about this item's own scope
   is unresolved independent of that
@@ -75,17 +75,41 @@ at a public URL instead of `localhost`.
 
 ## Done when
 
-- [ ] From a machine on a network unrelated to the deployment (not the same LAN/VPN), the demo page
-      loads, the widget connects, and a message sent from it is visible — verified live.
-- [ ] From the same unrelated network, the public console URL redirects to the public Keycloak login,
+- [x] From a machine on a network unrelated to the deployment (not the same LAN/VPN), the demo page
+      loads, the widget connects, and a message sent from it is visible — verified live
+      (`demo-shop1.reserve-me.ru`, real message confirmed in Postgres). This did **not** work on the
+      first pass — see "Found live" below; `5-12` is the real fix that made it actually work, not just
+      appear to.
+- [x] From the same unrelated network, the public console URL redirects to the public Keycloak login,
       the documented throwaway credential logs in, and the operator sees the message sent above in
       the queue/conversation view and can reply — verified live, both directions, matching `5-09`'s
       and `5-06`'s own "verified live, not asserted" bar.
-- [ ] The demo/landing page states the throwaway credential in the page itself, not only in a linked
+- [x] The demo/landing page states the throwaway credential in the page itself, not only in a linked
       doc.
-- [ ] A runbook section (new, or added to `8-01`'s own new doc) covers rebuilding and republishing the
+- [x] A runbook section (`runbooks/public-deploy.md`'s step 12) covers rebuilding and republishing the
       widget/console static bundles specifically — a different mechanism from `8-01`'s backend
-      redeploy, so documented separately.
+      redeploy, documented separately.
+
+## Found live (not assumed away)
+
+The demo page, console, TLS, CORS, and Keycloak registration all worked on the first real pass — but
+the actual chat conversation did not: a visitor's message consistently failed to reach the operator.
+Two independent causes, both found and fixed live, both documented as their own items rather than
+folded into this one silently (`5-11`'s own precedent for "a real bug found while proving deployment
+work becomes its own backlog item"):
+
+- **`5-12`** — the real, deterministic cause: the widget's own client code never finished wiring
+  `clientMessageId` through to `VisitorHub.SendMessageAsync`'s now-4-parameter signature (`5-07`), so
+  every real send failed at the hub-invocation layer before ever reaching the handler. This is a
+  widget application bug, not a deployment/config issue — exactly the kind `8-02`'s own Out of scope
+  said "becomes its own backlog item, not a fix folded in here."
+- **A one-time, self-resolving red herring along the way**: immediately after applying this item's own
+  Gateway manifest changes (the new SANs/routes), a handful of WebSocket connections dropped within
+  seconds of opening — traced to NGINX Gateway Fabric reloading its data-plane config in response to
+  the TLS Secret changing underneath it (a normal `nginx reload`, which does not preserve in-flight
+  long-lived connections). Confirmed transient, not structural, by testing again once the config
+  settled: a fresh connection through the same public route stayed open and stable. Not a persistent
+  Gateway problem — investigated and ruled out before `5-12`'s real cause was found.
 
 ## Open questions
 
