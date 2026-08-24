@@ -45,6 +45,26 @@ seeded demo operator's queue rendered counts like `195` accumulated across every
   write — but that is this item's own call to make and state, not a foregone conclusion.
 - Decide and state the semantics: does opening a conversation clear it, or does the operator have to
   actually see the newest message? Simplest defensible rule wins; write down which was chosen.
+- **Concurrency with the counter's other writer — the part most likely to be got wrong.** This is not
+  a fresh aggregate: `RecordUnreadMessageHandler` (`2-05`, consumer name `unread-counter`) already
+  loads the same `Conversation` and calls `IncrementUnreadCount` from `Ago.Chat.Worker`, and
+  `ConversationConfiguration` maps Postgres's `xmin` as a row version, so both writers are under
+  optimistic concurrency by construction. Two consequences this item has to handle deliberately
+  rather than discover:
+  - **A losing save must not be an error the operator sees.** `RecordUnreadMessageHandler`'s own doc
+    comment already states its side of this: a losing concurrent save throws, the broker retries, and
+    a later attempt reloads the fresh count. Mark-read has no broker behind it, so it needs its own
+    answer — retry-once-then-succeed is the obvious candidate (`6-08` already established that shape
+    for conversation writes and is worth reading first), and doing nothing is defensible too if the
+    next open re-issues it anyway. Whichever is chosen, say why.
+  - **The genuine logical race, not just the technical one**: a visitor message arriving in the same
+    instant as a mark-read can leave the count at zero for a message the operator never saw. Reading
+    the conversation, resetting to zero and saving is exactly the load-mutate-save that loses here.
+    Consider clearing *up to a known sequence* (the newest message the operator actually has) rather
+    than to an unconditional zero — that turns the operation into something a concurrent increment
+    can safely land on top of, and it composes with the "reached the bottom of the thread" semantics
+    above rather than fighting them. If an unconditional zero is chosen instead, state what happens
+    to a message that arrives mid-write and why that is acceptable.
 - Idempotency: marking an already-read conversation read again must be a no-op, not an error — the
   console will call this on every open, including re-opens.
 - The **visitor** side (`VisitorUnreadCount`) has the identical never-cleared shape. Either fix both
@@ -71,6 +91,10 @@ seeded demo operator's queue rendered counts like `195` accumulated across every
 - [ ] An operator who is not assigned to the conversation cannot clear its count (real `403`,
       integration-tested alongside the existing operator-authorization tests).
 - [ ] Marking an already-read conversation read is a no-op, proven by a test.
+- [ ] A concurrent `IncrementUnreadCount` and mark-read on the same conversation leave a correct
+      count — proven by a real concurrency test against Postgres, in `Ago.Chat.Concurrency.Tests`
+      alongside the existing capacity/assignment ones, not reasoned about. "Correct" means the item's
+      own stated rule from Scope: a message that arrived and was never seen must still be counted.
 - [ ] The visitor-side decision is stated either way, in code and in this item.
 - [ ] `ago-console`'s session-local read state is reduced to whatever remains genuinely useful, and
       `11-06`'s documented reload limitation is removed rather than left describing behaviour that no
