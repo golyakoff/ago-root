@@ -52,7 +52,15 @@ the same would be true for a real operator on the public deployment.
   connection protocol, plus a server-side change in `Ago.Chat.Api` — and it is worth its own item if
   the query-string placement itself is judged unacceptable. This item stops the *logging*, which is
   the part that is a one-line fix and a stated convention violation today.
-- Server-side logging. `Ago.Chat.Api` is not implicated by this finding; only the browser clients are.
+- Server-side logging. `Ago.Chat.Api`'s own logger is not implicated — verified 2026-08-25:
+  `appsettings.json` sets `"Microsoft.AspNetCore": "Warning"`, which suppresses the request-starting
+  log that would otherwise print the path and query at `Information`. **Narrowed the same day**: the
+  API's logger is not the whole server side. The edge access log (no log configuration exists anywhere
+  in `ago-deploy`, so NGINX's default combined format applies and logs the full request line) and the
+  trace spans (`AddAspNetCoreInstrumentation()` with no filter) have never been looked at, and a token
+  written to disk outlives one in a browser console.
+  `17-02-does-the-hub-token-reach-the-edge-log.md` owns that half. Still not this item's job — this
+  note only stops "not implicated" from reading as "checked".
 
 ## Done when
 
