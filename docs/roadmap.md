@@ -28,7 +28,7 @@ before anything below it, and within a band the order is a judgement call rather
 
 | Item | Why it cannot wait |
 |---|---|
-| `17-01` tenant-isolation proof | The loudest claim in `vision.md` (`site_id` scopes everything) is proven per-handler and ad hoc. On a live deployment open to self-registration, one missing filter is one tenant reading another's conversations — and `12-02` is about to add a *legitimate* cross-tenant reader, which is the worst moment for the rule to still be unwritten |
+| `17-01` tenant-isolation proof | The enforcement is centralized and its core is proven, but the composition is not: handler tests use a fake permission checker, two route groups accept a client-supplied `siteId` on purpose, at least one belongs-to-site guard has no test, and nothing stops the next handler skipping the check. `12-02` is about to add a *legitimate* cross-tenant reader, after which a deliberate exception and a forgotten filter look identical |
 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart. Stage 10's entire premise is runtime-created users |
 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — registration is accepted and the mail can never be sent, so no real visitor can finish signing up |
 | `16-01` personal-data map and residency | Not breakage, but two vendor questions due imminently (`10-05`'s provider, `15-02`'s backup destination) both move personal data somewhere, and answering either without the constraint is how a residency problem gets acquired |
@@ -494,12 +494,16 @@ describes the system as it actually is, with no unverified row left in it.
 failure available here and the loudest claim the project makes about itself.
 
 `vision.md` says it plainly — "Every piece of data is scoped by `site_id`; this is a multi-tenant
-system from day one because retrofitting tenancy is the classic portfolio-project failure." Today
-that is true in the schema and enforced per handler, one at a time, with tests that exist for some
-use cases and not others. Nobody can say which. On a deployment that is live and open to
-self-registration, a single missing filter means one shop reading another shop's conversations, and
-`12-02` is about to introduce a *deliberate* cross-tenant reader for the platform owner — which is
-precisely the wrong moment for the rule to still be unwritten, because after it lands nobody can tell
+system from day one because retrofitting tenancy is the classic portfolio-project failure." An audit
+run while scoping `17-01` (2026-08-25) found that claim to be in better shape than a quick look
+suggests and less proven than it should be, which is a different problem from the one this stage was
+opened expecting. Enforcement is centralized in one port and that port's real implementation has an
+integration test proving it refuses a role belonging to another site. What is missing is proof of the
+*composition*: handler tests drive a fake checker, two route groups accept a client-supplied `siteId`
+by deliberate design, at least one belongs-to-site guard has no test covering it, and nothing makes
+the next handler prove itself at all. On a deployment that is live and open to self-registration, that
+gap is one refactor away from one shop reading another shop's conversations — and `12-02` is about to
+introduce a *deliberate* cross-tenant reader for the platform owner, after which nobody can tell
 "crossing tenants on purpose" from "forgot the filter".
 
 Deliverables:
