@@ -62,6 +62,18 @@ A real bug found live while building this, unrelated to CORS itself but blocking
 constrains `where T : class` project-wide (`Ago.Platform.Abstractions`, `0.9.0`), and this layer's own
 positive/negative cache wraps its `bool` in a small reference-type result instead.
 
+**Addendum (`10-04`)**: proven end-to-end for a site created through `10-02`'s real self-registration
+path, not only pre-seeded fixtures - register, then an immediate widget handshake from that exact
+origin, passes both CORS layers with no wait. The negative-cache timing question this mechanism's
+TTL-only invalidation raises (could a pre-existing cached "no site allows this origin" strand a brand
+new site?) is answered **not a real risk for self-registration**: the origin is unknown to the system
+until `RegisterSiteHandler` commits it, the registration call itself never carries the customer's own
+origin (it comes from the console), and the registering user has no public key to probe with before
+registration completes - so nothing can ever populate a negative cache entry for that exact origin
+ahead of time. Full reasoning and the tests proving both the real flow and the underlying (unfixed,
+unreachable-here) TTL-only-invalidation limitation: `docs/backlog/5-01-per-site-cors.md`'s own
+addendum, `docs/backlog/10-04-self-registered-site-embedding-verification.md`.
+
 **Shipped in `5-03`**: `AttachmentEndpoints` is the first HTTP endpoint file to translate a
 `Result<T>`/`Error` failure into an RFC 7807 response - `Ago.Chat.Api.Http.ErrorExtensions.ToProblem`
 maps `ConversationErrors`' stable codes (`Attachment.NotFound`, `Message.RateLimited`, ...) to a

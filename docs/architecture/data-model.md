@@ -4,7 +4,10 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 
 ## Tables (initial shape - refined per stage)
 
-- `sites` - the tenant. `id`, `public_key`, `allowed_origins[]`, settings.
+- `sites` - the tenant. `id`, `public_key`, `allowed_origins[]`, `name` (**added in `10-02`** - a real
+  gap that item's own scope anticipated: its Goal takes a site display name as a required
+  registration input, but no such column existed before this stage. `text not null default ''`,
+  additive/reversible - `Stage10AddSiteName`, `ago-chat`), settings.
 - `visitors` - `id`, `site_id`, `token_hash`, first/last seen. Anonymous, no PII by design.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
@@ -30,9 +33,18 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   `EventEnvelope` from a claimed row, since dropping `correlation_id` silently defeats its purpose.
 - `inbox` - `message_id`, `consumer`, `processed_at`. The idempotency ledger for consumers.
 - `roles` - `id`, `site_id`, `name`, `permissions` (`text[]`) - the RBAC model `adr/0016` added,
-  built in `1-04`. No management API yet; `1-05`'s seed script is the only writer.
+  built in `1-04`. No management API yet; `1-05`'s seed script and, **as of `10-02`**,
+  `RegisterSiteHandler`'s bootstrap transaction (`Ago.Chat.Infrastructure.Postgres.SiteRegistrationRepository`)
+  are the only writers - still no general role-management surface (`authorization.md`'s own note on
+  this), just a second caller that seeds the same two fixed roles a real self-registered site needs
+  instead of only a script-seeded demo one.
 - `operator_roles` - `operator_id`, `role_id` - the join table; an operator can hold more than one
-  role even though Stage 1 only ever grants the single seeded `"Operator"` role.
+  role even though Stage 1 only ever grants the single seeded `"Operator"` role. **`10-02`**: a
+  self-registered operator is granted both `"Operator"` and `"Admin"` immediately, the same
+  `demo-admin` precedent `5-08`'s seed script already established, in the identical bootstrap
+  transaction as `roles` above - `Site` + both `Role`s + `Operator` + both `operator_roles` rows
+  commit together or not at all (`RegisterSiteHandler`'s own remarks on why this is deliberately
+  wider than this file's usual "one aggregate per transaction" default, below).
 - `attachments` (**shipped in `5-03`**) - `id` (uuid v7), `site_id`, `conversation_id`, `message_id?`,
   `object_key`, `content_type`, `size_bytes`, `state` (`pending|ready|deleted`), `created_at`,
   `thumbnail_key?` (**writer shipped in `5-04`** - `AttachmentThumbnailConsumer`; the column itself
@@ -94,6 +106,15 @@ load-mutate-save on `xmin`, which still rejects the race that matters (two saves
 
 Writes go through EF Core, one aggregate per transaction, no lazy loading. Reads go through Dapper
 with hand-written SQL returning DTOs. Rationale and trade-offs: `adr/0004`.
+
+**One deliberate exception, `10-02`**: `RegisterSiteHandler`'s bootstrap transaction writes `Site` +
+two `roles` rows + `Operator` + two `operator_roles` rows together, via
+`ISiteRegistrationRepository.TryRegisterAsync` (`Ago.Chat.Application.Abstractions`) - a real,
+multi-aggregate provisioning step, not an accidental widening. `1-05`'s seed script already produces
+the identical shape non-transactionally (idempotent `ON CONFLICT DO NOTHING` SQL, harmless to
+re-run); a real caller hitting `POST /api/v1/sites` gets exactly one attempt, so a partial failure
+here must not leave a site with no roles or an operator that resolves to nothing. Every other write
+in this codebase still follows the one-aggregate rule above unchanged.
 
 ## Migrations
 

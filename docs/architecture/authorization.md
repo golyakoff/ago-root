@@ -90,6 +90,18 @@ for the reason this section always gave: a real feature (password reset, hashing
 lockout) that competes for review attention with the concurrency and data work this project exists to
 demonstrate, for a problem every OIDC provider has already solved correctly.
 
+**Shipped in `10-01`** (`adr/0028`) - a second, strictly weaker authorization policy,
+`RequireKeycloakIdentity`, exists now alongside `RequireOperatorIdentity` on the same `Operator` JWT
+scheme. It accepts any token that is signature/audience/lifetime-valid against Keycloak's JWKS -
+including one whose `sub` resolves to no `operators` row - and is wired to exactly one route,
+`10-02`'s `POST /api/v1/sites` bootstrap endpoint. It exists because Keycloak's own
+`registrationAllowed: true` realm setting means a real visitor can now complete Keycloak's hosted
+registration form and hold a genuine, terminable authentication state `RequireOperatorIdentity` was
+never meant to admit - see `adr/0028` for why the two policies must stay distinct rather than
+`RequireOperatorIdentity` relaxing its own `RequireClaim(OperatorId)` check. The **Visitor** and
+**Webhook/API integrations** rows in the actor table above are unaffected - this is a second
+enforcement point on the existing Operator identification mechanism, not a fourth actor.
+
 Consequence this pinned down early, now realised: `Ago.Chat.Api` holds OIDC configuration
 (`Auth:Keycloak:Authority`/`Audience`) - not a secret itself (an issuer URL and a public client id,
 neither confidential), but Keycloak's own admin credentials are, and stay in `infra-credentials`

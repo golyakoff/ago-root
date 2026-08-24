@@ -72,6 +72,12 @@ two surfaces this decision was actually about.
 - `ago-widget` stays framework-free by design (`embeddable-widget` skill's bundle-budget rule) -
   this decision does not change that; the two frontends solve different problems with different
   constraints and were never going to share a framework choice.
+- **`10-03`**: a fourth console surface this ADR did not originally anticipate - a public,
+  pre-account, pre-authentication route (`/signup`, `/onboarding`), reachable by a visitor with no
+  `ago-console` session at all. It still runs on the same React app/build as the other three surfaces
+  (no framework or tooling implication follows from it), but a later reader of this ADR alone should
+  not be surprised that an unauthenticated route exists in this repository - the three surfaces listed
+  above all assumed an already-authenticated operator, and this one deliberately does not.
 - Cost: React's own "assembly required" nature means routing, state management, and form handling are
   each a small decision `5-06`'s own scaffold work has to make explicitly, rather than inheriting
   Angular's opinions for free.

@@ -1,7 +1,7 @@
 # Embedding a self-registered site: CORS and origin verification
 
 - **Stage**: 10
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `10-02-site-and-operator-registration.md` (a site must exist with real
   `allowed_origins`), `10-03-console-signup-onboarding.md` (the origin value in a real end-to-end run
   comes from the signup form, not a test fixture) — and `5-01-per-site-cors.md`, already shipped, whose
@@ -54,14 +54,54 @@ up yet. `docs/architecture/caching.md`'s cache-aside and negative-caching sectio
 
 ## Done when
 
-- [ ] The end-to-end integration test above passes against a real Postgres + Redis, proving both CORS
+- [x] The end-to-end integration test above passes against a real Postgres + Redis, proving both CORS
       layers for a site created through this stage's own registration path, not only a pre-seeded
       fixture.
-- [ ] The negative-cache timing question above is explicitly answered in this file's own text (updated
+      `Ago.Chat.Integration.Tests.SelfRegisteredSiteOriginTests.
+      RegisterThenImmediateWidgetHandshake_FromTheRegisteredOrigin_PassesBothCorsLayers` — calls the
+      real `RegisterSiteHandler` against a real Postgres (`SiteCachingFixture`, no Keycloak needed
+      since the handler only needs the `sub` string a validated token would carry, not the token
+      itself), then, with no wait and no cache warm-up, checks `SiteOriginCorsPolicyProvider` (layer 1)
+      and `AuthEndpoints.HandleVisitorSessionAsync` (layer 2) from that exact origin. Run for real
+      against Docker-backed Testcontainers Postgres + Redis: 2/2 new tests pass, and the full solution
+      suite (417 tests, up from 415 pre-existing) is green (`dotnet test Ago.Chat.slnx`), `dotnet
+      format --verify-no-changes` clean.
+- [x] The negative-cache timing question above is explicitly answered in this file's own text (updated
       in place) and, if a real gap was found, fixed with its own test proving the fix.
-- [ ] `5-01`'s and `api-design.md`'s existing notes gain the addendum described above.
+      **Answer: not a real risk for self-registration.** `CheckCorsOriginHandler`'s per-origin cache
+      key (`cors-origin:{origin}`) can only strand a freshly self-registered site behind a stale
+      negative if some earlier request carried that exact `Origin` header before the site existed. For
+      self-registration that is impossible by construction:
+      - The origin is a value the registering user types into `10-03`'s signup form; it only becomes
+        part of `Site.AllowedOrigins` once `RegisterSiteHandler`'s transaction commits, so nothing
+        upstream of that moment knows the value to send as an `Origin` header at all.
+      - The registration call itself (`POST /api/v1/sites`) is made by the signup form's own
+        JavaScript, from the console's own origin — never from the customer's own site — so it cannot
+        poison the cache key for the origin being registered either.
+      - The one caller who could type the origin in early — the registering user themselves — has no
+        way to before signing up: they have no public key yet to call `POST /api/v1/visitor-sessions`
+        with, and no widget script embedded on their page (that requires the public key `10-02`'s
+        response hands them *after* registration) to make their browser send that `Origin` header from.
+      - This item's own "Out of scope" (editing `allowed_origins` after signup) means there is also no
+        path today where an origin is freed and immediately reclaimed by a different site — the one
+        other scenario that could matter.
+
+      No fix was therefore needed — but the underlying TTL-only-invalidation limitation itself is real
+      and intentionally unfixed (`5-01` never wired up event-driven invalidation), so it is demonstrated
+      directly, not just reasoned about in prose:
+      `SelfRegisteredSiteOriginTests.AnOriginCheckedBeforeAnySiteClaimsIt_StaysNegativelyCachedThroughARaceRegistration`
+      deliberately performs the one check no real self-registration caller ever does (checking an
+      origin before any site claims it) and confirms the negative answer does outlive the registration
+      that would otherwise make it positive, within the 30-second window. If a future feature (most
+      likely the deferred `allowed_origins` editing surface) ever lets an origin move from one site to
+      another, that feature is the one that needs to revisit this note — self-registration itself does
+      not.
+- [x] `5-01`'s and `api-design.md`'s existing notes gain the addendum described above.
+      `docs/backlog/5-01-per-site-cors.md`'s own new "Addendum (`10-04`)" section, and
+      `docs/conventions/api-design.md`'s "Widget-facing constraints" gained a matching
+      "Addendum (`10-04`)" paragraph right after the existing "Shipped in `5-01`" note.
 
 ## Open questions
 
-None — this item verifies, and if needed closes a gap in, an already-shipped and already-understood
-mechanism; nothing here needs the author's input.
+None — this item verified, and found no gap to close in, an already-shipped and already-understood
+mechanism; nothing here needed the author's input.

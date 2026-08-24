@@ -1,7 +1,7 @@
 # Site and operator self-registration
 
 - **Stage**: 10
-- **Status**: ready
+- **Status**: done (`long-term/stage-10`, relaxed-mode background dispatch, 2026-08-24)
 - **Depends on**: `10-01-self-registration-identity-flow.md` — needs its `RequireKeycloakIdentity`
   policy to authenticate the bootstrap call this item adds; blocked transitively by `10-01`'s own open
   question until that lands.
@@ -90,22 +90,32 @@ second mechanism. `docs/conventions/naming-and-structure.md` for where a new use
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: a real Keycloak-signed token with no matching operator, posted to
+- [x] `Ago.Chat.Integration.Tests`: a real Keycloak-signed token with no matching operator, posted to
       `POST /api/v1/sites`, results in exactly one new `Site`, two new `Role`s (`"Operator"` +
       `"Admin"`, matching `5-08`'s exact permission sets), one new `Operator` with
       `external_subject_id` set from the token's `sub`, and two `operator_roles` rows — verified by
-      querying the rows directly, not just asserting the `201`.
-- [ ] The created operator's token subsequently resolves `OperatorId`/`SiteId` through the existing
+      querying the rows directly, not just asserting the `201`. `SiteRegistrationTests` — run for real
+      against Testcontainers Postgres/Keycloak, passing.
+- [x] The created operator's token subsequently resolves `OperatorId`/`SiteId` through the existing
       `OperatorIdentityClaimsTransformation` and can call an ordinary `RequireOperatorIdentity`-gated
       route (e.g. the queue) — proving the created rows are a real, working operator identity, not
-      just database rows that merely look right.
-- [ ] A second `POST` from the same `sub` is rejected `409`, not a second site — proven with a real
-      second call, not asserted from the handler's logic alone.
-- [ ] Rate limiting proven the same real-concurrency way `3-05`'s own tests prove their bucket (N
+      just database rows that merely look right. Proven with a *second*, freshly re-fetched token for
+      the same identity (not the one used to register), against a hand-built `RequireOperatorIdentity`
+      test route — run for real, passing.
+- [x] A second `POST` from the same `sub` is rejected `409`, not a second site — proven with a real
+      second call, not asserted from the handler's logic alone. Run for real, passing.
+- [x] Rate limiting proven the same real-concurrency way `3-05`'s own tests prove their bucket (N
       concurrent calls, exactly the configured capacity honoured, not a sequential loop).
-- [ ] `docs/architecture/data-model.md` gets a note if this item's own implementation surfaces anything
+      `RegisterSiteRateLimitingConcurrencyTests`: 30 concurrent registrations from distinct identities
+      sharing one IP against a real Redis-backed limiter — exactly 5 allowed, 25 denied. Run for real,
+      passing.
+- [x] `docs/architecture/data-model.md` gets a note if this item's own implementation surfaces anything
       not already documented about how `roles`/`operator_roles` get written outside `1-05`'s script
-      (state explicitly, once written, whether it does or doesn't).
+      (state explicitly, once written, whether it does or doesn't). It does: `sites` itself was
+      missing a `name` column the item's own Goal needs — a real gap this item's Scope anticipated
+      finding, closed with one small additive/reversible migration (`Stage10AddSiteName`), not a
+      migration silently added beyond what was scoped. `roles`/`operator_roles` now have
+      `RegisterSiteHandler`'s bootstrap transaction as a second writer alongside `1-05`'s script.
 
 ## Open questions
 

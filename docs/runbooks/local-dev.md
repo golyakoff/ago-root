@@ -81,6 +81,62 @@ curl -s -X POST http://127.0.0.1:8081/realms/ago-chat/protocol/openid-connect/to
   | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
 ```
 
+### Completing self-registration locally (`10-01`/`10-02`)
+
+**Shipped in `10-01`** (`adr/0028`): the realm now allows registration
+(`registrationAllowed: true`) and requires email verification before an account is usable
+(`verifyEmail: true`) - the same fields `5-05`'s own `VERIFY_PROFILE` gotcha above already forces
+onto every seeded user (`email`/`firstName`/`lastName`) are what Keycloak's own hosted registration
+form collects by default, so no extra realm config was needed to avoid that gotcha a second time at
+registration.
+
+The real flow a browser drives: open Keycloak's hosted registration page directly (the same
+`client_id`/`redirect_uri` shape `5-06`'s console login already redirects through) -
+
+```
+http://127.0.0.1:8081/realms/ago-chat/protocol/openid-connect/registrations?client_id=ago-console&response_type=code&redirect_uri=http://localhost:5173/callback&scope=openid
+```
+
+- fill in the form, and Keycloak sends a verification email through whatever SMTP config the realm
+has. **There is none, anywhere in this project** - local Keycloak has no SMTP configured at all, and
+attempting this flow fails silently server-side (`SEND_VERIFY_EMAIL_ERROR ... error="email_send_failed"`
+in Keycloak's own log, found live, `8-05`/`5-13`'s own investigation while checking the public
+deployment's mail-related exposure) rather than the "logs the email to its own console instead" this
+runbook previously claimed - that claim was never actually true, corrected here. The verification link
+is what actually lifts the "Verify Email" required action; without it, this exact browser flow cannot
+complete, and there is currently no local workaround other than the admin-API shortcut below. Adding a
+mock-SMTP relay (e.g. MailHog) to the local compose stack is real, unstarted work if this flow needs
+to be exercised end to end rather than sidestepped.
+
+For testing `10-02`/`10-03` without driving a real browser + email flow every time, mint an
+equivalent token directly against Keycloak's admin API instead - the same shape
+`OperatorOidcFixture.GetWrongIssuerAccessTokenAsync` already uses in the automated test suite, run
+by hand against the local compose Keycloak. Requires `KEYCLOAK_ADMIN`/`KEYCLOAK_ADMIN_PASSWORD` from
+`docker/.env`:
+
+```
+ADMIN_TOKEN=$(curl -s -X POST http://127.0.0.1:8081/realms/master/protocol/openid-connect/token \
+  -d "grant_type=password&client_id=admin-cli&username=$KEYCLOAK_ADMIN&password=$KEYCLOAK_ADMIN_PASSWORD" \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+
+curl -s -X POST http://127.0.0.1:8081/admin/realms/ago-chat/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"username":"local-self-register","email":"local-self-register@example.test","firstName":"Local","lastName":"SelfRegister","enabled":true,"emailVerified":true,"credentials":[{"type":"password","value":"local-self-register-password","temporary":false}]}'
+
+curl -s -X POST http://127.0.0.1:8081/realms/ago-chat/protocol/openid-connect/token \
+  -d "grant_type=password&client_id=ago-console&username=local-self-register&password=local-self-register-password" \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
+```
+
+`"emailVerified":true` on the admin-created user sidesteps the "Verify Email" required action the
+same way the seeded demo users already do - the point of this shortcut is testing `10-02`'s bootstrap
+endpoint against a real, signature-valid Keycloak token whose `sub` matches no `operators` row, not
+re-proving Keycloak's own email flow every time. `POST /api/v1/sites` (`10-02`) with this token in the
+`Authorization` header, gated by the new `RequireKeycloakIdentity` policy, is what actually creates
+the `Site`/`Operator`/`Role` rows - after that call succeeds, the same token (re-fetched, so
+`OperatorIdentityClaimsTransformation` resolves it fresh) works against any `RequireOperatorIdentity`
+route exactly like `demo-operator`'s does above.
+
 ### Running the widget demo locally
 
 **Shipped in `5-09`**: `ago-widget/demo/` is a deliberately hostile host page proving the widget's
