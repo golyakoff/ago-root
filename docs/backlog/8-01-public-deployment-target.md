@@ -1,8 +1,9 @@
 # Public deployment target: hosting, TLS, seeded demo tenant
 
 - **Stage**: 8
-- **Status**: blocked
-- **Depends on**: nothing new architecturally — reuses `1-05-seed-demo-tenant.md`'s seed script and
+- **Status**: ready
+- **Depends on**: `8-00` (base image, sequenced first per the author's own explicit instruction) —
+  otherwise nothing new architecturally, reusing `1-05-seed-demo-tenant.md`'s seed script and
   `5-05-operator-oidc-authentication.md`'s Keycloak realm-import verbatim, pointed at a new
   environment instead of inventing a new seeding mechanism
 
@@ -61,22 +62,12 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 - Verify health and reachability from *outside* the deployment — a real request from a machine not
   on the same network as the host, matching `k8s-local.md`'s own "verified means actually run"
   standard, not `kubectl get pods` alone.
-- **Note added 2026-08-25, author's own reminder — resolve when this item actually starts, not before**:
-  every `Ago.Chat.*` host's shared `Dockerfile` currently builds its final stage from
-  `mcr.microsoft.com/dotnet/aspnet:10.0` (Debian-based). For a real public deployment, switch to a
-  smaller production base image before shipping — current .NET guidance (verified 2026-08-25, not
-  assumed) leans toward **Ubuntu Chiseled** (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`) as
-  the default for production with no special requirements — smaller than Alpine's own musl-based image
-  in practice, no shell/package manager (smallest attack surface), and glibc-based so it avoids the
-  musl-compatibility risk Alpine carries for native dependencies. **Alpine**
-  (`mcr.microsoft.com/dotnet/aspnet:10.0-alpine`) is the fallback if Chiseled's own lack of a shell
-  breaks something this project's `Dockerfile`/entrypoint actually needs, or if a native dependency in
-  this project's stack (Npgsql, StackExchange.Redis, RabbitMQ.Client) turns out not to be musl-clean —
-  verify against the real image before deciding, not assumed clean either way. Chiseled images drop ICU
-  by default (no globalization support) unless the `-extra` variant is used — check whether this
-  project's own `DateTimeOffset`-only, UTC-everywhere convention (`docs/conventions/date-and-time.md`)
-  means culture-specific formatting was never a real dependency here, before pulling in the larger
-  `-extra` variant just to be safe.
+- **Base image note added 2026-08-25, resolved by `8-00`**: the research this note originally recorded
+  (Ubuntu Chiseled over Alpine, why, and the ICU/shell caveats to verify) is now a separate item,
+  `docs/backlog/8-00-minimal-production-base-image.md`, done ahead of this item rather than deferred
+  to it — the author asked for it resolved before `8-01` starts, not when it starts. This item now
+  simply inherits whichever base image `8-00` shipped; no further base-image decision is this item's
+  own job.
 
 ## Out of scope
 
@@ -110,18 +101,21 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 - [ ] No secret value appears in any file this item commits — the same audit this repository already
       applies everywhere (`repositories.md`).
 
-## Open questions
+## Open questions — resolved 2026-08-24, author's own decision
 
-- **Which hosting target**: a small managed Kubernetes offering, or a k3s VPS. `roadmap.md` leaves
-  this genuinely open ("a small managed cluster or a k3s VPS"), and nothing else in the repository
-  decides it. This is the author's call, likely driven by cost and by how much of the existing
-  Kustomize/NGINX Gateway Fabric setup should transfer unchanged — a managed Kubernetes offering
-  keeps `deploy/k8s/base/` and `adr/0014`'s Gateway API choice intact with the least new surface; a
-  bare k3s VPS still supports the Gateway API but adds provisioning work `k8s-local.md` never had to
-  cover for the Docker-Desktop-managed local cluster.
-- **Which domain name**, and who owns/pays for it and any hosting cost. Not decided anywhere in this
-  repository. `CLAUDE.md`'s "do not invent numbers, benchmarks, or 'typical' production figures"
-  means this item cannot silently assume a specific provider, domain, or cost figure — the author
-  states both, and this item's ADR records them once chosen.
+- **Hosting target: k3s VPS**, not a managed Kubernetes offering — the author's explicit call,
+  choosing lower cost over `deploy/k8s/base/`'s manifests transferring with zero new surface. This
+  item's own ADR (not yet written) must therefore cover the provisioning work `k8s-local.md` never
+  had to (OS choice, k3s install, whether the Gateway API's NGINX Gateway Fabric install from
+  `k8s-local.md` transfers unchanged onto k3s or needs its own verification step) — this is real,
+  undocumented ground, not a formality.
+- **Domain: the author's own `golyakov.net`**, with `*.ago.golyakov.net` subdomains — `chat.ago.
+  golyakov.net` (Api/hub traffic), `console.ago.golyakov.net` (operator console), `demo-shop1.ago.
+  golyakov.net` / `demo-shop2.ago.golyakov.net` (seeded demo tenant sites for the widget to embed
+  on), with the author open to adding more subdomains under the same `*.ago.golyakov.net` pattern for
+  any further tool this stage or a later one needs. No separate domain purchase needed. This item's
+  ADR records the exact subdomain-to-service mapping once DNS is actually configured, not just this
+  plan.
 
-This item does not start until both are answered.
+Both answered — this item is no longer blocked. Status changed to `ready`; still depends on `8-00`
+landing first per the author's own explicit sequencing.
