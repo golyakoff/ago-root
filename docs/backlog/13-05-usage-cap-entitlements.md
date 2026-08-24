@@ -53,7 +53,14 @@ Not yet defined — cannot be, without the answers below.
 
 ## Open questions
 
-- **Free-tier history retention: time-boxed (Slack-style, a rolling retention window past which older
+- ~~**Free-tier history retention: time-boxed or unlimited?**~~ **Answered in shape, 2026-08-25, by
+  `adr/0031`**: time-boxed, differentiated per tier, implemented by an immutable retention class in the
+  partition key, and archived rather than deleted. What remains is the window's *length*, which is now
+  a measurement `15-05` supplies rather than an open product question — so this item is no longer
+  blocked on a decision nobody had made, only on a number nobody has taken yet. `13-06` builds the
+  mechanism; this item records the resulting per-tier numbers as entitlements. The original question,
+  kept for the record:
+  **time-boxed (Slack-style, a rolling retention window past which older
   messages/conversations are deleted or archived) or unlimited history regardless of tier?** Note added
   2026-08-24: Stage 15's `15-04-retention-and-pruning-jobs.md` builds a *configurable* pruning mechanism
   (bounded-batch deletes, partition drops) and sets an operational default sized to keep a 2Gi volume

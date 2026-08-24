@@ -41,6 +41,11 @@ shape already established there, to be reused here rather than reinvented.
   fail halfway; they belong in `Ago.Chat.Worker` in the same shape as `15-04`'s prune and the existing
   `OutboxDispatcher`, with a recorded, resumable state, not in a synchronous HTTP call that a
   timeout can tear in half.
+- **The archive, added by `adr/0031` (2026-08-25)**: expired history is archived to object storage
+  rather than deleted, so erasure has one more store to reach and a deletion is not complete while an
+  archive object still holds the data. This also constrains that store's class — a cold tier that is
+  immutable or carries a minimum billable retention would make this item undeliverable, which
+  `adr/0031` records as a selection constraint rather than a preference.
 - **The backup answer, stated in one place**: deletion is complete when the last backup containing the
   data has aged out, and the window is `15-02`'s retention number. This item does not build a deletion
   journal replayed after restore — rejected deliberately, since such a journal is itself a list of

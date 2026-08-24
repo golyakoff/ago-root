@@ -35,7 +35,11 @@ invent a second one.
 - Prune published `outbox` rows past a short operational window (long enough that the window is itself
   a debugging aid, short enough that the table stays small). Deletion in bounded batches — a single
   unbounded `DELETE` on a hot table is its own incident.
-- Drop `messages` partitions past a retention horizon, and create future ones ahead of time. The horizon
+- Drop `messages` partitions past a retention horizon, and create future ones ahead of time.
+  **Changed by `adr/0031` (2026-08-25)**: partitions are per retention class *and* month, so a drop is
+  per class, and nothing may be dropped before its archive object is confirmed written (`13-06` owns
+  the archive step). This item still owns the mechanism; the grid it maintains simply gained a
+  dimension, and the drop gained a precondition. The horizon
   here is an **operational default**, chosen so the disk survives, and written down as replaceable by
   whatever number `13-05` eventually decides per tier — the mechanism must take the window as
   configuration, not bake a constant into a migration.

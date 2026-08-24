@@ -22,9 +22,11 @@ document.
 Two consequences follow, and they point in opposite directions.
 
 **Minimisation is real but it works on retention, not on fields.** Dropping a profile field changes
-little; not keeping conversations forever changes a lot. That makes the free-tier history window
-(`backlog/13-05`, still an open business decision) and the pruning mechanism (`backlog/15-04`) the
-strongest privacy levers in the backlog, which is not how either was originally framed. It is also
+little; not keeping conversations forever changes a lot. That makes the history window and the pruning
+mechanism (`backlog/15-04`) the strongest privacy levers in the backlog, which is not how either was
+originally framed. **Decided in shape 2026-08-25** (`adr/0031`): history is time-boxed, per tier, and
+archived rather than deleted — which means the liability moves to the archive rather than ending, and
+the published policy has to say so. The window's length waits on `15-05`'s measurement. It is also
 why an operator avatar has deliberately **not** been added: an image of a person's face is a further
 category of data plus another upload path with its own deletion, quota and moderation surface, for a
 benefit initials already provide (author's decision, 2026-08-25).
@@ -47,6 +49,7 @@ usual reason erasure in an event-driven system is intractable does not apply.
 | Redis | Rate-limit buckets, including one keyed by client IP (`RegisterSiteHandler`); presence; connection registry | Abuse control (`3-05`), realtime (`3-01`) | Expires on its own TTL; never a source of truth (`caching.md`) |
 | Edge access logs | Client IP per request | NGINX's own logging (`edge.md`) | Log retention — **not currently defined anywhere** |
 | Traces / metrics | Unverified — spans may or may not carry identifiers or content | Observability (`7-01`, `7-02`) | Unverified; `backlog/16-05` is the audit |
+| Retention archive | Expired conversation history, in `16-03`'s export format | `adr/0031`: expired history is archived rather than deleted, retrievable as a file on request | Object deletion — and the store's class must permit it, which `adr/0031` records as a selection constraint |
 | Backups | Copies of all of the above | Recoverability (`15-02`) | Retention window only — see below |
 
 Two stores that carry **no** personal data, deliberately, and should stay that way: `outbox.payload`

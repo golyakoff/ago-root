@@ -93,6 +93,14 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
 
 ## Partitioning
 
+**Changing, per `adr/0031` (decided 2026-08-25, built by `backlog/13-06`)**: `messages` becomes
+multi-level — `PARTITION BY LIST (retention_class)` at the top, each class partitioned by month
+exactly as below. The class is stamped from the tenant's tier when a message is written and never
+changes, so a tier change moves no rows; the product statement is "history is kept according to the
+plan it was written under". Every unique constraint widens by that column again, extending `adr/0019`
+rather than reopening it. The rest of this section describes what is shipped today and stays true of
+each class's own monthly grid.
+
 **Shipped in `2-06`**: `messages` is `PARTITION BY RANGE (created_at)`, monthly. Rationale: bounded
 index size, cheap retention (`DROP` a partition instead of a mass `DELETE`), and a concrete thing to
 demonstrate.

@@ -57,8 +57,11 @@ starting earlier than the work that needs them:
 - The **legal consultation** gating `16-04` and the whole `ago-business` legal block.
 - The **email provider** (`10-05`) and the **backup destination** (`15-02`) — both the author's
   decisions, both now constrained by data residency (`16-01`).
-- The **free-tier retention window** (`13-05`), which blocks two Stage 13 items and, per
-  `personal-data.md`, is also the strongest privacy lever available.
+- ~~The **free-tier retention window**~~ — **decided in shape 2026-08-25** (`adr/0031`): time-boxed,
+  per tier, via an immutable retention class in the partition key, archived rather than deleted. What
+  is left is the window's *length*, which is no longer waiting on anyone's decision — it waits on
+  `15-05` measuring real storage growth, which is ordinary work in the "Soon" band. `13-06` builds the
+  mechanism meanwhile.
 
 ### How this list is kept honest
 
@@ -356,6 +359,10 @@ querying the database by hand.
 **Goal:** turn a self-service account into a paying customer.
 
 Deliverables:
+- Retention as a real mechanism (`13-06`, `adr/0031`): `messages` partitioned by an immutable
+  retention class then by month, so a per-tier history window costs one `DROP PARTITION` rather than
+  bounded-batch deletes; expired periods archived to object storage in `16-03`'s export format and
+  retrievable as a file, rather than deleted outright.
 - Entitlement enforcement matching the tiers and cost-containment criterion already decided in the
   private `ago-business` repo (seat count at minimum; attachments/history/site-count caps as those
   business decisions land) — DB-sourced checks, never cached, per `architecture/caching.md`'s "never
