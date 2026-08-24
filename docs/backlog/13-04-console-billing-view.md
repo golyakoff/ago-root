@@ -52,7 +52,8 @@ return alone (see Scope below for how this screen must reflect that honestly).
   visible lie about payment state, not a cosmetic shortcut.
 - Reuse whatever form/table styling `5-07`/`5-08`/`10-03` already established — this item is not a design-
   system pass, matching the same deferral every other console item in this backlog has made for its own
-  new screen.
+  new screen. **Corrected 2026-08-24**: that chain of deferrals resolved to seventeen lines of CSS; build
+  this screen out of `11-05-console-design-foundation.md`'s components and shell instead.
 
 ## Out of scope
 

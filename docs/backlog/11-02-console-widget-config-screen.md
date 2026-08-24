@@ -27,6 +27,9 @@ already attached to every API call. `docs/backlog/5-07-console-conversation-expe
 view pattern those already established (`5-08`'s admin-only conversation list is the existing precedent
 for "a route only visible/reachable to a caller holding a specific permission"); this item is not a
 design-system pass, matching `5-06`'s own deferral of visual polish until there is a concrete screen.
+**Note added 2026-08-24**: `11-05-console-design-foundation.md` now makes that pass in this same stage.
+This item still is not it — whichever of the two lands second adopts the other's result, and this screen
+is the smaller retrofit of the pair.
 `11-01`'s exact request/response shapes for `GET`/`PUT .../widget-config` once implemented.
 
 ## Scope
