@@ -299,6 +299,17 @@ startup, so a wrong key fails fast instead of silently disabling a feature.
   with no manual fixes. Add `-v` to `down` to also wipe the named volumes for a truly clean slate
   (not run in this session - permission for a volume-destroying command was withheld; the command
   itself is standard compose behaviour, just not exercised here).
+- Build a host's container image: `docker build --build-context nugetfeed=../.nuget-feed --build-arg
+  PROJECT_NAME=Ago.Chat.Api|Worker|Webhooks -t ago-chat-api:local .` from `ago-chat`'s own root
+  (`Dockerfile`'s own header comment has the full reasoning for the shared-file/build-arg shape).
+  `8-00`: the final stage is `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, not the full
+  Debian image - ~43% smaller for Api/Webhooks, ~15% for Worker (`docker image ls`, `8-00`'s own
+  report has the exact numbers), verified live against this same compose stack (real
+  `/api/v1/visitor-sessions` call, real `/healthz/ready` checks, real webhook-delivery DB writes on
+  all three hosts, no ICU/globalization exception). One harmless warning to expect and not chase:
+  `Cannot load library libgssapi_krb5.so.2` in Worker's startup log - Npgsql's optional GSSAPI-auth
+  probe not finding that library on the minimal image, falling back cleanly since this compose
+  Postgres doesn't use GSSAPI auth anyway.
 
 ## When something is wrong
 
