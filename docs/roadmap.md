@@ -1,11 +1,69 @@
 # Roadmap
 
-Stages are ordered so that the project is demonstrable early and the hardest, most interview-relevant
-work (Stages 4, 6, 7, 9) happens on a stable skeleton rather than during it.
+**A stage number is an identifier, not a position in a queue.** Stages 0-8 were built in numeric
+order, and that shaped the early sequence deliberately: demonstrable early, with the hardest and most
+interview-relevant work (Stages 4, 6, 7) landing on a stable skeleton rather than during it. From
+Stage 9 onward the number stopped meaning order and nobody said so — Stage 9 was deprioritized in
+place rather than renumbered, Stages 20 and 21 were numbered out of range on purpose, and within two
+days of Stages 15 and 16 being written, four of their items had to be marked as coming first. Four
+exceptions in two days is not an exception list; it is a sequence that disagrees with its own
+numbering.
+
+So the numbering is now what it always actually was — a stable name for a body of work, which
+cross-references can point at without churn — and **the order lives in "What comes next" below**,
+which is the section to read when the question is what to build (corrected 2026-08-25).
 
 Each stage lists its **goal**, **deliverables**, and **done when** — the last one is what a session
 checks itself against before calling the stage finished. Stages are not time-boxed; they are
 scope-boxed.
+
+---
+
+## What comes next
+
+The current order, most urgent first. Bands, not a strict queue: anything in a band can be picked up
+before anything below it, and within a band the order is a judgement call rather than a dependency.
+
+### Now — broken, or blocking something else
+
+| Item | Why it cannot wait |
+|---|---|
+| `17-01` tenant-isolation proof | The loudest claim in `vision.md` (`site_id` scopes everything) is proven per-handler and ad hoc. On a live deployment open to self-registration, one missing filter is one tenant reading another's conversations — and `12-02` is about to add a *legitimate* cross-tenant reader, which is the worst moment for the rule to still be unwritten |
+| `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart. Stage 10's entire premise is runtime-created users |
+| `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — registration is accepted and the mail can never be sent, so no real visitor can finish signing up |
+| `16-01` personal-data map and residency | Not breakage, but two vendor questions due imminently (`10-05`'s provider, `15-02`'s backup destination) both move personal data somewhere, and answering either without the constraint is how a residency problem gets acquired |
+| `6-09` release operator capacity on close | A live defect from `7-04`'s load run: an operator's usable capacity decays until their connection drops, so the waiting queue quietly stops being served |
+
+### Soon — the current stage, and what the "Now" band leaves half-finished
+
+`10-03` (console signup UI, which only becomes real once `10-05` lands), `11-05` and `11-06` (the
+console design foundation and the operator workspace), `15-02` (backup and a restore drill), `15-03`
+(alerting), `5-13` (presigned upload size never enforced by storage).
+
+### After — in roughly this order, each already scoped
+
+Stage 12 (owner admin panel), Stage 13 (billing — partly blocked, see below), the rest of Stage 15,
+the rest of Stage 16, Stage 14 (AGO Inbox), Stage 20 (AGO Calendar), Stage 21 (the two products'
+integration). Stage 9 stays deprioritized. Stages 17-19 hold security (`17-01` is its first item) and
+operator-productivity work, neither fully scoped yet.
+
+### Waiting on someone else's clock
+
+Not work, and not blocked on effort — these have calendar latency that is not ours, so they are worth
+starting earlier than the work that needs them:
+
+- The **legal consultation** gating `16-04` and the whole `ago-business` legal block.
+- The **email provider** (`10-05`) and the **backup destination** (`15-02`) — both the author's
+  decisions, both now constrained by data residency (`16-01`).
+- The **free-tier retention window** (`13-05`), which blocks two Stage 13 items and, per
+  `personal-data.md`, is also the strongest privacy lever available.
+
+### How this list is kept honest
+
+It is updated when an item lands or when something genuinely jumps a band — not retroactively to
+match what happened. If this list and reality disagree, this list is what is wrong. An item is only
+moved into "Now" for a reason that can be stated in one sentence about present-tense breakage or a
+dependency with a date; "it would be nice to do next" is what the "Soon" band is for.
 
 ---
 
@@ -429,14 +487,45 @@ describes the system as it actually is, with no unverified row left in it.
 
 ---
 
-## Stages 17-19 — reserved for further AGO Chat and AGO Platform work
+## Stage 17 — Security, starting with the tenancy claim
+
+**Goal:** the security properties this system asserts are proven rather than asserted. Opened
+2026-08-25 with one item, deliberately: the tenancy boundary, which is both the highest-damage
+failure available here and the loudest claim the project makes about itself.
+
+`vision.md` says it plainly — "Every piece of data is scoped by `site_id`; this is a multi-tenant
+system from day one because retrofitting tenancy is the classic portfolio-project failure." Today
+that is true in the schema and enforced per handler, one at a time, with tests that exist for some
+use cases and not others. Nobody can say which. On a deployment that is live and open to
+self-registration, a single missing filter means one shop reading another shop's conversations, and
+`12-02` is about to introduce a *deliberate* cross-tenant reader for the platform owner — which is
+precisely the wrong moment for the rule to still be unwritten, because after it lands nobody can tell
+"crossing tenants on purpose" from "forgot the filter".
+
+Deliverables:
+- `17-01` — every tenant-scoped operation proven to reject a caller from another tenant, and a
+  systematic guard so a new one cannot be added without that proof, in the spirit of the arch tests
+  that already make layering violations fail rather than rely on review.
+
+Named, not yet scoped, and explicitly *not* bundled into `17-01`: secret handling and rotation,
+dependency and container scanning, VPS and cluster hardening, authentication bypass and token
+handling review, and abuse controls beyond the rate limits `3-05` already ships. Each is real, none
+is the tenancy boundary, and folding them together would mean shipping none of them properly.
+
+**Done when:** for the first item, no tenant-scoped operation lets a caller from another tenant reach
+anything, and that is enforced by something that fails automatically rather than by remembering.
+
+---
+
+## Stages 18-19 — reserved for further AGO Chat and AGO Platform work
 
 Not yet planned. Stage 14 was the first item to use the range Stage 10 froze open (2026-08-23),
-Stage 15 the second (2026-08-24) and Stage 16 the third (2026-08-25); the rest stays reserved so
-later `ago-chat`/`ago-platform` work does not collide with Stage 20's own number. One named candidate
-is already waiting for it: operator-productivity work — canned responses, search across conversations,
-transfer between operators, notes and tags, shortcuts, notifications — named in `11-06`'s out-of-scope
-as wanting a stage of its own rather than being a tail of a stage about appearance.
+Stage 15 the second (2026-08-24), Stage 16 the third and Stage 17 the fourth (both 2026-08-25); the
+rest stays reserved so later `ago-chat`/`ago-platform` work does not collide with Stage 20's own
+number. One named candidate is already waiting: operator-productivity work — canned responses, search
+across conversations, transfer between operators, notes and tags, shortcuts, notifications — named in
+`11-06`'s out-of-scope as wanting a stage of its own rather than being a tail of a stage about
+appearance.
 
 ---
 
@@ -498,38 +587,11 @@ ships end to end against the local cluster.
 
 ---
 
-## Order: items deliberately pulled ahead of their stage
-
-Stage numbers are the order, with one recorded exception. Three items belong to stages sequenced after
-Stage 12 but describe things that are wrong on the live deployment *now*, and waiting for their stage's
-turn would mean knowingly leaving them broken through Stages 12, 13 and 14. Named here rather than
-renumbering stages, which would move every cross-reference for nothing (added 2026-08-25):
-
-- **`10-05`** (transactional email) and **`15-01`** (Keycloak's persistent user store). Both are
-  prerequisites of Stage 10 being *true* rather than merely built: today a self-registered visitor
-  cannot receive a verification mail, and any account that did get created is destroyed by the next
-  pod restart. Stage 10 is otherwise finished, which is exactly why these two should not wait.
-- **`16-01`** (the personal-data map and the residency constraint). Not breakage, but a dependency
-  with a deadline: `10-05`'s email provider and `15-02`'s backup destination are both open questions
-  about moving personal data somewhere, and both are due soon. Answering either without the constraint
-  written down is how a system acquires a residency problem it then has to migrate out of. The item is
-  deliberately small — documentation and cross-references, no mechanism — so it can land early without
-  pulling the rest of Stage 16 with it.
-- **`6-09`** (release operator capacity on close). A live functional defect found by `7-04`'s load run:
-  an operator's usable capacity decays with every conversation they close until their connection drops
-  entirely, which on a public deployment means the waiting queue quietly stops being served.
-
-Everything else stays where it is. Backups, alerting, retention and capacity are insurance against a
-future failure, and the rest of Stage 16 is real work that needs its own stage's room; what is pulled
-forward is present-tense breakage plus one small document another item is about to need. That
-distinction is what keeps "pull it forward" from becoming a way to reorder the whole roadmap by
-preference.
-
----
-
 ## Guardrails for all stages
 
 - No stage is "done" with a red arch test, a skipped concurrency test, or a doc the code contradicts.
 - Performance claims come from `load/`, never from intuition.
 - Every stage that makes a real decision leaves an ADR behind.
 - Scope creep goes to `docs/backlog/`, not into the current branch.
+- A stage number never means "next". "What comes next" at the top of this file does, and it is
+  updated when the work moves rather than afterwards.
