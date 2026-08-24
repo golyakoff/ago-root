@@ -53,6 +53,12 @@ Not an uptime SLA - this is a demo cluster. What matters is the documented degra
 `realtime.md`: which dependency failure degrades, which rejects, and which is allowed to lose data
 (only Redis, and only ephemeral data).
 
+Still not an SLA after `roadmap.md`'s Stage 15 (added 2026-08-24), which is deliberately about
+*recoverability and noticing*, not availability: backup with a restore that has been performed,
+alert rules that reach a person, bounded growth, and deliberate capacity. The distinction matters -
+promising uptime would need a second node and a second of everything under it (`adr/0026`), whereas
+being able to come back from a lost disk, and to find out that something broke, does not.
+
 ## Observability requirements
 
 Everything above must be visible without attaching a debugger:

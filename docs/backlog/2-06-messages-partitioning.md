@@ -41,7 +41,9 @@ for the maintenance job.
 
 - Retention / dropping old partitions - `data-model.md` names `DROP` as the cheap-retention mechanism
   this enables, but no stage has committed to an actual retention policy or schedule yet. Do not invent
-  one; leave partitions accumulating until a real requirement names a window.
+  one; leave partitions accumulating until a real requirement names a window. **That requirement arrived
+  2026-08-24**: a 2Gi volume on a one-node public deployment, and `15-04-retention-and-pruning-jobs.md`
+  is where the drop schedule gets built - still not here.
 - Partitioning any other table - only `messages` is named in `data-model.md`.
 
 ## Done when

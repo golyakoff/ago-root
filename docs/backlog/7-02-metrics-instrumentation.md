@@ -59,7 +59,8 @@ to the pipeline builder itself, not a new pipeline per boundary).
 - Grafana panels and the Prometheus scrape config — `7-03`. This item's Done-when is provable against
   an in-memory metric reader, not a running Prometheus.
 - Alerting rules — not asked for anywhere in `nfr.md` or `roadmap.md`; a demo cluster, not an on-call
-  system.
+  system. **True when written, superseded 2026-08-24**: `roadmap.md`'s Stage 15 asks for exactly this,
+  and `15-03-alerting-and-notification.md` builds it on top of the instruments this item ships.
 - Instrumenting `6-05`'s webhook dispatcher specifically — the generic pipeline-name-tagged instrument
   this item ships covers it automatically the moment `6-05` registers a `Webhooks` named pipeline; no
   extra work is needed here, and none should be added speculatively before `6-05` exists.

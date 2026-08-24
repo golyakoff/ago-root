@@ -54,7 +54,9 @@ brought up and verified live, not just applied.
 - Long-term metric retention/storage sizing — a demo cluster restarts often; Prometheus's default local
   retention is enough, and tuning it without a real multi-day usage pattern would be inventing a number
   `CLAUDE.md` already forbids.
-- Alerting (Alertmanager) — not asked for anywhere in `roadmap.md` or `nfr.md`.
+- Alerting (Alertmanager) — not asked for anywhere in `roadmap.md` or `nfr.md`. **Asked for since
+  2026-08-24**: `roadmap.md`'s Stage 15, built by `15-03-alerting-and-notification.md` against the very
+  stack this item deploys.
 
 ## Done when
 

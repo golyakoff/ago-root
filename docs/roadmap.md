@@ -306,11 +306,57 @@ holds itself to.
 
 ---
 
-## Stages 15-19 — reserved for further AGO Chat and AGO Platform work
+## Stage 15 — Operational readiness
 
-Not yet planned. Stage 14 (above) is the first item to actually use the range Stage 10 froze open
-(2026-08-23); the rest stays reserved so later `ago-chat`/`ago-platform` work does not collide with
-Stage 20's own number.
+**Goal:** the public deployment stops being a thing it would be acceptable to lose. Stage 8 made it
+public; Stage 10 invites strangers to keep their own accounts and conversations in it. The stage that
+closes the gap between those two facts did not exist until now (added 2026-08-24).
+
+Every deliverable below is already written down somewhere in this repository as an explicit "out of
+scope, because this is a demo cluster" — `7-02` and `7-03` on alerting, `8-01` on alerting and on
+continuous deployment, `2-01` on outbox pruning, `2-06` on dropping old partitions. Each of those was
+honest when written. This stage is where that reason expires, and it deliberately takes the deferrals
+rather than quietly leaving them as permanent notes.
+
+Deliverables:
+- A Keycloak user store that survives a pod restart (`15-01`). It does not today: `start-dev`, no
+  `KC_DB` anywhere in `ago-deploy`, no volume at its data directory — so every runtime-created user
+  lives in an ephemeral H2 file inside the container layer and is destroyed by any restart. Only
+  realm-imported objects come back. Stage 10's whole premise is runtime-created users, which makes this
+  a prerequisite of Stage 10 being true in production rather than a piece of hygiene.
+- Backup of every durable store, off the node, and a **restore that has actually been performed**
+  (`15-02`) — one node, local-path volumes, and nothing copied anywhere else today.
+- Alerting rules that fire and a channel that reaches a person (`15-03`), each rule proven by making it
+  fire, each with a one-line "what to check first".
+- A retention *mechanism* — bounded-batch pruning of published outbox rows, dropping old `messages`
+  partitions, trimming the webhook delivery log (`15-04`). Deliberately the mechanism only: the
+  free-tier history window is a product decision that stays with `13-05`, and this stage must not
+  become that decision by shipping a default the product then inherits.
+- Deliberate capacity: measured usage, PVC sizes chosen rather than inherited from a local Docker
+  Desktop cluster, headroom arithmetic, and a **deliberate disk-full test** whose observed behaviour is
+  written down (`15-05`).
+- A real image registry, tagged images, and a rollback proven by performing one (`15-06`) — replacing
+  build-on-the-VPS-and-import, which leaves no previous version to roll back to and gives a rebuilt
+  cluster nothing to run.
+- Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
+  size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
+  bytes to a shared 2Gi volume) and `6-09` (operator capacity is released only on disconnect, so a
+  live operator's usable capacity decays until their connection drops).
+
+**Done when:** the deployment can lose its node and come back from backup with the data intact — proven
+by a restore that was performed, not designed; a self-registered account survives a redeploy; nothing
+in the database grows without bound; a broken deploy can be rolled back to the previous tag; and every
+alert rule in the set has been made to fire on purpose. No item in this stage is done on the strength of
+a manifest that looks right — this is the stage where "verified means actually run" applies hardest,
+because everything it builds only matters on the day it is needed.
+
+---
+
+## Stages 16-19 — reserved for further AGO Chat and AGO Platform work
+
+Not yet planned. Stage 14 (above) was the first item to use the range Stage 10 froze open
+(2026-08-23) and Stage 15 the second (2026-08-24); the rest stays reserved so later
+`ago-chat`/`ago-platform` work does not collide with Stage 20's own number.
 
 ---
 

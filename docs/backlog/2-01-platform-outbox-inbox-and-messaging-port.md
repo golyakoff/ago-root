@@ -73,7 +73,9 @@ and Postgres now/MySQL at Stage 9), `docs/adr/_template.md`.
 - The outbox dispatcher loop (`SKIP LOCKED`, poll-plus-notify) - that reads the generic table this
   item defines, but the dispatcher itself is a `Ago.Chat.Worker` concern (`2-04`), not a platform one.
 - Outbox row pruning/retention - `messaging.md` names it as a maintenance concern but no stage commits
-  to it yet; do not invent a job for it here.
+  to it yet; do not invent a job for it here. **Committed to since 2026-08-24**: Stage 15's
+  `15-04-retention-and-pruning-jobs.md` owns it. Still not this item's job - the note stands, it now
+  names where the work went.
 
 ## Done when
 

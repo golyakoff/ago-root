@@ -1,6 +1,10 @@
 # Release operator capacity when a conversation closes, not only on operator disconnect
 
-- **Stage**: 6
+- **Stage**: 6 — **scheduled into Stage 15** (2026-08-24), at its original number for the same
+  reason `5-13` keeps its own: existing references. It belongs to Stage 15's work because it is a
+  capacity leak on a deployment that is now live and taking real conversations — an operator's
+  usable capacity decays until their connection drops, which on a public deployment means the
+  waiting queue silently stops being served.
 - **Status**: ready
 - **Depends on**: nothing — `ago-chat` only, no product-side prerequisite
 
