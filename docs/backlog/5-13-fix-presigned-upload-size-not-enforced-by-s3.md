@@ -1,6 +1,10 @@
 # Fix: a presigned upload's declared size is never actually enforced by S3/MinIO itself
 
-- **Stage**: 5
+- **Stage**: 5 — **scheduled into Stage 15** (2026-08-24). Kept at its original number because a
+  dozen docs already reference `5-13`; renumbering a file to record a scheduling decision would
+  break those references to no benefit. It belongs to Stage 15's work because it was found while
+  investigating the public deployment's disk-exhaustion exposure, and it is the one path by which a
+  stranger can write unbounded bytes to a shared 2Gi volume (`15-05`).
 - **Status**: ready
 - **Depends on**: nothing — `ago-platform`'s `Ago.Platform.Storage.S3` only
 

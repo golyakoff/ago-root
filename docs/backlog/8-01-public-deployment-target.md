@@ -77,13 +77,18 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
   API and Keycloak to point at but is its own separable piece of work (a different repository's
   static bundle, a different kind of verification).
 - Alerting or uptime monitoring beyond what `7-03`'s dashboards already ship — `nfr.md`'s own "not
-  an uptime SLA" framing already rejects treating this as a Stage 8 goal.
+  an uptime SLA" framing already rejects treating this as a Stage 8 goal. **Now Stage 15's**
+  (`15-03-alerting-and-notification.md`, 2026-08-24) — still not an SLA, but a deployment that has
+  started holding other people's accounts (`10-01`) needs to be able to tell someone it is broken.
 - Autoscaling or a multi-node topology — one small node is enough for a demo a recruiter opens
   occasionally; `nfr.md`'s scale targets are Stage 7's job, proven on a cluster built for that
   purpose, not this one.
 - A CI/CD pipeline that auto-redeploys this environment on every push — a documented manual runbook
   is enough for a portfolio artifact that changes occasionally; nothing in `roadmap.md` asks for
-  continuous deployment here, and building one would be scope this item did not need.
+  continuous deployment here, and building one would be scope this item did not need. **Still true**:
+  Stage 15's `15-06-image-registry-and-deploy-rollback.md` deliberately makes deploys repeatable and
+  reversible without making them automatic, and keeps auto-deploy out of scope for the same reason
+  stated here.
 
 ## Done when
 

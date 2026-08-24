@@ -54,7 +54,11 @@ Not yet defined — cannot be, without the answers below.
 ## Open questions
 
 - **Free-tier history retention: time-boxed (Slack-style, a rolling retention window past which older
-  messages/conversations are deleted or archived) or unlimited history regardless of tier?** Stated
+  messages/conversations are deleted or archived) or unlimited history regardless of tier?** Note added
+  2026-08-24: Stage 15's `15-04-retention-and-pruning-jobs.md` builds a *configurable* pruning mechanism
+  (bounded-batch deletes, partition drops) and sets an operational default sized to keep a 2Gi volume
+  alive. That default is explicitly not an answer to this question, and this item is not unblocked by it
+  — but whatever is decided here will be a configuration value rather than new machinery. Stated
   explicitly, for this stage's own planning: **this is genuinely unresolved, not just unbuilt** — it is
   not decided anywhere in this repository, and it is not decided in the private business repository either
   (confirmed directly by the author while this stage was being planned, not inferred). This is the
