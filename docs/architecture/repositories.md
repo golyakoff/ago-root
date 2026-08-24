@@ -40,8 +40,8 @@ merge requests, a version bump, and a package publish.
 A host owned by the platform would have to reference `Ago.Chat.Module` in order to compose it, which
 inverts the dependency direction at the repository level. So the hosts belong to the product: the platform ships
 `Ago.Platform.Hosting` (module contract, health checks, telemetry, configuration binding) as a
-library, and each product assembles its own deployables from it. AGO Ads will ship its own hosts the
-same way, and the cluster runs both.
+library, and each product assembles its own deployables from it. AGO Calendar ships its own hosts
+the same way (`Ago.Calendar.Api`/`Worker`, `roadmap.md` Stage 20), and the cluster runs both.
 
 Names are therefore `Ago.Chat.Api`, `Ago.Chat.Worker`, `Ago.Chat.Webhooks`.
 

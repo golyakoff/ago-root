@@ -5,8 +5,12 @@ object storage, observability. It knows nothing about any particular product.
 
 **AGO Chat** is the first product on it: an embeddable customer-support chat. A shop drops a
 `<script>` tag on its site, visitors chat from a widget, operators answer from a console.
-**AGO Ads** (contextual ads) is planned as the second product and must be an *additive* change —
-a new repository (`ago-ads`) plus its own hosts, with no edits to the platform's shape.
+**AGO Calendar** (booking/scheduling) is planned as the second product and must be an *additive*
+change — a new repository (`ago-calendar`) plus its own hosts, with no edits to the platform's shape
+(`docs/vision.md`, `docs/roadmap.md` Stage 20, `docs/adr/0027-*`). **AGO Inbox** (incoming-channel
+expansion — SMS, MAX, Telegram, WhatsApp — plus offline auto-reply and unattended booking) is *not*
+a third product: it extends `Ago.Chat.*` (`docs/roadmap.md` Stage 14), because its channel-routing
+target is AGO Chat's own `Operator`, not a new one (`adr/0027`).
 
 Namespaces follow that split: `Ago.Platform.*` vs `Ago.Chat.*`. Products depend on the platform;
 **the platform must never reference a product** — and cannot, because they are separate repositories

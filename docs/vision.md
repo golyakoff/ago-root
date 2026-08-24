@@ -3,14 +3,38 @@
 ## Platform and products
 
 **AGO Platform** is the reusable substrate: hosting, realtime transport, messaging, persistence,
-caching, object storage, observability. **AGO Chat** is the first product built on it. **AGO Ads**
-(contextual advertising delivered through the same embedded script and the same ingest path) is the
-planned second product, and exists in this document mainly as a design constraint: every platform
-decision must be defensible without knowing anything about chat.
+caching, object storage, observability. **AGO Chat** is the first product built on it. **AGO
+Calendar** — a booking/scheduling system a shop uses to let customers reserve an appointment with one
+of its workers — is the planned second product (`roadmap.md` Stage 20). Unlike a purely illustrative
+"second product" would be, it is a real product decision, not chosen for the sake of the proof: a
+shop that already runs AGO Chat plausibly also wants online booking, and the two products share
+nothing except the platform underneath and, for a given shop, the same login. It still carries the
+architectural role the platform's design has always needed a second product to test: every platform
+decision must be defensible without knowing anything about chat, and a reviewer can ask whether the
+platform could host a second, structurally different product unchanged - the answer has to be yes,
+in code, not just in this paragraph.
 
-The split is not decoration. It is the thing that turns "a chat app" into "a platform with a
-product on it", and it is what a reviewer will probe: ask whether the platform could host the second
-product unchanged, and the answer has to be yes, in code.
+AGO Calendar's shape, briefly: a **Tenant** configures **Calendars**, **Workers** (the bookable
+resource - e.g. a barber), **Services**, and each worker's recurring **working hours**; an
+**Operator** - created by the tenant, and *not* the same entity as AGO Chat's own Operator even
+though the two roles look similar (`adr/0027` argues this in full) - works the day-to-day booking
+queue: confirming or rejecting pending bookings and building up a **Customer** lead card over time,
+keyed by phone number rather than an account. A booking looks instantly confirmed to the customer but
+is not, internally, until an operator confirms it or a deadline passes unactioned - the same
+atomic-claim discipline `concurrency.md` already uses for operator capacity, applied to a calendar
+slot instead of a conversation.
+
+**AGO Inbox** - expanding AGO Chat's own incoming channels beyond the embedded widget (SMS, MAX,
+Telegram, WhatsApp), plus a tenant-toggleable offline auto-reply and unattended booking through those
+channels (`roadmap.md` Stage 14) - is **not a third product**. `adr/0027` makes the direct argument:
+its channel-routing target is an incoming message that must reach an existing AGO Chat `Operator`,
+the same entity `SendVisitorMessage`/assignment/the console already work with today, not a new one.
+It is AGO Chat's own channel surface growing, staying inside `Ago.Chat.*`, the same way file
+attachments (Stage 5) grew the product without becoming a separate one.
+
+The platform/product split is not decoration. It is the thing that turns "a chat app" into "a
+platform with products on it", and it is what a reviewer will probe: ask whether the platform could
+host a second, unrelated product unchanged, and the answer has to be yes, in code.
 
 ## The product
 
@@ -61,8 +85,14 @@ not because a support chat "should" have it.
 
 ## Explicitly out of scope
 
-Voice/video calls, malware scanning of uploads, bots/LLM auto-replies, billing, CRM integrations,
-mobile apps, i18n of the widget. Each would add breadth where the project needs depth.
+Voice/video calls, malware scanning of uploads, CRM integrations, mobile apps, i18n of the widget.
+Each would add breadth where the project needs depth.
+
+Two items originally listed here no longer belong: **billing** is now Stage 13 (a self-service
+product needs a way to get paid), and **bots/LLM auto-replies** are now AGO Inbox's own
+tenant-toggleable, off-by-default offline auto-reply (Stage 14) - both became real roadmap work
+rather than staying deliberately out of scope, and this list is corrected rather than left to
+contradict the roadmap it sits next to.
 
 File attachments **are** in scope (`architecture/file-storage.md`): they are the one "feature" here
 that forces a genuinely different scaling shape from everything else in the system.
