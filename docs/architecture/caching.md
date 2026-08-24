@@ -53,7 +53,7 @@ own small slice once a real caller needs it, following the same pattern this one
 
 | Data | TTL | Invalidation | Why it is cacheable |
 |---|---|---|---|
-| Site config (`public_key`, allowed origins, widget settings) | 5 min + jitter | Event `SiteSettingsChanged` | Read on every widget handshake, changed rarely. This is the hot one. **Shipped in `3-04`**: `GetSiteConfigByPublicKeyHandler` (`Ago.Chat.Application`), the widget handshake's site lookup (`POST /api/v1/visitor-sessions`). |
+| Site config (`public_key`, allowed origins, widget settings) | 5 min + jitter | Event `SiteSettingsChanged` | Read on every widget handshake, changed rarely. This is the hot one. **Shipped in `3-04`**: `GetSiteConfigByPublicKeyHandler` (`Ago.Chat.Application`), the widget handshake's site lookup (`POST /api/v1/visitor-sessions`). **Invalidation shipped for real in `11-01`**: `SiteSettingsChanged` had existed and been consumer-wired (`SiteCacheInvalidationConsumer`) since `3-04` with no producer; `UpdateWidgetConfigHandler` is the first real caller, proven end to end against real Postgres/RabbitMQ/Redis (`WidgetConfigCacheInvalidationEndToEndTests`) — a config write's outbox row reaches `SiteCacheInvalidationConsumer`, which broadcasts `CacheInvalidated` for this row's own key, evicted on every node well before the TTL above would otherwise expire it. |
 | Operator profile + capacity | 1 min | Event on change | Read on every assignment decision |
 | Conversation metadata (participants, state) | 30 s | Event `ConversationAssigned` / `ConversationClosed` | Read on every inbound message |
 | Recent message page (last N of a conversation) | 15 s | Write-through on new message | Reconnect storms re-request the same page |
