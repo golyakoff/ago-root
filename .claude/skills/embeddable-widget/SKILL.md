@@ -27,7 +27,11 @@ here exists because the widget cannot assume anything about its host.
 `data-site` on the script tag identifies the tenant. The site key is public and grants only the
 ability to start a visitor session - anything else requires the signed visitor token. The handshake
 returns the site's widget settings (cached server-side per `caching.md`) and the visitor's history
-cursor.
+cursor. **Shipped in `11-03`**: the handshake call itself now fires eagerly at mount time rather than
+lazily on first open (position has to be known before the closed launcher ever renders), and the
+returned primary color/launcher position are actually applied to the rendered widget - a missing or
+malformed value falls back to the widget's own built-in default silently, per the "never break the
+host page" rule above.
 
 ## Connection behaviour
 

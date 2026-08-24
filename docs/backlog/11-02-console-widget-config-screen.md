@@ -1,7 +1,11 @@
 # Console: widget configuration screen
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done — implemented, then verified live end to end against the real local stack
+  (compose Postgres/Redis/Keycloak + `dotnet run` Api and Worker). The build pass could not reach a
+  live stack at the time it ran (ports busy with another session's work) and said so plainly rather
+  than asserting; the managing session then ran the real verification afterwards. See Done-when for
+  what was actually observed.
 - **Depends on**: `11-01-widget-config-data-model-and-api.md` (the API this screen calls)
 
 ## Goal
@@ -27,19 +31,21 @@ already attached to every API call. `docs/backlog/5-07-console-conversation-expe
 view pattern those already established (`5-08`'s admin-only conversation list is the existing precedent
 for "a route only visible/reachable to a caller holding a specific permission"); this item is not a
 design-system pass, matching `5-06`'s own deferral of visual polish until there is a concrete screen.
-**Note added 2026-08-24**: `11-05-console-design-foundation.md` now makes that pass in this same stage.
-This item still is not it — whichever of the two lands second adopts the other's result, and this screen
-is the smaller retrofit of the pair.
 `11-01`'s exact request/response shapes for `GET`/`PUT .../widget-config` once implemented.
 
 ## Scope
 
-- A new authenticated route (e.g. `/settings/widget` — state the final path once written), reachable
+- A new authenticated route — **`/settings/widget`** is the final path, exactly as sketched — reachable
   only to an operator whose token resolves `site:configure`, matching `5-08`'s existing pattern for a
   permission-gated view rather than inventing a new one. An operator without the permission does not see
   the entry point at all — client-side visibility only, since the server's own `403` on `11-01`'s
   endpoints is the actual enforcement (matching how every other client/server validation split in this
-  codebase is already stated explicitly).
+  codebase is already stated explicitly). `WidgetConfigPage.tsx` gates itself internally
+  (`usePermissions().hasPermission("site:configure")`), identical to `AdminConversationsPage`'s own
+  shape; `QueuePage` grew a matching nav link next to its existing `/admin` one. `siteId` (needed to
+  build `11-01`'s site-scoped URL) was not previously exposed anywhere in the console - `PermissionsContext`/
+  `PermissionsProvider` gained it from the same `GET /api/v1/operators/me` response `permissions`
+  already comes from, rather than a second fetch.
 - The form itself: a color input (hex value, live swatch preview) and a position selector (the two
   enum values `11-01` defined, e.g. a two-option choice, not a free-text field). State explicitly what
   this validates client-side (malformed hex, UX-only) versus what `11-01`'s own endpoint already
@@ -66,17 +72,32 @@ is the smaller retrofit of the pair.
 
 ## Done when
 
-- [ ] Manually verified against the local cluster, the same "verified live, not asserted" bar `5-06`
-      through `5-08` used: an operator holding `site:configure` opens the screen, sees the site's
-      current values (or the built-in defaults if never set), changes the color and position, saves,
-      and a subsequent page reload shows the new values persisted (proving the round trip through
-      `11-01`'s real API, not just local component state).
-- [ ] An operator without `site:configure` cannot reach the screen through the console's own navigation
-      (client-side gating) and, if the route is hit directly, the underlying API call fails with the
-      `403` `11-01`'s own server-side check already produces — the screen does not attempt to hide a
-      failed call as if it succeeded.
-- [ ] CI build+lint stays green, matching `5-06`'s own precedent for what `ago-console` automates versus
-      verifies by hand.
+- [x] Manually verified against the local cluster, the same "verified live, not asserted" bar `5-06`
+      through `5-08` used. Actually observed, in a real browser against `dotnet run` Api + Worker and
+      the compose Postgres/Redis/Keycloak: logged in as `demo-admin` (holds `site:configure`), the
+      "Widget appearance" nav entry rendered, `/settings/widget` loaded the site's **real** current
+      values (`#12B886` / `BottomLeft` - set moments earlier by a direct `curl PUT`, so the screen
+      demonstrably read them from `11-01`'s API rather than from any local default), changing them to
+      `#E8590C` / `BottomRight` and pressing Save showed "Saved.", and the new values were then
+      confirmed independently in two places: `GET .../widget-config` returned
+      `{"primaryColorHex":"#E8590C","position":"BottomRight"}` and the `sites` row itself held
+      `#E8590C | bottom-right` (kebab-case in the column, per `11-01`'s own `PositionConverter`).
+- [x] An operator without `site:configure` cannot reach the screen through the console's own
+      navigation and, if the route is hit directly, does not get a screen pretending the call
+      succeeded. Actually observed: signed out, signed back in as `demo-operator` (no
+      `site:configure`) — the "Widget appearance" nav entry was absent, and navigating straight to
+      `/settings/widget` rendered "You do not have permission to configure this site's widget." with
+      zero form controls present (`inputCount: 0`, `selectCount: 0`), not an empty or default-looking
+      form. The matching server-side gate was verified separately at the API level: both
+      `GET` and `PUT .../widget-config` with a real `demo-operator` token returned `403` with
+      `Conversation.Forbidden` and a specific `detail`, and an invalid colour (`nothex`) as `demo-admin`
+      returned `400 WidgetConfig.InvalidColor` — so the client-side gate is UX only, exactly as
+      intended, and the real enforcement is `11-01`'s.
+- [x] CI build+lint stays green, matching `5-06`'s own precedent for what `ago-console` automates versus
+      verifies by hand. Actually run: `npm run typecheck` (clean), `npm run lint` (clean, zero
+      warnings), `npm run test` (18/18 passing - `vitest`, including 6 new tests for
+      `widgetConfigValidation.ts`'s hex-color check), `npm run build` (`tsc -b && vite build` succeeds,
+      picking up the committed `.env.production`).
 
 ## Open questions
 
