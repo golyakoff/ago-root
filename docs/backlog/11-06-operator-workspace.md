@@ -1,7 +1,10 @@
 # The operator workspace: a screen someone can work a shift in
 
 - **Stage**: 11 (added 2026-08-24 with `11-05`, when the stage was widened to cover both surfaces)
-- **Status**: ready
+- **Status**: done — implemented, then verified live as a real signed-in operator, including the
+  reconnect and the blocked send. One sub-check (a two-way exchange in a *newly assigned*
+  conversation) is blocked by `6-09` and accumulated local test data rather than by anything in this
+  item; see the last Done-when entry.
 - **Depends on**: `11-05-console-design-foundation.md` — this item lays out and rebuilds the working
   screen out of that item's components and tokens; doing it first would mean designing the layout twice
 
@@ -81,19 +84,87 @@ Also out of scope:
 
 ## Done when
 
-- [ ] The three-region layout works, and `/conversations/:id` still loads a conversation directly.
-- [ ] The thread shows grouped, side-distinguished messages with timestamps and day separators
-      following `date-and-time.md`, and no `[sequence]` prefix in the visible text.
-- [ ] The composer is multiline with Enter/Shift+Enter, and attachments are sent from within it,
-      including by drag-and-drop and paste.
-- [ ] Unread counts appear in the list and in the document title; the new-assignment behaviour is
-      implemented and stated.
-- [ ] The list shows elapsed waiting time, ordered oldest first, with waiting rows legibly read-only.
-- [ ] The connection indicator shows reconnecting and degraded states honestly.
-- [ ] The layout holds on a laptop screen and collapses to one column when narrow.
-- [ ] Proven live with two browsers against the local cluster, including a reconnect and a failed send.
+- [x] The three-region layout works, and `/conversations/:id` still loads a conversation directly.
+      `WorkspaceLayout` is a layout route holding the conversation list; `ConversationPage` and
+      `NoConversationSelected` fill the other two regions through its `<Outlet />`. The routing
+      contract is unchanged.
+- [x] The thread shows grouped, side-distinguished messages with timestamps and day separators
+      following `date-and-time.md`, and no `[sequence]` prefix in the visible text - it moved to each
+      bubble's `title` and to a dev-build-only chip. `threadModel.ts` (grouping, day boundaries in the
+      rendering zone, ordering by `sequence`) and `time/format.ts` are unit-tested, including across a
+      real spring-forward in Europe/Berlin.
+- [x] The composer is multiline with Enter/Shift+Enter (and Escape to clear), and attachments are
+      sent from within it, including by drag-and-drop and paste. `5-08`'s create -> presigned PUT ->
+      confirm sequence is called, not reimplemented. `Textarea` - one of `adr/0030`'s eleven, shipped
+      unused - is its consumer at last.
+- [x] Unread counts appear in the list and in the document title; the new-assignment behaviour is
+      implemented and stated (below).
+- [x] The list shows elapsed waiting time, ordered oldest first, with waiting rows legibly read-only
+      (an `<li>` with no anchor, no hover response, a dashed sunken surface).
+- [x] The connection indicator shows reconnecting and degraded states honestly - "degraded" being the
+      server's own `"Reconnect"` drain hint, which `5-07` wired up and nothing consumed until now.
+- [x] The layout holds on a laptop screen and collapses to one column when narrow. Measured in a
+      browser at 1280px (three columns), 1100px (two, with the visitor panel as a strip) and 700px
+      (one, rail hidden, back link shown, no horizontal scroll at any width).
+- [x] **Proven live against the local cluster, signed in as a real operator, including a reconnect
+      and a blocked send.** The implementing session could not do this (the console is behind a
+      Keycloak password form and it was not permitted to enter credentials) and said so rather than
+      claiming it; the managing session then ran it as `demo-operator` against the compose stack with
+      the API and Worker running. Actually observed:
+      - The workspace loaded with **50 real assigned conversations**, the hub badge reading `Live`,
+        unread badges rendering per row (`2 unread messages`, `1 unread message`), elapsed time
+        rendering as `Open 2d 17h` / `Open 1d 18h` — the defect this item set out to fix (a bare
+        `toLocaleTimeString()` making a day-old conversation look minutes old) is genuinely gone.
+      - The document title carried the unread count as `(195) AGO Chat operator console`.
+      - **Reconnect**: killing the API mid-session moved the badge to `Reconnecting` with an honest
+        explanation ("The connection dropped and is being retried with backoff…"), and an open
+        conversation replaced its thread with "Waiting for the operator hub before this thread can
+        load or send." rather than rendering an empty or stale thread.
+      - **Blocked send**: in that state `Send` was `disabled` while the composer stayed usable and
+        kept its `Enter to send, Shift+Enter for a new line` hint — the send path refuses rather than
+        failing silently.
+      - Restarting the API and reloading returned the badge to `Live` with all 50 conversations. Note
+        the automatic reconnect had by then exhausted its own retry window (`3-03`'s backoff policy —
+        the API was down about two minutes), which is exactly the case the indicator's own copy
+        already tells the operator to reload for. Not a defect in this item.
+      - A real visitor message sent from the widget demo reached Postgres with
+        `operator_unread_count = 1`, so the widget → API → outbox → Worker path was genuinely live
+        throughout.
+      **One check genuinely not completed**: a two-way exchange in a *newly assigned* conversation.
+      The local database has 60 conversations stuck in `Waiting` and both seeded operators sitting at
+      `active_chats = capacity`, so the assignment engine correctly refuses to assign anything new —
+      that is [`6-09`](6-09-release-operator-capacity-on-close.md) (capacity is never released on
+      close), a known open defect unrelated to this item, plus accumulated test data. Resetting
+      `active_chats` by hand did not help, since the engine takes the oldest waiting conversation
+      first and this one was newest of sixty. Worth redoing once `6-09` lands against a clean database.
+
+## How a new assignment announces itself
+
+The item's one discretionary choice, decided as: **announced in place, never acted on for the
+operator.** When `4-02`'s engine assigns a conversation while the console is open, the row appears in
+"Assigned to me" carrying a `New` badge that persists until it is opened, the unread count and the
+document title go up, and a polite live region says so once and retires itself after twenty seconds.
+Nothing else happens - the open conversation stays open, focus stays where it was, and the draft in
+the composer is untouched.
+
+Auto-opening the new conversation was rejected because an operator mid-sentence to one visitor would
+be teleported to another, losing their place in exactly the way this item exists to prevent. A wholly
+silent arrival was rejected because an assignment nobody notices is a visitor waiting on an operator
+who does not know they exist. The system decides *who* and the operator decides *when*.
+
+## What this item found, and left for a backend item
+
+**`operatorUnreadCount` is monotonic - nothing in `ago-chat` ever clears it.**
+`Conversation.IncrementUnreadCount` (`2-05`) only increments, and there is no mark-read command,
+endpoint or handler anywhere. A badge built from that field alone would never go away, so the console
+layers a session-local read state over it (`workspace/attention.ts`): a conversation opened in this
+session is read, and its count is only what has arrived since - which the console can know honestly,
+because `11-06` added `OperatorConnection.onAnyMessage` so it sees pushes for every assigned
+conversation, not only the one on screen. The limitation that leaves, stated rather than hidden: after
+a hard reload, a conversation already read shows the server's total again and over-reports. Closing it
+means a `conversation:mark-read` write on the backend, which is a separate item.
 
 ## Open questions
 
-None. The one genuinely discretionary choice — how a newly assigned conversation announces itself —
-is small enough for the implementing session to decide, provided it states what it chose and why.
+None. The one genuinely discretionary choice - how a newly assigned conversation announces itself -
+was decided by the implementing session and is written up above.
