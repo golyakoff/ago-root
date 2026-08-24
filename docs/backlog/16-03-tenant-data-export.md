@@ -28,7 +28,10 @@ platform owner, this one stays strictly inside one tenant for that tenant.
   `16-02`), and made available as a single downloadable archive when ready.
 - Contents: conversations, messages with their timestamps and authorship, attachment metadata, site
   configuration, operator list. A documented format — the format is part of the deliverable, since an
-  export nobody can read is not an export.
+  export nobody can read is not an export. **Load-bearing twice over since `adr/0031` (2026-08-25)**:
+  the same format is what `13-06` writes as the retention archive, one object per site per period, so
+  a later change to it is a change to files already written. Version it, or state why it does not need
+  versioning.
 - **Attachment bytes: decide and state.** Either included in the archive, which makes it large and
   slow but complete, or referenced by time-limited presigned URLs, which keeps it small but means the
   export decays. Both are defensible; the choice gets written down with its reasoning.

@@ -40,3 +40,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0028 | Keycloak-native self-registration; `RequireKeycloakIdentity` stays distinct from `RequireOperatorIdentity` | Accepted |
 | 0029 | Widget config is fixed fields, read at bootstrap | Accepted |
 | 0030 | Design tokens and a closed hand-rolled component set for the console, not a component library | Accepted |
+| 0031 | History retention: an immutable retention class in the partition key, an archive instead of deletion | Accepted |
