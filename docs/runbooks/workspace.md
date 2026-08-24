@@ -4,7 +4,7 @@ All repositories are siblings under one parent folder:
 
 ```
 C:\git\ago\
-  ago-root\  ago-platform\  ago-chat\  ago-widget\  ago-console\  ago-deploy\  .nuget-feed\
+  ago-root\  ago-platform\  ago-chat\  ago-widget\  ago-console\  ago-deploy\  ago-landing\  .nuget-feed\
 ```
 
 ## Junctions
@@ -45,5 +45,10 @@ else needs to exist inside it beforehand.
 
 ## Cloning fresh
 
-Clone all six repositories into one parent folder, then run the junction snippet. The build and test
+Clone all seven repositories into one parent folder, then run the junction snippet. The build and test
 commands live in `local-dev.md`; the cluster in `k8s-local.md`.
+
+`ago-landing` (the marketing page, added 2026-08-24 to this runbook — it existed and was deployed
+before it was written down anywhere) has no junction and is not needed for the build or test loop; it
+is a single static page. Clone it when working on the marketing page, or on
+`backlog/11-05-console-design-foundation.md`, which takes the console's design tokens from it.

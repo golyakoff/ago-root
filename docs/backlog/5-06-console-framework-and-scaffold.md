@@ -45,7 +45,10 @@ reasoning that justified giving it its own repository at all.
   functionality this shell will hold.
 - Attachment UI, admin role management - `5-08`.
 - A design system / component library choice beyond what the framework itself needs to run - defer
-  visual polish decisions to `5-07`, where there is an actual UI to apply them to.
+  visual polish decisions to `5-07`, where there is an actual UI to apply them to. **That deferral was
+  never taken up**: `5-07` built the UI and made no design pass, and three later items deferred to it in
+  turn. `11-05-console-design-foundation.md` (2026-08-24) is where the choice this note postponed is
+  finally made.
 
 ## Done when
 

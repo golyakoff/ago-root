@@ -229,18 +229,42 @@ zero seed-script involvement.
 
 ---
 
-## Stage 11 — Widget customization
+## Stage 11 — How both surfaces look
 
-**Goal:** a site owner can make the embedded widget look like their own site, not a generic AGO one.
+**Goal:** neither surface a person actually looks at is an accident. Two audiences, deliberately in
+one stage: the site owner can make the embedded widget look like their own site rather than a generic
+AGO one, and the operator gets a console that was designed rather than left as the markup the
+scaffold happened to produce.
+
+**Widened from "Widget customization" on 2026-08-24.** The console half was not in this stage's
+original scope, and it is here for sequencing rather than theme: `5-06` deferred the design-system
+choice to `5-07`, "where there is an actual UI to apply them to"; `5-07` built that UI and never made
+the pass; and `10-03`, `11-02`, `12-03` and `13-04` each then wrote "reuse whatever form/button
+styling `5-07` already established". What `5-07` established is `src/index.css` — seventeen lines
+setting a font, a margin and a `max-width`. Four screens have now been specified against a design
+that does not exist. Stage 12 and Stage 13 each add another console screen, so the pass either lands
+here, at the end of the stage that already owns appearance, or those screens get built bare and
+retrofitted afterwards. Inserting a new stage before Stage 12 instead would mean renumbering 12
+through 14 and every cross-reference to them, for nothing but tidier grouping.
 
 Deliverables:
-- Per-site widget configuration: colors, styles/theme, position on the host page.
-- Console surface to edit that configuration.
+- Per-site widget configuration: colors, styles/theme, position on the host page (`11-01`, shipped).
+- Console surface to edit that configuration (`11-02`).
 - Widget bootstrap reads and applies the configuration live - no rebuild or redeploy of the widget
-  bundle needed per site.
+  bundle needed per site (`11-03`).
+- A console design foundation (`11-05`): tokens taken from the existing `ago-landing` identity rather
+  than invented, a deliberately closed set of eleven components, an application shell with real
+  navigation, loading/empty/error states as first-class, an accessibility floor, and the six existing
+  screens retrofitted onto it. The dark theme `index.css` currently half-claims via `color-scheme:
+  light dark` is dropped rather than left as a claim nothing honours (author's decision, 2026-08-24).
+- The operator workspace itself (`11-06`): a three-region layout, a thread that reads as a
+  conversation instead of `[sequence] authorKind: body`, a real composer, visible wait times, and a
+  connection indicator instead of the raw hub state printed as text.
 
 **Done when:** a site owner changes color/position from the console and sees it reflected in the
-embedded widget on their own page without touching code.
+embedded widget on their own page without touching code; and an operator can work a shift in the
+console without the interface being the hard part — verified live, by actually working conversations
+through it, the same bar `5-07` held itself to.
 
 ---
 

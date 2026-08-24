@@ -10,6 +10,12 @@ ago/
   ago-platform/   ago-chat/   ago-widget/   ago-console/   ago-deploy/
 ```
 
+`ago-landing` was added later than the five above (it ships the marketing page routed at the apex
+domain by `deploy/k8s/overlays/demo/landing-static.yaml`) and is recorded here as of 2026-08-24 — it
+had been created, committed and deployed while this table still said five. It is load-bearing for more
+than marketing now: `backlog/11-05-console-design-foundation.md` takes the console's colour and type
+tokens from it rather than inventing a second visual identity.
+
 `ago-root` additionally exposes the others as `platform/`, `chat/`, `widget/`, `console/`, `deploy/`
 through Windows junctions, so one session can read and edit across repositories without leaving its
 working directory. Those junctions are gitignored and never tracked here; they point at absolute
@@ -22,6 +28,7 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | `ago-widget` | the embeddable script | a versioned CDN bundle | the public API contract |
 | `ago-console` | operator console SPA | static bundle | the public API contract |
 | `ago-deploy` | compose, Kustomize, seed | manifests | image tags, chart values |
+| `ago-landing` | the public marketing page at the apex domain | a static page, served from the demo overlay | nothing |
 | `ago-root` | docs, ADRs, conventions, skills, backlog, `load/` scenarios and reports | the rules everything else obeys | nothing |
 
 ## Why the platform is a package, not a folder

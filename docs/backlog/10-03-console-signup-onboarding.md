@@ -60,7 +60,10 @@ wiring runs for a first-time caller.
   to build a UI for.
 - A design-system pass beyond what `5-06`'s scaffold already established. `5-06` deferred visual polish
   until there was a concrete screen to apply it to; this item is that screen, but a full design pass is
-  still not this item's job — reuse whatever `5-07` already established for form/button styling.
+  still not this item's job — reuse whatever `5-07` already established for form/button styling. **Note
+  added 2026-08-24**: that turned out to be seventeen lines of CSS, and `11-05-console-design-
+  foundation.md` is the pass that fixes it — this screen gets retrofitted there, so it is still not this
+  item's job.
 
 ## Done when
 

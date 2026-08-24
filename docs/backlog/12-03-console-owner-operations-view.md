@@ -56,7 +56,9 @@ owner-eligible token, see Scope below.
   own pagination contract rather than re-implementing client-side paging over a full result set.
 - Reuse whatever form/table styling `5-07`/`5-08` already established for the console's existing screens
   — this item is not a design-system pass, matching how `10-03` treated the same question for its own new
-  screen.
+  screen. **Corrected 2026-08-24**: build this screen out of `11-05-console-design-foundation.md`'s
+  components and shell, which land a stage earlier precisely so screens like this one are not built bare
+  and restyled afterwards.
 
 ## Out of scope
 
