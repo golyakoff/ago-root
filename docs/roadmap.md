@@ -186,18 +186,22 @@ item `8-00` through `8-05`.
 
 ---
 
-## Stage 9 — Prove the abstractions
+## Stage 9 — Prove the abstractions (deprioritized 2026-08-24)
 
-**Goal:** the interview-winning demonstration that the ports are real.
+**Goal:** the interview-winning demonstration that the ports are real — `Ago.Platform.Messaging.Kafka`
+and `Ago.Chat.Infrastructure.MySql`, each implementing the existing port, full suite green against
+both, plus an honest friction report (ordering scope, replay, `jsonb` vs `json`, `SKIP LOCKED`
+behaviour, offset/timestamp handling).
 
-Deliverables:
-- `Ago.Platform.Messaging.Kafka` implementing the same port; the full suite green against it.
-- `Ago.Chat.Infrastructure.MySql`; the full suite green against it.
-- A short document listing every friction found (ordering scope, replay, `jsonb` vs `json`,
-  `SKIP LOCKED` behaviour, offset/timestamp handling) — the honest list is the deliverable.
-
-**Done when:** `Messaging:Provider` and `Persistence:Provider` switch the system with zero changes in
-`Domain` or `Application`, proven by a CI matrix running both combinations.
+**Deprioritized, not cancelled as a design claim**: the author's own call, once Stage 8's public
+deployment was live — this stage would only re-prove a boundary the ADRs (`0002`, `0006`, `0011`,
+`0017`) already argue for from the abstraction's own shape, not from a second working
+implementation. Real portfolio value sits ahead of it (Stages 10-14, 20-21) rather than in a second
+broker/database adapter nobody downstream depends on. The four backlog items that were scoped for
+it (`9-01`-`9-04`) were removed rather than left `ready` and stale — if this stage is ever picked
+back up, it gets re-scoped fresh against whatever the platform looks like at that time, not against
+a plan written before Stages 10-21 existed. Every ADR that cites "Stage 9" as where a provider swap
+gets proven still means it — this note only changes *when*, not the underlying design claim.
 
 ---
 

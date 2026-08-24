@@ -30,8 +30,9 @@ anything real).
 ## Stack
 
 .NET 10 · ASP.NET Core Minimal API + SignalR · PostgreSQL (EF Core writes, Dapper reads) · RabbitMQ
-(Kafka joins as a second, swappable implementation in Stage 9) · Redis · S3/MinIO · Kubernetes (k3s in
-production, Docker Desktop locally) · OpenTelemetry → Prometheus/Grafana/Jaeger
+(behind a broker-agnostic port, `adr/0006` — Kafka as a second implementation is a real, deprioritized
+roadmap item, `roadmap.md` Stage 9, not yet built) · Redis · S3/MinIO · Kubernetes (k3s in production,
+Docker Desktop locally) · OpenTelemetry → Prometheus/Grafana/Jaeger
 
 ## Architecture, in one diagram
 
