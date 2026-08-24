@@ -1,7 +1,7 @@
 # Switch Ago.Chat.* hosts to a minimal production base image
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing — pure Dockerfile/build change, no relation to `8-01`'s hosting/domain
   decision (both now resolved: k3s VPS, `*.ago.golyakov.net`), verified only against the local
   compose loop, not the public deployment
@@ -72,20 +72,48 @@ confirmed as a real, concrete blocker to resolve, not a hypothetical one.
 
 ## Done when
 
-- [ ] `ago-chat/Dockerfile`'s final stage uses `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`
+- [x] `ago-chat/Dockerfile`'s final stage uses `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`
       (or, if genuinely necessary and stated why, the Alpine fallback) instead of the full `aspnet:10.0`
       image, with an entrypoint that does not depend on a shell existing in the final stage.
-- [ ] All three hosts (`Api`, `Worker`, `Webhooks`) build successfully from the changed Dockerfile and
+- [x] All three hosts (`Api`, `Worker`, `Webhooks`) build successfully from the changed Dockerfile and
       were run for real against the compose loop's own dependencies - not asserted, actually started
       and actually served/processed a real request each.
-- [ ] The ICU/globalization decision (leaner non-`-extra` vs. `-extra`) is stated and justified against
+- [x] The ICU/globalization decision (leaner non-`-extra` vs. `-extra`) is stated and justified against
       this project's own real dependency closure, not assumed from the note's own general reasoning
       alone.
-- [ ] Image size before/after is reported as a real number (`docker image ls`), not asserted as
+- [x] Image size before/after is reported as a real number (`docker image ls`), not asserted as
       "smaller" without a measurement.
-- [ ] Any runbook that documents the build/run commands is updated if the switch changed them.
+- [x] Any runbook that documents the build/run commands is updated if the switch changed them.
 
 ## Open questions
 
 None - `8-01`'s own note already resolved the base-image research question; this item is that research
 applied and verified against the real Dockerfile and the real dependency closure.
+
+## Shipped in
+
+`ago-chat`: `Dockerfile`'s final stage switched to `mcr.microsoft.com/dotnet/aspnet:10.0-noble-
+chiseled`; the shell-dependent entrypoint replaced with a literal exec-form array backed by a fixed
+`app.dll`/`app.deps.json`/`app.runtimeconfig.json` triple baked in during the (still-shelled) build
+stage — a real bug (renaming only the `.dll` breaks `dotnet`'s own host-config resolution) found and
+fixed during verification, not anticipated by the original research note.
+
+**Verified live against the compose loop**, all three hosts: Api served a real `POST
+/api/v1/visitor-sessions` end to end (201, real JWT); Worker and Webhooks both passed real
+`/healthz/ready` dependency checks; Webhooks processed genuine `webhook_deliveries` DB writes while
+running. No ICU/globalization exception anywhere — kept Chiseled's default non-`-extra` (no-ICU)
+variant, matching this project's UTC-only/`DateTimeOffset`-everywhere convention, verified rather than
+assumed. One harmless warning found and explained (Npgsql's optional GSSAPI-auth probe missing
+`libgssapi_krb5.so.2` on the minimal image, falling back cleanly — this compose Postgres doesn't use
+GSSAPI auth).
+
+**Real image-size numbers** (`docker image ls`): Api 246MB → 140MB (~43% smaller), Worker 705MB →
+599MB (~15% smaller), Webhooks 244MB → 139MB (~43% smaller). Worker's own absolute size is dominated
+by ~440MB of multi-RID SkiaSharp native binaries under `/app/runtimes` — unrelated to this item's own
+base-image switch, flagged separately as a follow-up rather than fixed here.
+
+Chiseled worked without needing the Alpine fallback — the only real blocker (the shell-dependent
+entrypoint) was fixed within this item's own scope.
+
+`docs/runbooks/local-dev.md` updated with the build command, the measured sizes, and the harmless
+GSSAPI warning so a future session doesn't mistake it for a real bug.
