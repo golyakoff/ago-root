@@ -118,6 +118,37 @@ curl -H "Host: ago-chat.localhost" -H "Content-Type: application/json" \
   (`kubectl exec -n ago-chat deploy/ago-chat-gateway-nginx -- grep -A6 'upstream ago-chat_ago-chat-api'
   /etc/nginx/conf.d/http.conf`) and look for `least_conn;` and one `server` line per replica.
 
+## Observability (`7-03`)
+
+`kubectl apply -k` above also brings up `prometheus`, `grafana`, and `jaeger` in the `ago-chat`
+namespace - verified live: all three reach `1/1 Running`, Grafana's provisioned datasources (Prometheus,
+Jaeger) and five dashboards load without error (`/api/datasources`, `/api/search?type=dash-db`), and
+Jaeger receives real OTLP traces from all three `Ago.Chat.*` hosts (`Otel__Exporter__Endpoint` wired to
+`http://jaeger:4317` in `api.yaml`/`worker.yaml`/`webhooks.yaml` - confirmed via
+`http://localhost:16686/api/services` after port-forwarding, listing all three hosts).
+
+```
+kubectl port-forward -n ago-chat svc/prometheus 9090:9090   # http://localhost:9090/targets
+kubectl port-forward -n ago-chat svc/grafana 3000:3000      # http://localhost:3000
+kubectl port-forward -n ago-chat svc/jaeger 16686:16686     # http://localhost:16686
+```
+
+**Metrics gotcha found while verifying this item, fixed in `7-02` before merge** (same root cause
+`local-dev.md`'s own compose-loop note documents): Prometheus's targets page initially showed every
+`Ago.Chat.*` host `DOWN` with a real `404 Not Found` on `/metrics` - DNS and Service routing were
+correct, nothing was listening on that path. `7-02` had wired metrics as an OTLP push to Jaeger (which
+doesn't implement the OTLP metrics service) instead of a Prometheus scrape endpoint; fixed with
+`AddPrometheusExporter()` plus `app.MapPrometheusScrapingEndpoint()` per host. Re-verified after the fix
+landed.
+
+**Also found and fixed while verifying this item**: `api.yaml`, `worker.yaml`, and `webhooks.yaml` were
+all missing `Storage:S3:*` env vars (`S3StorageOptions` is validated at startup for every host, not only
+`Ago.Chat.Api`), and `webhooks.yaml` had no `env`/`envFrom` block at all - a pre-existing gap since
+`5-02`/`6-05`, invisible only because the previously-running pods predated these requirements. All three
+manifests now carry `Storage__S3__{ServiceUrl,AccessKey,SecretKey,Bucket}` (pointed at `minio.yaml`'s
+own Service) and `Webhooks__SecretEncryptionKey` (the same throwaway dev value already committed in
+`Ago.Chat.Webhooks/appsettings.Development.json`).
+
 ## Scale-out testing
 
 Only the cluster can answer these, so use it for them:

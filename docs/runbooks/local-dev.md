@@ -195,6 +195,36 @@ Local endpoints (all verified reachable):
 | Keycloak (OIDC) | http://localhost:8081 (`5-05`) |
 | Keycloak health/management | http://localhost:8082 |
 | `Ago.Chat.Api` health | http://localhost:5009/healthz/live (port from `launchSettings.json`) |
+| Prometheus | http://localhost:9090/targets (`7-03`) |
+| Grafana | http://localhost:3000 (`7-03`, `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` from `deploy/docker/.env` - same env-var-driven, no-committed-secret-value shape as Keycloak's admin credentials above) |
+| Jaeger UI | http://localhost:16686 (`7-03`) |
+
+**`7-03`**: `Ago.Chat.Worker`/`Ago.Chat.Webhooks` have no `applicationUrl` in their own
+`Properties/launchSettings.json` (neither file has one, unlike `Ago.Chat.Api`'s `http://localhost:5009`),
+so both default to Kestrel's bare `http://localhost:5000` and collide with each other if started
+together the way this runbook's own bring-up sequence does - verified live: starting `Ago.Chat.Worker`
+alone logs `Now listening on: http://localhost:5000`. Prometheus's compose-loop scrape config
+(`deploy/docker/prometheus-scrape-config.yml`) assumes fixed, distinct ports instead - start Worker and
+Webhooks with an explicit `ASPNETCORE_URLS` so the collision and the scrape targets are resolved
+together:
+
+```
+ASPNETCORE_URLS=http://localhost:5010 dotnet run --project ../ago-chat/src/Ago.Chat.Worker
+ASPNETCORE_URLS=http://localhost:5011 dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
+```
+
+**Metrics gotcha found while verifying `7-03`, fixed in `7-02` before merge**: none of the three hosts
+served `/metrics` at first - confirmed live (`curl http://localhost:5009/metrics` against a real running
+`Ago.Chat.Api` returned an empty body and `HTTP 404`, Prometheus's own targets page showed every
+`Ago.Chat.*` target `DOWN` with a real connection/404 error, not a wiring mistake in the scrape config).
+Root cause: `7-02`'s first draft wired metrics through the same `AddOtlpExporter` **push** call tracing
+uses, pointed at the same `Otel:Exporter:Endpoint` (Jaeger) - but Jaeger's OTLP receiver only implements
+the trace collector service, and Prometheus's own model is pull/scrape in the first place, not push, so
+every metric silently went nowhere either way. Fixed by replacing that with `AddPrometheusExporter()`
+plus one `app.MapPrometheusScrapingEndpoint()` line per host's own `Program.cs` (mapping the endpoint
+needs the built `WebApplication`, not available from `Ago.Platform.Hosting`'s own `IServiceCollection`-
+only extension method). Re-verified after the fix: `/metrics` returns real Prometheus-format output, and
+Prometheus's targets page shows `ago-chat-api` `up`.
 
 `Ago.Chat.Worker`'s `/healthz/ready` is a real check as of `2-04` (Postgres + RabbitMQ reachable, not
 trivially healthy) - verified: started against the compose stack above, `/healthz/live` and
