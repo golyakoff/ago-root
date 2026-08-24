@@ -105,8 +105,10 @@ deployment's mail-related exposure) rather than the "logs the email to its own c
 runbook previously claimed - that claim was never actually true, corrected here. The verification link
 is what actually lifts the "Verify Email" required action; without it, this exact browser flow cannot
 complete, and there is currently no local workaround other than the admin-API shortcut below. Adding a
-mock-SMTP relay (e.g. MailHog) to the local compose stack is real, unstarted work if this flow needs
-to be exercised end to end rather than sidestepped.
+mock-SMTP relay (e.g. MailHog) to the local compose stack is real work — **now owned, as of 2026-08-25,
+by `backlog/10-05-transactional-email-delivery.md`**, which covers both the local relay and a real
+sending provider for the public deployment, where the same gap means a real visitor cannot finish
+registering at all. Until it lands, the admin-API shortcut below stays the only way past this gate.
 
 For testing `10-02`/`10-03` without driving a real browser + email flow every time, mint an
 equivalent token directly against Keycloak's admin API instead - the same shape

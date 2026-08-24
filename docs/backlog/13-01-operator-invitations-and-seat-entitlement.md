@@ -121,7 +121,12 @@ different case, applied correctly to this one instead.
   choose (Slack, email client, anything) — no email-sending/deliverability system is built here, the same
   call `10-01` already made for its own "Verify Email" flow ("a custom sender or template is a separate
   concern this item does not scope"). State this explicitly rather than silently under-building against
-  what a reviewer might expect an "invite" feature to include.
+  what a reviewer might expect an "invite" feature to include. **Note added 2026-08-25**: that chain of
+  deferrals — this item pointing at `10-01`, `10-01` pointing at nobody — is now owned by
+  `10-05-transactional-email-delivery.md`, which gives the deployment a real sending path. This item
+  still builds no mail system of its own; if it later wants to send the code rather than have it copied,
+  that is the first genuine in-app caller, and `10-05` names it as where the `IEmailSender` port question
+  gets decided against a real use case instead of speculatively.
 - **The multi-identity loophole, addressed explicitly, not silently assumed either way**: `12-02` already
   found that one real person can register more than one free-tier site by creating multiple Keycloak
   identities, since `10-02` enforces "one site per Keycloak identity," not "one site per person." This
