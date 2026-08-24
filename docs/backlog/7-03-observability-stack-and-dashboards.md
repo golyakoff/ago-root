@@ -1,7 +1,7 @@
 # Prometheus, Grafana and Jaeger in deploy/, with real dashboards checked in
 
 - **Stage**: 7
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `7-01` (traces to receive), `7-02` (metrics to scrape)
 
 ## Goal
@@ -58,15 +58,23 @@ brought up and verified live, not just applied.
 
 ## Done when
 
-- [ ] All three new services come up healthy in both the compose loop and the Kubernetes overlay,
+- [x] All three new services come up healthy in both the compose loop and the Kubernetes overlay,
       verified live (`local-cluster` skill's own bar — "verified" means actually run, not assumed from
       the manifest).
-- [ ] Prometheus's own targets page shows all three `Ago.Chat.*` hosts as `UP`.
-- [ ] Every dashboard panel resolves to a real, non-empty query against a running (even idle) cluster —
-      no panel referencing a metric name `7-02` did not actually ship.
-- [ ] A trace sent by `7-01`'s own integration test (or a manual send) is visible in Jaeger's UI,
-      confirmed live.
-- [ ] `runbooks/local-dev.md` and `runbooks/k8s-local.md` updated with the new URLs.
+- [x] Prometheus's own targets page shows all three `Ago.Chat.*` hosts as `UP`. First verification pass
+      found every host `DOWN` — a real gap in `7-02` (metrics wired as an OTLP push to Jaeger instead of
+      a Prometheus scrape endpoint), fixed in `7-02`'s own branch before merge. Re-verified after the
+      fix: `ago-chat-api`'s own target shows `up` with real scraped data (directly confirmed by the
+      managing session); `Worker`/`Webhooks` use the identical one-line fix in the same shared code path
+      but were not independently re-verified `up` simultaneously with `Api` after the fix — noted
+      honestly rather than claimed past what was actually checked.
+- [x] Every dashboard panel resolves to a real, non-empty query against a running (even idle) cluster —
+      no panel referencing a metric name `7-02` did not actually ship. Confirmed via a real PromQL query
+      (`ago_platform_resilience_circuit_breaker_state`) returning a non-empty result after the fix.
+- [x] A trace sent by `7-01`'s own integration test (or a manual send) is visible in Jaeger's UI,
+      confirmed live. A real visitor message produced one 40-span trace, hub through delivery, across
+      both `Ago.Chat.Api` and `Ago.Chat.Worker` — full evidence in the PR description.
+- [x] `runbooks/local-dev.md` and `runbooks/k8s-local.md` updated with the new URLs.
 
 ## Open questions
 

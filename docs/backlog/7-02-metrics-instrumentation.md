@@ -90,6 +90,16 @@ repos) and in the source files themselves (`ChatMetrics`, `ResilienceMetrics`, `
 `RealtimeMetrics`, `RabbitMqMetrics`) — `7-03` gives it a Grafana home. Full test suites: `ago-platform`
 76/76, `ago-chat` 385/385.
 
+**Real gap found and fixed before merge, live while verifying `7-03`**: the first draft above wired
+metrics through the same `AddOtlpExporter` push call tracing uses, pointed at the same
+`Otel:Exporter:Endpoint` (Jaeger) — but Jaeger's OTLP receiver only implements the trace collector
+service, and Prometheus's own model is pull/scrape, not push, so every metric silently went nowhere
+either way. Fixed with `AddPrometheusExporter()` (`OpenTelemetry.Exporter.Prometheus.AspNetCore`,
+pinned `1.18.0-beta.1` — this package has never shipped a stable release, tracking the SDK's own
+1.18.0 line) plus one `app.MapPrometheusScrapingEndpoint()` line per host's own `Program.cs`. Verified
+live after the fix: a running `Ago.Chat.Api`'s own `/metrics` returns real Prometheus-format output,
+and Prometheus's targets page shows `ago-chat-api` `up` with real, non-empty metric data.
+
 ## Open questions
 
 None.
