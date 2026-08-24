@@ -2,7 +2,7 @@
 
 - **Stage**: 11 (added 2026-08-24, when the stage was widened to cover both surfaces — see
   `roadmap.md`'s own note on why the console pass is sequenced here rather than in its own stage)
-- **Status**: ready
+- **Status**: done (2026-08-25)
 - **Depends on**: nothing new architecturally — `adr/0023` already chose React, `5-06` already
   scaffolded the app, and every screen this item restyles already exists. It does not depend on
   `11-02` shipping first; whichever lands second adopts the other's result, and `11-02` is the smaller
@@ -84,17 +84,57 @@ of this item's ADR.
 
 ## Done when
 
-- [ ] An ADR records the tokens-plus-hand-rolled versus component-library decision, with the
+- [x] An ADR records the tokens-plus-hand-rolled versus component-library decision, with the
       alternative it rejected and why.
-- [ ] Tokens exist as a single source, traceably derived from `ago-landing`'s palette and type.
-- [ ] All eleven components exist, and nothing beyond them was added.
-- [ ] The shell renders on every route, with permission-gated navigation and an active state.
-- [ ] All six existing screens are retrofitted, with no behavioural change and the existing Vitest
-      suite green without modification.
-- [ ] `color-scheme: light dark` is gone and no dark-theme claim remains anywhere.
-- [ ] Focus is visible everywhere, contrast passes at the sizes used, and the pre-existing
+- [x] Tokens exist as a single source, traceably derived from `ago-landing`'s palette and type.
+- [x] All eleven components exist, and nothing beyond them was added.
+- [x] The shell renders on every route, with permission-gated navigation and an active state.
+- [x] All existing screens are retrofitted — **seven, not six**: `11-02` merged first, so this item
+      adopted its `WidgetConfigPage` per the "whichever lands second adopts the other's result" note
+      above. No behavioural change, and the existing Vitest suite (18 tests, 4 files) green without
+      modification.
+- [x] `color-scheme: light dark` is gone and no dark-theme claim remains anywhere.
+- [x] Focus is visible everywhere, contrast passes at the sizes used, and the pre-existing
       `role="alert"` / `aria-label` semantics survive.
-- [ ] Exercised live against the local cluster.
+- [x] Exercised live against the local cluster.
+
+## Outcome
+
+`adr/0030` records the decision: design tokens in plain CSS custom properties plus a hand-rolled set
+closed at eleven, no component library. The alternative it takes most seriously — and names as the one
+most likely to become correct later — is a headless library (Radix / React Aria); it lost because the
+two components where a headless library earns its keep, the modal and the select, are exactly the two
+the browser now implements natively (`<dialog>`'s `showModal()`, `<select>`), and this console has one
+select with two options and no modals. Measured cost of the result: 17.15 kB CSS, 3.74 kB gzipped.
+
+Shipped in `ago-console`: `src/design/tokens.css` (the single token source, with every value traced to
+an `ago-landing` colour or to a stated derivation rule, and every measured WCAG ratio recorded inline),
+`src/design/base.css`, eleven components under `src/components/`, and the shell under `src/shell/`
+(`AppShell` prop-driven and context-free so `/signup`, `/callback` and `/onboarding` — which mount
+outside `PermissionsProvider` — can render it, plus `OperatorShell` for the gated routes).
+
+Two colours from the landing could not survive at console sizes and were demoted rather than quietly
+used: `#8f8ac9` (3.16:1 on white) is now borders and dots only, with `#565096` (7.04:1) carrying text,
+and the landing's `--line` (1.24:1) is a separator only, with `--ago-line-strong` (3.62:1) as the edge
+of every control so 1.4.11's 3:1 holds.
+
+Two of the eleven ship without a consumer, deliberately: `Dialog` and `Textarea`. Using either on an
+existing screen would have been a behaviour change — a confirmation step in front of the attachment
+delete, and Enter no longer submitting the composer — which this presentation-only item excludes.
+`11-06` owns the composer; `11-06`/`13-04` are the screens that will want the dialog.
+
+Verified live against the local stack (`Ago.Chat.Api` on 5009, compose infra, console dev server on
+5173), signed in as the real `demo-operator`: the queue rendering ~50 real assigned rows and the
+waiting list, a real conversation's thread (`aria-label="Message thread"` intact), and — the useful
+negative — the shell's navigation showing only **Queue** for an operator without `site:configure`,
+with `/admin` and `/settings/widget` typed in directly still rendering their refusal branches with
+`role="alert"` preserved. Focus was measured on a real keyboard `Tab` driven over CDP in headless
+Chrome: `2px solid #4b3aff` at 2px offset, and the skip link genuinely slides into view.
+
+One gap, stated rather than papered over: the *populated* states of the two `site:configure` screens
+(the admin conversation table, the widget-config form) were exercised only through their code paths
+and the build, not observed live, because that needs a second interactive login. Their empty and
+refusal states were observed live. Worth five minutes at the next opportunity.
 
 ## Open questions
 
