@@ -37,8 +37,9 @@ before anything below it, and within a band the order is a judgement call rather
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
-`10-03` (console signup UI, which only becomes real once `10-05` lands), `11-05` and `11-06` (the
-console design foundation and the operator workspace), `15-02` (backup and a restore drill), `15-03`
+`11-06` (the operator workspace — `11-05`'s design foundation landed 2026-08-25 with `adr/0030`, so
+this is what is left of Stage 11 besides the notice field `16-04` adds later), `10-03` (console signup
+UI, which only becomes real once `10-05` lands), `15-02` (backup and a restore drill), `15-03`
 (alerting), `5-13` (presigned upload size never enforced by storage).
 
 ### After — in roughly this order, each already scoped
