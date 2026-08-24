@@ -1,7 +1,7 @@
 # README rewrite for the reviewer audience
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `7-06-stage-7-load-proof-report.md` (the real numbers this item quotes must exist
   first), `8-02-public-demo-page-and-console.md` (the live link and throwaway credential this item
   points to must actually work before this item can be marked done)
@@ -68,13 +68,20 @@ this item extends rather than invents from scratch.
 
 ## Done when
 
-- [ ] `README.md` reads correctly for someone who has read nothing else in the repository — no
+- [x] `README.md` reads correctly for someone who has read nothing else in the repository — no
       unexplained jargon, no forward reference to a doc that isn't linked from the README itself.
-- [ ] Every number in the new README traces to a specific line in a `load/reports/*.md` file.
-- [ ] The ADR index lists every accepted ADR present in `docs/adr/` at the time of this change.
-- [ ] The live demo link and throwaway credential are present in the README and were verified working
-      at the time this item was completed — not "should still work," actually opened and used.
-- [ ] The two stale lines named in Context to read first are corrected in this same change.
+- [x] Every number in the new README traces to a specific line in a `load/reports/*.md` file
+      (`load/reports/2026-08-24-stage-7-summary.md`, cited directly).
+- [x] The ADR index lists every accepted ADR present in `docs/adr/` at the time of this change (0001
+      through 0027).
+- [x] The live demo link and throwaway credential are present in the README and were verified working
+      at the time this item was completed — both operator logins tested for real: `demo-operator`
+      through the actual console UI (a real Keycloak redirect, a real login, the real hub connection
+      showing real conversations from this session's own earlier tests), `demo-operator-2` through a
+      real direct-grant token that resolves to its own, different `siteId` — not "should still work."
+- [x] The two stale lines named in Context to read first are corrected in this same change (the
+      "rewritten at Stage 7" banner and the "Kafka in Stage 8" stack line, both replaced with the
+      current, live status and `roadmap.md`'s actual Stage 9 placement).
 
 ## Open questions
 
