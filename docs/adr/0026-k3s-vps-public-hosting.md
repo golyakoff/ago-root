@@ -79,7 +79,7 @@ stays honest about what was actually decided versus what was actually bought:
 | `chat.reserve-me.ru` | `Ago.Chat.Api` — REST + both SignalR hubs | this item |
 | `auth.reserve-me.ru` | Keycloak (OIDC issuer + login UI) | this item — **new, not named in the backlog's own subdomain list** |
 | `console.reserve-me.ru` | `ago-console` static bundle | routing designed here; the Service and bundle are `8-02`'s job |
-| `demo-shop1.reserve-me.ru`, `demo-shop2.reserve-me.ru` | seeded demo tenant sites the widget embeds on | reserved in this plan; no backend exists yet, so no Gateway resource is created for them in this item — that is `8-02`'s static-page work |
+| `demo-shop1.reserve-me.ru`, `demo-shop2.reserve-me.ru` | two independent seeded demo tenant sites the widget embeds on | routing designed here; `demo-shop1`'s Service/bundle are `8-02`'s job, `demo-shop2`'s (a second, isolated tenant, for demonstrating tenant isolation live) are `8-05`'s |
 
 **`auth.reserve-me.ru` is this ADR's own addition to the plan**, not a re-litigation of the
 domain/subdomain-pattern decision. The backlog's subdomain list covered API, console, and the two demo

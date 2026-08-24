@@ -1,17 +1,17 @@
 # Runbook: public deployment (k3s VPS)
 
-> **Status: steps 1-11 fully live and verified end to end** (2026-08-24) — every one of those steps
-> actually ran against the real VPS, in order, in the same session. This runbook was originally
-> written by a session with no VPS to deploy to ("design only" as of its first version); the managing
-> session then executed it live once the author provisioned the real server, finding and fixing seven
-> real bugs along the way (all documented in place, below, at the step each was found). Final external
-> check: a real `POST .../token` direct-grant call against `https://auth.reserve-me.ru` returned a real
-> Keycloak JWT, and that token was accepted by `https://chat.reserve-me.ru/api/v1/operators/me` with
-> `200` — the whole chain, DNS through TLS through Keycloak through the API, proven live, not asserted.
-> **Step 12 (`8-02`, the console and public demo page) was added by a design-only worktree pass with no
-> VPS access** — its own commands are untested against the real cluster; the managing session still
-> has to run them live and update this note once it does. `adr/0026` (including its own "Post-decision
-> update") has the reasoning behind every choice named here; this file is the "how".
+> **Status: fully live and verified end to end** (2026-08-24) — every step below, including step 12
+> and step 13, has actually run against the real VPS. This runbook was originally written by a
+> session with no VPS to deploy to ("design only" as of its first version); the managing session then
+> executed it live once the author provisioned the real server, finding and fixing real bugs along the
+> way (documented in place, below, at the step each was found — nine in total across steps 1-13, one
+> of them a real product bug in `ago-widget` fixed as its own backlog item, `5-12`, not folded in
+> silently). Final external check, repeated after each of steps 12 and 13: a real visitor sends a
+> message through the public widget, it lands in Postgres, and the operator console (a real Keycloak
+> login, a different browser context per operator) sees and answers it — the whole chain, DNS through
+> TLS through Keycloak through the API through the realtime hub, proven live, not asserted. `adr/0026`
+> (including its own "Post-decision update") has the reasoning behind every choice named here; this
+> file is the "how".
 
 Every step below is marked **(you)** if it can only be done by the author by hand — buying the VPS,
 touching a domain registrar's panel, generating and holding real secret values — or **(session)** if a
@@ -366,7 +366,7 @@ harness.html`'s Operator pane, pointed at `?api=https://chat.reserve-me.ru` — 
 this pass beyond the REST call above, since the REST call already proves the identical JWT-validation
 path the hub's own connection negotiation uses.
 
-## 12. Publish the console and the public demo page **(session) — written by a design-only pass, 2026-08-24; not yet run against the live VPS**
+## 12. Publish the console and the public demo page **(session) — done 2026-08-24, one real product bug found and fixed live**
 
 `8-02`'s own scope: `console.reserve-me.ru`'s `HTTPRoute` (step 8, `gateway.yaml`) has had no real
 backend behind it since it was created — this closes that gap, and routes a new
@@ -376,13 +376,6 @@ delivery (`adr/0026`: no registry, build straight on the VPS, import into k3s's 
 either**: `ago-console`/`ago-widget` are static frontend bundles behind nginx, each with their own
 `Dockerfile` in their own repository, not another `Ago.Chat.*` .NET host `build-images.sh` already
 knows how to build.
-
-This session (working in isolated worktrees with no VPS/database access) verified `npm run build`
-succeeds for real in both repositories, that both new `Dockerfile`s actually build and actually serve
-correct content (a running container, curled locally — SPA fallback on `ago-console`, the demo page
-and `ago-chat.js` both served on `ago-demo-shop1`), and that `kubectl kustomize` renders the changed
-overlay cleanly. It could not run any step below against the real cluster — that is this section's
-own next real action for a session with VPS access.
 
 ```bash
 # alongside the ago-platform/ago-chat/ago-deploy clones step 6 already made:
@@ -449,39 +442,107 @@ alone is not enough:
 kubectl exec -i -n ago-chat deploy/redis -- redis-cli FLUSHALL
 ```
 
-**Keycloak's `ago-console` client registration — investigated, no action needed for this specific
-change, a real open question left for a future one**: `local-dev.md`'s own "Running the console
-locally" section already established, for the local Keycloak instance (`5-06`), that
-`--import-realm` only imports a realm that does not already exist — editing the committed
-`keycloak-realm-import.json` and even restarting the pod does not re-apply anything to an
-already-provisioned realm; Keycloak's import step is skip-if-exists, not upsert-on-boot. The
-production Keycloak here runs the identical `start-dev --import-realm` mode (`k8s/base/keycloak.yaml`),
-so the same behaviour applies to it, not just to local.
+**Keycloak's `ago-console` client registration** needed no separate live action: git history shows the
+domain-rename commit that added `https://console.reserve-me.ru/*`/`https://console.reserve-me.ru` to
+the `ago-console` client's `redirectUris`/`webOrigins` (`6efb4cf`, "feat(8-01): domain changed to
+reserve-me.ru") landed *before* the fixes that got Keycloak's pod to first reach `Running` on the live
+VPS (step 8's `66feeec`/`90c4016`) — so the very first successful `--import-realm` on the real cluster
+already saw the updated file. Confirmed live with a real console login, not just reasoned about.
 
-This item's own registration (`https://console.reserve-me.ru/*`/`https://console.reserve-me.ru` in
-the `ago-console` client's `redirectUris`/`webOrigins`) needs no separate live action, though: git
-history shows the domain-rename commit that added those two values (`6efb4cf`,
-"feat(8-01): domain changed to reserve-me.ru") landed *before* the fixes that got Keycloak's pod to
-first reach `Running` on the live VPS (step 8's `66feeec`/`90c4016`, the `Recreate`-strategy and
-probe-timing fixes) — so the very first successful `--import-realm` on the real cluster already saw
-the updated file. Confirm this live rather than trust the reasoning alone (a real console login is
-the simplest proof: if it redirects to Keycloak and logs in, the registration is already there) —
-not done in this pass since it needs a real browser against the live console.
-
-**Left genuinely open, not resolved here**: if a *later* change to `keycloak-realm-import.json` needs
-to reach the already-provisioned production realm (this item's own change did not, per the timing
-argument above), editing the file and re-applying the overlay will not be enough on its own. It will
-need Keycloak's own Admin REST API (or Admin Console UI) applied directly against the live realm — the
-same by-hand step `local-dev.md` already documents for a local install. Whether a full realm
-delete-and-re-import is a better mechanism than a targeted REST `PUT` for that future case is not
-decided here, reasoned from Keycloak's own documented `--import-realm` behaviour rather than verified
-against this project's live instance, since no case needing it has come up yet.
+**Correction to an assumption this section originally stated as fact**: `local-dev.md`'s own finding
+for a *fresh* Keycloak install ("`--import-realm` only imports a realm that does not already exist")
+does not fully generalize to a restart of an *already-provisioned* realm. `8-05` found, live, that
+editing `keycloak-realm-import.json` to add a brand-new user and then restarting the pod (a normal
+`kubectl apply` picking up the changed ConfigMap) **does** add that user to the live realm — a real,
+working account with the exact fixed id from the JSON, confirmed before this session's own Admin API
+call ever succeeded. Whether an *update* to an already-existing entity behaves the same way is still
+untested — treat that specific case as open, but "a new entity added via the committed JSON plus a
+rollout restart reaches an already-provisioned realm" is now a confirmed fact, not a stated assumption.
 
 **Verify — from outside this network, same bar as step 11**: load `https://demo-shop1.reserve-me.ru`,
 send a message through the widget in the corner; from a second tab, `https://console.reserve-me.ru`
 should redirect to the public Keycloak login, `demo-operator`/`demo-operator-password` should log in,
 and the message sent above should be visible in the queue and answerable, with the reply arriving back
-on the demo page live — `8-02`'s own Done-when bar, not asserted from the manifests.
+on the demo page live — `8-02`'s own Done-when bar. **This did not pass on the first real attempt**:
+the widget's own visitor-side send failed every time against the real server, silently on the wire.
+Root-caused and fixed as its own backlog item (`5-12`, not folded into this deployment item silently,
+matching `5-11`'s own precedent) — a widget application bug (a missing `clientMessageId` argument on
+the hub invocation), not a deployment or infrastructure issue. A one-time, self-resolving red herring
+came up along the way too: right after this step's own `kubectl apply`, a handful of WebSocket
+connections dropped within seconds of opening, traced to NGINX Gateway Fabric reloading its data-plane
+nginx config in response to the TLS Secret changing underneath it (a normal reload, which does not
+preserve in-flight long-lived connections) — confirmed transient by testing again once the config
+settled, not a structural Gateway problem, ruled out before `5-12`'s real cause was found. After the
+`5-12` fix was built, deployed, and re-verified: a real message, sent through the real widget, landed
+in Postgres and was answered by the real operator console — passed, not asserted.
+
+## 13. A second demo tenant, and the permanent HTTP→HTTPS redirect **(session) — done 2026-08-24**
+
+`8-05`'s own scope: a second, fully independent demo tenant (`demo-shop2.reserve-me.ru`) to show
+tenant isolation live, plus the permanent HTTP→HTTPS redirect step 12's own predecessor deliberately
+left out for lack of a live server to verify it against.
+
+```bash
+cd ago-widget && git pull   # picks up public-demo-2/, Dockerfile's DEMO_PAGE_DIR arg
+cd ../ago-deploy && git pull   # picks up demo-shop2-static.yaml, gateway/tls changes
+
+cd k8s
+CONSOLE_REPO=../../ago-console WIDGET_REPO=../../ago-widget \
+  AGO_API_BASE_URL=https://chat.reserve-me.ru ./build-static-images.sh   # now builds all three images
+docker save ago-demo-shop2:local | sudo k3s ctr -n k8s.io images import -
+
+kubectl apply -k overlays/demo
+kubectl get certificate ago-public-tls -n ago-chat -w   # re-issues in place with the sixth SAN
+```
+
+**CORS** for the second site (`create-demo-tenant.sh`'s own `on conflict (id) do update` shape, same
+as step 12's):
+
+```bash
+cat > /tmp/site2-seed.sql << 'SQL'
+insert into sites (id, public_key, allowed_origins)
+values (
+  '00000000-0000-0000-0000-000000000008',
+  'demo_site2',
+  array['https://demo-shop2.reserve-me.ru', 'https://console.reserve-me.ru']::text[]
+)
+on conflict (id) do update set allowed_origins = excluded.allowed_origins;
+
+insert into operators (id, site_id, status, capacity, external_subject_id)
+values ('00000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000008', 'Online', 5, '00000000-0000-0000-0000-00000000000b')
+on conflict (id) do update set external_subject_id = excluded.external_subject_id;
+
+insert into roles (id, site_id, name, permissions)
+values ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-000000000008', 'Operator',
+        array['conversation:read', 'conversation:send', 'conversation:assign']::text[])
+on conflict (id) do nothing;
+
+insert into operator_roles (operator_id, role_id)
+values ('00000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-00000000000a')
+on conflict (operator_id, role_id) do nothing;
+SQL
+kubectl exec -i -n ago-chat deploy/postgres -- psql -U ago -d ago_chat -v ON_ERROR_STOP=1 < /tmp/site2-seed.sql
+kubectl exec -i -n ago-chat deploy/redis -- redis-cli FLUSHALL
+```
+
+**The `demo-operator-2` Keycloak user** was added by `kubectl apply`'s own Keycloak rollout restart
+picking up the changed `keycloak-realm-import.json` (see step 12's corrected note above) — no separate
+Admin API call was actually needed to *create* it, though this session used the Admin API anyway to
+diagnose a real problem: the first version of this user (`lastName: "Operator (tenant 2)"`) was
+created successfully but could never log in (`invalid_grant: "Account is not fully set up"`) —
+Keycloak's declarative User Profile silently rejects that shape of `lastName` at login time, not at
+creation time, with no actionable error. Fixed by using a plain `"Operator2"` instead
+(`keycloak-realm-import.json` updated to match, so a fresh install never hits this). If a future
+seeded user's login fails the same opaque way, suspect the `firstName`/`lastName` shape first, before
+anything else.
+
+**Verify — from outside this network**: load `https://demo-shop2.reserve-me.ru` (visibly different
+from `demo-shop1`'s page), send a message, confirm it in Postgres tagged `demo_site2`; a direct-grant
+token for `demo-operator-2`/`demo-operator-2-password` resolves via `/api/v1/operators/me` to
+`siteId=...0008`, a different site than `demo-operator`'s `...0001` — all passed live. `curl -I
+http://chat.reserve-me.ru/` (or any `*.reserve-me.ru` host) returns a real `301` to the `https://`
+equivalent — passed live, and the existing five hostnames stayed reachable throughout the Certificate
+re-issue for the new SAN.
 
 ## Redeploying after a change
 
@@ -494,10 +555,11 @@ on the demo page live — `8-02`'s own Done-when bar, not asserted from the mani
 3. If `k8s/overlays/demo/` itself changed (a new route, a new resource limit): `kubectl apply -k
    k8s/overlays/demo` again — kustomize + `kubectl apply` is declarative, so this is safe to re-run.
 
-**Rebuilding the widget/console static bundles specifically (`8-02`) is a different mechanism from
-steps 1-3 above**, not covered by them: `git pull` in `ago-console`/`ago-widget` on the VPS, re-run
-step 12's own `build-static-images.sh` + `k3s ctr images import` block, then
-`kubectl rollout restart deployment/ago-console deployment/ago-demo-shop1 -n ago-chat` — re-running
+**Rebuilding the widget/console static bundles specifically (`8-02`/`8-05`) is a different mechanism
+from steps 1-3 above**, not covered by them: `git pull` in `ago-console`/`ago-widget` on the VPS,
+re-run step 12's own `build-static-images.sh` + `k3s ctr images import` block (now builds all three
+images), then `kubectl rollout restart deployment/ago-console deployment/ago-demo-shop1
+deployment/ago-demo-shop2 -n ago-chat` — re-running
 `kubectl apply -k overlays/demo` alone does **not** pick up new image content here, since the
 Deployment manifest itself is unchanged (same `:local` tag) even though what that tag points to in
 containerd changed; a rollout restart is what actually re-pulls (imports) the new content into a fresh
@@ -509,10 +571,6 @@ manual sequence is the whole story until a later item decides differently.
 
 ## Known gaps, named plainly
 
-- **HTTP is never redirected to HTTPS** — `gateway.yaml`'s own comment names this: a permanent
-  redirect is a small addition (Gateway API's `RequestRedirect` HTTPRoute filter) this item did not
-  add without a live server to verify it against. A visitor hitting `http://chat.reserve-me.ru`
-  today gets a 404 from the Gateway (no HTTPRoute matches the `http` listener), not a redirect.
 - **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
   inherited unchanged from the local realm import, per this item's own instruction to reuse `5-05`'s
   mechanism rather than invent a new one. Tightening this to `external` (require TLS for
@@ -521,12 +579,6 @@ manual sequence is the whole story until a later item decides differently.
 - **Keycloak runs in `start-dev` mode publicly**, not its own hardened `start` production mode —
   `adr/0026`'s own "Consequences" section names this a deliberate, stated gap: a demo IdP for one
   seeded operator, not a production identity provider.
-- **`console.reserve-me.ru`/`demo-shop1.reserve-me.ru` — designed and built by `8-02`, not yet
-  applied to the live cluster.** `ago-console`'s and `ago-demo-shop1`'s Services, Deployments,
-  Dockerfiles, and the `gateway.yaml`/`tls.yaml` wiring all exist as of `8-02`'s own worktree pass
-  (step 12 above), but that pass had no VPS access — until a session with real access runs step 12's
-  commands, both hostnames still 404/fail exactly as this line originally said. `demo-shop2.reserve-me.ru`
-  stays reserved-only, unrouted, deliberately out of `8-02`'s own scope (no second demo tenant/page).
 - **One node, still** — `k8s-local.md`'s own "Known limits" (no pod anti-affinity, no real node-drain
   or network-partition testing) carry over unchanged to this real deployment. `nfr.md`'s "not an
   uptime SLA — this is a demo cluster" framing is the bar this deployment is held to, not a new one
