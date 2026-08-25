@@ -103,34 +103,46 @@ Two failures this has actually caused, both worth the check being written down:
   later opened a fresh PR from it, which would have silently reverted the fixes that landed in the
   meantime. Every rebuild ends with `git push origin --delete <old-branch>`, not just a local delete.
 
-### One item's PRs land together, and the code lands first
+### One item's PRs land together: check the whole group first, and merge `ago-root` last
 
 A backlog item usually spans repositories - a fix in `ago-chat` and its record in `ago-root`, or a
 change in `ago-deploy` plus the runbook it makes wrong. Those PRs are one change wearing several
-numbers, and they are merged **as a group, in one sitting**, never one now and the rest later.
+numbers, so they are merged **as a group, in one sitting**, never one now and the rest later.
 
-Within the group, **code before docs**, without exception.
+The rule has two steps, and the first is what makes the second safe:
 
-The failure this prevents is specific and quiet. `ago-root` is the only place that records what is
-considered done: an item's `Status` line, its Done-when boxes, its Outcome, and the queue. Merge the
-`ago-root` half while its `ago-chat` half is still open and every one of those becomes false at once -
-the item says `done`, the queue has dropped its row, and the code is not on `main`. Nothing fails, no
-test goes red, and the next session reads the claim as fact and plans on top of it. That is worse than
-an unmerged branch, because an unmerged branch is visibly unfinished.
+1. **Before merging anything, check every PR in the group.** Each one must be `MERGEABLE` *and* have
+   its required checks green. Not "looks fine" - actually read the state of all of them:
+   ```bash
+   gh pr view <n> --repo golyakoff/<repo> --json mergeable,mergeStateStatus,statusCheckRollup
+   ```
+   If any member of the group is not ready, **none of them merges yet**. A group is ready or it is not.
+2. **Once they all pass that check, the order among them does not matter - except that `ago-root`
+   merges last.** Always. It is the only repository whose content is a *claim about the others*.
 
-The reverse order is harmless: code on `main` with its documentation a few minutes behind is a gap
-that closes itself and misleads nobody while it is open.
+Why `ago-root` is the exception rather than "docs after code": it is the only place that records what
+is considered done - an item's `Status` line, its Done-when boxes, its Outcome, and the queue. Merge
+that half while any other half is still open and every one of those becomes false at once: the item
+says `done`, the queue has dropped its row, and the code is not on `main`. **Nothing fails, no test
+goes red**, and the next session reads the claim as fact and plans on top of it. That is worse than an
+unmerged branch, because an unmerged branch is visibly unfinished.
 
-Two practical consequences:
+The reverse gap is harmless and self-closing: code on `main` with its record a few minutes behind
+misleads nobody while it is open.
 
-- **Do not merge a docs PR that says "done" until the thing it describes is on `main`.** If the code
-  half is blocked - a red check, a review, a conflict - the docs half waits with it, however clean it
-  looks on its own.
-- If one half genuinely cannot land, say so in the other's PR rather than merging it anyway with the
-  Status line quietly softened. A half-landed item is a decision worth stating, not a wording problem.
+Two consequences worth stating:
 
-Branches for one item are given the same name across repositories precisely so the group is visible at
-a glance (`feat/17-01-tenant-isolation` in both `ago-chat` and `ago-root`).
+- If one member of the group genuinely cannot land, **say so in the others' PRs** rather than merging
+  them anyway with the `ago-root` Status line quietly softened. A half-landed item is a decision worth
+  stating, not a wording problem.
+- Step 1 is not ceremony. **This was got wrong on 2026-08-25, minutes after the rule was written**:
+  two merge commands were issued back to back without confirming the first had succeeded. The
+  `ago-chat` half was refused by a repository ruleset (a branch behind its base, which `--admin` does
+  not bypass) while the `ago-root` half went through - so `main` claimed a cross-tenant fix was proven
+  while the fix itself sat in a closed branch. Checking the group first would have merged nothing.
+
+Branches for one item carry the same name across repositories precisely so the group is visible at a
+glance (`feat/17-01-tenant-isolation` in both `ago-chat` and `ago-root`).
 
 ### The queue table has one writer
 
@@ -175,5 +187,6 @@ Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`, `build`. Scop
 - New behaviour has tests at the right level (`testing.md`).
 - Docs updated in the same branch if the change made one wrong.
 - The branch does **not** touch `docs/roadmap.md`'s queue table - the merger edits it once, afterwards.
-- If the item spans repositories, every half is ready - they merge as a group, code first.
+- If the item spans repositories, every PR in the group is `MERGEABLE` with its checks green before
+  any of them merges - and `ago-root` merges last.
 - No commented-out code, no `TODO` without an issue or backlog file reference.
