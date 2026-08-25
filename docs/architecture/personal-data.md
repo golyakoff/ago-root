@@ -6,6 +6,15 @@ export cannot be built correctly against a system nobody has inventoried — and
 code, the migrations and the manifests on 2026-08-25 by `16-01`**, which corrected two rows that were
 wrong and added six stores the first pass did not list.
 
+**Extended 2026-08-25 by `20-01` to cover a second product.** AGO Calendar has its own database
+(`adr/0027`) and its own personal data, and it is a different *kind*: AGO Chat's identifying data is
+mostly incidental — a visitor happening to type their phone number into a support message — while a
+booking product asks for a phone number as its one mandatory field and keeps a named lead card with
+notes and a no-show history. That is a deliberate product decision, not a leak, and it means the
+minimisation argument below ("minimisation works on retention, not on fields") holds for AGO Chat and
+holds less well here: the field *is* the product. Its three rows are in the table, marked
+**AGO Calendar**.
+
 Every row below cites where the fact came from. That is the point of the file: a personal-data map
 assembled from memory is exactly the artifact that gets a residency answer wrong. Where a fact could
 not be established from this workspace it says so rather than guessing a plausible value — see
@@ -83,6 +92,9 @@ not who is legally answerable for them — that second question is `16-04`'s and
 | Metrics (Prometheus) | Aggregates, on a PVC. Labels are site/consumer/topic-shaped, not person-shaped, as far as `7-02`'s instruments go | AGO | Until the PVC is reclaimed; no retention flag set | Nothing automatic | `k8s/base/prometheus.yaml` |
 | Application logs | Structured, and scanned for this item: every log statement in `Ago.Chat.*` interpolates ids, counts, statuses and object keys — **no message body, no email, no IP** was found | AGO, via the container runtime | Whatever the node's log rotation does — **not defined by anything in this project** | Nothing this project owns | grep over every `Log*(` call in `ago-chat/src` |
 | Edge access logs | Client IP per request, by NGINX's own default logging | AGO | **Undefined.** No retention policy exists | Nothing | `edge.md`; `17-02` is the item that owns this surface |
+| `customers` (**AGO Calendar**'s own Postgres, `20-01`) | **A phone number — the customer's only mandatory field — plus an optional name, free-text operator notes, and a no-show count.** The most directly identifying store either product has: unlike `visitors`, this row is *meant* to name a person, and unlike `messages.body` the identifier is structured and exact | AGO, on its own node | **Forever.** No pruning exists, and none is designed | Row deletion; `ON DELETE CASCADE` from `tenants`. Nothing automatic | `Stage20CreateCalendarSchema.cs`; `Ago.Calendar.Domain/Customer.cs` |
+| `events` (**AGO Calendar**) | Not content, but a **behavioural record about a named person**: which worker they saw, for what service, when, and whether they turned up. `customer_id` is retained on cancelled and no-show rows deliberately, because the lead card exists to keep exactly that history | AGO | Forever | Row deletion; cascades from `tenants` | `Stage20CreateCalendarSchema.cs`; `Ago.Calendar.Domain/Event.cs` |
+| `operators` (**AGO Calendar**) | `id`, `tenant_id`, `display_name`, `external_subject_id?`. **A display name, unlike AGO Chat's `operators`, which holds none** — worth noticing rather than discovering later: the two products' operator tables are not the same shape, and this one names a person | AGO | Forever | Row deletion | `Stage20CreateCalendarSchema.cs`; `Ago.Calendar.Domain/Operator.cs` |
 | Backups | One encrypted artifact per run holding both Postgres databases, the roles, the MinIO objects and the overlay's `.env`. **Not** Redis and **not** RabbitMQ — see below | AGO. Staged on the node (newest 7 runs), collected onto the author's own machine, which is where the backup actually is. No third party holds a copy; nothing leaves Russia (`adr/0050`) | **30 days** on the collected copies — a choice, not a derivation, and it must be set to whatever the published privacy policy states | The window expiring, enforced by `backup-pull.sh` on every run | `adr/0050`, `runbooks/backup-and-restore.md` |
 | Retention archive | Expired conversation history in `16-03`'s export format | AGO, or a destination `adr/0031` has not chosen | `adr/0031`: archived rather than deleted | Object deletion — and the store's class must permit it, which `adr/0031` records as a selection constraint | `adr/0031` |
 
@@ -114,6 +126,16 @@ attachment orphan sweep.** No message pruning, no partition drop, no outbox trim
 webhook-delivery trim, no queue purge, no log or trace retention policy this project owns. Every
 "Removal path" in the table above that is not a TTL is *a thing a human or a future item would have to
 run*. `15-04` and `adr/0031` are where that changes; `16-02` is where per-person erasure arrives.
+
+**AGO Calendar is the same, and `16-02` now has two databases to erase from, not one.** `20-01` built
+its schema with no retention job and no pruning, exactly like AGO Chat's, which is consistent rather
+than good. The one structural difference worth carrying into `16-02`: erasure there is *easier*,
+because a person is a row (`customers`) rather than a substring of free text — deleting the lead card
+and cascading `events` is a complete answer for that tenant, with no full-text sweep needed. What
+makes it harder is that the two products share no key: the same human is a `customers` row in one
+database and a `visitors` row plus message text in another, with nothing linking them, so a
+cross-product erasure request cannot be executed as one operation. Named here so `16-02` does not
+discover it mid-implementation.
 
 Two stores carry **no** personal data, deliberately, and should stay that way: `outbox.payload` and
 `webhook_deliveries.payload`, both body-free by contract and both now stated as such in
