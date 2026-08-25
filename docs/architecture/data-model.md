@@ -22,12 +22,20 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   rows `DEFAULT now()` would stamp the demo tenant and every previously-registered site with the instant
   the migration ran and present that as fact. `null` means "not recorded"; the only writer is
   `RegisterSiteHandler`, from `IClock`.
-- `visitors` - `id`, `site_id`, `token_hash`, first/last seen. No name, email or contact detail by
-  design - the row identifies a returning browser, not a named person. **Qualified 2026-08-25**: that
-  is true of these columns and misleading about the dataset, since `messages` next to it holds whatever
-  the visitor typed, which in a support product routinely includes their own name and phone number. See
-  `personal-data.md` for what the system actually holds and where; a `token_hash` that reliably singles
-  out a returning individual is also not the same thing as anonymous data.
+- `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, and nothing else.
+  **Corrected in `16-01`**: this bullet listed a `token_hash` column that was never built. There is no
+  such column in `Stage1CreateChatSchema`, in the EF model snapshot, or in `Visitor.cs`, and the string
+  does not occur anywhere in `ago-chat` - the visitor token is a stateless signed JWT (`sub`, `site_id`,
+  `kind`) that the server issues and validates but never stores. The browser is the only place a copy
+  exists. The practical consequences run in both directions and both are worth knowing before designing
+  against this table: there is nothing here to leak, and there is also no server-side handle to revoke
+  (`adr/0034`'s "no deny-list, because there is no caller").
+  No name, email or contact detail by design - the row identifies a returning browser, not a named
+  person. **Qualified 2026-08-25**: that is true of these columns and misleading about the dataset,
+  since `messages` next to it holds whatever the visitor typed, which in a support product routinely
+  includes their own name and phone number. See `personal-data.md` for what the system actually holds
+  and where; an identifier that reliably singles out a returning individual is also not the same thing
+  as anonymous data.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
   shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
@@ -168,9 +176,15 @@ load-mutate-save on `xmin`, which still rejects the race that matters (two saves
 `personal-data.md` maps which of the tables above hold personal data, and is the file a schema change
 updates when it adds a column that holds something about a person. Two properties recorded there are
 load-bearing for erasure and are easy to break from here without noticing: `outbox.payload` and
-`webhook_deliveries.payload` hold no message bodies, so message content exists in exactly two places
-(`messages.body` and the object store) rather than in every copy an event-driven system would
-otherwise scatter.
+`webhook_deliveries.payload` hold no message bodies, so message content **at rest in Postgres** exists
+in exactly two places (`messages.body` and the object store) rather than in every copy an event-driven
+system would otherwise scatter.
+
+**Qualified by `16-01`**: "exactly two places" is true of this database and not of the whole system.
+The realtime fan-out path publishes a full `MessageDto`, body included, as a persistent message on a
+durable broker queue, so message text also exists transiently in RabbitMQ and durably in any node
+queue left behind by a replaced pod. `personal-data.md` has the mechanism and the bound; it changes
+nothing about this schema, but it does change what "delete the row and you are done" means.
 
 ## Access strategy
 

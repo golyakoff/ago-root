@@ -20,7 +20,16 @@ story in `concurrency.md` true.
 
 ## Upload flow
 
-1. Client asks the API for an upload slot: filename, declared content type, declared size.
+1. Client asks the API for an upload slot: declared content type, declared size. **Corrected in
+   `16-01`**: this step said "filename" and the implementation never took one.
+   `CreateAttachmentRequest` is `(ContentType, SizeBytes)`, and the object key's extension is looked up
+   from the server's own content-type allowlist, never taken from the client
+   (`CreateAttachmentHandler`). That is worth keeping deliberately rather than by accident: it is a
+   security property (`AttachmentOptions`'s own remark - a client cannot graft an executable extension
+   onto an object) *and* a data-minimisation one, since a visitor's filename is frequently personal
+   data in its own right and never enters this system at all. Adding a "show the original filename"
+   feature adds a column, a wire field and an export field, and belongs in `personal-data.md` the day
+   it does.
 2. API validates: per-site quota, per-visitor rate limit, size ceiling, extension/type allowlist.
    It creates an `attachments` row with state `pending` and returns a presigned PUT URL scoped to
    one object key, one method, one content type, expiring in minutes.

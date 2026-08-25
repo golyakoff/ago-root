@@ -26,6 +26,12 @@ Authoritative sources: `docs/architecture/data-model.md`, `adr/0004`, `adr/0011`
 4. Indexes, partial indexes, partitions, and any raw DDL go into the migration through
    `migrationBuilder.Sql`, never into a side script that will drift from the code.
 5. Update `data-model.md` in the same change if the shape or an index rationale changed.
+6. **If the column holds anything about a person, update `docs/architecture/personal-data.md` in the
+   same change** - the row it needs is store, what is held, how long, and what removes it. "About a
+   person" is broader than a name or an email: free text a user typed, an uploaded file, an IP
+   address, a device or session identifier that singles someone out, and a timestamp of what someone
+   did all count. If the answer to "what removes it" is "nothing", write that - an honest blank is
+   what makes `16-02`'s erasure work possible; a missing row is what makes it wrong.
 
 ## Index and query rules
 

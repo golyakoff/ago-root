@@ -1,10 +1,17 @@
 # Personal data
 
-What personal data this system holds, where it lives, why it exists, and how it is removed. Written
-2026-08-25, as the prerequisite artifact for `roadmap.md`'s Stage 16 — deletion and export cannot be
-built correctly against a system nobody has inventoried.
+What personal data this system holds, where it lives, under whose control, for how long, and what
+removes it. Written 2026-08-25 as the prerequisite artifact for `roadmap.md`'s Stage 16 — deletion and
+export cannot be built correctly against a system nobody has inventoried — and **verified against the
+code, the migrations and the manifests on 2026-08-25 by `16-01`**, which corrected two rows that were
+wrong and added six stores the first pass did not list.
 
-This file states facts about the system and the constraints they imply. It is not legal advice and
+Every row below cites where the fact came from. That is the point of the file: a personal-data map
+assembled from memory is exactly the artifact that gets a residency answer wrong. Where a fact could
+not be established from this workspace it says so rather than guessing a plausible value — see
+*What is unestablished*.
+
+This file states facts about the system and the constraints they imply. It is **not legal advice** and
 does not decide AGO's legal position; that determination is recorded as an open question in the
 private `ago-business` repository and needs a lawyer, exactly the way `ago-business`'s own channel
 research already gates Meta's Business API behind one.
@@ -31,65 +38,190 @@ why an operator avatar has deliberately **not** been added: an image of a person
 category of data plus another upload path with its own deletion, quota and moderation surface, for a
 benefit initials already provide (author's decision, 2026-08-25).
 
-**Erasure is nevertheless tractable here, by earlier design luck.** Message content lives in exactly
-two places. `MessageAccepted` deliberately carries no body ("a consumer that needs it reads
-`GetConversationHistory` instead"), and webhook deliveries deliberately carry none either ("never a
-message body", `backlog/6-05`). So the outbox and the delivery log hold no copies of the text — the
-usual reason erasure in an event-driven system is intractable does not apply.
+**Erasure is nevertheless tractable here, by earlier design luck — but less tractable than the first
+draft of this file claimed.** Message content at rest in the application's own database lives in
+exactly two places, `messages.body` and the object store — the widget caches no bodies in the browser,
+only ids and a sequence number. `MessageAccepted` deliberately
+carries no body ("a consumer that needs it reads `GetConversationHistory` instead" — verified: its
+record has seven fields and none is the text, `Ago.Chat.Contracts/MessageAccepted.cs`), and webhook
+deliveries deliberately carry none either (verified: the payload is built once as
+`WebhookEventPayload(EventType, ConversationId, OccurredAt)`,
+`DispatchWebhooksForEventHandler.cs:65`). So the outbox and the delivery log hold no copies of the
+text — the usual reason erasure in an event-driven system is intractable does not apply *to those two*.
+
+What `16-01` found is that it does apply, in a narrow and bounded way, **to the broker**. The realtime
+fan-out path serialises a full `MessageDto` — body included — into `NodeDelivery.PayloadJson` and
+publishes it as an ordinary event (`Ago.Platform.Realtime/NodeFanoutPublisher.cs`), and
+`RabbitMqEventPublisher` marks every message `Persistent = true` onto durable queues
+(`RabbitMqEventPublisher.cs:46`, `RabbitMqEventConsumer.cs:39-46`) backed by a PVC
+(`ago-deploy/k8s/base/rabbitmq.yaml`). In steady state those messages are consumed within
+milliseconds and gone. The bounded exception is in the table below.
 
 ## Where it lives
 
-| Store | Personal data | Why it is there | Removal path |
-|---|---|---|---|
-| `messages.body` (Postgres) | Free text; anything a visitor or operator typed | The product | Row deletion, or partition drop (`15-04`) |
-| MinIO objects + thumbnails | Attachment bytes; anything a visitor uploaded | The product (`file-storage.md`) | Object deletion; `5-04`'s sweeper already deletes orphans |
-| Keycloak database | Email, first/last name, password hash, sessions | Authentication (`adr/0022`, `adr/0028`); email is required, not optional — `10-01` gates accounts on verification and `10-05` adds password reset | Keycloak user deletion (needs `15-01`'s persistent store to be meaningful) |
-| `sites.name`, `allowed_origins` | The customer's business identity, not a natural person's | Tenancy, CORS (`5-01`) | Row deletion |
-| `visitors.token_hash` | A pseudonymous identifier — not a name, but it singles out a returning person | Recognising a returning visitor (`vision.md`) | Row deletion |
-| Redis | Rate-limit buckets, including one keyed by client IP (`RegisterSiteHandler`); presence; connection registry | Abuse control (`3-05`), realtime (`3-01`) | Expires on its own TTL; never a source of truth (`caching.md`) |
-| Edge access logs | Client IP per request | NGINX's own logging (`edge.md`) | Log retention — **not currently defined anywhere** |
-| Traces / metrics | Unverified — spans may or may not carry identifiers or content | Observability (`7-01`, `7-02`) | Unverified; `backlog/16-05` is the audit |
-| Retention archive | Expired conversation history, in `16-03`'s export format | `adr/0031`: expired history is archived rather than deleted, retrievable as a file on request | Object deletion — and the store's class must permit it, which `adr/0031` records as a selection constraint |
-| Backups | Copies of all of the above | Recoverability (`15-02`) | Retention window only — see below |
+Ordered roughly by how much a person would mind. "Control" means who can physically reach the bytes,
+not who is legally answerable for them — that second question is `16-04`'s and a lawyer's.
 
-Two stores that carry **no** personal data, deliberately, and should stay that way: `outbox.payload`
-and `webhook_deliveries.payload`, both body-free by contract. `operators` holds no name or email
-either — identity lives in Keycloak and is joined by `external_subject_id` (`authorization.md`), so
-the application database never duplicates it. A change that adds a name column to `operators`, or a
-body to an integration event, is not a small change; it converts erasure from a two-place problem
-into a five-place one.
+| Store | What is held | Control | How long | What removes it | Verified from |
+|---|---|---|---|---|---|
+| `messages.body` (Postgres) | Free text; anything a visitor or operator typed | AGO, on its own node (`adr/0026`) | **Forever.** No pruning exists today | Row deletion; `ON DELETE CASCADE` from `conversations`, and from `sites` through it. Partition drop once `15-04` exists | `AgoChatDbContextModelSnapshot.cs`; `Stage1CreateChatSchema.cs` FKs; `PartitionMaintenanceJob` **only creates** partitions, never drops |
+| `attachments` rows + the MinIO objects they point at | Attachment bytes — a photo, a document, a screenshot — plus content type and size | AGO | **Forever.** No retention job | `DeleteAttachmentHandler` deletes the object *and* the thumbnail; `5-04`'s sweeper deletes only objects whose row never got a `message_id`. **Gap: deleting a conversation cascades the `attachments` rows and leaves the MinIO objects behind** — nothing joins the two | `DeleteAttachmentHandler.cs:55-95`; `AttachmentOrphanSweepJob`; `Stage5AddAttachments.cs` cascade FKs |
+| Keycloak's user store | Email (required — `verifyEmail: true`), username, first/last name, password hash, sessions | AGO | Until the account is deleted. **New since 2026-08-25**: it now survives restarts | Keycloak user deletion | `adr/0036`; `k8s/base/keycloak-realm-import.json` |
+| `visitors` | `id`, `site_id`, `first_seen_at`, `last_seen_at` — **and nothing else** | AGO | Forever | Row deletion; cascades from `sites` | `Stage1CreateChatSchema.cs:69-86`, `Visitor.cs` |
+| `conversations` | The visitor↔operator pairing, timestamps, unread counters | AGO | Forever | Row deletion; cascades from `sites` | schema snapshot |
+| `sites.name`, `sites.allowed_origins` | The customer's business identity, not a natural person's — though a sole trader's business name often is their name | AGO | Forever | Row deletion | `Stage10AddSiteName.cs`, schema snapshot |
+| `operators` | `id`, `site_id`, `status`, `capacity`, `active_chats`, `external_subject_id`. **No name, no email** — identity is joined from Keycloak by subject | AGO | Forever | Row deletion | schema snapshot; `authorization.md` |
+| Redis | Rate-limit buckets — one keyed by **client IP** (`register-site:ip:{ip}`); presence sets and the connection registry, keyed by principal | AGO | Bucket TTL is `ceil(capacity / refill_per_second) + 1` seconds — **≈3601 s (~1 h) for the IP bucket at its default capacity 10, refill 10/3600**. Registry entries: 30 s | Redis expiry. **But**: the deployment mounts a PVC at `/data` and passes no `command:`, so `redis:7-alpine`'s built-in RDB save points apply and the keyspace is written to disk. Expiry survives a reload, so nothing comes back alive — the snapshot file itself is never separately erased | `RegisterSiteHandler.cs:52-67`, `RegisterSiteRateLimitOptions.cs`, `RedisRateLimiter.cs` (Lua `ttl` line), `ConnectionRegistryOptions.cs:12`, `k8s/base/redis.yaml`, `docker/docker-compose.yml:45-51` |
+| RabbitMQ, `deliver-to-connections.{node}` queues | **Message bodies**, inside `NodeDelivery.PayloadJson` | AGO | Milliseconds in steady state. **The exception**: the node id is the pod name (`HOSTNAME`), the queue is `durable, autoDelete: false`, and nothing deletes it — so each pod replacement leaves a queue behind, holding whatever was in flight when the pod died, indefinitely. Publishing to a dead node stops within the registry's 30 s TTL, which bounds *how much*, not *how long* | Nothing automatic. `NodeDeliveryConsumer`'s own remarks already call the queue leak "accepted, not solved… nothing in this project has a queue-retention policy yet" — what was not recorded anywhere is that the leaked queue can contain message text | `NodeFanoutPublisher.cs`, `MessageDto.cs`, `NodeTopics.cs`, `ServiceCollectionExtensions.ResolveNodeId`, `RabbitMqEventConsumer.cs:41-46`, `NodeDeliveryConsumer.cs:15-23`, `k8s/base/rabbitmq.yaml` |
+| RabbitMQ dead-letter queues (`*.dlq`) | The full envelope of a poisoned message — including a `NodeDelivery` body, for `deliver-to-connections.{node}.dlq` | AGO | **Indefinitely.** Durable, no TTL, no consumer, no purge job | Nothing automatic | `RabbitMqEventConsumer.cs:59-61`, `NodeDeliveryConsumer.cs:47` |
+| `outbox.payload` | Body-free by contract — ids, kinds, sequences, trace context | AGO | **Forever.** Rows are stamped `published_at` and never deleted | Nothing automatic | schema snapshot; no `DELETE FROM outbox` exists anywhere in either backend repo |
+| `webhook_deliveries.payload` | Body-free by contract | AGO | Forever | Nothing automatic | `DispatchWebhooksForEventHandler.cs:61-67` |
+| `webhook_deliveries.response_snippet` | Up to 2000 characters of **the tenant's own server's response body**, whatever it happens to contain | AGO | Forever | Nothing automatic | `WebhookDelivery.MaxResponseSnippetLength`, `HttpWebhookDeliveryClient.cs:176-183` |
+| The visitor's own browser | `localStorage`: the signed visitor token (30-day `exp`), the visitor id, the current conversation id, a last-seen sequence per conversation. **No message bodies** | The visitor's device | The token expires after 30 days; **the `localStorage` entries themselves never do** — the widget has no clear path and no "forget me" control | The visitor clearing site data. Nothing in the product | `ago-widget/src/storage.ts`, `JwtTokenService.VisitorTokenLifetime`, `adr/0034` |
+| The operator's own browser | `sessionStorage`: the OIDC tokens for scope `openid profile email`, so the ID token carries email and name | The operator's device | Cleared when the tab closes — `oidc-client-ts` with `WebStorageStateStore(sessionStorage)`, chosen deliberately over `localStorage` | Closing the tab; signing out | `ago-console/src/auth/userManager.ts:15-26` |
+| Traces (Jaeger) | Span attributes — ids, connection ids, topic names. Whether any span carries content or a token is **unaudited** (`16-05`) | AGO | Until the pod restarts. `jaegertracing/all-in-one` with no PVC and no storage backend configured = in-memory only | Pod restart, which on this cluster is frequent | `k8s/base/jaeger.yaml:20-24` (its own comment: "In-memory storage only") |
+| Metrics (Prometheus) | Aggregates, on a PVC. Labels are site/consumer/topic-shaped, not person-shaped, as far as `7-02`'s instruments go | AGO | Until the PVC is reclaimed; no retention flag set | Nothing automatic | `k8s/base/prometheus.yaml` |
+| Application logs | Structured, and scanned for this item: every log statement in `Ago.Chat.*` interpolates ids, counts, statuses and object keys — **no message body, no email, no IP** was found | AGO, via the container runtime | Whatever the node's log rotation does — **not defined by anything in this project** | Nothing this project owns | grep over every `Log*(` call in `ago-chat/src` |
+| Edge access logs | Client IP per request, by NGINX's own default logging | AGO | **Undefined.** No retention policy exists | Nothing | `edge.md`; `17-02` is the item that owns this surface |
+| Backups | Copies of everything above that lives on a PVC | **Open — this is `15-02`'s decision, and it is the reason this file exists now** | The retention window `15-02` sets | The window expiring | `backlog/15-02` |
+| Retention archive | Expired conversation history in `16-03`'s export format | AGO, or a destination `adr/0031` has not chosen | `adr/0031`: archived rather than deleted | Object deletion — and the store's class must permit it, which `adr/0031` records as a selection constraint | `adr/0031` |
+
+### Two corrections `16-01` made to the first draft
+
+**There is no `visitors.token_hash`.** Both this file and `data-model.md` described a column that was
+never built. `visitors` is `id`, `site_id`, `first_seen_at`, `last_seen_at` — verified against the
+Stage 1 migration, the EF model snapshot and `Visitor.cs`, and the string `token_hash` does not occur
+anywhere in `ago-chat`. The visitor token is a stateless signed JWT carrying `sub` (visitor id),
+`site_id` and `kind`; the server keeps no copy of it, and the browser is the only place it is stored.
+This *strengthens* the minimisation story and *weakens* one erasure story: there is no server-side
+handle to revoke, which is exactly the gap `adr/0034` decided to leave open ("no deny-list, because
+there is no caller").
+
+**Attachments never carry the visitor's filename.** `POST /api/v1/conversations/{id}/attachments`
+takes `(ContentType, SizeBytes)` and nothing else; the object key is
+`site/{siteId}/conv/{conversationId}/{attachmentId}{ext}` with the extension looked up from the
+server's own allow-list, never from the client. So `receipt-for-ivan-petrov.pdf` never enters the
+system at all. `file-storage.md` step 1 said the client sends a filename; it was corrected in the same
+change as this file. **Preserve this**: a "show the original filename" feature would add a new personal
+-data field to the schema, the wire and any export.
+
+## Retention, stated plainly
+
+Worth its own heading because the table's "How long" column has one dominant value.
+
+**Nothing in this system is ever deleted automatically, anywhere, except by a TTL in Redis and by the
+attachment orphan sweep.** No message pruning, no partition drop, no outbox trim, no inbox trim, no
+webhook-delivery trim, no queue purge, no log or trace retention policy this project owns. Every
+"Removal path" in the table above that is not a TTL is *a thing a human or a future item would have to
+run*. `15-04` and `adr/0031` are where that changes; `16-02` is where per-person erasure arrives.
+
+Two stores carry **no** personal data, deliberately, and should stay that way: `outbox.payload` and
+`webhook_deliveries.payload`, both body-free by contract and both now stated as such in
+`messaging.md` and `api-design.md` so that a later change has to argue with a written rule rather than
+merely fail to notice one. `operators` holds no name or email either. A change that adds a name column
+to `operators`, or a body to an integration event, is not a small change: it converts erasure from a
+two-place problem into a five-place one, and it converts an append-only table that is currently
+retained forever into a personal-data store that is retained forever.
 
 ## Standing constraints
 
-These are constraints on decisions the backlog has already opened, and they exist here so they are
-applied rather than rediscovered per item.
+These are constraints on decisions the backlog has already opened. They exist here so they are applied
+rather than rediscovered per item.
 
-**Data residency.** Russian law requires personal data of Russian citizens to be processed in
-databases located in Russia. The deployment already is (`adr/0026`, a Russian VPS) — but that was a
-cost and latency decision, not a data-protection one, and nothing recorded it as a constraint until
-now. It binds three open vendor questions directly: `10-05`'s email provider, `15-02`'s off-node
-backup destination, and any future object-storage or SMS vendor (`20-05`, `14-03`). Each of those
-moves personal data across the boundary if answered carelessly. `15-06`'s container registry does
-not: images carry no personal data.
+### Data residency
 
-**Deletion versus backups.** A restore returns what was deleted. The resolution here is a bounded
-backup retention window, after which deletion is complete because no copy survives — written into the
-privacy policy honestly rather than claimed as immediate (author's decision, 2026-08-25). The
-alternative considered and rejected was a deletion journal replayed after every restore: more precise,
-but the journal is itself a list of people who asked to be forgotten, which is a worse thing to hold
-than the short window it removes. `15-02` must set its retention to a number this policy can state.
+**The constraint, stated so it can be checked rather than recalled.**
 
-**Who answers to whom.** Working direction, to be confirmed by the lawyer and recorded in an ADR by
-`backlog/16-04`: AGO is the controller for its own account holders' data (they registered with AGO),
-and a processor acting on the tenant's instruction for visitors' conversation data (the visitor was
-the shop's customer, not AGO's). That split is what makes tenant-initiated export and deletion a
-product requirement rather than a courtesy, and it is why the widget carries a processing notice the
-tenant configures (`16-04`) — AGO supplies the mechanism, the tenant owns the text and its accuracy.
+Russian law requires that recording, systematisation, accumulation, storage, amendment and retrieval
+of personal data of Russian citizens be carried out using databases located in Russia — the
+localisation rule, commonly cited as 152-ФЗ art. 18 п. 5. That citation is here for orientation, not
+as a reading: *the precise reach of the rule — whether a given vendor arrangement is "processing in a
+database" or a permitted onward transfer, and what an operator must notify and when — is a lawyer's
+determination, not this file's* (`16-04`).
+
+What this file does assert, because they are facts about this system rather than readings of a statute:
+
+1. **The primary stores are in Russia today.** `adr/0026` put the deployment on a Russian VPS, for cost
+   and latency. Nothing recorded it as a data-protection constraint until now, so it was a happy
+   accident; from 2026-08-25 it is a constraint.
+2. **Therefore the default answer for any new destination is "in Russia", and moving one out is a
+   decision that must be made explicitly, in writing, with the legal question asked first** — not a
+   side effect of picking whichever vendor had the nicer API.
+3. **The rule binds destinations, not images.** `15-06`'s container registry is out of scope: images
+   carry no personal data.
+
+**What it binds, and what each item must now answer before it chooses:**
+
+| Item | The vendor question | What crosses the boundary if answered carelessly |
+|---|---|---|
+| `10-05` transactional email | Which sending provider | Every account holder's email address, plus the content of verification and password-reset mail |
+| `15-02` backup and verified restore | Which off-node destination | A complete copy of every store in the table above — the single largest transfer this project could make |
+| `20-05` / `14-03` SMS and channel vendors | Which gateway | Phone numbers, and message text on any channel that carries it |
+| `adr/0031`'s archive store | Where expired history is archived | Whole conversation transcripts |
+| Any future object-storage vendor | Where attachment bytes live | Documents and photographs visitors uploaded |
+
+`10-05` and `15-02` each carry this constraint in their own Open questions as of 2026-08-25, so
+neither can be answered without meeting it.
+
+**A related trap, named because it is easy to walk into:** `adr/0034` declined a registration CAPTCHA
+partly because Google's reCAPTCHA "would attach a Google call to the sign-up path just as `16-01` is
+about to write down a data-residency constraint". That reasoning generalises — a third-party script on
+a page where a person is typing their details is a transfer, whatever it is called.
+
+### Deletion versus backups
+
+A restore returns what was deleted. The resolution here is a bounded backup retention window, after
+which deletion is complete because no copy survives — written into the privacy policy honestly rather
+than claimed as immediate (author's decision, 2026-08-25). The alternative considered and rejected was
+a deletion journal replayed after every restore: more precise, but the journal is itself a list of
+people who asked to be forgotten, which is a worse thing to hold than the short window it removes.
+`15-02` must set its retention to a number the policy can state.
+
+`16-01` adds one item to that reasoning: the window has to cover **RabbitMQ's PVC and the leaked node
+queues too**, not only Postgres and MinIO, because that is where the map found message text outside
+the two places everyone thinks about.
+
+### Who answers to whom
+
+Working direction, to be confirmed by the lawyer and recorded in an ADR by `backlog/16-04`: AGO is the
+controller for its own account holders' data (they registered with AGO), and a processor acting on the
+tenant's instruction for visitors' conversation data (the visitor was the shop's customer, not AGO's).
+That split is what makes tenant-initiated export and deletion a product requirement rather than a
+courtesy, and it is why the widget carries a processing notice the tenant configures (`16-04`) — AGO
+supplies the mechanism, the tenant owns the text and its accuracy.
+
+## What is unestablished
+
+Written down rather than guessed, because a map is most dangerous where it is confident and wrong.
+
+- **What Keycloak's brute-force protection stores, and where.** `adr/0034` turned
+  `bruteForceProtected` on, and Keycloak's attack-detection view reports per-user failure counts — its
+  model also carries a last-failed-login IP. Whether that record lives in the `keycloak` database
+  (persistent since `adr/0036`) or in an in-memory Infinispan cache in this Keycloak version was not
+  verified against a running instance and is **not** asserted here either way. Worth ten minutes with
+  `psql` before `15-02` decides what a backup contains.
+- **Whether Keycloak sessions are persisted** in this version and configuration — same reason, same
+  method.
+- **What trace spans actually carry.** `16-05` is the audit and it needs running instrumentation to
+  look at, not a reading of the code. The table's Traces row says only what the manifest proves.
+- **What the node's own log rotation does** with container stdout and with NGINX's access log. Nothing
+  in `ago-deploy` configures it, so the answer is whatever the distribution's default is — unverified.
+- **Whether Prometheus label cardinality includes anything person-shaped** under load; `7-02`'s
+  instruments look site- and consumer-scoped, but that was read, not measured.
+
+## Keeping this true
+
+An inventory that drifts is worse than none, because it will be trusted. Three places now name this
+file, so that a change that widens the map is a change that has to think about it:
+
+- `data-model.md` — "the file a schema change updates".
+- `.claude/skills/db-migration` — step 5 of *Making the change*.
+- `.claude/skills/messaging-contract` — step 1, on adding a field to a contract.
 
 ## What is not decided here
 
 The legal questions — notification to the regulator, the published policy and offer text, the
-processing clause in the tenant agreement, and whether any given incident is notifiable and on what
-deadline — belong in `ago-business` and to a lawyer. What this file commits to is the engineering
-side: knowing where the data is, being able to remove it, being able to hand it over, and not
-quietly widening the list above without noticing.
+processing clause in the tenant agreement, whether AGO is controller or processor for which dataset,
+and whether any given incident is notifiable and on what deadline — belong in `ago-business` and to a
+lawyer. What this file commits to is the engineering side: knowing where the data is, being able to
+remove it, being able to hand it over, and not quietly widening the list above without noticing.

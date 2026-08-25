@@ -16,6 +16,12 @@ In `Ago.Chat.Contracts` (never in Domain, never in Application):
   `CorrelationId`, plus identifiers and only the payload a consumer cannot cheaply look up.
 - Never contains a domain entity. Mapping domain event to contract happens in Application, so that
   refactoring an aggregate is not a breaking wire change.
+- **Never contains a message body, and never contains anything else about a person that the event's
+  ids do not already imply.** This is a privacy property, not only a size one (`messaging.md`,
+  `personal-data.md`): `outbox.payload` is a table nothing prunes, so whatever a contract carries is
+  retained indefinitely. A field that adds personal data to a contract is additive on the wire and
+  load-bearing for erasure - say so in the change, and add the row to `personal-data.md` in the same
+  commit.
 
 ## 2. Version it correctly
 

@@ -52,14 +52,68 @@ of a happy accident.
 
 ## Done when
 
-- [ ] `personal-data.md` exists, lists every store, and is referenced from `data-model.md`.
-- [ ] `data-model.md`'s "no PII by design" sentence is corrected.
-- [ ] `10-05` and `15-02` each carry the residency constraint in their own Open questions, so neither
+- [x] `personal-data.md` exists, lists every store, and is referenced from `data-model.md`.
+- [x] `data-model.md`'s "no PII by design" sentence is corrected.
+- [x] `10-05` and `15-02` each carry the residency constraint in their own Open questions, so neither
       can be answered without it.
-- [ ] `messaging.md` and `api-design.md` state that integration events and webhook payloads stay
+- [x] `messaging.md` and `api-design.md` state that integration events and webhook payloads stay
       body-free, and why that is now a privacy property and not only a size one.
-- [ ] The migration guidance names the map as something a schema change updates.
+- [x] The migration guidance names the map as something a schema change updates
+      (`db-migration` step 6, and the same obligation in `messaging-contract` step 1 for a contract
+      field).
+
+## What the verification pass found
+
+The item was written as "recording what is already true", so the work that mattered was checking
+whether it *was* true. Every row of the table now cites the entity, migration, manifest or config it
+came from. Five things did not survive that check.
+
+- **`visitors.token_hash` does not exist and never did.** Both `personal-data.md` and `data-model.md`
+  described the column; `Stage1CreateChatSchema`, the EF model snapshot and `Visitor.cs` all say the
+  table is `id`, `site_id`, `first_seen_at`, `last_seen_at`, and the string does not occur anywhere in
+  `ago-chat`. The visitor token is a stateless signed JWT the server never stores. Both files
+  corrected.
+- **Message bodies do cross the broker.** The realtime fan-out serialises a full `MessageDto` into
+  `NodeDelivery.PayloadJson`, published `Persistent = true` onto a durable queue. The claim that
+  message content lives in exactly two places was true of Postgres and not of the system. Bounded, and
+  recorded with its bound.
+- **Nothing is ever deleted automatically, anywhere,** except Redis TTLs and the attachment orphan
+  sweep. No message pruning, no outbox or inbox trim, no webhook-delivery trim, no queue purge, no
+  retention policy this project owns for logs or traces. The map now says so under its own heading
+  rather than leaving it implied by fourteen "Removal path" cells.
+- **Attachments never carry the visitor's filename** — `CreateAttachmentRequest` is
+  `(ContentType, SizeBytes)` and the extension comes from the server's allowlist. A real minimisation
+  property that nothing had recorded; `file-storage.md`'s step 1 claimed the opposite and was
+  corrected.
+- **Redis is snapshotted to a PVC.** Both the manifest and `docker-compose` mount `/data` and pass no
+  `command:`, so `redis:7-alpine`'s built-in save points apply. Expiry survives a reload so nothing
+  comes back alive, but "it is only in memory" was not a safe assumption to carry into `15-02`.
+
+## Found but deliberately not built
+
+Both are mechanisms, and this item is a document.
+
+- **Deleting a conversation orphans its MinIO objects.** `attachments` rows cascade from
+  `conversations`; the bytes do not, and the orphan sweeper only claims rows that never got a
+  `message_id`. `16-02` already lists MinIO in its reach — this is the specific shape of the trap it
+  has to avoid, not a new item.
+- **Leaked node queues can hold message text indefinitely.** The node id is the pod name, the queue is
+  `durable, autoDelete: false`, and each pod replacement leaves one behind; the matching `*.dlq` has no
+  TTL and no consumer either. `NodeDeliveryConsumer`'s own remarks already accept the queue leak — what
+  nobody had written down is what the leaked queue contains. **This needs an owner and has none**;
+  `15-04` (retention and pruning jobs) is the closest fit, since it is the item that would be adding
+  the project's first retention mechanism anyway.
 
 ## Open questions
 
-None. Everything here is recording what is already true.
+None of this item's own. Five facts it could not establish from the workspace are listed in
+`personal-data.md`'s *What is unestablished* section rather than guessed — chiefly what Keycloak's
+brute-force protection and session store actually persist now that `adr/0036` gave it a real database,
+which `15-02` should settle before it decides what a backup contains. `16-05` owns the logs-and-traces
+half.
+
+**No ADR was written.** `0039` was reserved for this item and is left unclaimed: nothing here chooses
+between real alternatives. The residency constraint is a consequence of `adr/0026` plus a statute, not
+a decision this item made, and the decisions it binds (`10-05`'s provider, `15-02`'s destination) are
+the ones that should carry ADRs — made against the constraint rather than justified afterwards, which
+was the whole reason for pulling this item ahead of its stage.
