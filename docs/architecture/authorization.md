@@ -36,7 +36,10 @@ JWKS is the signature source there, no local key involved at all.
 | **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants exactly one thing as of `12-02`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview. No write or action surface for this actor exists |
 
 `site_id` scoping is the one piece already load-bearing everywhere (`vision.md`: "multi-tenant from
-day one"). Every candidate model below keeps it; none of them replace it. The **platform owner** is
+day one") - **and "everywhere" is now a checked claim rather than an assumption**: every use case,
+route and read query is classified in `tenant-isolation.md`, and `17-01` found one place where the
+scoping was genuinely absent (see the section on it at the end of this file). Every candidate model
+below keeps it; none of them replace it. The **platform owner** is
 the one deliberate exception, and it is an exception *outside* the model rather than a hole in it -
 `adr/0032`: an owner is not an `Operator` with a wider scope, it is a caller the RBAC model has no
 representation for at all, recognised by a claim that model can never write.
@@ -274,6 +277,43 @@ password guessing and do nothing about account creation. What bounds it today is
 account cannot finish email verification while the realm has no SMTP server (`10-05`), so it can never
 reach `10-02`'s bootstrap endpoint and never becomes a tenant. The trigger is the day that stops being
 true.
+
+## Tenant isolation: classified, guarded, and one hole closed - `17-01`
+
+Everything above answers "may this operator do X". This section is about the question next to it -
+"may they do X **to that tenant's data**" - and it is the one this document previously left implicit.
+
+**The classification is `tenant-isolation.md`**, a sibling file, and it is where to go for detail:
+all 37 use-case entry points, all 21 tenant-carrying routes and hub methods, and all 5 read-model
+queries, each with the provenance of its `site_id` and the gate that protects it. Only the headline
+belongs here: 21 entry points are RBAC-gated, 16 are deliberately not and each says why, and exactly
+one query in the codebase (`12-02`'s owner overview) reads across tenants at all.
+
+**`17-01` found a real cross-tenant hole, and it is worth recording as a correction to what this
+document used to imply.** The sentence "`site_id` scoping is the one piece already load-bearing
+everywhere" was read - reasonably - as "the boundary is complete, only the proof is missing." It was
+not. `AssignConversationHandler` checked `conversation:assign` for the site on the caller's own token
+and then assigned whatever conversation id it was handed, never comparing the two, so an operator of
+one site could claim a *waiting* conversation belonging to another and then pass every downstream
+check legitimately - history, sending as that tenant's operator, closing, attachments, presence - all
+of which gate on being the conversation's assigned operator and nothing else. Fixed by one
+belongs-to-site comparison in that handler, returning `NotFound` rather than `Forbidden` (another
+tenant's row must be indistinguishable from a nonexistent one, matching `DeleteAttachmentHandler` and
+`RevokeWebhookEndpointHandler`).
+
+The lesson is specific and it changes how the model should be read: **`IPermissionChecker` answers
+half the question.** It proves the caller may act on a site they named; it says nothing about whether
+the object they then loaded by id belongs to that site. `adr/0016` always drew that line - "RBAC
+answers may this operator act at all, a per-conversation comparison answers on this one" - but the
+second half had no systematic accounting until now, which is exactly how one handler came to be
+missing it.
+
+**A guard now exists**, `Ago.Chat.Architecture.Tests.TenantScopeTests`, in the same spirit as `0-02`'s
+layering tests: every use case must take a `SiteId` and check `IPermissionChecker`, or appear in an
+explicit exemption list with a stated reason - and the list is checked in both directions, so a stale
+exemption fails as loudly as a missing one. Its own limit is stated plainly because it matters here:
+it detects a *missing* check, never a check made against the wrong site. `17-01`'s finding would not
+have tripped it. Ownership comparisons are covered by tests, one per branch, not by a rule.
 
 ## Done when nothing here is open anymore
 
