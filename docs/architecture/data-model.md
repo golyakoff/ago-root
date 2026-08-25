@@ -15,7 +15,13 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   constraint restricting it to `'bottom-right'`/`'bottom-left'` - cheap storage-level backstop for the
   `Position` enum, matching this table's own `Ago.Chat.Domain.Position`/`PositionConverter` mapping
   (kebab-case in the column, the CLR enum's own member names on the wire - the two boundaries are free
-  to differ).
+  to differ). **`created_at timestamptz NULL` added in `12-02`** (`Stage12AddSiteCreatedAt`,
+  additive/reversible) - the same kind of real gap `name` records above: `12-02`'s owner overview needs
+  a per-tenant creation time and this table had none, though `conversations`, `messages` and
+  `attachments` all carry one. **Nullable with no default and no backfill, on purpose**: giving existing
+  rows `DEFAULT now()` would stamp the demo tenant and every previously-registered site with the instant
+  the migration ran and present that as fact. `null` means "not recorded"; the only writer is
+  `RegisterSiteHandler`, from `IClock`.
 - `visitors` - `id`, `site_id`, `token_hash`, first/last seen. No name, email or contact detail by
   design - the row identifies a returning browser, not a named person. **Qualified 2026-08-25**: that
   is true of these columns and misleading about the dataset, since `messages` next to it holds whatever
@@ -146,6 +152,31 @@ re-run); a real caller hitting `POST /api/v1/sites` gets exactly one attempt, so
 here must not leave a site with no roles or an operator that resolves to nothing. Every other write
 in this codebase still follows the one-aggregate rule above unchanged.
 
+**The one cross-tenant read, `12-02`**: `PlatformOverviewReadStore.ListSitesAsync`
+(`IPlatformOverviewReadStore`) is the only query in `ago-chat` that is not scoped to a single
+`site_id`. Every other read takes a tenant-scoped id and its `WHERE` clause cannot address another
+tenant's rows; this one deliberately takes no site parameter, because "how many accounts exist and what
+is each one doing" has no answer inside one tenant. It is safe for a structural reason rather than a
+careful one: exactly one endpoint reaches it (`GET /api/v1/owner/sites`), gated exclusively by `12-01`'s
+`RequirePlatformOwner` (`adr/0032`), which is satisfied only by a Keycloak *realm* role - no row in
+`roles`/`operator_roles`, however broadly seeded, can satisfy it. Read-only: one `SELECT`, no write
+surface for the owner exists.
+
+Two things about its shape are worth recording here because the table definitions above do not make them
+obvious:
+
+- **`messages` carries no `site_id`.** The tenant is reachable only through `conversations`, so any
+  per-site message aggregate is a join (`conversations` filtered by `site_id` via
+  `ix_conversations_site_all`, then each conversation's messages on the
+  `(conversation_id, sequence, created_at)` unique index).
+- **A per-site message count must be time-bounded, not all-time.** Because `messages` is partitioned by
+  `created_at` (above), a predicate on that column is what lets Postgres prune to the partitions the
+  window covers; an all-time `COUNT(*)` or `MAX(created_at)` reads every partition that has ever existed
+  and degrades for the life of the deployment. `12-02` uses a 30-day window - at most two monthly
+  partitions - for both its message count *and* its "last activity", the latter being a real narrowing
+  of what that field can mean (backlog `12-02` states it). The aggregates are computed per page row, so
+  the work per request is bounded by the page size rather than by how many tenants exist.
+
 ## Migrations
 
 **Verified**: `Stage1CreateChatSchema` (`1-04`) applied cleanly to a real Postgres (both the
@@ -170,6 +201,9 @@ above for why reversing it is a data-recovery procedure, not a rollback.
 verified from-scratch the same way: `active_chats` lands as a genuine EF-visible shadow property
 (confirmed by `OperatorCapacityStoreTests`' concurrent-claim proof actually reading/writing it), and
 `ix_conversations_waiting` replaces the default FK index cleanly with no query regression found.
+`Stage12AddSiteCreatedAt` (`12-02`) is additive and reversible, verified the same from-scratch way
+(`PlatformOverviewFixture` migrates a fresh Postgres and then reads the column back through the real
+query): one nullable `timestamptz`, no default, no backfill, no table rewrite.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
