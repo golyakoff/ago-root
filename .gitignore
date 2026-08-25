@@ -38,10 +38,11 @@ Thumbs.db
 .DS_Store
 
 # Each component is its own git repository living beside this one (../ago-platform, ../ago-chat,
-# ../ago-widget, ../ago-console, ../ago-deploy), reachable here through Windows junctions for
-# convenience. Never track their contents from this repo.
+# ../ago-calendar, ../ago-widget, ../ago-console, ../ago-deploy), reachable here through Windows
+# junctions for convenience. Never track their contents from this repo.
 /platform
 /chat
+/calendar
 /widget
 /console
 /deploy

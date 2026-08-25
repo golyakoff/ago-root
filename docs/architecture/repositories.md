@@ -7,24 +7,31 @@ the whole tree being moved:
 ```
 ago/
   ago-root/       this repository — docs, ADRs, conventions, skills, backlog, load/
-  ago-platform/   ago-chat/   ago-widget/   ago-console/   ago-deploy/
+  ago-platform/   ago-chat/   ago-calendar/   ago-widget/   ago-console/   ago-deploy/
 ```
 
-`ago-landing` was added later than the five above (it ships the marketing page routed at the apex
+`ago-calendar` was added on 2026-08-25 by `backlog/20-00-repository-scaffold-and-platform-consumption.md`:
+the second *product* on the platform (booking/scheduling), and the first real test of the claim this
+whole topology exists to support — that `Ago.Platform.*` is consumable by something that is not AGO
+Chat. It ships two hosts (`Ago.Calendar.Api`, `Ago.Calendar.Worker`) and no `Webhooks` host, because
+nothing in it needs an outbound-delivery bulkhead yet (`adr/0013`).
+
+`ago-landing` was added later than the original five (it ships the marketing page routed at the apex
 domain by `deploy/k8s/overlays/demo/landing-static.yaml`) and is recorded here as of 2026-08-24 — it
 had been created, committed and deployed while this table still said five. It is load-bearing for more
 than marketing now: `backlog/11-05-console-design-foundation.md` takes the console's colour and type
 tokens from it rather than inventing a second visual identity.
 
-`ago-root` additionally exposes the others as `platform/`, `chat/`, `widget/`, `console/`, `deploy/`
-through Windows junctions, so one session can read and edit across repositories without leaving its
-working directory. Those junctions are gitignored and never tracked here; they point at absolute
-paths, so **if the tree is moved, recreate them** — nothing else in the documentation breaks.
+`ago-root` additionally exposes the others as `platform/`, `chat/`, `calendar/`, `widget/`,
+`console/`, `deploy/` through Windows junctions, so one session can read and edit across repositories
+without leaving its working directory. Those junctions are gitignored and never tracked here; they
+point at absolute paths, so **if the tree is moved, recreate them** — nothing else in the documentation breaks.
 
 | Repository | Contains | Produces | Depends on |
 |---|---|---|---|
 | `ago-platform` | `Ago.Platform.*` — Kernel, Abstractions, adapters (Postgres, RabbitMQ, Redis, S3), Realtime, Hosting, Resilience | **NuGet packages** | nothing of ours |
 | `ago-chat` | `Ago.Chat.*` — Domain, Application, Contracts, Infrastructure, Module, **and the hosts** (Api, Worker, Webhooks) | Docker images | `Ago.Platform.*` packages |
+| `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and the hosts** (Api, Worker) | Docker images | `Ago.Platform.*` packages |
 | `ago-widget` | the embeddable script | a versioned CDN bundle | the public API contract |
 | `ago-console` | operator console SPA | static bundle | the public API contract |
 | `ago-deploy` | compose, Kustomize, seed | manifests | image tags, chart values |
@@ -42,6 +49,22 @@ called `Common`.
 The trade is real and is recorded in `adr/0012`: a change spanning platform and product costs two
 merge requests, a version bump, and a package publish.
 
+## Why one product never references another
+
+The platform/product boundary is enforced by physics — `ago-platform` has no access to a product's
+source. The **product/product** boundary has no such luck: `ago-chat` and `ago-calendar` are sibling
+folders on one disk, and a `ProjectReference` two directories up is one line away at any time. So
+that direction is enforced by a test instead: `Ago.Calendar.Architecture.Tests` asserts that **no
+`Ago.Calendar.*` assembly references any `Ago.Chat.*` assembly**, at three levels — compiled assembly
+references, named types, and any `Ago.Chat.*.dll` reaching the build output (which catches a
+reference added but not yet called, the one the compiler optimises out of the metadata).
+
+`adr/0027` is what makes that a rule rather than a preference: AGO Calendar defines its own
+`Operator`, its own permission vocabulary and its own tables, and the two products are unified only
+through Keycloak identity. The tempting shortcut — reuse Chat's `Operator`, they look alike — is
+exactly what the test exists to stop, so it ships with a deliberately violating fixture beside a
+compliant twin, permanently in the build, proving it can go red (`20-00`).
+
 ## Why the hosts live in the product repository
 
 A host owned by the platform would have to reference `Ago.Chat.Module` in order to compose it, which
@@ -57,20 +80,29 @@ Names are therefore `Ago.Chat.Api`, `Ago.Chat.Worker`, `Ago.Chat.Webhooks`.
 - Platform packages use SemVer. A breaking change to a platform port is a major bump with a migration
   note in the platform's changelog — the same discipline demanded of integration events.
 - Local development uses a **file-based NuGet feed**: `dotnet pack` into a local folder
-  (`C:\git\ago\.nuget-feed\`, `runbooks/workspace.md`) that `nuget.config` in `ago-chat` lists as a
-  source. No hosted feed is required to work offline.
-- For a change that genuinely spans both repositories, `ago-chat` supports a **dev override**: a
-  solution filter / `Directory.Build.props` switch that swaps the `PackageReference` for a
+  (`C:\git\ago\.nuget-feed\`, `runbooks/workspace.md`) that `nuget.config` in `ago-chat` and
+  `ago-calendar` both list as a source. No hosted feed is required to work offline. The two products
+  need not pin the same platform version, and generally will not: a product bumps when something
+  makes it bump, not on the platform's release cadence.
+- For a change that genuinely spans a product and the platform, each product repository supports a
+  **dev override**: a `Directory.Build.props` switch that swaps the `PackageReference` for a
   `ProjectReference` into a sibling `../ago-platform` checkout. Use it while iterating; the branch
   that gets merged must build against the published package version, and CI builds only that way.
   Leaving a `ProjectReference` in a merged branch is a defect — it would hide exactly the API break
   the package boundary exists to catch.
+
+  The switch is named per consuming repository — `AgoPlatformDevOverride` in `ago-chat`,
+  `AgoCalendarDevOverride` in `ago-calendar` — rather than one shared name (`20-00`). One variable
+  would retarget *every* product's build in the same shell, so overriding for one product would
+  silently build the other against unpublished platform source too, and a green build against source
+  that is not published yet is precisely the API break this whole mechanism exists to catch.
 - **CI restores from a real hosted feed**: `ago-platform`'s own CI publishes every package it packs
   on `main` to this repository's GitHub Packages NuGet feed, using its own `GITHUB_TOKEN` — no new
-  secret to publish. `ago-chat`'s CI restores `Ago.Platform.*` from that feed, authenticated with a
+  secret to publish. Each product's CI restores `Ago.Platform.*` from that feed, authenticated with a
   `read:packages`-scoped PAT held as a repository secret (`AGO_PLATFORM_PACKAGES_TOKEN`) — GitHub does
   not allow anonymous reads of NuGet packages even on a public repository. `adr/0018` (superseding
-  `adr/0015`, which packed from source instead) records the trade.
+  `adr/0015`, which packed from source instead) records the trade. That secret is per repository, so
+  every new consumer needs its own copy of it before its CI can restore — `ago-calendar` included.
 
 ## Cross-repository changes
 
