@@ -1,7 +1,8 @@
 # AGO Calendar: domain model and persistence
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (2026-08-25) — `ago-calendar` `feat/20-01-domain-and-persistence`; 89 tests green
+  (16 architecture, 56 domain, 17 integration), zero build warnings
 - **Depends on**: `20-00-repository-scaffold-and-platform-consumption.md`
 
 ## Goal
@@ -88,20 +89,100 @@ set explicitly, mirroring `1-05`'s single hardcoded `"Operator"` role for Stage 
 
 ## Done when
 
-- [ ] `Ago.Calendar.Domain.Tests`: every entity's invariants are proven — a `Worker` cannot belong to
+- [x] `Ago.Calendar.Domain.Tests`: every entity's invariants are proven — a `Worker` cannot belong to
       two tenants, an `Event` cannot transition from `Booked` back to `Available`, `WorkingHoursRule`
       rejects a second calendar for the same worker, `Event.Claim` on an already-`PendingConfirmation`
       row throws the same class of state-invariant exception `Conversation.AssignTo` already
       establishes the pattern for.
-- [ ] Migration applies cleanly to a real Postgres (Testcontainers), reversible or explicitly marked
+      Done: 56 tests, no infrastructure. "Cannot belong to two tenants" is enforced in the two ways it
+      is actually broken — `Worker.JoinCalendar`/`Worker.Offer` take the whole related aggregate, not
+      an id, so the cross-tenant check is an invariant rather than something each caller must remember.
+      Includes `DaylightSavingTimeTests` (`America/New_York`, not `Europe/Moscow` — Russia has not
+      observed DST since 2014, so a Moscow-only test would pass against code storing a fixed offset),
+      which `date-and-time.md` asks for by name.
+- [x] Migration applies cleanly to a real Postgres (Testcontainers), reversible or explicitly marked
       one-way with a stated reason, matching `data-model.md`'s own migration rules.
-- [ ] `Ago.Calendar.Integration.Tests`: the partial `Available`-status index is actually used by the
+      Done: `Stage20CreateCalendarSchema`, **fully reversible including its two hand-written
+      `migrationBuilder.Sql` statements** — `MigrationReversibilityTests` reverts to `"0"`, asserts the
+      tables, the exclusion constraint and the `btree_gist` extension are gone, re-applies, and asserts
+      all three are back with no pending model changes.
+- [x] `Ago.Calendar.Integration.Tests`: the partial `Available`-status index is actually used by the
       query it exists for (confirmed the same way `4-01`'s own waiting-queue index was — `EXPLAIN`
       output or an equivalent concurrency proof, not asserted from the migration text alone).
-- [ ] `docs/architecture/data-model.md` gains a short "AGO Calendar" section (or a pointer to wherever
+      Done: `EXPLAIN` under `SET LOCAL enable_seqscan = off` names `ix_events_available`, and the same
+      for `ix_events_pending_confirmation`. Stated honestly in the test: this shows an index *can*
+      serve the predicate, not that it is faster than a scan — that would be a measurement, and none
+      was made.
+- [x] `docs/architecture/data-model.md` gains a short "AGO Calendar" section (or a pointer to wherever
       `ago-calendar`'s own copy of this doc lives, if this project's docs end up split per-repository —
       state which, once decided) recording the schema shape and the reasoning above, matching how this
       file already documents `ago-chat`'s own schema in full.
+      **Decided: one file, in `ago-root`, not a per-repository copy.** Every other architecture
+      document here already spans both products in place (`repositories.md` and
+      `naming-and-structure.md` both gained `ago-calendar` rows in `20-00`), `ago-root`'s stated job is
+      to hold the rules for the whole platform while code lives elsewhere, and a split would put the
+      two schemas where a reviewer comparing them cannot see them side by side. The file now opens by
+      saying it covers two databases.
+- [x] Beyond the original list: `docs/architecture/personal-data.md` gains AGO Calendar's three
+      personal-data rows. Not in this item's scope as written, and required by the `db-migration`
+      skill's own rule — `customers.phone` is the most directly identifying column either product has.
+
+## Decisions taken while building this
+
+Recorded here because they were judgment calls, not mechanics.
+
+- **`adr/0049`** covers the two that were worth arguing about, as one ADR because they cannot be made
+  independently: *what time is stored in what* (instants on `events`, wall clock on
+  `working_hours_rules`, one IANA zone on `calendars` as the single bridge, nothing about the
+  customer's zone), and *where the no-overlap guarantee lives* (a GiST exclusion constraint, because
+  an aggregate can enforce a rule about itself and only the database can enforce one about the
+  relationship between rows).
+- **The CLR type is `BookingCalendar`, the table is still `calendars`.** A type named `Calendar` in
+  `Ago.Calendar.Domain` is unreferenceable from any other project in the repository: from inside
+  `Ago.Calendar.Infrastructure.*` the simple name resolves to the enclosing *namespace* `Ago.Calendar`
+  before a `using`-imported type is considered (CS0118 — reproduced deliberately before renaming
+  rather than assumed). The alternatives were a `using` alias in every consuming file, which this
+  project's conventions rule out, or qualifying every reference. Nothing leaks to the schema.
+- **`events` carries `tenant_id`** even though it is reachable through `calendar_id` — learning from
+  this repository's own record that `messages` carries no `site_id` and every per-tenant message
+  question is a join forever. `20-04`'s tenant-wide pending queue would be exactly that join.
+- **The v1 seeded role is one role, `"Operator"`, holding all seven permissions** including
+  `calendar:configure`, because the product spec's own framing is that one person is the tenant, the
+  operator and the only worker. Stated in `Role`, asserted in a test, and recorded in `data-model.md`.
+- **The platform package pin moved 0.16.0 → 0.18.0** in the same branch (`7-09`/`adr/0046`'s telemetry
+  split). One line, because no host here ever called `AddPlatformObservability`; `Ago.Calendar.Worker`
+  deliberately takes **no** `Ago.Platform.Observability` reference, and its restore graph now resolves
+  **zero** OpenTelemetry packages where `20-00`'s Open questions section counted eight.
+
+## Deliberately left for later
+
+Named so the next item does not have to work out what is missing.
+
+- **`20-02`**: the materialiser itself, and with it the only code that converts wall clock to instants
+  (`CalendarTimeZone` → `TimeZoneInfo`, in Infrastructure). Also the Dapper read store for
+  availability — `adr/0004`'s read side needs a read model, and this item builds none, which is why
+  Dapper is not even a package reference yet.
+- **`20-03`**: `IEventRepository` deliberately has **no** `TryClaimAsync`. The atomic
+  `UPDATE ... WHERE status = 'Available'` is that item's centrepiece, and its port's shape depends on
+  decisions it has not made — whether the claim shares a transaction with the customer's
+  find-or-create, and what a loser gets back. What this item ships is what makes either shape safe:
+  `xmin` on `events`, the exclusion constraint, and the two translated exceptions
+  (`EventConcurrencyConflictException`, `SlotOverlapException`).
+- **`20-04`**: the confirmation sweep and the operator queue. Their index
+  (`ix_events_pending_confirmation`) exists and is proven; the job does not. `Event.Confirm`
+  deliberately does not check the deadline — the sweep confirms after it and an operator may confirm
+  before it, so the timing rule belongs to the caller.
+- **Re-offering a vetoed slot.** No transition back to `Available` exists on `Event`. The product spec
+  leaves "released or cancelled, depending on how close the start is" to implementation, and a
+  transition built before that decision would be a guess with a customer's booking attached.
+- **`20-06`**: the provisioning transaction that writes the seeded role, this product's own
+  `OperatorIdentityClaimsTransformation`, and `IPermissionChecker`. `roles`/`operator_roles` therefore
+  have no production writer yet — the same position `ago-chat`'s own `roles` was in at `1-04`.
+- **`20-05`**: the first outbox writer. The tables exist from this migration (one line,
+  `ApplyOutboxInboxConfiguration()`), so that item does not have to change the schema to send its
+  first SMS.
+- **No `IServiceRepository`-style CRUD beyond what has a named caller**, no read models, no use cases,
+  no HTTP surface, and no `deploy` overlay — this item is the shape, not the behaviour.
 
 ## Open questions
 

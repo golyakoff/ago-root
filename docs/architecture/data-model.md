@@ -2,6 +2,20 @@
 
 PostgreSQL is the only source of truth. Everything else is a cache, a queue, or a projection.
 
+**This file covers two databases, not one.** Everything down to *Provider swap* is **AGO Chat**'s
+schema; **AGO Calendar** has its own section near the end and its own separate database — no query in
+either product can reach the other's tables (`adr/0027`), and no foreign key crosses between them.
+
+*Why one file and not one per repository* (decided in `20-01`, since `ago-calendar` is the first
+product that could have gone either way): every other architecture document here already spans both
+products in place — `repositories.md` and `naming-and-structure.md` both gained `ago-calendar` rows in
+`20-00` rather than sprouting per-repo copies — and `ago-root`'s stated job is to hold the rules and
+decisions for the whole platform while the code lives elsewhere. Splitting this one file would make it
+the first exception, and would put the two products' schemas where a reviewer comparing them cannot
+see them side by side, which is exactly the comparison the platform claim invites. The cost is that
+this page is now long and mixes two databases; the section heading below is the mitigation, not a
+denial.
+
 ## Tables (initial shape - refined per stage)
 
 - `sites` - the tenant. `id`, `public_key`, `allowed_origins[]`, `name` (**added in `10-02`** - a real
@@ -265,8 +279,113 @@ EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 - Raw SQL (partitions, partial indexes, helper functions) goes into the migration via
   `migrationBuilder.Sql`, never into a hand-run script that will drift.
 
+## AGO Calendar (Stage 20)
+
+A **separate database**, in a separate repository, reached only by `Ago.Calendar.*` hosts. Built by
+`20-01` (`Stage20CreateCalendarSchema`, `Ago.Calendar.Infrastructure.Postgres`). The reasoning behind
+the two decisions that shaped it - how time is stored, and where the no-overlap guarantee lives - is
+`adr/0049`; this section records the shape.
+
+Everything above about **ids (UUID v7), `timestamptz`, keyset pagination, partial indexes for
+queue-like predicates, EF for writes / Dapper for reads, and one aggregate per transaction applies
+here unchanged**. What follows is only what is specific to this product.
+
+### Tables
+
+- `tenants` - `id`, `name`, `created_at`. The account holder. Structurally what `sites` is for AGO
+  Chat and deliberately not that row (`adr/0027`).
+- `operators` - `id`, `tenant_id`, `display_name`, `external_subject_id?` (unique when present, the
+  same partial-unique shape `adr/0022` added to `ago-chat`'s own table). **No `capacity`, no
+  `active_chats`, no `status`** - the absence is the point: `adr/0027` rejected a shared `Operator`
+  precisely because a booking queue is a work list, not a set of simultaneous attachments, and nothing
+  in this product routes to a *particular* operator.
+- `roles` - `id`, `tenant_id`, `name`, `permissions text[]`; `operator_roles` - `(operator_id,
+  role_id)`. `adr/0016`'s pattern with an independent vocabulary (`booking:confirm`, `booking:reject`,
+  `booking:cancel`, `booking:mark_no_show`, `customer:read`, `customer:edit`, `calendar:configure`).
+  **The v1 seeded role set, stated plainly the way `1-05` states AGO Chat's: exactly one role,
+  `"Operator"`, holding all seven** - in a one-person business the tenant, the operator and the only
+  worker are the same human, so an operator login that could not configure its own calendar would be
+  unusable by the target customer. Unique on `(tenant_id, name)`, never on `name` alone. **No writer
+  in production yet** - `Role.SeedOperatorRole` exists and the provisioning transaction that calls it
+  is `20-06`, the same position `ago-chat`'s `roles` was in at `1-04`.
+- `workers` - `id`, `tenant_id`, `display_name`, `is_active`. The person a customer books; not an
+  operator, and possibly with no login at all.
+- `services` - `id`, `tenant_id`, `name`, `duration_minutes int`. Whole minutes in an integer rather
+  than a Postgres `interval`: the domain's own invariant is already "a whole number of minutes", and
+  an integer column stays trivially comparable for `20-02`'s availability queries.
+- `calendars` - `id`, `tenant_id`, `name`, `time_zone` (**IANA id as text, never an offset**),
+  `buffer_minutes`, `is_published`, `created_at`. `buffer_minutes` is per calendar, not per service or
+  per worker (the product spec's own decision), and is consumed by `20-02`; nothing reads it yet.
+- `customers` - `id`, `tenant_id`, `phone`, `display_name?`, `notes?`, `no_show_count`,
+  `first_seen_at`, `last_seen_at`. The lead card. **Unique `(tenant_id, phone)`** - the same person
+  booking at two shops is two cards, and one tenant's notes must never surface in another's console.
+  That index is also `20-03`'s find-or-create backstop, the same "storage backstop, not the primary
+  mechanism" division `adr/0019` draws for chat's message sequence. Personal data: see
+  `personal-data.md`.
+- `working_hours_rules` - `id`, `worker_id`, `calendar_id`, `day_of_week` (stored as the name, not the
+  ordinal - .NET's `Sunday = 0` versus the ISO week is a trap worth not setting), `starts_at`/`ends_at`
+  as **`time` without a zone**. Wall clock, deliberately: see `adr/0049`. v1 allows one calendar per
+  worker, enforced in the aggregate (`Worker.JoinCalendar`) and **not** as a unique index on
+  `calendar_workers.worker_id`, so widening it later removes a check rather than reversing a
+  constraint.
+- `events` - `id`, `tenant_id`, `calendar_id`, `worker_id`, `service_id?`, `customer_id?`,
+  `starts_at`/`ends_at` (`timestamptz`), `local_date` (`date`), `status`, `confirmation_deadline?`,
+  `created_at`, plus `xmin`. **One row is both the free slot and the booking that takes it** - status
+  transitions, never a second row (`adr/0049`). `tenant_id` is carried even though it is reachable
+  through `calendar_id`, deliberately learning from this page's own record that `messages` carries no
+  `site_id` and every per-tenant message question is a join forever.
+- `calendar_workers` - `(calendar_id, worker_id)`; `worker_services` - `(worker_id, service_id)`. Both
+  owned by the `Worker` aggregate, because the invariants they carry are statements about a worker.
+- `outbox` / `inbox` - the platform's own tables (`adr/0017`), taken unchanged through
+  `ApplyOutboxInboxConfiguration()`. **The first evidence that generalisation was real rather than an
+  AGO-Chat-shaped guess**: a second product consumes it with one line and no change to the platform.
+  No writer here yet; `20-05`'s SMS event is the first.
+
+### Keys, indexes and the one constraint that matters
+
+- `ix_events_available` - partial, `(calendar_id, starts_at) WHERE status = 'Available'`. The direct
+  analogue of `ix_conversations_waiting`: proportional to what is bookable rather than to everything
+  ever booked. Proven to be the index the planner reaches for, by `EXPLAIN` against a real Postgres -
+  the same bar `4-01` set, and with the same honesty about what that does and does not show (it shows
+  an index *can* serve the predicate; whether it is faster than a scan is a measurement, and no
+  measurement has been made).
+- `ix_events_pending_confirmation` - partial, `(tenant_id, confirmation_deadline) WHERE status =
+  'PendingConfirmation'`. Serves both of `20-04`'s readers - the auto-confirm sweep and the operator
+  queue - over the same small, short-lived set.
+- `ix_calendars_published` - partial on `tenant_id WHERE is_published`.
+- `ux_customers_tenant_phone`, `ux_roles_tenant_name`, `ux_operators_external_subject_id` (partial on
+  `IS NOT NULL`).
+- **`ex_events_worker_no_overlap`** - a GiST **exclusion constraint**, `EXCLUDE USING gist (worker_id
+  WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (status <> 'Cancelled')`, needing the
+  `btree_gist` extension. This is the no-double-booking guarantee, and it is a constraint rather than
+  application code for the reason `adr/0049` argues at length: an aggregate can enforce a rule about
+  itself, and only the database can enforce one about the relationship between rows. `'[)'` matches
+  `TimeSlot.Overlaps` exactly so adjacent slots do not collide; `Cancelled` is excluded because a
+  cancellation frees the time, while `Blocked` and `NoShow` are not, because both still occupy the
+  worker.
+- Optimistic concurrency is `xmin` on `events`, mapped exactly as `1-04` mapped it on `conversations`.
+
+### Migration
+
+**Verified**: `Stage20CreateCalendarSchema` applies cleanly from scratch to a real Postgres
+(Testcontainers, `Ago.Calendar.Integration.Tests`), and is **fully reversible** - including its two
+hand-written `migrationBuilder.Sql` statements, which is the half a `DropTable`-only `Down` silently
+gets wrong. The reversibility is a test that reverts to `"0"`, asserts the tables, the constraint and
+the extension are all gone, re-applies, and asserts they are all back with no pending model changes.
+The overlap guarantee is proven by two genuinely concurrent transactions racing for one worker's time,
+with the loser refused by `23P01`; deleting the constraint from the migration turns exactly four tests
+red, which was checked rather than assumed.
+
 ## Provider swap (Stage 9)
 
 `Ago.Chat.Infrastructure.MySql` implements the same ports. Known frictions to document rather than
 hide: `jsonb` vs `json`, UUID storage, `SKIP LOCKED` support, partitioning syntax, and
 case-sensitivity of identifiers. The honest list of frictions is the point of the exercise.
+
+**AGO Calendar adds the hardest entry on that list so far** (`20-01`): MySQL has neither exclusion
+constraints nor range types, so `ex_events_worker_no_overlap` has no translation at all - a MySQL
+adapter would need a different *mechanism* (a lock, or a serializable transaction), not different DDL.
+Also Postgres-specific here: the partial indexes on `events`/`calendars`, `text[]` for
+`roles.permissions`, `tstzrange`, and the `btree_gist` extension. Stage 9 is deprioritized
+(`roadmap.md`), and this entry exists so that if it is ever revived nobody discovers the exclusion
+constraint by hitting it.
