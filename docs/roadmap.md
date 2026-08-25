@@ -21,20 +21,37 @@ scope-boxed.
 
 ## What comes next
 
-The current order, most urgent first. Bands, not a strict queue: anything in a band can be picked up
-before anything below it, and within a band the order is a judgement call rather than a dependency.
+The current order, most urgent first. **The "Now" table below is a queue: work straight down it.**
+The bands after it are looser — anything in a band can be picked up before anything below it, and
+within those the order is a judgement call rather than a dependency.
 
-### Now — broken, or blocking something else
+Renumbering the stages to make the numbers themselves the queue was considered and declined
+(2026-08-25). It would have been cheaper than expected — 32 backlog files and about 330 references,
+all in this repository, and *zero* in any code repository, because unbuilt work has no code citing it.
+It was declined because renumbering alone would not have produced a queue: stages are not sequenceable
+as wholes, since `15-01` is broken today while `15-04` is future work and both sit in Stage 15. Making
+the numbers a queue would have meant re-partitioning items into new stages, which buys an ordinal at
+the cost of each stage reading as an argument rather than a bucket. The order lives here instead, and
+a stage number stays a name.
 
-| Item | Why it cannot wait |
-|---|---|
-| `17-01` tenant-isolation proof | The enforcement is centralized and its core is proven, but the composition is not: handler tests use a fake permission checker, two route groups accept a client-supplied `siteId` on purpose, at least one belongs-to-site guard has no test, and nothing stops the next handler skipping the check. `12-02` is about to add a *legitimate* cross-tenant reader, after which a deliberate exception and a forgotten filter look identical |
-| `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart. Stage 10's entire premise is runtime-created users |
-| `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — registration is accepted and the mail can never be sent, so no real visitor can finish signing up |
-| `16-01` personal-data map and residency | Not breakage, but two vendor questions due imminently (`10-05`'s provider, `15-02`'s backup destination) both move personal data somewhere, and answering either without the constraint is how a residency problem gets acquired |
-| `5-14` + `17-02` the hub access token | Both SignalR clients print the negotiated WebSocket URL — token included — to the browser console on every connect (`5-14`, confirmed live). Whether the same URL also reaches the edge access log and the trace spans is unverified (`17-02`), and that is the half that would matter: a token on disk outlives one in a devtools pane |
-| `5-15` unread count never clears | `OperatorUnreadCount` only ever increments — no decrement, no reset, no `MarkRead` anywhere in the aggregate. `11-06`'s badge and title count are a session-local approximation over a number that never goes down, and they over-report after a reload. Found while building the workspace that now depends on it |
-| `6-09` release operator capacity on close | A live defect from `7-04`'s load run: an operator's usable capacity decays until their connection drops, so the waiting queue quietly stops being served. Now also blocks verification of shipped work: `11-06`'s two-way-exchange check in a newly assigned conversation could not be completed because of it |
+### Now — in this order
+
+Row order is the queue (made deliberate 2026-08-25, when the author said they would work straight down
+this table). It is not a dependency chain: nothing here blocks anything else below it except where the
+row says so. It is ordered by cost-to-close first, so the list shortens quickly, then by what is worst
+if left.
+
+| # | Item | Why here, and why in this position |
+|---|---|---|
+| 1 | `5-14` the token in the browser console | Both SignalR clients print the negotiated WebSocket URL, token included, on every connect, because neither calls `configureLogging`. First because it is minutes in two repositories and a stated convention violation — the cheapest thing on the list |
+| 2 | `5-15` unread count never clears | `OperatorUnreadCount` only ever increments — no decrement, no reset, no `MarkRead` in the aggregate — so `11-06`'s badge and title count are a session-local approximation that over-reports after a reload. A visible defect in a feature that shipped days ago |
+| 3 | `6-09` release operator capacity on close | An operator's usable capacity decays with every conversation they close until their connection drops, so the waiting queue quietly stops being served. Paired with the row above because both are the operator queue, and this one also unblocks the `11-06` verification sub-check it currently prevents |
+| 4 | `17-06` the realm's login settings | Keycloak's login-security settings are inherited defaults on a realm that has been open to public self-registration since Stage 10. The only thing on this list an ordinary attacker could act on without waiting for someone else's CVE — and it is a realm-import change today, an operation on live accounts once there are real customers |
+| 5 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
+| 6 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
+| 7 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users |
+| 8 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other |
+| 9 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
@@ -68,10 +85,14 @@ starting earlier than the work that needs them:
 
 ### How this list is kept honest
 
-It is updated when an item lands or when something genuinely jumps a band — not retroactively to
+It is updated when an item lands or when something genuinely jumps the queue — not retroactively to
 match what happened. If this list and reality disagree, this list is what is wrong. An item is only
-moved into "Now" for a reason that can be stated in one sentence about present-tense breakage or a
+added to "Now" for a reason that can be stated in one sentence about present-tense breakage or a
 dependency with a date; "it would be nice to do next" is what the "Soon" band is for.
+
+When a row is closed, delete it rather than striking it through — the stage sections and the backlog
+items are where finished work is recorded, and a queue that keeps its dead entries stops being a queue.
+Renumber the rest; the numbers are positions, not identifiers.
 
 ---
 
