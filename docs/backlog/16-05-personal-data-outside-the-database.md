@@ -32,7 +32,14 @@ noticed" is not a deadline anybody can meet.
   added 2026-08-25**: `17-02` chases one specific instance to a definite answer — the hub access token,
   which travels in the WebSocket URL's query string — through the edge access log and the trace spans.
   Take its findings and its method rather than re-deriving either; it is the worked example of what
-  this sweep looks for everywhere else.
+  this sweep looks for everywhere else. **It is now closed, and three of its results carry straight
+  over.** The Jaeger half of this sweep starts from "query values are already redacted by the .NET
+  instrumentation, and the way to lose that is an environment variable, not a code change" rather than
+  from scratch. The edge-log half starts from a format that no longer contains a query string at all,
+  so what is left there is client IPs — this item's actual subject. And `17-02` leaves one thing open
+  that belongs to a sweep rather than to it: nginx's **error** log prints the request line and upstream
+  URI with the query string intact and cannot be configured otherwise, so error-log lines are a store
+  this audit should treat separately from access-log lines.
 - Fix whatever the audit finds, and add a guard where a guard is possible — a test that fails if a
   known-sensitive value appears in a log scope is worth more than a convention nobody re-reads.
 - **Edge access-log retention**: define it, apply it, and record the number. IPs kept forever by
