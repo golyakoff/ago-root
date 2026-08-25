@@ -36,9 +36,23 @@ mechanism of any kind. Three consequences follow, none of them recorded anywhere
 **Other secrets, for completeness**: Postgres, RabbitMQ, MinIO and Keycloak admin credentials, all
 from the same Secret; `GRAFANA_ADMIN_PASSWORD`, which now guards a **publicly reachable** admin UI
 (`grafana.reserve-me.ru`, a deliberate call recorded in `gateway.yaml`); and
-`AGO_PLATFORM_PACKAGES_TOKEN`, a classic GitHub PAT scoped to `read:packages` held as a repository
-secret in `ago-chat`'s CI — user-scoped and expiring, so it has a rotation deadline whether or not
-anyone has noted one.
+`AGO_PLATFORM_PACKAGES_TOKEN`, a classic GitHub PAT scoped to `read:packages`.
+
+**Recorded 2026-08-25, since this item asked for it and the answer now exists.** One value, held as a
+repository secret in **two** repositories — `ago-chat` and `ago-calendar`, the latter added when the
+second product's CI needed the same feed. **Scope: `read:packages` only. Expires 2027-08-25.** Rotating
+it means creating one PAT, setting it in both repositories, and revoking the old one *in that order* —
+revoking first breaks the CI of whichever repository is pushed to next.
+
+Two facts worth keeping beside it. Deliberately one value in two places rather than two independent
+tokens: a personal account has no shared Actions secret, so two copies are unavoidable, and the choice
+is only whether there is one expiry to track or two. And **`ago-platform` holds no secret at all** — it
+*publishes* packages with `permissions: packages: write` and the built-in `GITHUB_TOKEN`. That is
+direct evidence the consuming side could plausibly do the same: `adr/0018` justified the PAT by noting
+GitHub forbids *anonymous* reads, which is true and does not describe `GITHUB_TOKEN`. Granting each
+package Actions-read access to the consuming repository would remove this credential from the
+inventory entirely rather than rotating it forever. Untested, and the cheapest experiment on this
+list.
 
 ## Context to read first
 
@@ -66,7 +80,10 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
   multi-key acceptance so the retirement delay is configuration rather than a constant.
 - **A leak procedure**: what to do when a secret is known to be exposed, per secret, given the above.
   One page in the runbook, not a policy document.
-- Note the packages PAT's expiry somewhere a human will see it before CI breaks.
+- Note the packages PAT's expiry somewhere a human will see it before CI breaks. **The date is now
+  known (2027-08-25) and written above — but a backlog file is a record, not a reminder.** It will not
+  fire. Whatever does fire, a calendar entry being the obvious one, is the actual deliverable here;
+  writing the date down and calling it done is the failure this bullet was trying to prevent.
 
 ## Out of scope
 
@@ -87,7 +104,8 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
 - [ ] The visitor signing key can be rotated with overlapping validation, proven by rotating it in a
       local environment without invalidating a live token.
 - [ ] A leak procedure exists in the runbook.
-- [ ] The packages PAT's expiry is recorded where it will be seen.
+- [ ] The packages PAT's expiry is recorded **in something that fires**, not only written down. The
+      date itself (2027-08-25) is already in this file.
 
 ## Open questions
 
