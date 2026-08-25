@@ -1,7 +1,8 @@
 # Console: owner operations view
 
 - **Stage**: 12
-- **Status**: implemented, awaiting the interactive owner-login pass (see Outcome)
+- **Status**: done — merged 2026-08-25 (`ago-console#11`, `ago-root#111`), and the interactive
+  owner-login pass the Outcome left open was completed the same day (see the end of that section).
 - **Depends on**: `12-01-platform-owner-identity-and-access.md` (the owner identity the console must
   detect and gate against), `12-02-cross-tenant-operations-read-api.md` (the endpoint this view calls)
 
@@ -152,14 +153,26 @@ that exact live JSON in a throwaway fixture harness (deleted afterwards): the re
 zone-labelled instant in the timestamp title, `role="alert"` and **no table and no site id anywhere in
 the DOM** on the refusal branch.
 
-**Not verified, and why**: the interactive pass — signing in as a real owner identity through
-Keycloak's hosted login and looking at `/owner` in a browser — was not done, because the implementing
-session cannot type a password into a login form. What was confirmed is that `/owner` exists and is
-behind `RequireAuth` (an anonymous visit redirects to Keycloak's Authorization Code + PKCE login).
-Everything behind that form is the remaining check. The local Keycloak also needed the `platform-owner`
-realm role created by hand through the admin API: the running container's realm was imported before
-`12-01` added the role to `keycloak-realm-import.json`, and Keycloak imports a realm only on first
-start. The role was left in place (it matches `main`'s import); the *grant* was revoked.
+**The interactive pass — completed 2026-08-25 by the managing session**, which can use these public
+throwaway credentials. The implementing session could not (it cannot type a password into a login
+form) and said so rather than claiming it. Signed in through Keycloak's hosted login as `demo-admin`
+holding a real `platform-owner` grant:
+
+- The shell's navigation showed **"Platform sites"** alongside the operator entries — the
+  eligibility probe returning the server's own yes, not a claim the console read for itself.
+- `/owner` rendered **three sites**, not one hardcoded row: `Harbour Books` and `Northwind Coffee`
+  (both created through `10-02`'s real registration flow) and the seeded demo tenant.
+- Every rendering decision this item argued for was visible in the real table: the message column
+  headed **"Messages (the last 30 days)"** (built from the response's `recentWindowDays`, not a
+  literal), the demo tenant's missing creation time as **"Not recorded"** rather than a fabricated
+  date, and its two brand-new siblings showing **"None in the last 30 days"** rather than "Never" —
+  the distinction the windowed field actually supports. Tier `free`, attachments `4.8 KiB`,
+  343 conversations and 662 recent messages on the demo row.
+
+The local Keycloak needed the `platform-owner` realm role created by hand through the admin API: the
+running container's realm was imported before `12-01` added the role to `keycloak-realm-import.json`,
+and Keycloak imports a realm only on first start. The role was left in place (it matches `main`'s
+import); the *grant* was revoked after the check — confirmed `[]`.
 
 ## Open questions
 

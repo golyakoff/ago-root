@@ -1,9 +1,9 @@
 # Cross-tenant operations read API
 
 - **Stage**: 12
-- **Status**: implemented (`ago-chat`, branch `feat/12-02-cross-tenant-read-api`, stacked on `12-01`'s
-  own unmerged branch) — see **What shipped** below for every decision this file left open, and for the
-  two places implementation found the item's own text wrong.
+- **Status**: done — merged 2026-08-25 (`ago-chat#58`, `ago-root#108`). See **What shipped** below for
+  every decision this file left open, and for the two places implementation found the item's own text
+  wrong.
 - **Depends on**: `12-01-platform-owner-identity-and-access.md` — needs its `RequirePlatformOwner`
   policy to gate the endpoint this item adds; blocked transitively by nothing else, since `12-01` itself
   has no open question.

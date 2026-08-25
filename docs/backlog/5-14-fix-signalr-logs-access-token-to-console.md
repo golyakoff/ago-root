@@ -1,7 +1,22 @@
 # Fix: the console's SignalR client logs the operator's access token to the browser console
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done — `.configureLogging(signalR.LogLevel.Warning)` on both `HubConnectionBuilder`
+  call sites. The widget did have the identical defect, confirmed live rather than assumed, so this
+  turned out to be two repositories rather than the one the "Depends on" line below predicted.
+  The mechanism, pinned down exactly in `@microsoft/signalr@8`: `HubConnectionBuilder` with no
+  `configureLogging` gets `ConsoleLogger(LogLevel.Information)`, and `WebSocketTransport` logs
+  `WebSocket connected to {url}` at `Information` — *after* appending `access_token=` to that url.
+  `Warning` was chosen as the **lowest** level that suppresses that line, keeping the diagnostics
+  worth having (HTTP request errors and timeouts, the page-freeze warning that predicts a dropped
+  connection, an unhandled server→client method name) rather than going to `Error`/`None`.
+  Development keeps **no** verbose exception, in either client, and the reason is stronger than
+  "the token is just as real locally": the token-bearing line sits at `Information`, which is
+  *above* `Debug` and `Trace` on this library's ladder, so every level verbose enough to be worth
+  switching to also prints the token. There is no dev setting that is both more informative and
+  token-free, which makes the `import.meta.env.DEV` shape this item floated a way to reintroduce
+  the leak rather than a way to keep diagnostics. (`ago-widget` could not have taken it anyway —
+  `build.mjs` is one esbuild invocation with no dev/production mode and no `import.meta.env`.)
 - **Depends on**: nothing — `ago-console` only
 
 ## Goal
@@ -49,7 +64,20 @@ reasoning. What must never be recorded — here or in a commit message — is an
   development, so "it's only local" is not on its own a sufficient argument. State whichever way it
   goes and why.
 - A check for any *other* place either client hands a token somewhere it could be logged or persisted
-  beyond `sessionStorage`/`localStorage`'s existing, intended use.
+  beyond `sessionStorage`/`localStorage`'s existing, intended use. **Done — nothing else found.**
+  Every other token use in both clients is an `Authorization: Bearer` request header (`ago-console`'s
+  `api/*.ts`, `ago-widget`'s `attachments.ts`), never a query parameter, so nothing else can land in
+  a URL. The hub query string is the sole exception, and moving it is this item's stated Out of scope.
+  There are five `console.*` calls between the two repositories and none passes a token: three
+  `console.error(message, err)` in `ago-console`, and `ago-widget`'s single `errors.ts` sink, which
+  already carries its own "console.error only, never console.log" note. Nor can the error object
+  smuggle one in — no `Error` `@microsoft/signalr` throws interpolates the token-bearing url
+  (`HttpConnection`'s only url-carrying throw is `Cannot resolve '{url}'`, raised while normalising
+  the `withUrl` argument, before any token is appended). Storage is as documented: `ago-console` keeps
+  the OIDC user in `sessionStorage` via `WebStorageStateStore`, `ago-widget` keeps the visitor token
+  under its own namespaced `localStorage` key. One residual this item cannot close: a *failed*
+  request is logged by the browser itself, with the full url, independently of any application
+  logging — one more reason the query-string placement deserves its own item.
 
 ## Out of scope
 
@@ -70,12 +98,42 @@ reasoning. What must never be recorded — here or in a commit message — is an
 
 ## Done when
 
-- [ ] Neither `ago-console` nor `ago-widget` prints a URL containing `access_token` to the browser
+- [x] Neither `ago-console` nor `ago-widget` prints a URL containing `access_token` to the browser
       console at their default (shipped) logging level — verified by actually connecting against a
       running API and reading the real console output, not by reading the configuration.
-- [ ] Whatever development-mode behaviour is chosen is stated in the code with its reasoning, and
-      cannot leak into a production build.
-- [ ] `npm run typecheck`/`lint`/`test`/`build` stay green in whichever repositories changed.
+      **`ago-widget`**: fully end to end. `demo/index.html` served on `http://localhost:5173` (the
+      demo site's `allowed_origins` carries both `:8080` and `:5173`, so no CORS bend was needed)
+      against `Ago.Chat.Api` on `:5009`. Before, on opening the bubble, the console carried
+      `Information: WebSocket connected to ws://localhost:5009/hubs/visitor?id=…&access_token=eyJ…`
+      with a complete, valid visitor JWT. After, in a fresh tab with `localStorage` cleared: the
+      negotiate returned 200, a real conversation id was created and stored, the composer was
+      enabled — and the console was **empty**.
+      **`ago-console`**: verified at the level below fully-interactive, and the gap is worth naming.
+      A real operator token needs a Keycloak password login, which the session doing this work could
+      not perform. Instead the console's *own* `OperatorConnection` class — same constructor, same
+      `HubConnectionBuilder`, same `configureLogging` line — was driven over a real WebSocket from a
+      throwaway harness page on the Vite dev server, using a credential-free visitor token from
+      `POST /api/v1/visitor-sessions` with the hub path temporarily pointed at `/hubs/visitor`
+      (reverted immediately; neither the harness nor the substitution is in the commit). Before:
+      the same `Information: WebSocket connected to …&access_token=eyJ…` line. After: `CONNECTED`,
+      with nothing in the console but Vite's own HMR client.
+
+      **The remaining gap — a real `/hubs/operator` connect with a real operator JWT — was then
+      closed by the managing session**, which can use these public throwaway credentials. Signed in
+      as `demo-operator` against the local stack, the workspace loaded 50 real conversations and the
+      hub badge read **`Live`** — a genuinely successful WebSocket connect, not a failed one that
+      would have proven nothing. With that connection open, a console search for
+      `access_token|WebSocket connected|eyJ` returned **no matches at all**, while the console was
+      demonstrably not empty (Vite's HMR client, React's devtools notice and unrelated HTTP errors
+      were all present). The `Information`-level line that carried the token is gone from the real
+      operator path, observed rather than inferred from the shared code path.
+- [x] Whatever development-mode behaviour is chosen is stated in the code with its reasoning, and
+      cannot leak into a production build. Nothing is conditional, so there is no build mode for it
+      to leak across — see the Status note above for why a conditional would have been the wrong
+      shape here rather than merely unnecessary.
+- [x] `npm run typecheck`/`lint`/`test`/`build` stay green in whichever repositories changed.
+      `ago-console` 71 tests in 8 files; `ago-widget` 36 tests in 6 files, bundle 20.5 KB gzipped,
+      unchanged against the 45 KB budget.
 
 ## Open questions
 
