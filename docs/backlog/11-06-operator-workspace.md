@@ -152,17 +152,23 @@ be teleported to another, losing their place in exactly the way this item exists
 silent arrival was rejected because an assignment nobody notices is a visitor waiting on an operator
 who does not know they exist. The system decides *who* and the operator decides *when*.
 
-## What this item found, and left for a backend item
+## What this item found, and handed to a backend item — now closed
 
-**`operatorUnreadCount` is monotonic - nothing in `ago-chat` ever clears it.**
-`Conversation.IncrementUnreadCount` (`2-05`) only increments, and there is no mark-read command,
-endpoint or handler anywhere. A badge built from that field alone would never go away, so the console
-layers a session-local read state over it (`workspace/attention.ts`): a conversation opened in this
-session is read, and its count is only what has arrived since - which the console can know honestly,
-because `11-06` added `OperatorConnection.onAnyMessage` so it sees pushes for every assigned
-conversation, not only the one on screen. The limitation that leaves, stated rather than hidden: after
-a hard reload, a conversation already read shows the server's total again and over-reports. Closing it
-means a `conversation:mark-read` write on the backend, which is a separate item.
+**`operatorUnreadCount` was monotonic - nothing in `ago-chat` ever cleared it.**
+`Conversation.IncrementUnreadCount` (`2-05`) only incremented, and there was no mark-read command,
+endpoint or handler anywhere. A badge built from that field alone would never have gone away, so this
+item layered a session-local read state over it (`workspace/attention.ts`): a conversation opened in
+this session counted as read, and its badge showed only what had arrived since - which the console
+could know honestly, because `11-06` added `OperatorConnection.onAnyMessage` so it sees pushes for
+every assigned conversation, not only the one on screen. The limitation that left, stated rather than
+hidden at the time: after a hard reload, a conversation already read showed the server's total again
+and over-reported.
+
+**`5-15` closed it.** `POST /api/v1/conversations/{id}/read` clears the count server-side, up to the
+sequence the operator actually has, so `operatorUnreadCount` now means what the badge claims and
+survives a reload because it is a column. `attention.ts` kept only what a snapshot genuinely cannot
+know - arrivals and clears since the last queue fetch, plus the session-local "New" marker - and the
+reload limitation above no longer exists.
 
 ## Open questions
 

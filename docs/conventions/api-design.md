@@ -110,6 +110,17 @@ fresh data. A second conflict inside that retry becomes `Conversation.Concurrenc
 (`ConversationConcurrencyConflictException`, `Ago.Chat.Application.Abstractions`), not with EF Core's
 own exception type, since `Ago.Chat.Application` may not reference EF Core.
 
+**Shipped in `5-15`**: `POST /api/v1/conversations/{id}/read` - "actions that are not CRUD become
+sub-resources" again, a sibling of `/close`. Two things about it are worth reading as convention
+rather than as one endpoint's detail. First, it takes `{"upToSequence": n}` rather than being a bare
+"clear it" action: the body carries the state the caller is asserting ("my read position is n"), which
+is what lets the server keep counting a message that arrives in the same instant instead of silently
+muting it. Second, it is REST despite the console already holding an open SignalR connection to the
+same server, and the reason is this convention itself - a non-assigned operator gets a real `403` with
+a problem-details body and a `type` a client can branch on, where a hub method could only have thrown
+a `HubException` carrying a string that is indistinguishable from a transport fault. A write whose
+failure modes matter belongs on HTTP; a hub method is for what the connection is *for*.
+
 ## Compatibility
 
 Additive changes only within a version: new optional fields are fine, renamed or removed fields are
