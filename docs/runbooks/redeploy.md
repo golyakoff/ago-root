@@ -64,6 +64,20 @@ of consequence, and pretending otherwise is how a harmless check becomes somebod
 - **Smoke fails on the console CSS check**: the bundle is stale, which means either the pull or the
   import did not take. Check the pod's start time against the commit you expected.
 
+## What it does not apply: manifests
+
+`redeploy.sh` pulls, builds, imports, migrates and restarts. It never runs `kubectl apply -k`. That is
+defensible — a redeploy is usually about new *code*, and applying an overlay that also carries a
+half-finished manifest change is its own hazard — but it means **a change that lives only in
+`ago-deploy/k8s/` does not reach the node through this script**, no matter how many times it is run,
+and nothing in its output says so.
+
+`15-01` is the first change of that shape: Keycloak's move onto a persistent database is entirely
+manifest plus one new `.env` key. `public-deploy.md`'s "Applying `15-01` to this deployment" section is
+the procedure, and it starts with `kubectl apply -k k8s/overlays/demo` for exactly this reason. The
+same applies to any future resource-limit, probe, route or env change. If the fix is in a `.yaml` under
+`k8s/`, `./redeploy.sh` is not the tool.
+
 ## What this does not solve
 
 Everything `15-06` covers: images are still built on the node under a mutable `:local` tag, there is

@@ -33,7 +33,58 @@ connection at all - useful for reviewing a change before applying it.
 
 `ago-chat-api` runs 3 replicas here since `3-06` (`least_conn` across them, `edge.md`) - copy
 `deploy/k8s/overlays/local/.env.example` to `.env` first if this is a fresh checkout; it now also
-carries `AUTH_JWT_SIGNING_KEY`, needed so every replica validates the same tokens (`authorization.md`).
+carries `AUTH_JWT_SIGNING_KEY`, needed so every replica validates the same tokens (`authorization.md`),
+and, since `15-01`, `KEYCLOAK_DB_PASSWORD` (below). An `.env` copied before `15-01` is missing that key
+and Keycloak's pod will sit in `Init:0/1` with `KEYCLOAK_DB_PASSWORD: not set` in the init container's
+log - re-copy from `.env.example` rather than guessing what changed.
+
+## Keycloak's user store (`15-01`, `adr/0036`)
+
+Keycloak keeps its realm and its users in **its own `keycloak` database inside the same Postgres
+Deployment** that holds `ago_chat`, under its own `keycloak` role. Before `15-01` it ran on an embedded
+H2 file in the pod's ephemeral writable layer, and every restart destroyed every account created at
+runtime — reproduced live on this cluster before the fix, and gone after it.
+
+Startup ordering is enforced by the pod itself, not by a runbook step: an init container
+(`create-keycloak-database`) waits for `pg_isready` against the `postgres` Service, then creates the
+role and the database if they are not there. It is idempotent, so it runs on every boot and is a no-op
+after the first. Two consequences worth knowing before debugging:
+
+- **Keycloak's pod stays in `Init:0/1` while Postgres is down.** That is the intended reading of a
+  dependency, not a stuck pod. `kubectl logs -n ago-chat deploy/keycloak -c create-keycloak-database`
+  says which of the two it is.
+- **`kubectl exec ... deploy/keycloak` now needs `-c keycloak`**, because the pod has more than one
+  container and the default guess is no longer unambiguous.
+
+Verified live on this cluster (2026-08-25), which is the only evidence that counts for this one:
+
+```
+# before the fix: create a user, restart, it is gone
+# after the fix:
+kubectl rollout restart deployment/keycloak -n ago-chat
+kubectl exec -n ago-chat deploy/keycloak -c keycloak -- sh -c '
+  /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master \
+    --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+  /opt/keycloak/bin/kcadm.sh get users -r ago-chat --fields username --format csv --noquotes'
+```
+
+The runtime-created account was still listed after the restart, and a direct-grant token request for it
+still returned `200` with a real access token. Keycloak's own log on that boot reads
+`Realm 'ago-chat' already exists. Import skipped` — which is the second half of this change: a changed
+`keycloak-realm-import.json` no longer reaches a running realm, and
+`deploy/k8s/apply-realm-settings.sh` is how realm-level settings are applied instead
+(`local-dev.md`'s "Changing the realm after it exists" has the full rules, including what the script
+does *not* cover).
+
+Boot timings were re-measured rather than assumed to carry over from the H2 path, since Liquibase now
+runs over the network: first boot into an empty `keycloak` database logged `started in 29.253s` and was
+listening ~40s after container start; a restart against the populated database logged `started in
+10.852s` and reached Ready at 61s — i.e. the existing `initialDelaySeconds: 60` is now the binding
+constraint, not Keycloak, so the probe delays were left unchanged.
+
+**Wiping the local realm is still the cheap way out** when it holds nothing worth keeping: delete the
+`postgres-data` PVC (which drops `ago_chat` too, so re-run migrations and the seed afterwards) and the
+next boot is a first boot, realm import and all.
 
 ## Migrations and seeding
 

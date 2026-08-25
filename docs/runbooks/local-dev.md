@@ -26,6 +26,17 @@ dotnet run --project ../ago-chat/src/Ago.Chat.Worker
 dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 ```
 
+**`15-01`: an existing `deploy/docker/.env` needs one new key**, `KEYCLOAK_DB_PASSWORD` — copy it from
+the updated `.env.example`. Keycloak no longer keeps its users in an embedded H2 file inside the
+container; it now has its own `keycloak` database and its own role in the same Postgres container as
+`ago_chat` (`adr/0036`), created before Keycloak starts by a one-shot `keycloak-db-init` service.
+Without the key, `docker compose up` refuses to start with a missing-variable error rather than
+starting something half-configured. What this buys locally: an account created at runtime (through
+Keycloak's registration form, or the admin API) now survives `docker compose restart` **and** a full
+container recreate — verified live on both. What it costs: editing
+`deploy/k8s/base/keycloak-realm-import.json` no longer reaches a realm that already exists, because the
+realm now survives too. See "Changing the realm after it exists" below.
+
 `AGO_CHAT_CONNECTION_STRING` (already exported above) must stay set for `Ago.Chat.Api` too -
 `ChatModule.ConfigureServices` (`1-06`) reads it the same way the migration step did. With
 `ASPNETCORE_ENVIRONMENT=Development`, the API additionally serves `/dev-harness.html` (a plain
@@ -44,6 +55,43 @@ tabs) confirmed twice by hand. That second round of manual testing found a real 
 artifact: SignalR scopes `Clients.Group(...)` per hub *type*, so `VisitorHub` and `OperatorHub` never
 shared a group even under the same name - fixed by having each hub also broadcast through the other's
 `IHubContext<THub>` (`docs/backlog/1-06-api-realtime-and-wiring.md` has the detail).
+
+### Changing the realm after it exists
+
+**Since `15-01`/`adr/0036`.** Keycloak's realm lives in Postgres now, so it survives a restart, and
+`--import-realm` picks its strategy from what it finds. Read straight off Keycloak's own startup log:
+
+```
+empty database:       KC-SERVICES0030: Full model import requested. Strategy: OVERWRITE_EXISTING
+                      Realm 'ago-chat' imported
+realm already there:  KC-SERVICES0030: Full model import requested. Strategy: IGNORE_EXISTING
+                      Realm 'ago-chat' already exists. Import skipped
+```
+
+`Import skipped` skips the whole file — realm settings, clients, roles, users, all of it. Editing
+`deploy/k8s/base/keycloak-realm-import.json` and restarting does nothing at all on a realm that
+already exists. It used to appear to work only because the store was being destroyed on every boot.
+
+- **Realm-level settings** (`adr/0034`'s brute-force thresholds, password policy, OTP parameters, the
+  four token/session lifetimes; `registrationAllowed`, `verifyEmail`, `sslRequired`) — edit the JSON,
+  then:
+
+  ```bash
+  cd deploy && k8s/apply-realm-settings.sh compose   # or: k8s/apply-realm-settings.sh   (kubectl context)
+  ```
+
+  It PUTs the realm-level fields of the mounted file onto the live realm and leaves users and clients
+  alone. Verified live on both targets with a runtime-created user present throughout: the settings
+  changed, the user stayed, and the user could still get a token afterwards.
+- **A client, realm role, group or user** — not covered by that script, and not covered by a restart
+  either. Do it with a `kcadm.sh`/Admin API call, in the same change that edits the JSON, so a fresh
+  install and a running one end up the same.
+- **Never `kc.sh import --override true`.** It applies the whole file by *replacing the realm*, which
+  deletes every self-registered account with it.
+- **Starting over locally is still cheap**, and is the honest shortcut when the local realm has
+  nothing worth keeping: `docker compose -f deploy/docker/docker-compose.yml down -v` (or deleting the
+  `postgres-data` PVC in the cluster) drops both databases, and the next boot is a first boot again.
+  Never on the demo deployment.
 
 ### Getting a working operator session locally
 
@@ -203,9 +251,11 @@ Two things found by actually doing this (`12-03`, 2026-08-25), both of which cos
 - **A Keycloak container started before `12-01` merged does not have the role**, because
   `--import-realm` imports a realm only when it does not already exist - the mounted file changing
   afterwards does nothing. `curl .../roles/platform-owner` returning `{"error":"Could not find role"}`
-  on an otherwise healthy realm is this, not a typo. Either recreate the Keycloak volume, or create the
-  role once by hand (`POST /admin/realms/ago-chat/roles` with `{"name":"platform-owner"}`), which is
-  what the import would have done.
+  on an otherwise healthy realm is this, not a typo. Create the role once by hand (`POST
+  /admin/realms/ago-chat/roles` with `{"name":"platform-owner"}`), which is what the import would have
+  done. Since `15-01` this is the *only* option for a realm role: `apply-realm-settings.sh` covers
+  realm-level settings, not roles, and dropping the realm to force a re-import would take every
+  self-registered account with it (`adr/0036`).
 
 The role has to be in the token, not just in the database: re-fetch the user's access token after
 granting (the direct-grant snippets above), and `realm_access.roles` should contain `platform-owner`.
