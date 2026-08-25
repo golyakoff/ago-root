@@ -689,62 +689,170 @@ Realm-level settings go through `k8s/apply-realm-settings.sh`; clients, roles an
 `kcadm.sh` call. Never `kc.sh import --override true` — it replaces the realm and takes every account
 with it.
 
-## Turning on transactional email — `10-05` **(you, and it needs a decision first — NOT DONE)**
+## Transactional email — `10-05`, on a self-hosted Postfix
 
-Right now **no visitor can finish signing up on this deployment.** The realm has
-`registrationAllowed: true` and `verifyEmail: true` with no `smtpServer`, so Keycloak accepts the
-registration, fails to send the verification mail (`SEND_VERIFY_EMAIL_ERROR ...
-error="email_send_failed"` in its own log), and leaves the account holding a required action that can
-never be lifted. Password reset is in the same state.
+**The provider decision was made and it went against `adr/0040`'s recommendation.** That ADR
+recommended Yandex Cloud Postbox; the author chose **self-hosted Postfix on this node**. `adr/0040`'s
+amendment records the reversal, what the recommendation got wrong (outbound port 25 is *not* blocked
+by this hoster — verified), and what the choice costs. Read it before changing anything here.
 
-`10-05` built everything that does not depend on a decision only you can make: **which sending
-provider.** `adr/0040` carries the comparison, the real costs, and the recommendation (Yandex Cloud
-Postbox — free at this volume, payable with a Russian card, and processing inside Russia, which
-`architecture/personal-data.md`'s residency constraint requires). The keys are deliberately blank in
-`k8s/overlays/demo/.env.example` until you choose; blank means Keycloak fails *visibly*, which is
-better than the silent failure a wrong value would produce.
+There is therefore **no provider account and no SMTP credential.** The `KEYCLOAK_SMTP_*` block in
+`k8s/overlays/demo/.env.example` carries real committed values rather than placeholders, because none
+of them is sensitive.
 
-Once chosen, on the node:
+### The shape of it
+
+Postfix runs on the node, send-only: it accepts nothing for the domain (`mydestination = localhost`),
+has no `relayhost`, and delivers directly to recipient MXes. OpenDKIM signs outbound mail in sign-only
+mode with a 2048-bit key under selector `mail`.
+
+Keycloak runs in a pod and reaches Postfix at **`10.42.0.1:25`** — the k3s flannel bridge (`cni0`)
+gateway, i.e. the node as seen from inside a pod. Postfix listens on all interfaces and trusts
+`10.42.0.0/16` in `mynetworks`; ufw allows that CIDR. No Service, no `Endpoints`, no `hostNetwork`.
+That address is cluster-internal and identical on any default k3s install, so unlike the node's public
+address it is safe to commit. No AUTH and no STARTTLS on that hop — it never leaves the machine.
+
+### Changing the mail configuration
 
 ```bash
 cd ~/ago-deploy
 
-# 1. Verify the sending domain in the provider's console, and publish SPF, DKIM and DMARC for it.
-#    Do this BEFORE the first real send. Without them the mail is accepted and filed as spam, which
-#    from the visitor's side is indistinguishable from the failure above.
-
-# 2. Fill the KEYCLOAK_SMTP_* block in k8s/overlays/demo/.env from the provider's console.
-#    Never commit it - it is gitignored, like every other value in that file.
-
-# 3. Push the new keys into the Secret and let Keycloak pick them up.
+# 1. Edit the KEYCLOAK_SMTP_* block in k8s/overlays/demo/.env (gitignored).
+# 2. Push it into the Secret. NOTE: the secretGenerator hash changes, so this rolls every Deployment
+#    that mounts infra-credentials - api, worker, webhooks, keycloak, postgres, rabbitmq, minio,
+#    grafana - not just Keycloak. Expect a brief blip, and do it deliberately.
 kubectl apply -k k8s/overlays/demo
-kubectl rollout restart deployment/keycloak -n ago-chat
-kubectl rollout status deployment/keycloak -n ago-chat --timeout=180s
+kubectl rollout status deployment/keycloak -n ago-chat --timeout=300s
 
-# 4. Apply them to the live realm. The Secret changing does NOT change the realm by itself -
-#    smtpServer is realm state, and since 15-01 realm state only arrives through a script.
+# 3. Apply to the live realm. The Secret changing does NOT change the realm by itself - smtpServer is
+#    realm state, and since 15-01 realm state only arrives through a script.
 k8s/apply-smtp-settings.sh
-
-# 5. Password reset also needs `resetPasswordAllowed: true`, which 10-05 added to the realm import
-#    file. On a realm that already exists that flag arrives the same way every other realm setting
-#    does - not by restarting.
-k8s/apply-realm-settings.sh
 ```
 
-**Then prove it, from a mailbox on a domain we do not control** (Yandex, Mail.ru, Gmail — not the
-sending domain): register through `https://auth.reserve-me.ru`'s hosted form with a real browser,
-confirm the mail arrives **in the inbox and not the spam folder**, follow the link, and reach `10-02`'s
-bootstrap call with no admin-API step anywhere in it. Then do a password reset the same way. Until
-both have been run here, `10-05`'s last three "Done when" boxes stay unticked.
+### Before any send from a rebuilt node: check DNS the hard way
 
-**Two things about the recommended provider that will bite if forgotten**: every accepted message is
-billed whether it is delivered or not, and the default quota is 200 messages per 24 hours — enough for
-a demo, not enough for a launch, and raising it is a request to the provider rather than a setting.
+SPF, DKIM, DMARC and a correct PTR must all exist, **and the zone must agree with itself.** This is
+not a formality — `adr/0040`'s amendment records an incident where reg.ru served this zone from
+sixteen authoritative IPs of which only four carried the DKIM record. A verifier that lands on one of
+the other twelve gets an authoritative `NXDOMAIN`, fails DKIM, and caches that negative answer. On an
+IP with no sending reputation, that is durable harm done for a reason no single `dig` would reveal.
+
+`dig <name>` is **not** a propagation check: it asks one recursive resolver, which asked one
+authoritative server. Compare the SOA serial at every authoritative address instead:
+
+```bash
+cd ~ && for ns in $(dig +short NS reserve-me.ru); do for ip in $(dig +short A "$ns"); do
+  echo "$ip $(dig +norecurse +short +time=2 SOA reserve-me.ru @"$ip" | awk '{print $3}')"
+done; done | sort -k2
+```
+
+Every line must show the same serial. If they do not, wait — the zone's SOA refresh is four hours, so
+a secondary that missed the `NOTIFY` catches up within that — and re-run it. Only then:
+
+```bash
+cd ~ && sudo opendkim-testkey -d reserve-me.ru -s mail -vvv
+```
+
+`key OK` means the key in DNS matches the private key OpenDKIM holds. `record not found` while `dig`
+succeeds is the partial-propagation symptom above, not a key problem.
+
+### Proving it
+
+**From a mailbox on a domain we do not control** (Yandex, Mail.ru, Gmail — not the sending domain):
+register through `https://auth.reserve-me.ru`'s hosted form with a real browser, confirm the mail
+arrives **in the inbox and not the spam folder**, follow the link, and reach `10-02`'s bootstrap call
+with no admin-API step anywhere in it. Then do a password reset the same way.
+
+Inbox-versus-spam is the whole point and cannot be checked from the node: `postfix/smtp` logging
+`status=sent (250 2.0.0 OK)` means the recipient *accepted* the message, which is entirely compatible
+with it being filed as spam. Read the actual mailbox.
+
+Useful without owning a mailbox at each provider: send once to a `mail-tester.com` address and read
+its report, which gives an objective SPF/DKIM/DMARC/PTR verdict and a SpamAssassin score. It does not
+tell you where Gmail would put the message, only whether the authentication story is sound.
+
+### Inbound — small on purpose, and here is what it is not
+
+The domain has an MX (`10 mail.reserve-me.ru`) and Postfix accepts mail for it. **This is not a mail
+service for humans.** There is no IMAP, no webmail, no per-person account, and none is planned. It is
+a handful of aliases in `/etc/aliases` delivering into one local mbox, `/var/mail/ago`:
+
+| Alias | Why it exists |
+|---|---|
+| `postmaster@`, `abuse@` | RFC 2142. Where blocklist operators and receiving providers write about our sending. An unreachable `postmaster@` is itself a negative deliverability signal. |
+| `no-reply@` | Keycloak's envelope sender, so **this is where bounces come back to**. A mistyped registration address produces a hard bounce that now lands here instead of nowhere. |
+| `dmarc@` | DMARC `rua=` aggregate reports — **the alias exists, the DNS tag does not yet.** See below. |
+| `root@` | cron and `unattended-upgrades`, otherwise silently dropped. |
+
+Read it with `sudo less /var/mail/ago` (or `mail -f /var/mail/ago`). **Nothing reads it on a
+schedule** — that is a real gap, not an oversight, and `15-03` is where notifying on it would belong.
+
+Anything not aliased is rejected at RCPT time rather than accepted and bounced, so this node is not a
+backscatter source. Adding an address means adding an alias and running `sudo newaliases`.
+
+**Two registrar edits are still outstanding** (DNS is not managed from this repo or the node):
+
+1. `MX 10 mail.reserve-me.ru` — without it nothing external can reach the aliases above at all.
+2. DMARC gains its reporting destination: `v=DMARC1; p=none; rua=mailto:dmarc@reserve-me.ru`. It is
+   currently `v=DMARC1; p=none;` with no `rua=`, which was unavoidable while there was no inbox and is
+   now merely undone.
+
+### Re-proving the port-25 properties after any change
+
+Port 25 is open to the internet, so two properties must hold and both are cheap to check. Run these
+**from a machine that is not the node** (the node itself is in `mynetworks` and would pass trivially):
+
+```bash
+# 1. NOT AN OPEN RELAY - must answer 554 5.7.1 Relay access denied
+cd ~ && echo probe | curl -sv --url "smtp://mail.reserve-me.ru:25/probe.example.com" \
+  --mail-from "probe@gmail.com" --mail-rcpt "probe@example.org" --upload-file - 2>&1 | grep -E "RCPT|554|550"
+
+# 2. UNKNOWN RECIPIENT REFUSED IN-BAND - must answer 550 5.1.1 User unknown in local recipient table
+cd ~ && echo probe | curl -sv --url "smtp://mail.reserve-me.ru:25/probe.example.com" \
+  --mail-from "probe@gmail.com" --mail-rcpt "nosuchuser@reserve-me.ru" --upload-file - 2>&1 | grep -E "RCPT|550"
+```
+
+Both verified after the inbound change on 2026-08-25. Use an FQDN as the URL path — that becomes the
+EHLO name, and `reject_non_fqdn_helo_hostname` will refuse a bare hostname — and a sender domain that
+actually accepts mail, since `reject_unknown_sender_domain` refuses `example.com` (null MX).
+
+### What bounds the junk an MX attracts
+
+`smtpd_helo_required`, `reject_invalid_helo_hostname`, `reject_non_fqdn_helo_hostname`,
+`reject_non_fqdn_sender`, `reject_unknown_sender_domain`; per-client connection/message/recipient rate
+limits, from which `mynetworks` is exempt so the cluster's own path is never throttled;
+`message_size_limit` 10 MB; `mailbox_size_limit` 50 MB with a `logrotate` entry
+(`/etc/logrotate.d/ago-mailbox`) rotating the mbox weekly, four compressed generations — the rotation
+is what stops the size limit becoming a permanent "mailbox full" rejection.
+
+**No content filter, deliberately** — no SpamAssassin, no rspamd. Nobody reads this mailbox
+conversationally, so junk costs disk rather than attention, and disk is already bounded.
+
+**Exposure**: Postfix 3.8.6 from Ubuntu's archive, SMTP on 25 with opportunistic STARTTLS and **no
+SASL** — there is no authenticated submission path, so no credential to brute-force and no submission
+port open. Dovecot/IMAP/POP are not installed. Patched by `unattended-upgrades` (enabled, `-security`
+origin included).
+
+### What this costs, permanently
+
+- **Reputation is ours to build and lose.** A provider brings shared IP reputation that is already
+  good; this node brings none, and any future misstep lands on the one IP that also carries every
+  legitimate verification mail.
+- **Nothing monitors blocklists.** The first symptom of a Spamhaus listing will be a visitor saying
+  the mail never arrived. Check `mailq` and `journalctl -u postfix` when that happens.
+- **Bounces land but are not processed.** `no-reply@` receives them; nothing reads them, there is no
+  suppression list, and a repeatedly-bouncing address is retried like any other.
+- **SPF is `-all`**, a hard fail authorising exactly this node. Correct while all outbound comes from
+  here — and it means **any future attempt to send under this domain from anywhere else fails by
+  design**: a second node, a migration to a provider, a CI notification. The fix is a deliberate SPF
+  change made alongside the new sender, never a surprise to diagnose.
+- **Mail dies with the node.** One node, no queue anywhere else, and inbound stops too.
 
 **And one consequence that is not about mail at all.** `adr/0034` deferred the registration CAPTCHA
 partly because a spam account could never lift `verifyEmail` and so could never create a tenant.
-Completing the steps above deletes that bound. `adr/0040` says what replaces it and hands the choice
-between a CAPTCHA and an invite/waitlist gate forward — read it before turning this on, not after.
+Turning mail on deletes that bound — and `adr/0040` section 6's named replacement, the provider's own
+200-messages-per-24-hours quota, **does not exist on a self-hosted Postfix.** So the trigger has fired
+and its mitigation is gone. Read `adr/0040`'s amendment before treating that as settled.
 
 ## Known gaps, named plainly
 
