@@ -1,7 +1,9 @@
 # Architecture tests
 
 - **Stage**: 0
-- **Status**: in progress — tests written and verified; CI wiring waits on `0-04-ci-pipeline.md`
+- **Status**: done — the tests were written and verified, and `0-04`'s CI has been running them on
+  every push since Stage 0 closed, which was the one thing this status was waiting on. Corrected
+  2026-08-25; it had said `in progress` ever since.
 - **Depends on**: `0-01-repositories-and-skeleton.md`
 
 ## Goal
