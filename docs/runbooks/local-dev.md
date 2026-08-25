@@ -458,8 +458,9 @@ uses, pointed at the same `Otel:Exporter:Endpoint` (Jaeger) - but Jaeger's OTLP 
 the trace collector service, and Prometheus's own model is pull/scrape in the first place, not push, so
 every metric silently went nowhere either way. Fixed by replacing that with `AddPrometheusExporter()`
 plus one `app.MapPrometheusScrapingEndpoint()` line per host's own `Program.cs` (mapping the endpoint
-needs the built `WebApplication`, not available from `Ago.Platform.Hosting`'s own `IServiceCollection`-
-only extension method). Re-verified after the fix: `/metrics` returns real Prometheus-format output, and
+needs the built `WebApplication`, not available from the platform's own `IServiceCollection`-only
+extension method - which is `Ago.Platform.Observability.AddPlatformObservability` as of `7-09`; it
+shipped from `Ago.Platform.Hosting` until then). Re-verified after the fix: `/metrics` returns real Prometheus-format output, and
 Prometheus's targets page shows `ago-chat-api` `up`.
 
 `Ago.Chat.Worker`'s `/healthz/ready` is a real check as of `2-04` (Postgres + RabbitMQ reachable, not

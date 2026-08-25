@@ -51,14 +51,19 @@ ago-platform (NuGet packages)          ago-chat (Docker images)
   Ago.Platform.Realtime
   Ago.Platform.Resilience
   Ago.Platform.Hosting
+  Ago.Platform.Observability
 ```
 
 Two things follow from this being two **repositories** rather than two folders (`adr/0012`):
 
 - The platform cannot reference a product even by accident - it has no access to the source.
 - The hosts belong to the product, because a host must reference the module it composes. The
-  platform contributes `Ago.Platform.Hosting` (the `IProductModule` contract, health checks,
-  telemetry, configuration binding) as a library.
+  platform contributes `Ago.Platform.Hosting` (the `IProductModule` contract, `AddPlatformKernel`,
+  `SystemClock`) as a library, and optional capabilities - telemetry wiring in
+  `Ago.Platform.Observability` - as separate packages a host takes only if it can use them.
+  `Ago.Platform.Hosting` is the one package no host can decline, so **what it declares, every host of
+  every product pays for**; `adr/0046` is the worked example of that rule being broken and fixed,
+  measured in a restore graph rather than argued.
 
 ## What qualifies as platform
 
