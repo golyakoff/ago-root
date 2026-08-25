@@ -83,6 +83,23 @@ already exists. It used to appear to work only because the store was being destr
   It PUTs the realm-level fields of the mounted file onto the live realm and leaves users and clients
   alone. Verified live on both targets with a runtime-created user present throughout: the settings
   changed, the user stayed, and the user could still get a token afterwards.
+- **The realm's `smtpServer`** (`10-05`/`adr/0040`) — the one realm-level setting that is *not* in
+  that JSON, because it carries a credential and because its correct value differs between the local
+  sink and the demo's real provider. It comes from `KEYCLOAK_SMTP_*` in the `infra-credentials` Secret
+  and is applied by its own script:
+
+  ```bash
+  cd C:/git/ago/ago-deploy
+  k8s/apply-smtp-settings.sh compose   # or: k8s/apply-smtp-settings.sh   (kubectl context)
+  ```
+
+  Being absent from the JSON, it is left alone by `apply-realm-settings.sh` — which is the point, not
+  an accident. Running the two in either order is safe: Keycloak returns the stored SMTP password
+  masked as `**********` and recognises its own mask on the way back in, checked directly against its
+  `realm_smtp_config` table before and after. One tooling gotcha worth knowing:
+  `kcadm get realms/ago-chat --fields smtpServer` prints `{ }` even when the setting is correctly
+  applied, because that field filter does not descend into a Map — read the whole representation
+  instead, which is what the script does.
 - **A client, realm role, group or user** — not covered by that script, and not covered by a restart
   either. Do it with a `kcadm.sh`/Admin API call, in the same change that edits the JSON, so a fresh
   install and a running one end up the same.
@@ -145,18 +162,53 @@ The real flow a browser drives: open Keycloak's hosted registration page directl
 http://127.0.0.1:8081/realms/ago-chat/protocol/openid-connect/registrations?client_id=ago-console&response_type=code&redirect_uri=http://localhost:5173/callback&scope=openid
 ```
 
-- fill in the form, and Keycloak sends a verification email through whatever SMTP config the realm
-has. **There is none, anywhere in this project** - local Keycloak has no SMTP configured at all, and
-attempting this flow fails silently server-side (`SEND_VERIFY_EMAIL_ERROR ... error="email_send_failed"`
-in Keycloak's own log, found live, `8-05`/`5-13`'s own investigation while checking the public
-deployment's mail-related exposure) rather than the "logs the email to its own console instead" this
-runbook previously claimed - that claim was never actually true, corrected here. The verification link
-is what actually lifts the "Verify Email" required action; without it, this exact browser flow cannot
-complete, and there is currently no local workaround other than the admin-API shortcut below. Adding a
-mock-SMTP relay (e.g. MailHog) to the local compose stack is real work — **now owned, as of 2026-08-25,
-by `backlog/10-05-transactional-email-delivery.md`**, which covers both the local relay and a real
-sending provider for the public deployment, where the same gap means a real visitor cannot finish
-registering at all. Until it lands, the admin-API shortcut below stays the only way past this gate.
+- fill in the form, and Keycloak sends a verification email through the realm's SMTP config.
+
+**Shipped in `10-05`** (`adr/0040`): there is one now, locally. Until 2026-08-25 there was none
+anywhere in this project, and this flow died server-side at `SEND_VERIFY_EMAIL_ERROR ...
+error="email_send_failed"` in Keycloak's own log (found live under `8-05`/`5-13` while checking the
+public deployment's mail-related exposure) — never the "logs the email to its own console instead"
+this runbook once claimed, a claim that was never true and stays corrected here. The verification link
+is what lifts the "Verify Email" required action, so without delivery the browser flow simply could
+not complete.
+
+Two pieces make it work locally, and the second is easy to forget:
+
+1. **A Mailpit sink** — a service in `deploy/docker/docker-compose.yml` and a Deployment in
+   `deploy/k8s/overlays/local/` (deliberately not in `base/`: a sink on the demo deployment would
+   accept a real visitor's mail and silently drop it). It accepts everything on `1025`, forwards
+   nothing, and shows the result at **http://localhost:8025** on the compose loop, or via
+   `kubectl port-forward -n ago-chat svc/mailpit 8025:8025` on the cluster.
+2. **Pointing the realm at it**, which `docker compose up` does *not* do by itself. SMTP is a realm
+   setting, and since `15-01` a realm setting only arrives through a script:
+
+   ```bash
+   cd C:/git/ago/ago-deploy
+   k8s/apply-smtp-settings.sh compose   # or: k8s/apply-smtp-settings.sh   (kubectl context)
+   ```
+
+   It reads `KEYCLOAK_SMTP_*` from inside the Keycloak container — the same `.env` →
+   `secretGenerator` → `infra-credentials` chain every other credential uses — and applies them to the
+   live realm. **Copy the new `KEYCLOAK_SMTP_*` block out of `.env.example` into your own `.env`
+   first**, or the script tells you which key is missing and stops. `adr/0040` explains why these
+   values are not simply in `keycloak-realm-import.json` like every other realm setting: one of them
+   is a credential, the correct values differ between a sink and a paid provider, and
+   `apply-realm-settings.sh` would otherwise be one run away from resetting the demo's real mail
+   configuration to a local sink.
+
+After that the whole flow runs for real: submit the form, Keycloak shows "Email verification ... has
+been sent to <your address>", the message appears in Mailpit's UI, and its link lands the account
+verified (`emailVerified: true`, `requiredActions: []`) — which is exactly the token state `10-02`'s
+bootstrap endpoint wants. Verified end to end this way on 2026-08-25.
+
+**Password reset works too, and needed more than SMTP.** `resetPasswordAllowed` was `false`, so the
+realm never rendered a "Forgot Password?" link at all; `10-05` set it to `true` in
+`keycloak-realm-import.json`. On an existing local realm that flag arrives through
+`k8s/apply-realm-settings.sh`, not through a restart. The flow then runs the same way: request the
+reset, read the `Reset password` message in Mailpit, follow its link, set the new password.
+
+The admin-API shortcut below is still here and still useful — it is now a convenience for repeated and
+automated testing rather than the only way past this gate.
 
 For testing `10-02`/`10-03` without driving a real browser + email flow every time, mint an
 equivalent token directly against Keycloak's admin API instead - the same shape
@@ -380,6 +432,8 @@ Local endpoints (all verified reachable):
 | Prometheus | http://localhost:9090/targets (`7-03`) |
 | Grafana | http://localhost:3000 (`7-03`, `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` from `deploy/docker/.env` - same env-var-driven, no-committed-secret-value shape as Keycloak's admin credentials above) |
 | Jaeger UI | http://localhost:16686 (`7-03`) |
+| Mailpit SMTP | `localhost:1025` (`10-05` - what the realm's `smtpServer` points at locally) |
+| Mailpit UI | http://localhost:8025 (`10-05` - every mail Keycloak sends locally lands here and goes no further) |
 
 **`7-03`**: `Ago.Chat.Worker`/`Ago.Chat.Webhooks` have no `applicationUrl` in their own
 `Properties/launchSettings.json` (neither file has one, unlike `Ago.Chat.Api`'s `http://localhost:5009`),

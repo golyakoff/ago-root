@@ -182,7 +182,25 @@ Jaeger receives real OTLP traces from all three `Ago.Chat.*` hosts (`Otel__Expor
 kubectl port-forward -n ago-chat svc/prometheus 9090:9090   # http://localhost:9090/targets
 kubectl port-forward -n ago-chat svc/grafana 3000:3000      # http://localhost:3000
 kubectl port-forward -n ago-chat svc/jaeger 16686:16686     # http://localhost:16686
+kubectl port-forward -n ago-chat svc/mailpit 8025:8025      # http://localhost:8025  (10-05)
 ```
+
+**`10-05`: this overlay has a Mailpit sink and the demo overlay deliberately does not.** It is what the
+realm's `smtpServer` points at locally, so Keycloak's "Verify Email" and password-reset flows can be
+driven for real instead of through the admin-API shortcut. `kubectl apply -k` brings the Deployment up
+but does *not* configure the realm — SMTP is a realm setting, so it arrives the same way every realm
+setting has since `15-01`:
+
+```
+cd C:/git/ago/ago-deploy
+k8s/apply-smtp-settings.sh
+```
+
+Copy the `KEYCLOAK_SMTP_*` block from `k8s/overlays/local/.env.example` into your own `.env` before
+running it, and re-apply the overlay so the Secret carries the new keys; the script names the missing
+key and stops if you have not. `local-dev.md`'s "Changing the realm after it exists" has the full
+rules, and `adr/0040` has the reasoning for why this one setting is not in `keycloak-realm-import.json`
+with the others.
 
 **Metrics gotcha found while verifying this item, fixed in `7-02` before merge** (same root cause
 `local-dev.md`'s own compose-loop note documents): Prometheus's targets page initially showed every
