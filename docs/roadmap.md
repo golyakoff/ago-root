@@ -106,11 +106,14 @@ and the missing three gate a whole set rather than a single item. Sorted by what
 - The **legal consultation** gating `16-04` and the whole `ago-business` legal block. The longest
   calendar latency of anything here and the one with no substitute, which is why it is worth starting
   before the work that needs it rather than when it blocks.
-- **Four subscription-lifecycle questions** (`13-03`, blocked on them): what a failed recurring charge
-  does — immediate downgrade, a grace period, or a dunning schedule; whether an explicit cancellation
-  is immediate or paid-until-period-end; whether a mid-cycle change is prorated or deferred; and what
-  happens when a downgrade would leave fewer seats than the account has operators. Pure product
-  decisions, no code involved, and they unblock a Stage 13 item outright.
+- ~~**Four subscription-lifecycle questions**~~ — **answered 2026-08-25** (`ago-business`'s
+  `decisions/0006`), and `13-03` is unblocked. Failed charge: retries for roughly a week with full
+  access retained, then Free. Cancellation: paid until the period ends, no refund. Mid-cycle:
+  upgrades immediate and charged, downgrades at renewal with no credit — which removes credit
+  accounting entirely, since ЮKassa has no balance concept. More operators than seats: nothing is
+  deleted and nobody is chosen for the customer, the owner assigns the seats — one behaviour covering
+  both the voluntary downgrade and the involuntary drop to Free, because in the second the customer is
+  by definition not answering. `13-01` gains seat assignment and operator removal as a consequence.
 - **What "site-count cap" means** (`13-05`): the identity-correlation problem `13-01` already named, or
   a genuinely new feature letting one paying account hold several sites. `10-02` deliberately rejected
   an `Account` aggregate above `Site`, so the second reading reopens that decision — which is exactly
