@@ -57,39 +57,37 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `5-17` a failed send desynchronises the widget's bubbles | Found by `11-08`'s own tests, reproduced not reasoned: `pendingSends` pairs an echo to a bubble by queue *position*, and a failed send never removes its entry - so the next message's echo deletes the "Not sent" warning instead of its own bubble and renders itself twice. The visitor loses the only sign a message never went. First because it is visitor-visible, small, and the identifier needed to fix it is already on the wire |
-| 2 | `5-13` presigned upload size never enforced | Hours, and its own premise expires the moment `8-07` or `10-05` lands. Cheapest thing here |
-| 3 | `7-08` delivery observability | Small, and 2026-08-25 measured what its absence costs: an hour of reading code to answer one question |
-| 4 | `17-07` visitor session silent renewal | The visitor-side twin of `5-16`, which was a live defect in the operator console. Same class, same size |
-| 5 | `8-07` demo credentials minted on request | Ends one shared public operator, and needs no mail — so it does not wait on anything |
-| 6 | `15-06` a registry, tagged images, a rollback | **Placed here on purpose.** `20-00` below adds a second product to deploy, and deploying is already the known weak point — three separate costs on 2026-08-25 alone. Doing this after Calendar means building the second product on top of it |
-| 7 | `20-00` the `ago-calendar` scaffold | The single most valuable thing left. Every ADR asserts the platform is defensible without knowing about chat; this is where that stops being an assertion and becomes code, and the first commit already tests it |
-| 8 | `20-01` Calendar domain and persistence | `Event` as the one real row a booking transitions through, never a computed slot |
-| 9 | `20-02` availability materialisation | Materialised ahead to a rolling horizon, with already-materialised days directly editable |
-| 10 | `20-03` booking and the lead card | An atomic compare-and-set claim on an `Available` row — the same discipline operator capacity already uses |
-| 11 | `20-04` confirmation sweep and operator queue | The same Worker-job shape as `OutboxDispatcher`, not a new mechanism |
-| 12 | `20-06` Calendar console and booking widget | Reuses per-site CORS and the OIDC pattern rather than inventing a second of either |
-| 13 | `14-01` external channel identity and inbound port | AGO Inbox starts here: the domain concept and the port every adapter plugs into |
-| 14 | `14-04` offline auto-reply | Channel-agnostic by design, so it needs no adapter and no vendor — the one Inbox item with no external dependency |
-| 15 | `14-02` MAX channel adapter | The first concrete channel, chosen because it has an open Bot API and no regulatory friction |
-| 16 | `13-01` operator invitations and seat entitlement | Also carries seat assignment and operator removal, which `decisions/0006` made a prerequisite of everything else in billing |
-| 17 | `13-02` ЮKassa checkout and webhook | The first successful payment; state confirmed by webhook through the outbox, never by trusting a redirect |
-| 18 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
-| 19 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
-| 20 | `15-04` retention and pruning jobs | Bounded pruning of everything that grows without limit, and the mechanism `13-06` builds on |
-| 21 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
-| 22 | `11-08` frontend behaviour tests | `5-16` and `17-07` are both exactly the class this exists for. Here rather than later because two examples is when the argument is easiest to make |
-| 23 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
-| 24 | `15-02` backup, and a restore performed | Destination decided 2026-08-25. Rises the moment there is a customer whose data is not ours to lose |
-| 25 | `15-03` alerting that reaches a person | Now buildable: something finally collects the machine's own metrics |
-| 26 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
-| 27 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
-| 28 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 29 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
-| 30 | `17-04` dependency and image scanning | Only meaningful once `15-06` gives images somewhere to be pushed |
-| 31 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
-| 32 | `17-05` runtime hardening | `securityContext` and `NetworkPolicy` everywhere. Limits blast radius rather than reducing the chance of a breach, which is why it is not higher |
-| 33 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
-| 34 | `11-07` finish the login theme | Error pages, and the anti-drift mechanism for the tokens that the first pass owed |
+| 2 | `7-08` delivery observability | Small, and 2026-08-25 measured what its absence costs: an hour of reading code to answer one question |
+| 3 | `17-07` visitor session silent renewal | The visitor-side twin of `5-16`, which was a live defect in the operator console. Same class, same size |
+| 4 | `8-07` demo credentials minted on request | Ends one shared public operator, and needs no mail — so it does not wait on anything |
+| 5 | `15-06` a registry, tagged images, a rollback | **Placed here on purpose.** `20-00` below adds a second product to deploy, and deploying is already the known weak point — three separate costs on 2026-08-25 alone. Doing this after Calendar means building the second product on top of it |
+| 6 | `20-00` the `ago-calendar` scaffold | The single most valuable thing left. Every ADR asserts the platform is defensible without knowing about chat; this is where that stops being an assertion and becomes code, and the first commit already tests it |
+| 7 | `20-01` Calendar domain and persistence | `Event` as the one real row a booking transitions through, never a computed slot |
+| 8 | `20-02` availability materialisation | Materialised ahead to a rolling horizon, with already-materialised days directly editable |
+| 9 | `20-03` booking and the lead card | An atomic compare-and-set claim on an `Available` row — the same discipline operator capacity already uses |
+| 10 | `20-04` confirmation sweep and operator queue | The same Worker-job shape as `OutboxDispatcher`, not a new mechanism |
+| 11 | `20-06` Calendar console and booking widget | Reuses per-site CORS and the OIDC pattern rather than inventing a second of either |
+| 12 | `14-01` external channel identity and inbound port | AGO Inbox starts here: the domain concept and the port every adapter plugs into |
+| 13 | `14-04` offline auto-reply | Channel-agnostic by design, so it needs no adapter and no vendor — the one Inbox item with no external dependency |
+| 14 | `14-02` MAX channel adapter | The first concrete channel, chosen because it has an open Bot API and no regulatory friction |
+| 15 | `13-01` operator invitations and seat entitlement | Also carries seat assignment and operator removal, which `decisions/0006` made a prerequisite of everything else in billing |
+| 16 | `13-02` ЮKassa checkout and webhook | The first successful payment; state confirmed by webhook through the outbox, never by trusting a redirect |
+| 17 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
+| 18 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
+| 19 | `15-04` retention and pruning jobs | Bounded pruning of everything that grows without limit, and the mechanism `13-06` builds on |
+| 20 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
+| 21 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
+| 22 | `15-02` backup, and a restore performed | Destination decided 2026-08-25. Rises the moment there is a customer whose data is not ours to lose |
+| 23 | `15-03` alerting that reaches a person | Now buildable: something finally collects the machine's own metrics |
+| 24 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
+| 25 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
+| 26 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
+| 27 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
+| 28 | `17-04` dependency and image scanning | Only meaningful once `15-06` gives images somewhere to be pushed |
+| 29 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
+| 30 | `17-05` runtime hardening | `securityContext` and `NetworkPolicy` everywhere. Limits blast radius rather than reducing the chance of a breach, which is why it is not higher |
+| 31 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
+| 32 | `11-07` finish the login theme | Error pages, and the anti-drift mechanism for the tokens that the first pass owed |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
 | — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |
