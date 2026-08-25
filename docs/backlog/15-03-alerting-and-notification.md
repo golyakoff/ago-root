@@ -69,9 +69,35 @@ is a documented, acceptable degradation, which is exactly the line an alert must
 - [ ] `7-02` and `7-03`'s out-of-scope notes are updated to point here rather than left contradicting
       the code — `CLAUDE.md`'s "docs are part of the deliverable".
 
+## Two mechanisms, not one — decided 2026-08-25
+
+Internal alerting and external checking answer different questions, and neither substitutes for the
+other. This was implicit and is now stated, because conflating them is how a deployment ends up with
+dashboards nobody watches and no idea when it went down.
+
+- **Internal** (this item's rules): outbox lag growing, DLQ rising, disk filling, a pod crash-looping,
+  a certificate approaching expiry. Only visible from inside, and worthless if nobody is told.
+- **External**: the whole thing being gone. Structurally impossible to detect from inside — a
+  deployment cannot alert on its own unreachability, and Grafana in particular runs *inside* the thing
+  it watches.
+
+**The external check targets `https://chat.reserve-me.ru/healthz/ready`**, not the landing page and not
+the console bundle. `Ago.Chat.Api` registers that endpoint with `ready`-tagged checks for Postgres,
+RabbitMQ and Redis, so a 200 there means the API is up *and* its three dependencies are reachable.
+Checking a static page instead proves only that nginx served a file, which is green while the API is
+dead — the classic mistake that makes monitoring reassuring rather than useful. Verified reachable and
+returning 200 from outside on 2026-08-25.
+
+Grafana's own public route was removed the same day (`ago-deploy`'s `gateway.yaml`), which removes any
+temptation to treat "I can open the dashboard" as a liveness check.
+
 ## Open questions
 
-- **External uptime checking.** Every rule above is evaluated *by the deployment being monitored*, which
-  by construction cannot tell you it is down. A third-party uptime check is the standard answer and is
-  either free-tier or cheap, but it is a real external dependency and the author's call. Not a blocker:
-  the internal rules are worth having either way, and this question can be settled after they ship.
+- **Which external checker.** Three shapes, all defensible, and the choice is the author's:
+  a scheduled GitHub Actions workflow (free, no new vendor, genuinely outside the deployment — but
+  cron granularity is minutes, GitHub delays scheduled runs under load, and schedules get disabled on
+  inactive repositories, so it detects within roughly ten minutes rather than seconds); a third-party
+  uptime service (better interval and notification channels, one more vendor, free tiers exist — check
+  their current terms rather than trusting a number written here); or a heartbeat pushed outward, where
+  silence is the alarm, which keeps working no matter how tightly inbound traffic is firewalled. Not a
+  blocker: the internal rules are worth having either way.

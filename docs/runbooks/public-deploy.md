@@ -597,10 +597,21 @@ manual sequence is the whole story until a later item decides differently.
 - **Keycloak runs in `start-dev` mode publicly**, not its own hardened `start` production mode —
   `adr/0026`'s own "Consequences" section names this a deliberate, stated gap: a demo IdP for one
   seeded operator, not a production identity provider.
-- **No firewall, and the k3s control plane faces the internet** (established 2026-08-25): `ufw` is
-  inactive, the provider filters nothing, and an external probe reaches `6443` (API), `10250` (kubelet)
-  and `32669` (k3s-server). All three reject anonymous requests — `401`, not even a version string — so
-  this is exposure of an authentication surface, not an open cluster. `17-05` owns closing it.
+- ~~**No firewall, and the k3s control plane faces the internet**~~ — **closed the same day it was
+  found, 2026-08-25.** `ufw` now runs with `deny incoming`, allowing `22`, `80` and `443` plus the k3s
+  pod (`10.42.0.0/16`) and service (`10.43.0.0/16`) ranges and the `cni0` bridge.
+  `DEFAULT_FORWARD_POLICY` had to be set to `ACCEPT` first — its `DROP` default breaks pod networking
+  on a k3s node, which is the trap this change exists to avoid rather than fall into. Verified after
+  enabling: a fresh SSH session, 24 pods still Running, and `chat`/`auth`/`console`/both demo
+  shops/apex all still 200.
+
+  **How it was verified, because the obvious method lies.** A plain TCP probe from the author's own
+  network reports *every* port reachable, including one nothing listens on — something on that path
+  answers every SYN. The trustworthy evidence is content, not connectivity: before the firewall,
+  `curl -sk https://<node-ip>:6443/version` returned a real Kubernetes `401` JSON body, and `:10250`
+  answered `401` as well. After it, the same requests return nothing at all. Whether `32669` was ever
+  reachable from outside was never actually established — that one only ever produced an ambiguous TLS
+  error, and the earlier note claiming otherwise overstated what the evidence supported.
 - **k3s Secrets are unencrypted at rest** — `k3s secrets-encrypt status` reports `Disabled`. Host-level
   access is required to read them, so it is defence-in-depth; `17-05` owns the decision.
 - **Unattended security upgrades are on and working** — checked 2026-08-25, zero pending, no reboot
@@ -609,6 +620,23 @@ manual sequence is the whole story until a later item decides differently.
   or network-partition testing) carry over unchanged to this real deployment. `nfr.md`'s "not an
   uptime SLA — this is a demo cluster" framing is the bar this deployment is held to, not a new one
   invented here.
+
+## Reaching Grafana (it is no longer public)
+
+`grafana.reserve-me.ru` was removed from the edge on 2026-08-25 (`ago-deploy`'s `gateway.yaml` carries
+the reasoning). Grafana is a ClusterIP Service inside the cluster, not something the node itself
+serves, so a tunnel has to point at the Service address rather than at the node's own `localhost`:
+
+```bash
+cd ~ && GRAFANA_IP=$(ssh -i ~/.ssh/ago-vps-ed25519 ago@<node-ip> 'sudo k3s kubectl get svc grafana -n ago-chat -o jsonpath={.spec.clusterIP}') && ssh -i ~/.ssh/ago-vps-ed25519 -N -L 3000:$GRAFANA_IP:3000 ago@<node-ip>
+```
+
+Then open `http://localhost:3000`. The ClusterIP is looked up rather than hardcoded because it changes
+if the Service is ever recreated. Verified working 2026-08-25.
+
+Nothing about this replaces an external liveness check — Grafana runs inside the thing it watches and
+cannot report the failure that matters most. That is `backlog/15-03`'s subject, and the target is
+`https://chat.reserve-me.ru/healthz/ready`, which already exercises Postgres, RabbitMQ and Redis.
 
 ## Troubleshooting
 
