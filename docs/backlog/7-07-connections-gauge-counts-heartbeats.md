@@ -70,7 +70,9 @@ name "connection count per node" as something that must be visible without a deb
 
 - Any dashboard or alert that reads this metric — `7-03` and `15-03`. They inherit a working value
   once this lands; nothing there needs changing for the wrong reason.
-- The delivery-observability gap this investigation also exposed — `5-17`.
+- The delivery-observability gap this investigation also exposed — `7-08`. (This line said `5-17`
+  until 2026-08-25; the item was written as `7-08` instead, since it is observability work and belongs
+  next to the rest of Stage 7's instruments rather than in Stage 5.)
 - Anything about connection *behaviour*. The registry, the heartbeat and the TTL are all working as
   designed; only the counting is wrong.
 
