@@ -37,6 +37,16 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   release. Nothing ever loads `Operator` through EF's change tracker and saves it back, so there is
   no load-mutate-save path that could race the raw `UPDATE` - the shadow property is what makes that
   true by construction, not by convention.
+  **Corrected in `6-09`**: the "symmetric release" above was, until then, a sentence this document
+  asserted and no ordinary code path performed. `active_chats` went up on every automatic assignment
+  and came back down only when an operator's *last connection anywhere* dropped (`4-04`'s
+  `OperatorConversationReleaser`), so an operator who simply finished conversations one at a time
+  ratcheted to zero usable capacity and the site's waiting queue stopped being served - found live by
+  `7-04`'s `assignment-contention` run (`load/reports/2026-08-24-assignment-contention.md`), not by
+  reading this page. The invariant the column now actually keeps, and the one to check any future
+  change against: **`active_chats` equals the number of conversations currently `Assigned` to that
+  operator whose `holds_capacity_claim` is true** - see the `conversations` bullet below and
+  `adr/0033`.
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
   (`waiting|assigned|closed`), `last_sequence`, `visitor_unread_count`, `operator_unread_count`,
   `operator_last_read_sequence`, timestamps. Optimistic concurrency uses Postgres's built-in `xmin`
@@ -50,6 +60,24 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   still counted whichever of the two saves wins the `xmin` race. There is no visitor-side twin -
   nothing reads `visitor_unread_count` yet (`5-15`'s own Decisions section). No index: the column is
   only ever read as part of an aggregate already located by primary key.
+  `holds_capacity_claim` (`6-09`, `adr/0033`) is the receipt for one `operators.active_chats` slot:
+  true only for a conversation the automatic assignment engine assigned after `TryClaimAsync` actually
+  took a slot, in that same transaction. A conversation an operator picked up by hand
+  (`AssignConversationHandler`, behind `OperatorHub.JoinConversationAsync`) takes no slot and carries
+  no receipt, which is why closing one must not decrement anything. `Close` and `ReleaseToQueue`
+  consume the receipt as part of the same `SaveChangesAsync` as the state transition, so under `xmin`
+  a claim cannot be released twice for one close and cannot be released for a close that lost its
+  race. Deliberately an ordinary mapped property rather than a shadow property like
+  `operators.active_chats` right above: that column has a raw-SQL writer an EF load-mutate-save could
+  race, and this one has exactly one writer, the aggregate itself. No index - it is read only as part
+  of an aggregate already located by primary key, or of one `GetAssignedToOperatorAsync` already
+  materialises.
+  **Migration `Stage6AddConversationCapacityClaim` also repairs existing rows**, which a schema
+  migration normally has no business doing: it declares every currently-`Assigned` conversation to
+  hold a claim and resets each operator's `active_chats` to exactly that count. Both halves have to
+  run together, and the reason they run at all is that the pre-`6-09` leak is already baked into every
+  deployed database - shipping the fix alone would leave every existing environment exactly as jammed
+  as it is, because nothing in the new code path ever revisits a conversation that was already closed.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
   `created_at`, `delivered_at?`, `read_at?`.
 - `outbox` - `id`, `occurred_at`, `type`, `version`, `payload` (jsonb), `partition_key`,

@@ -5,7 +5,7 @@
   capacity leak on a deployment that is now live and taking real conversations — an operator's
   usable capacity decays until their connection drops, which on a public deployment means the
   waiting queue silently stops being served.
-- **Status**: ready
+- **Status**: done (2026-08-25) — except the load re-run below, see Done when
 - **Depends on**: nothing — `ago-chat` only, no product-side prerequisite
 
 ## Goal
@@ -56,18 +56,78 @@ transitions the conversation to `Closed`, enqueues `ConversationClosed`, saves �
 
 ## Done when
 
-- [ ] `CloseConversationHandler` releases operator capacity on a normal close, for conversations that
-      hold a real capacity claim.
-- [ ] A new test deterministically reproduces the bug (fails before the fix, passes after) — assign via
+- [x] `CloseConversationHandler` releases operator capacity on a normal close, for conversations that
+      hold a real capacity claim. `Conversation.HoldsCapacityClaim` is what "a real capacity claim"
+      became — see Decisions below and `adr/0033`.
+- [x] A new test deterministically reproduces the bug (fails before the fix, passes after) — assign via
       the automatic path, close, assert `active_chats` decrements.
+      `CloseConversationCapacityConcurrencyTests` (`Ago.Chat.Concurrency.Tests`), four tests against
+      real Postgres. Against pre-fix code three of them fail, with the load report's own symptom
+      reproduced in miniature: 60 conversations, 12 rounds of closes racing assignment ticks, `closed=10,
+      assigned=0, waiting=50, active_chats=[5, 5]` — the plateau. With the fix: `closed=54, assigned=6,
+      waiting=0, active_chats=[2, 4]`, summing to exactly the live assignment count.
 - [ ] `7-04`'s own `assignment-contention` scenario (`Ago.Chat.LoadDriver`,
       `LOADDRIVER_SCENARIO=assignment-contention`) re-run at the same small scale as
       `load/reports/2026-08-24-assignment-contention.md` and confirmed to no longer plateau after the
       first capacity's worth — a new dated report, not just a claim the fix works.
+      **Still open, deliberately.** The local compose database is shared with other concurrent sessions
+      whose `Ago.Chat.Api`/`Worker` processes are running pre-`6-09` code against it, and they were
+      observed assigning conversations with no receipt and closing them with no release *during* this
+      item's own verification. A load report measured on that database would not be honest about what it
+      measured. The re-run wants a database no other session is writing to.
+
+## Verified live instead, on the shared compose stack
+
+Not a substitute for the load re-run above, but the causal chain end to end, on the real endpoint:
+
+- Migration applied to the local dev database; 55 assigned conversations grandfathered as claim-holding,
+  `active_chats` reconciled (it was already equal to the true assigned count there — the operators were
+  pinned because they genuinely held 50 and 5 open conversations, not because the counter had drifted).
+- One close through `POST /api/v1/conversations/{id}/close` with a real Keycloak operator token:
+  `active_chats` 50 → 49. Before this item, that number never moved on a close.
+- Three closes in a row: 50 → 47 immediately, and within 8 s the assignment engine had consumed all
+  three freed slots (47 → 50) with three named conversations moving `Waiting` → `Assigned` and the
+  waiting queue dropping 118 → 115. That is the queue draining past a capacity ceiling that had not
+  moved for days.
+
+## The demo deployment
+
+Nothing to run by hand, and nothing was run against it from here. `ago-deploy/k8s/redeploy.sh` step 4
+already runs `dotnet ef database update` before restarting the pods, so the next redeploy applies the
+repair migration and the demo's waiting queue starts moving again on its own.
+
+One caveat worth knowing rather than acting on: that script deliberately migrates *before* the restart,
+so for the length of a redeploy the old code runs against the new column. A conversation closed by the
+old code in that window keeps its `holds_capacity_claim` and its slot leaks, exactly as it does today —
+inert afterwards (nothing revisits a closed conversation), a handful of slots at most, and cleared the
+next time that operator goes offline. Not worth a second repair pass; worth not being surprised by.
+
+## Decisions
+
+**The open question below is resolved: a hand-picked conversation holds no claim, and after this item
+it releases none.** `AssignConversationHandler` never calls `TryClaimAsync`, confirmed by reading it —
+so the two assignment paths are genuinely asymmetric, and a close cannot tell them apart without being
+told. `Conversation.HoldsCapacityClaim` is that receipt. Releasing unconditionally instead would have
+decremented, for every hand-picked conversation ever closed, a slot a *different* conversation was
+holding — over-subscription, which is worse than the leak this item fixes and which `ReleaseAsync`'s
+floor at zero would hide rather than prevent. `adr/0033` records the full fork, including why the
+tidier alternative — making manual assignment claim capacity too — was not taken here.
+
+**`OperatorConversationReleaser` was touched after all**, despite the "out of scope" note below: it now
+releases per conversation that holds a claim rather than per assigned conversation. The end state is
+the same either way (it releases *all* of an operator's assignments and `ReleaseAsync` floors at zero),
+so this fixes no observable number — it stops a second path obeying a different rule that only agrees
+with the first by accident.
+
+**Follow-up worth its own item**: manual assignment is capacity-blind on both sides. Consistent now,
+still wrong as a product behaviour — an operator who picks up five conversations by hand looks idle to
+the engine and keeps being handed more. Fixing it means deciding whether an operator at capacity may
+refuse-or-be-refused a conversation they explicitly chose, and giving the Application layer a
+transaction boundary it does not have.
 
 ## Open questions
 
-Whether a manually-assigned conversation (`AssignConversationHandler`'s own path) holds a real capacity
+~~Whether a manually-assigned conversation (`AssignConversationHandler`'s own path) holds a real capacity
 claim that also needs releasing on close, or whether that path is capacity-blind by design end to end
-(as `7-04`'s report found it is on the *claim* side) — resolve by reading the code as part of this
-item's own Scope, not left open past that.
+(as `7-04`'s report found it is on the *claim* side)~~ — resolved above: capacity-blind end to end, and
+kept that way deliberately (`adr/0033`).
