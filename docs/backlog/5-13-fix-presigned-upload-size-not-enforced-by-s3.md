@@ -5,7 +5,16 @@
   break those references to no benefit. It belongs to Stage 15's work because it was found while
   investigating the public deployment's disk-exhaustion exposure, and it is the one path by which a
   stranger can write unbounded bytes to a shared 2Gi volume (`15-05`).
-- **Status**: ready
+- **Status**: done (`ago-platform` `0.16.0`) — the declared length is signed into the presigned PUT
+  (`GetPreSignedUrlRequest.Headers.ContentLength`) and MinIO refuses a mismatched request with
+  `403 SignatureDoesNotMatch` before accepting a byte. Proven at the storage layer, not the
+  application's: both new tests PUT straight at the presigned URL with no use case involved, and both
+  failed against the pre-fix code with `Expected: Forbidden, Actual: OK` (a 4096-byte PUT stored
+  happily against a URL presigned for 64 bytes). 79 tests green, zero warnings. One thing this item
+  did not anticipate: the mechanism can only sign an *exact* length, never a ceiling, so
+  `UploadConstraints.MaxSizeBytes` was renamed to `SizeBytes` — see Scope below.
+  **Still required, not done here**: `ago-chat` pins exact package versions, so the fix does not reach
+  it until `Directory.Packages.props` moves to `0.16.0`.
 - **Depends on**: nothing — `ago-platform`'s `Ago.Platform.Storage.S3` only
 
 ## Goal
@@ -45,14 +54,27 @@ would reopen this item's own concern if made without this fix landing first).
   header on the presigned PUT request (`GetPreSignedUrlRequest.Headers`) — the AWS SDK includes any
   header set there in the canonical request the signature covers, so the actual PUT must carry that
   exact `Content-Length` or S3/MinIO rejects the signature outright, before accepting a single byte.
+  **Done.** Consequence this item's own wording did not follow through on: the mechanism signs one
+  exact number, so the field stopped being a ceiling the moment it started being enforced. Keeping the
+  name `MaxSizeBytes` would have left the port promising a bound it cannot express — a presigned PUT
+  has no range condition at all (`content-length-range` belongs to a POST policy, which this item's
+  Out-of-scope already rejected). Renamed to `UploadConstraints.SizeBytes`, with the ceiling staying
+  where it always actually lived: `CreateAttachmentHandler`'s own check against
+  `AttachmentOptions.MaxSizeBytes`, before it declares anything.
 - Confirm MinIO (not just AWS S3) honors a signed `Content-Length` header the same way — a real
   integration-test assertion against the Testcontainers MinIO instance this project's own S3 tests
-  already use, not assumed from AWS's own documented behavior alone.
+  already use, not assumed from AWS's own documented behavior alone. **Done**: MinIO
+  `RELEASE.2025-09-07T16-13-09Z` answers `403 SignatureDoesNotMatch`, asserted by error code rather
+  than by "not 2xx" — a bare non-success assertion would pass on a typo in the URL and prove nothing
+  about the signature.
 - `ago-widget`'s `uploadToPresignedUrl` (and `ago-console`'s equivalent): confirm neither one
   overrides or strips a `Content-Length` header on its own `fetch`/XHR call in a way that would
   conflict with the signed value (browsers normally set this automatically from the actual body size,
   which is exactly what needs to match — this is a verification step, not expected to need a code
-  change).
+  change). **Verified, no change needed**: both are `xhr.send(file)` with only `Content-Type` set by
+  hand, and both declare `file.size` at presign time, so the browser's own `Content-Length` is the
+  same number that was signed. `Content-Length` is a forbidden header name in both `fetch` and XHR, so
+  neither client could override it even deliberately.
 
 ## Out of scope
 
@@ -67,13 +89,27 @@ would reopen this item's own concern if made without this fix landing first).
 
 ## Done when
 
-- [ ] A real MinIO integration test proves a PUT with a mismatched `Content-Length` against a
-      presigned URL fails at the storage layer, not just at `ConfirmAttachmentHandler`.
-- [ ] The existing size-ceiling test (`declaredSizeBytes > options.MaxSizeBytes` → rejected before
+- [x] A real MinIO integration test proves a PUT with a mismatched `Content-Length` against a
+      presigned URL fails at the storage layer, not just at `ConfirmAttachmentHandler`. Two:
+      oversized and undersized, both PUT directly at the URL with no use case in the picture.
+- [x] The existing size-ceiling test (`declaredSizeBytes > options.MaxSizeBytes` → rejected before
       presigning) still passes unchanged — this item adds a second, storage-level enforcement layer,
-      it does not replace the existing declared-size check.
-- [ ] `file-storage.md` updated to state the two-layer enforcement (declared-size check before
+      it does not replace the existing declared-size check. That test lives in `ago-chat` and is
+      untouched; it constructs no `UploadConstraints` of its own, so the rename does not reach it.
+- [x] `file-storage.md` updated to state the two-layer enforcement (declared-size check before
       presigning, signed `Content-Length` enforced by the store itself) as shipped fact.
+
+## Follow-up for the `ago-chat` side (not this branch's lane)
+
+- Bump `Ago.Platform.*` to `0.16.0` in `Directory.Packages.props`. Nothing in `ago-chat` needs a code
+  change: `CreateAttachmentHandler` and `AttachmentThumbnailGenerator` both construct
+  `UploadConstraints` positionally with the exact size they intend to upload, so the rename is
+  source-compatible for both.
+- One comment goes stale, not one test. `AttachmentUploadFlowTests.Confirm_WhenTheUploadedBytesDontMatchTheDeclaredSize_FailsAndStaysPending`
+  still passes — it never asserts the PUT succeeded, and confirm still fails with
+  `Attachment.VerificationFailed`, now because the object is absent rather than because it was the
+  wrong size. Its inline comment ("even though the presigned PUT itself succeeded") is what becomes
+  untrue, and the test is arguably worth re-pointing at the case it now actually covers.
 
 ## Open questions
 

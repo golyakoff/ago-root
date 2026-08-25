@@ -32,7 +32,12 @@ story in `concurrency.md` true.
    it does.
 2. API validates: per-site quota, per-visitor rate limit, size ceiling, extension/type allowlist.
    It creates an `attachments` row with state `pending` and returns a presigned PUT URL scoped to
-   one object key, one method, one content type, expiring in minutes.
+   one object key, one method, one content type, **one exact byte count**, expiring in minutes.
+   **Corrected in `5-13`**: the byte count is new. Until then the size ceiling existed only in this
+   step — `CreateAttachmentHandler` compared the *declared* size against `AttachmentOptions.MaxSizeBytes`
+   and then presigned a PUT that carried no size constraint at all, so a client that declared 1 KiB and
+   PUT 4 GiB straight at the URL was bounded by nothing. A limit the application checks and the storage
+   does not enforce is not a limit.
 3. Client PUTs the bytes straight to storage.
 4. Client tells the API "uploaded"; the API **verifies against storage** (HEAD: exists, real size,
    real content type) before flipping the row to `ready`. A client claim is never trusted.
@@ -99,6 +104,23 @@ chat history render of 20 images is one round trip's worth of signing, not 20.
 ## Validation and safety
 
 - Size ceiling per file and per conversation, enforced at presign time and re-verified after upload.
+  **Two layers since `5-13`, and they answer different questions.** The ceiling itself is the
+  application's (`CreateAttachmentHandler` vs `AttachmentOptions.MaxSizeBytes`) — storage cannot know a
+  product's quota. What storage now enforces is that the upload is *the size it declared*: the declared
+  length is signed into the presigned PUT (`GetPreSignedUrlRequest.Headers.ContentLength`), SigV4's
+  canonical request covers every header named in `X-Amz-SignedHeaders`, and MinIO recomputes the
+  signature over the real request's own `Content-Length` and answers `403 SignatureDoesNotMatch` before
+  accepting a byte. Verified against a real MinIO container, not assumed from AWS's documentation
+  (`S3FileStorageTests`, oversized and undersized, both PUT at the URL directly with no use case
+  involved). The signed value is **exact, not a bound** — a presigned PUT cannot express a range at all;
+  `content-length-range` is a presigned-*POST* policy condition, and adopting it would mean every browser
+  client switching from a raw PUT to a multipart form POST for the same outcome. That is why
+  `UploadConstraints.MaxSizeBytes` became `UploadConstraints.SizeBytes` in `Ago.Platform.Abstractions`
+  `0.16.0`: the port had been promising a ceiling it never enforced and now cannot express.
+  Step 4's HEAD re-verification is unchanged and still runs — it is the layer that decides whether an
+  object counts as *usable*, and it remains the only check on the content type the store actually
+  recorded. The distinction worth keeping straight: HEAD can refuse to mark an attachment `ready`, it
+  can never refuse the write, which is exactly the gap `5-13` closed.
 - Content type sniffed from the first bytes server-side for images, not trusted from the client.
   **Not actually shipped as written**: `5-03`'s HEAD-verify trusts whatever Content-Type MinIO/S3
   itself reports for the object (an improvement over trusting the client's own pre-upload claim, since
