@@ -26,16 +26,20 @@ random-per-process key. **Still true, but only for the Visitor scheme now** - `5
 replaced this signing story outright for the Operator scheme, not by evolving it: Keycloak's own
 JWKS is the signature source there, no local key involved at all.
 
-## The three actors, and what's already true about each
+## The four actors, and what's already true about each
 
 | Actor | Identification today | Authorization today |
 |---|---|---|
 | **Visitor** | Signed token (cookie/localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`) | None beyond the token's `site_id` claim |
 | **Operator** | `/hubs/operator` expects a JWT (`realtime.md`) - **issued by Keycloak** (`5-05`, `adr/0022`), validated directly against its JWKS; `OperatorId`/`site_id` are resolved from the token's `sub` via `OperatorIdentityClaimsTransformation`, not read from the token directly | `adr/0016`'s RBAC, resolved per request from `OperatorId`/`site_id` regardless of how they were resolved |
 | **Webhook/API integrations** | Outbound only today: deliveries to a tenant's endpoint are HMAC-signed (`adr/0013`) so *they* can verify *us*. There is no inbound integration API yet, so "how does a third party authenticate to AGO Chat" is entirely unplanned | N/A - does not exist |
+| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants no action yet - `12-01` built the boundary, not what sits behind it |
 
 `site_id` scoping is the one piece already load-bearing everywhere (`vision.md`: "multi-tenant from
-day one"). Every candidate model below keeps it; none of them replace it.
+day one"). Every candidate model below keeps it; none of them replace it. The **platform owner** is
+the one deliberate exception, and it is an exception *outside* the model rather than a hole in it -
+`adr/0032`: an owner is not an `Operator` with a wider scope, it is a caller the RBAC model has no
+representation for at all, recognised by a claim that model can never write.
 
 ## Decided: the authorization model
 
@@ -158,6 +162,50 @@ widget appearance specifically, the same `resource:action` naming judgment `adr/
 elsewhere. Both callers are still `IPermissionChecker`-checked the ordinary way; nothing about this
 widens who holds the permission - only the "Admin" role, seeded the same way as before.
 
+## The platform owner: shipped in `12-01`
+
+**Shipped in `12-01`** (`adr/0032`) - a fourth actor, and the first one that is not scoped to a site
+at all. A third authorization policy, `RequirePlatformOwner`, sits on the same `JwtSchemes.Operator`
+scheme alongside `RequireOperatorIdentity` and `RequireKeycloakIdentity`, and accepts exactly one
+thing: a signature/audience/lifetime-valid Keycloak token whose `realm_access.roles` claim contains
+the `platform-owner` **realm role**. `PlatformOwnerAuthorizationHandler` (`Ago.Chat.Api/Auth/`)
+parses that claim - Keycloak emits it as a JSON object, so a plain `RequireClaim` cannot express the
+check - and succeeds on nothing else.
+
+Why it is not `5-08`'s `"Admin"` role with a wider scope, restated here because it is the whole point
+of the item: an admin operator is an `Operator` row, resolved through
+`OperatorIdentityClaimsTransformation`, scoped to one `site_id`, checked through `PermissionChecker`.
+The platform owner has none of those. `PlatformOwnerAuthorizationHandler` reads exactly one input - a
+claim Keycloak signs - and that input is not writable by anything in this system, so no `INSERT` into
+`roles`/`operator_roles`, however broadly granted, can satisfy it. The separation runs both ways and
+both ways are tested: the owner identity has no `operators` row, so `RequireOperatorIdentity` rejects
+the very token `RequirePlatformOwner` accepts, and a `demo-admin` token that really does hold
+`site:configure` (proven against `PermissionChecker` in the same test, not asserted) is rejected by
+`RequirePlatformOwner` while `RequireOperatorIdentity` accepts it.
+
+Fail-closed by construction, not by convention: the role name is a compile-time constant rather than
+configuration (there is no key to omit and no empty value to mis-read as "no restriction"), and the
+handler calls `context.Fail()` explicitly on every non-matching path, which is sticky for the whole
+policy evaluation - a second handler added for the same requirement later cannot grant what this one
+denied. A missing claim, a claim that is not JSON, a `roles` value that is not an array, and a
+case-different role name all land there, each with a test.
+
+**Who holds the role is never in this repository.** The realm role is *defined* in every realm-import
+file the project maintains and *granted* only in the test one, to a fixed identity that exists solely
+inside a Testcontainers container. `ago-deploy/k8s/base/keycloak-realm-import.json` defines it and
+grants it to nobody - deliberately, since that one file provisions the public demo realm and every
+credential in it is committed to a public repository, so a committed grant would be the leak itself
+(`repositories.md`, "no secrets, ever"). The real grant is a manual action in Keycloak's admin
+console. Consequence, accepted: a freshly imported realm has no platform owner until someone assigns
+the role by hand, which is the correct default and not a defect. Note when doing it: the demo/local
+Keycloak runs `start-dev --import-realm` with no persistent volume, so a hand-made grant is lost on
+every pod restart - and Keycloak imports with `IGNORE_EXISTING`, so on a Keycloak whose realm *does*
+persist, adding the role to the import file does not create it either.
+
+`12-01` deliberately built no owner *action*. `RequirePlatformOwner` is wired to no route yet - the
+cross-tenant query is `12-02`, the console view is `12-03`, and any write access an owner might have
+is not designed. Nothing about the role's presence widens any existing policy.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
@@ -165,3 +213,5 @@ widens who holds the permission - only the "Admin" role, seeded the same way as 
 - [x] `realtime.md` updated to state the shipped mechanism as fact (`1-06`, `5-05`). `vision.md` did
       not need a change - it never described an authorization model to begin with.
 - [x] The admin/supervisor role and `attachment:delete` ship - `5-08`, above.
+- [x] An ADR decides how a caller that is not scoped to any site is represented - `adr/0032`, a
+      Keycloak realm role, outside the RBAC model rather than a wildcard inside it (`12-01`).
