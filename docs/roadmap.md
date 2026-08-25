@@ -360,10 +360,16 @@ Deliverables:
 - The operator workspace itself (`11-06`): a three-region layout, a thread that reads as a
   conversation instead of `[sequence] authorKind: body`, a real composer, visible wait times, and a
   connection indicator instead of the raw hub state printed as text.
+- The login page (`11-07`, added 2026-08-25 after the rest of the stage shipped). Noticed only once
+  the designed console was live on the public deployment: the path runs from a landing page in Manrope
+  and Unbounded, through Keycloak's stock theme with no AGO identity at all, into a console that was
+  deliberately designed. The middle screen is the first one an operator or a self-registered account
+  holder actually sees, and it was missed because it lives in a different repository and belongs to a
+  component nobody thought of as ours.
 
 **Done when:** a site owner changes color/position from the console and sees it reflected in the
 embedded widget on their own page without touching code; and an operator can work a shift in the
-console without the interface being the hard part — verified live, by actually working conversations
+console — from the login page onward — without the interface being the hard part — verified live, by actually working conversations
 through it, the same bar `5-07` held itself to.
 
 ---
