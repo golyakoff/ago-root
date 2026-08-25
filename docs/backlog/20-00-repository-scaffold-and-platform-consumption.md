@@ -1,7 +1,8 @@
 # AGO Calendar: repository scaffold and platform consumption
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: in progress — scaffold built and verified locally; CI green on the new repository is
+  the one criterion that cannot be checked before the first push
 - **Depends on**: nothing new architecturally — repeats `0-01-repositories-and-skeleton.md`'s and
   `0-02-arch-tests.md`'s own pattern for a second product, against `ago-platform`'s current `main`
   instead of building it from scratch
@@ -71,16 +72,35 @@ this item's arch tests must therefore also assert `Ago.Calendar.*` has no refere
 
 ## Done when
 
-- [ ] `ago-calendar` builds against a *published* platform package version (not a project reference),
+- [x] `ago-calendar` builds against a *published* platform package version (not a project reference),
       `dotnet test` is green, and an intentional layering violation (a `Domain` type referencing
       `Npgsql`, and separately, an `Ago.Calendar.*` project referencing an `Ago.Chat.*` assembly) fails
       the arch-test suite — both proven by actually introducing and reverting the violation, matching
       `0-02`'s own verification bar, not merely writing the test and trusting it.
+      Done: restores `Ago.Platform.Kernel`/`Abstractions`/`Persistence.Postgres`/`Hosting` **0.16.0**
+      (ago-platform's current published version) with no `ProjectReference` into `../ago-platform`
+      outside the dev-override branch; format/build/test green with zero warnings; **13 of the 16
+      arch tests were each deliberately broken and confirmed red, then reverted** — including a real
+      `Ago.Chat.Domain` assembly reference from `Ago.Calendar.Domain`. The three not broken are the
+      two `PlatformBoundaryTests` (breaking them means editing `ago-platform`, and they are the pair
+      the package boundary already makes true by construction) and nothing else.
 - [ ] CI is green on the new repository, restoring `Ago.Platform.*` from the real GitHub Packages feed,
-      not a local file feed or a source-pack step.
-- [ ] `repositories.md` and `naming-and-structure.md` updated with the new repository.
+      not a local file feed or a source-pack step. **Blocked on a repository secret**:
+      `AGO_PLATFORM_PACKAGES_TOKEN` is a *repository* secret and `ago-calendar` does not have one yet.
+      The workflow is written and mirrors `ago-chat`'s exactly; it cannot pass until the PAT is added.
+- [x] `repositories.md` and `naming-and-structure.md` updated with the new repository.
 
 ## Open questions
 
-None — this item is a direct repeat of `0-01`/`0-02`'s own already-proven pattern against a second
-product; nothing about repository scaffolding is specific to what AGO Calendar's domain will contain.
+None about the scaffold itself. One thing the scaffold *found*, which belongs to the platform rather
+than to this item: **`Ago.Platform.Hosting` assumes an ASP.NET Core host.** `IProductModule` — the
+platform/product seam a second product must reference to exist at all — sits in the same package as
+`AddPlatformObservability`, which hard-depends on `OpenTelemetry.Instrumentation.AspNetCore` and
+`OpenTelemetry.Exporter.Prometheus.AspNetCore` (a package with no stable release, ever). So
+`Ago.Calendar.Worker`, a plain `Microsoft.NET.Sdk.Worker` host that calls only `AddPlatformKernel()`,
+restores eight OpenTelemetry packages including a prerelease one and can still not use the platform's
+observability, because a Prometheus scrape endpoint needs an `IEndpointRouteBuilder` a generic host
+does not have. `ago-chat` never noticed: its `Worker` and `Webhooks` hosts are `Microsoft.NET.Sdk.Web`
+already. That is one product's workaround having quietly become the platform's requirement — exactly
+the class of thing a second consumer exists to surface. Splitting the module contract out of the
+telemetry package (or gating the ASP.NET Core pieces) is a real platform item; not opened here.
