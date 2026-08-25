@@ -162,9 +162,13 @@ but an afternoon and a decision.
 ### How this list is kept honest
 
 It is updated when an item lands or when something genuinely jumps the queue — not retroactively to
-match what happened. If this list and reality disagree, this list is what is wrong. An item is only
-added to "Now" for a reason that can be stated in one sentence about present-tense breakage or a
-dependency with a date; "it would be nice to do next" is what the "Soon" band is for.
+match what happened. If this list and reality disagree, this list is what is wrong.
+
+**An item appears in exactly one place.** Putting it in the table removes it from "Soon" in the same
+edit — never both (author's rule, 2026-08-25). This is the same failure this file has now corrected
+three times: the pulled-ahead list, the Soon band's own ordering, and the Soon band again after the
+queue was deepened. Two lists describing the same order do not stay in agreement, and the one nobody
+is reading is the one that goes stale and then misleads.
 
 When a row is closed, **delete it** rather than striking it through or moving it to the bottom with a
 timestamp, and renumber the rest — the numbers are positions, not identifiers. The reasoning, since the
