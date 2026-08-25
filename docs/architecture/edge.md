@@ -18,6 +18,13 @@ image delivery and TLS). `8-02` followed that decision through for the widget sc
 ships from the same kind of lightweight nginx static-file Service the local-k8s column already
 named, not a CDN - `ago-widget/Dockerfile`, `ago-deploy/k8s/overlays/demo/demo-shop1-static.yaml`.
 
+**The "no-registry" half of that reasoning expired on 2026-08-25** (`adr/0047`): the three
+`Ago.Chat.*` host images are published to GHCR by CI and pulled by the demo overlay. The CDN
+conclusion is unaffected — a container registry serves the cluster, not the browser, and nothing about
+it puts the widget bundle nearer a visitor. The widget still ships from the nginx Service above, and
+its own image is still built on the node under a mutable tag, which `adr/0047` names as the piece
+`15-06` could not reach.
+
 On Docker Desktop the entry point is **NGINX Gateway Fabric**, configured through the Gateway API
 (`Gateway`, `HTTPRoute`) rather than a legacy `Ingress` resource, reachable on `localhost`. Nothing in
 the application depends on which controller is in front, and no route or policy attachment may encode

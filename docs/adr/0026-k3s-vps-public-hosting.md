@@ -141,6 +141,17 @@ images and OS.
 
 ### Image delivery: build directly on the VPS, import into k3s's own containerd — no registry
 
+> **Amended by `adr/0047` (2026-08-25) — this section only.** Everything else in this ADR stands.
+> Images now go to GHCR under their full commit SHA, pushed by `ago-chat`'s CI; the demo overlay
+> pulls them and the three `imagePullPolicy: Never` patches are gone. The reasoning below was
+> answering "how does a container reach a node with no shared image store" and answered it correctly
+> for that. What it did not weigh — because nothing had yet made it visible — is that a mutable
+> `:local` tag leaves *no earlier artifact anywhere*, so there is nothing to roll back to, and *no way
+> to tell from a running pod which commit it carries*. Both costs came due on 2026-08-25, in one day.
+> The "new credential" objection below also turned out not to hold: a repository's own `GITHUB_TOKEN`
+> publishes to GHCR with no new secret, and a public package needs none to pull either. Read this
+> section for the reasoning trail; read `adr/0047` for what is true now.
+
 `k8s/overlays/local/kustomization.yaml`'s own `imagePullPolicy: Never` works because images are built
 straight into the local Docker daemon's store that the same machine's Kubernetes reads from
 (`k8s-local.md`). A remote VPS has no such shared store, so this item had to pick a real mechanism:
@@ -200,6 +211,9 @@ directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.r
   control either way.
 - Redeploying after a source change means re-running the build-on-VPS sequence by hand — slower than a
   registry-backed rolling update, and a real cost the "no CI/CD auto-redeploy" scope accepted going in.
+  **Superseded by `adr/0047`** for the three `Ago.Chat.*` hosts: `ago-deploy/k8s/deploy.sh <sha>`
+  moves the cluster to an image CI already published, with no build on the node at all. The four
+  static bundles still work exactly as described here.
 - The MSK 80 tier's cost (≈1 800 ₽/month) is the author's own recurring expense for as long as this
   demo stays up — stated in real currency, not glossed over, since `CLAUDE.md` calls this out
   explicitly as real infrastructure cost, not a hypothetical.
@@ -233,7 +247,9 @@ directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.r
   otherwise need. HTTP-01 needs nothing beyond what this deployment already has (DNS pointed at one
   node, port 80 reachable).
 - **GHCR/Docker Hub image registry** — see "Image delivery" above; rejected for the credential and
-  scope reasons stated there, not restated here.
+  scope reasons stated there, not restated here. **Reversed by `adr/0047` on 2026-08-25**: GHCR was
+  adopted, and the credential objection turned out to be wrong (publishing needs no new secret, and
+  a public package needs none to pull).
 - **A single subdomain with path-based routing** (e.g. `chat.reserve-me.ru/api`, `/console`) instead of
   per-service subdomains — would need one fewer DNS record and one fewer TLS SAN. Rejected: path-based
   routing at the edge for functionally separate services (API/hub traffic vs. a static SPA bundle vs.

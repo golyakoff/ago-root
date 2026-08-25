@@ -24,7 +24,7 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | Repository | Contains | Produces | Depends on |
 |---|---|---|---|
 | `ago-platform` | `Ago.Platform.*` — Kernel, Abstractions, adapters (Postgres, RabbitMQ, Redis, S3), Realtime, Hosting, Observability, Resilience | **NuGet packages** | nothing of ours |
-| `ago-chat` | `Ago.Chat.*` — Domain, Application, Contracts, Infrastructure, Module, **and the hosts** (Api, Worker, Webhooks) | Docker images | `Ago.Platform.*` packages |
+| `ago-chat` | `Ago.Chat.*` — Domain, Application, Contracts, Infrastructure, Module, **and the hosts** (Api, Worker, Webhooks) | Docker images, published to GHCR by CI under the commit SHA (`adr/0047`) | `Ago.Platform.*` packages |
 | `ago-widget` | the embeddable script | a versioned CDN bundle | the public API contract |
 | `ago-console` | operator console SPA | static bundle | the public API contract |
 | `ago-deploy` | compose, Kustomize, seed | manifests | image tags, chart values |
@@ -82,6 +82,25 @@ declare as little as it can.
   `read:packages`-scoped PAT held as a repository secret (`AGO_PLATFORM_PACKAGES_TOKEN`) — GitHub does
   not allow anonymous reads of NuGet packages even on a public repository. `adr/0018` (superseding
   `adr/0015`, which packed from source instead) records the trade.
+
+## Container images: also GitHub, also published by CI
+
+The statement this section used to make — that there is no hosted registry for container images, only
+`adr/0026`'s build-on-the-node-and-`ctr images import` — **stopped being true on 2026-08-25**
+(`adr/0047`).
+
+`ago-chat`'s CI publishes all three host images to **GHCR** on every push to `main`:
+`ghcr.io/golyakoff/ago-chat-{api,worker,webhooks}`, tagged with the **full 40-character commit SHA**.
+Publishing needs no new secret — the same "a repository's own `GITHUB_TOKEN` can write to its own
+package feed" property the NuGet feed above already relies on — and the packages are public, so
+pulling needs none either. There is deliberately no `latest`, and `deploy.sh` refuses any tag that is
+not a commit SHA: a tag that names a moment cannot be rolled back to.
+
+A running pod names its own commit at `GET /healthz/version`, read out of the compiled assembly
+(`-p:SourceRevisionId`), not out of a manifest. That is the half a registry alone does not fix.
+
+**The four static bundles are not there yet.** `ago-console`, the two `ago-demo-shop*` images and
+`ago-landing` still build on the node under a mutable `:local` tag. `adr/0047` names what each needs.
 
 ## Cross-repository changes
 
