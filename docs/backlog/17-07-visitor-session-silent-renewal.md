@@ -1,7 +1,7 @@
 # Visitor sessions renew silently, so the lifetime can finally come down
 
 - **Stage**: 17
-- **Status**: ready
+- **Status**: done in `ago-widget`; the `Ago.Chat.Api` half is specified and queued (see Outcome)
 - **Depends on**: nothing. Created by `17-06`, which decided the visitor token's lifetime and found
   that the number cannot move on its own. Pairs with `17-03`, whose key-rotation drain window is
   whatever this item leaves the lifetime at.
@@ -67,16 +67,77 @@ that decision are inputs here, not questions:
 
 ## Done when
 
-- [ ] A visitor whose stored token is near expiry gets a fresh token for the **same** `VisitorId`, and
-      their conversation history is still theirs — proven end to end, not asserted.
+- [x] A visitor whose stored token is near expiry gets a fresh token for the **same** `VisitorId`, and
+      their conversation history is still theirs — proven by `ago-widget`'s `session.test.ts` and
+      `ui/sessionRenewal.test.ts` against a faked API, **not** end to end: the endpoint they drive
+      does not exist in `Ago.Chat.Api` yet (see Outcome). That gap is named rather than papered over.
 - [ ] `JwtTokenService.VisitorTokenLifetime` is 7 days, and `adr/0034`/`authorization.md` say so.
-- [ ] A test covers the expired-token path explicitly, whichever behaviour is chosen for it.
-- [ ] The renewal endpoint is rate-limited, with a test that it is actually wired to the limiter
-      (`3-05`'s own Done-when precedent — proving `IRateLimiter` exists somewhere is not the same
-      thing).
+      **Decided (`adr/0048`), not applied** — `ago-chat` was out of this session's lane. `adr/0034`
+      carries the decision plus an explicit note that the constant is still 30; `authorization.md`
+      moves with the code rather than ahead of it.
+- [x] A test covers the expired-token path explicitly — both of them, since the answer differs by
+      moment: expired at page load (re-mint, cleared cursor, a sentence in the panel) and expired
+      while the page is open (the session ends visibly, no second identity).
+- [ ] The renewal endpoint is rate-limited, with a test that it is actually wired to the limiter.
+      Specified in Outcome and in `adr/0048`; belongs to the `ago-chat` change.
 
 ## Open questions
 
-- Sliding renewal (each renewal restarts the 7 days, so an active visitor never expires) or an
-  absolute cap after which re-identification is forced regardless? Sliding is what the product wants;
-  an absolute cap is what bounds a stolen token. The answer belongs in this item.
+None. Both are answered in `adr/0048`: **sliding, no absolute cap** (the cap evicts the honest
+visitor and not the attacker, because the minting endpoint is public and a visitor cannot
+re-identify — with a named trigger for revisiting), and the expiry check **reads `exp` from the
+token** rather than storing it alongside (a stored expiry cannot exist for the sessions already in
+visitors' browsers, forcing a choice between a renewal storm on release day and the silence this item
+exists to end).
+
+## Outcome
+
+**Split across two repositories, and only one of them was in reach.** `ago-widget` is done;
+`Ago.Chat.Api` had an open PR and a package follow-up queued behind it, so the server half is
+**specified precisely and deliberately not written**. That is a real state, not a failure: the widget
+was built to be lifetime-agnostic and to treat a missing endpoint as a transient failure, so it runs
+correctly against the API as deployed today (a `404` on renewal leaves the visitor on their existing
+valid token) and starts renewing the moment the endpoint lands, with no second change on this side.
+
+### What shipped in `ago-widget`
+
+`getOrCreateVisitorSession` is now `VisitorSessionManager` (`src/session.ts`), plus `tokenExpiry.ts`,
+a ~40-line JWT payload reader that verifies nothing and exists only to decide *when* to renew.
+
+- **Renewal at the point of use, not on a timer.** Every place the token is presented — the hub's
+  negotiate and the three attachment calls — goes through one method that exchanges the token first
+  if less than a third of its own lifetime is left. `adr/0048` carries why this beats a timer; the
+  short version is that a timer does not fire across a sleeping device, which is the ordinary case
+  for a multi-day window.
+- **The `5-17` trap, closed.** `accessTokenFactory` closed over a captured token — "harmless only
+  because the token never rotates", which stopped being true here. It takes an async provider now, so
+  a connection opened days ago and dropped negotiates with a token valid *at that moment*. This is
+  the single change that decides whether the widget survives its own token's lifetime, and it is what
+  `ui/sessionRenewal.test.ts`'s first test asserts.
+- **The window comes from the token** (`exp - nbf`), never from a constant mirroring the server's, so
+  the same code is correct against 30 days and 7.
+- **Two different answers for expiry, by moment.** At page load: mint a new identity, clear the
+  conversation cursor (a `lastKnownSequence` into a conversation the new `VisitorId` does not own
+  would make the resuming `JoinAsync` ask for a delta of someone else's transcript), and say so in
+  the panel. While the page is open: end the session visibly and stop the connection — re-identifying
+  there would put the visitor in a different conversation underneath the first one's transcript,
+  typing to an operator who cannot see them.
+- **A transient failure never ends an identity.** Only a definitive `401`/`403` does; an unreachable
+  API, a `5xx` or a `429` leaves the visitor on the token they still hold, throttled to one retry a
+  minute so a dead API costs one request per minute rather than one per reconnect attempt.
+
+103 tests (up from 72), `typecheck`/`lint`/`test`/`build` green, bundle **22.0 KB gzipped** (from
+21.0) against the 45 KB budget. Ten deliberate breaks, each reverted at once, listed in the handback.
+
+### What `Ago.Chat.Api` still needs — specified, not written
+
+`adr/0048` carries the full contract. In brief: `POST /api/v1/visitor-sessions/renew`, authenticated
+on the Visitor scheme, body carrying the site's public key (reusing `3-05`'s existing cached
+`GetSiteConfigByPublicKeyHandler` lookup and rejecting a token whose `site_id` does not match),
+`200 OK` with the **same response shape as the mint** — which also closes `ago-widget`'s recorded
+`11-03` config-staleness limitation, since that shape is exactly the "session endpoint that can
+return current config without minting a new visitor" it said did not exist. Rate-limited **per
+visitor** rather than per site (the mint has no visitor identity to key on; renewal does, and
+per-visitor stops one abusive holder exhausting a bucket shared with a whole site), `429` +
+`Retry-After`, origin checked as the mint is. Plus `JwtTokenService.VisitorTokenLifetime` →
+`TimeSpan.FromDays(7)` and the `authorization.md` paragraphs that state the old number.
