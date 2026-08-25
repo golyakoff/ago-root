@@ -109,6 +109,18 @@ never meant to admit - see `adr/0028` for why the two policies must stay distinc
 **Webhook/API integrations** rows in the actor table above are unaffected - this is a second
 enforcement point on the existing Operator identification mechanism, not a fourth actor.
 
+**One consequence `10-03` added, recorded because it is invisible from the API side.**
+`RequireOperatorIdentity`'s rejection is no longer only a gate - it is also the *signal* the console
+routes on. `ago-console`'s OIDC callback tells "an existing operator" from "a real Keycloak identity
+with no `operators` row yet" by calling `GET /api/v1/operators/me` and reading the status: `200` is
+an operator, `403` is the new state, and anything else (`401`, `5xx`, a network failure) is treated
+as a failure rather than as either. That is deliberate - the console must not decode the token and
+guess, because the resolution is `OperatorIdentityClaimsTransformation`'s and happens per request -
+but it does mean **that endpoint's `403` for a claimless principal is now a contract**, not an
+implementation detail. Changing it to a `404`, or to a `200` with an empty body, would silently send
+freshly-registered visitors to a queue that will never fill for them. Nothing needs to change today;
+whoever touches that route should know the console is reading its status code as an answer.
+
 Consequence this pinned down early, now realised: `Ago.Chat.Api` holds OIDC configuration
 (`Auth:Keycloak:Authority`/`Audience`) - not a secret itself (an issuer URL and a public client id,
 neither confidential), but Keycloak's own admin credentials are, and stay in `infra-credentials`
