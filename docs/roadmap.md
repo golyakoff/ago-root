@@ -43,8 +43,7 @@ if left.
 
 | # | Item | Why here, and why in this position |
 |---|---|---|
-| 1 | `6-10` closing deadlocks against the assignment engine | `40P01: deadlock detected` in `OperatorCapacityStore.ReleaseAsync` on the ordinary close path, twice on CI the day `6-09` merged - once on `main`, once on an unrelated branch whose security fix sat blocked behind it. Not a flaky test: the assertion is real and the deadlock is in product code. First because it is the only row here that turns `main` red at random, and a suite that goes red for reasons nobody chases is a suite people learn to re-run |
-| 2 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other. Also the trigger `17-06`/`adr/0034` named for revisiting the registration CAPTCHA: until this lands, a spam account can never lift its own required action, and once it does, the cost of one drops to a deliverable mailbox |
+| 1 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other. Also the trigger `17-06`/`adr/0034` named for revisiting the registration CAPTCHA: until this lands, a spam account can never lift its own required action, and once it does, the cost of one drops to a deliverable mailbox |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
