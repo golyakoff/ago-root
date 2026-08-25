@@ -3,8 +3,10 @@
 - **Stage**: 11 (added 2026-08-24 with `11-05`, when the stage was widened to cover both surfaces)
 - **Status**: done — implemented, then verified live as a real signed-in operator, including the
   reconnect and the blocked send. One sub-check (a two-way exchange in a *newly assigned*
-  conversation) is blocked by `6-09` and accumulated local test data rather than by anything in this
-  item; see the last Done-when entry.
+  conversation) was blocked by `6-09` and accumulated local test data rather than by anything in this
+  item; see the last Done-when entry. **`6-09` shipped 2026-08-25** — closing a conversation now
+  frees the operator's slot and the queue moves again, so that sub-check is redoable whenever the
+  local database is clean enough to run it on.
 - **Depends on**: `11-05-console-design-foundation.md` — this item lays out and rebuilds the working
   screen out of that item's components and tokens; doing it first would mean designing the layout twice
 
@@ -137,6 +139,10 @@ Also out of scope:
       close), a known open defect unrelated to this item, plus accumulated test data. Resetting
       `active_chats` by hand did not help, since the engine takes the oldest waiting conversation
       first and this one was newest of sixty. Worth redoing once `6-09` lands against a clean database.
+      **`6-09` landed 2026-08-25** and was verified on that same database: three closes through the
+      real endpoint freed three slots and the engine consumed all three within 8 s, moving three
+      conversations `Waiting` → `Assigned`. The "oldest first" problem is unchanged, so redoing this
+      check still wants a database without sixty conversations queued ahead of the new one.
 
 ## How a new assignment announces itself
 

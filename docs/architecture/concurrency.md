@@ -101,6 +101,38 @@ Capacity is enforced with optimistic concurrency:
 A row count of 0 means "lost the race", which is a normal outcome to retry, not an error to log at
 `Error` level.
 
+**The release half was missing until `6-09`, and this document did not notice.** The claim above was
+built in `4-01`, proven under contention, and written up here - while the only thing that ever
+executed its mirror image (`active_chats - 1`) was `4-04`'s bulk "this operator's last connection
+anywhere dropped, redistribute their whole load" sweep. Closing a conversation, the ordinary way an
+assignment ends, released nothing, so `active_chats` was a monotonically-increasing counter under
+exactly the traffic pattern the product is for. Found by running `7-04`'s `assignment-contention`
+scenario (`load/reports/2026-08-24-assignment-contention.md`: 51/150 assigned, then a flat plateau
+for 210 s while 49 closes succeeded), not by inspection - the mechanism was correct and the
+lifecycle around it was not, which is the failure mode a page like this one is least able to catch
+by re-reading itself.
+
+**Shipped in `6-09`**: `Conversation.HoldsCapacityClaim` (`Ago.Chat.Domain`) is the receipt for one
+slot, set only by the two `IAssignmentClaimer` implementations in the same transaction as the
+`TryClaimAsync` that took it, and consumed by `Close`/`ReleaseToQueue` in the same
+`SaveChangesAsync` as the state transition itself. `CloseConversationHandler` releases when - and
+only when - that consumption happened, and `OperatorConversationReleaser` now does the same per
+conversation instead of assuming every assignment held a slot. The receipt exists because the two
+ways a conversation becomes `Assigned` are genuinely asymmetric: the engine claims a slot first,
+while `AssignConversationHandler` (behind `OperatorHub.JoinConversationAsync`) is capacity-blind end
+to end - `adr/0033` records why that asymmetry was preserved rather than removed by making manual
+assignment claim too. The invariant to hold any future change to: **`active_chats` equals the number
+of conversations currently `Assigned` to that operator that hold a claim** - asserted exactly, not as
+a range, by `CloseConversationCapacityConcurrencyTests` with real closes racing real assignment ticks
+against real Postgres.
+
+The one residual, stated rather than designed away: the release is issued *after* the close commits,
+so a process death in that window leaks exactly one slot. Releasing before the commit would be worse -
+a save that then loses on `xmin` would leave the conversation assigned with its slot already handed
+back, and the operator over-subscribable for the rest of that slot's life. Making the window vanish
+would mean driving the release from the `ConversationEnded` outbox event in `Ago.Chat.Worker`, at the
+cost of freeing the slot only after the dispatcher and broker hop; `adr/0033` weighs both.
+
 In-process, each Worker's assignment loop is single-threaded per shard, so intra-process contention
 is designed away rather than locked away.
 

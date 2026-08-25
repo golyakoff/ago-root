@@ -43,13 +43,12 @@ if left.
 
 | # | Item | Why here, and why in this position |
 |---|---|---|
-| 1 | `6-09` release operator capacity on close | An operator's usable capacity decays with every conversation they close until their connection drops, so the waiting queue quietly stops being served. It was paired here with `5-15` because both were the operator queue; `5-15` shipped 2026-08-25, and this one still stands alone — it also unblocks the `11-06` verification sub-check it currently prevents |
-| 2 | `17-06` the realm's login settings | Keycloak's login-security settings are inherited defaults on a realm that has been open to public self-registration since Stage 10. The only thing on this list an ordinary attacker could act on without waiting for someone else's CVE — and it is a realm-import change today, an operation on live accounts once there are real customers |
-| 3 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
-| 4 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
-| 5 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users |
-| 6 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other |
-| 7 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
+| 1 | `17-06` the realm's login settings | Keycloak's login-security settings are inherited defaults on a realm that has been open to public self-registration since Stage 10. The only thing on this list an ordinary attacker could act on without waiting for someone else's CVE — and it is a realm-import change today, an operation on live accounts once there are real customers |
+| 2 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
+| 3 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
+| 4 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users |
+| 5 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other |
+| 6 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
@@ -251,8 +250,9 @@ Deliverables:
 **Done when:** the report exists with real p50/p95/p99 numbers against the targets, and any target
 that was missed is explained rather than quietly dropped. Done via `load/reports/2026-08-24-stage-7-
 summary.md` — nine scenario reports at ~1-3% of `nfr.md`'s stated scale (one, pod-kill, did not run —
-blocked by a tool permission denial), one real bug found (`6-09`, still open) and one Stage 6 regression
-confirmed fixed (the webhook bulkhead).
+blocked by a tool permission denial), one real bug found (`6-09`, fixed 2026-08-25 — its own
+`assignment-contention` re-run is still owed, on a database no other session is writing to) and one
+Stage 6 regression confirmed fixed (the webhook bulkhead).
 
 ---
 
@@ -479,8 +479,10 @@ Deliverables:
   cluster nothing to run.
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
-  bytes to a shared 2Gi volume) and `6-09` (operator capacity is released only on disconnect, so a
-  live operator's usable capacity decays until their connection drops).
+  bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a
+  live operator's usable capacity decays until their connection drops) — `6-09` shipped 2026-08-25;
+  the demo deployment picks up its repair migration on the next redeploy, which is what unjams its
+  waiting queue.
 
 **Done when:** the deployment can lose its node and come back from backup with the data intact — proven
 by a restore that was performed, not designed; a self-registered account survives a redeploy; nothing
