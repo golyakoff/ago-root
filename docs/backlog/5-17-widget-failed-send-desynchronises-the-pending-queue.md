@@ -1,7 +1,7 @@
 # Fix: one failed send in the widget desynchronises every optimistic bubble after it
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing — `ago-widget` only.
 
 ## Goal
@@ -79,18 +79,77 @@ was sent). Read how it pairs before inventing a second scheme here.
   matching defect there, file it separately rather than widening this one.
 - Any change to the wire protocol. `clientMessageId` is already carried both ways.
 
+## The decision this item owed: what a failed send leaves behind
+
+**It depends on whether the server could have seen it, and the split is exactly the two error types
+`connection.ts` already distinguishes.** Neither of the two answers in Scope on its own — the right
+line runs between the errors, not across all failures.
+
+**A send that never left drops its entry.** `NotConnectedError` is thrown before `invoke` is called
+at all, and any other rejection came back while the socket was still up, i.e. the hub refused it. No
+delivery can ever carry that `clientMessageId`, so keeping the entry would only park a dead key in
+the map for the life of the panel. The failed bubble stays until the visitor does something about it,
+and a visitor message arriving with that id anyway would be a genuinely new message — which is how it
+would render.
+
+**A send whose outcome is unknown keeps its entry.** `SendOutcomeUnknownError` means the invoke was
+in flight when the socket went: the message may well have landed. If it did, the server's own copy
+carries the same `clientMessageId` and will arrive — over the live connection, or in the history a
+resuming `JoinAsync` replays — and resolves that bubble into the real message, rendered once.
+Dropping the entry would make that arrival look like a brand-new message and render the visitor's one
+message **twice**, under a warning saying it might never have been sent at all.
+
+**This does not turn "we are not sure" into a silently removed warning**, which was the constraint.
+The warning is removed by one thing only: the server's own copy of *that* message showing up, which
+is evidence rather than a guess. Nothing else can clear it — not a later message's echo, not the
+reconnect itself, not time passing — and if the message really never landed, it stays on screen for
+good. The old positional pairing did the opposite: it removed the warning on the *next* message's
+echo, with no evidence about the message the warning was about, which is the defect.
+
+It is the same rule `ago-console` applies from the other end (`ConversationPage.tsx`: retry an
+unknown-outcome send with the *same* `clientMessageId` because server-side dedup makes it safe, a
+fresh one when nothing was sent). Both sides treat that id as still live in exactly the case where
+the server may already hold it. Not a second scheme — the console's rule read from the receiving
+side. Automatic retry stays out of scope, as written.
+
+Recorded in `ago-widget`'s `ui/widget.ts` (the `SendOutcomeUnknownError` branch carries the reasoning
+in full), in its README, and here. **No ADR**: this is one client's local reconciliation policy, it
+changes no guarantee anything else depends on, and the wire contract it rests on was already decided
+by `5-07`/`5-12`.
+
+## What the item had slightly wrong
+
+"The identifier is already on the wire in both directions; this is a local lookup, not a protocol
+change" — correct about the wire (`Ago.Chat.Contracts.MessageDto.ClientMessageId` rides on every
+delivery, and `VisitorHub`'s single `ToDto` means the local echo, the fan-out copy and the resume
+history all carry it), but `ago-widget/src/protocol/types.ts` did not **declare** the field, so
+nothing on this side could read it even in principle. `ago-console`'s copy of that file had declared
+it since `5-07`. Adding it is still not a protocol change, only this repository's mirror of the
+contract catching up.
+
+One of `11-08`'s own tests had to change with the fix, which is worth naming rather than burying:
+`widget.test.ts`'s "does not re-render the visitor's own message when the server echoes it back"
+pushed a visitor echo carrying **no** `clientMessageId` — a message the real `VisitorHub` cannot
+produce for a send that supplied one. It passed under positional pairing precisely because nothing
+read the id. Its fixture now carries the id the widget sent the message under; the test still asserts
+the same thing and is stronger for it. It is not a fails-before test — it passed both before and
+after — it is a fixture that was quietly wrong being made real.
+
 ## Done when
 
-- [ ] A failed send followed by a successful one leaves the failure notice visible and renders the
-      successful message exactly once — proven by a test that fails against the current code.
-- [ ] Echoes are paired by `clientMessageId`, and a test proves position no longer matters — e.g. two
-      sends whose echoes arrive out of order still resolve their own bubbles.
-- [ ] The `SendOutcomeUnknownError` decision is stated in the code with its reasoning, and covered.
-- [ ] `npm run typecheck`/`lint`/`test`/`build` green, and the gzipped bundle stays inside its 45 KB
-      budget (21.0 KB today).
+- [x] A failed send followed by a successful one leaves the failure notice visible and renders the
+      successful message exactly once — proven by a test that fails against the current code
+      (`ui/reconciliation.test.ts`; against the pre-fix code it produced `["second", "second"]`,
+      the exact symptom `11-08` reported).
+- [x] Echoes are paired by `clientMessageId`, and a test proves position no longer matters — two
+      sends whose echoes arrive out of order each resolve their own bubble, and a visitor message
+      this panel never sent renders as a new message instead of consuming somebody's entry.
+- [x] The `SendOutcomeUnknownError` decision is stated in the code with its reasoning, and covered by
+      a test that fails against the current code: the warning survives an unrelated message's echo
+      and is cleared by an echo carrying its own id.
+- [x] `npm run typecheck`/`lint`/`test`/`build` green — 72 tests, up from 68 — and the gzipped bundle
+      is **21.0 KB**, unchanged, against the 45 KB budget. A `Map` costs nothing an array did not.
 
 ## Open questions
 
-Only the one named in Scope — whether a failed entry is dropped or left to be reconciled by a late
-echo. It is this item's own to decide and record; both answers are defensible and the difference is
-visible to a visitor.
+None. The one this item owned is answered above.
