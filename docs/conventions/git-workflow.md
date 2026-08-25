@@ -103,6 +103,34 @@ Two failures this has actually caused, both worth the check being written down:
   later opened a fresh PR from it, which would have silently reverted the fixes that landed in the
   meantime. Every rebuild ends with `git push origin --delete <old-branch>`, not just a local delete.
 
+### The queue table has one writer
+
+`docs/roadmap.md`'s "Now" table is the single most conflict-prone file in this repository, and the
+reason is structural rather than careless: **every** finished item wants to delete its own row and
+renumber the rest, so any two branches in flight at once edit the same lines from different starting
+numbers. That is a genuine content conflict every time - not the spurious kind a tree-hash comparison
+dismisses - and it does not care how carefully either side worked.
+
+It happened three times on 2026-08-25 alone (`5-15`, `6-09`, `17-06`), each costing a close-and-rebuild
+or a hand-reconciliation, while the actual content of those branches never overlapped at all.
+
+So: **a branch implementing an item does not touch `docs/roadmap.md`.** Not the row, not the
+numbering, not a note. The item's own backlog file records that it is done - that is the authoritative
+record, with its date and merge reference - and the queue is edited **once, separately, by whoever
+merges**, after the item lands. When several items are in flight this collapses N conflicting edits
+into one uncontested commit.
+
+This is not a rule about care. Two sessions can each be completely right about the queue and still
+produce a conflict, because "delete row 4 and renumber 5-9" and "delete row 2 and renumber 3-9" are
+incompatible descriptions of the same table. Removing the concurrency is the only fix that scales
+with the number of parallel workers.
+
+The same reasoning applies to any other file that is a *shared index* rather than a piece of the work:
+`docs/adr/README.md` is the other one. There the collision is milder - appending distinct lines
+usually merges - but two branches claiming the same ADR number is a real collision that no merge tool
+can catch, so a session taking an ADR checks the number against `origin/main` **and** against every
+open PR, and parallel workers are handed distinct numbers up front.
+
 ## Commit messages
 
 `<type>(<scope>): <imperative summary>` - e.g. `feat(chat): assign waiting conversations to operators`.
@@ -117,4 +145,5 @@ Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`, `build`. Scop
 - `Ago.Chat.Architecture.Tests` green - a layering violation is never "fixed later".
 - New behaviour has tests at the right level (`testing.md`).
 - Docs updated in the same branch if the change made one wrong.
+- The branch does **not** touch `docs/roadmap.md`'s queue table - the merger edits it once, afterwards.
 - No commented-out code, no `TODO` without an issue or backlog file reference.
