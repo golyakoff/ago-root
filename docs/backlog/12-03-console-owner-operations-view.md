@@ -1,7 +1,7 @@
 # Console: owner operations view
 
 - **Stage**: 12
-- **Status**: ready
+- **Status**: implemented, awaiting the interactive owner-login pass (see Outcome)
 - **Depends on**: `12-01-platform-owner-identity-and-access.md` (the owner identity the console must
   detect and gate against), `12-02-cross-tenant-operations-read-api.md` (the endpoint this view calls)
 
@@ -47,9 +47,11 @@ owner-eligible token, see Scope below.
   briefly see a flash of a screen it cannot actually load data into, and must degrade safely (a normal
   "not found" or "not authorized" state, not a broken table) if the client-side signal and the server's
   real answer ever disagree — the server's `401`/`403` is what actually protects the data either way.
-- A data table (reusing whichever `react-admin`/`Refine`-shaped component set `adr/0023`'s Consequences
-  pointed toward — state the actual package chosen once implemented, matching `CLAUDE.md`'s "no package
-  without saying what it replaces and why hand-rolling is worse") listing every site returned by `12-02`'s
+- A data table (~~reusing whichever `react-admin`/`Refine`-shaped component set `adr/0023`'s Consequences
+  pointed toward — state the actual package chosen once implemented~~ — **overtaken by `adr/0030`**,
+  which closed the console's component set at eleven hand-rolled components including `Table`; the
+  package chosen is *none*, and adding one now would need an argument against both `CLAUDE.md`'s
+  dependency rule and that ADR) listing every site returned by `12-02`'s
   endpoint: name, tier (literal `"free"` today — render it plainly, do not imply a richer tier system
   exists until `12-02`'s own field carries real data), seats, conversations, recent message volume,
   storage bytes, created, last activity. Keyset-paginated using `12-02`'s cursor, matching that endpoint's
@@ -81,12 +83,83 @@ owner-eligible token, see Scope below.
       `10-03` used: an owner-identity login reaches the new route and sees a table populated with real
       data across more than one seeded site (at minimum the demo site plus one additional site created
       through `10-02`/`10-03`'s flow, so the table is provably not just echoing one hardcoded row).
-- [ ] Manually verified: an ordinary operator token (including one holding `5-08`'s `"Admin"` role)
+      **Half-done**: the data half is verified — three real sites (demo plus two registered through
+      `10-02`) came back in one live response and rendered as the real table; the *login* half is not,
+      because the implementing session cannot type a password into Keycloak's form. See Outcome.
+- [x] Manually verified: an ordinary operator token (including one holding `5-08`'s `"Admin"` role)
       navigating directly to the new route's URL is rejected cleanly — the console shows a normal
       "not authorized" state, not a broken table or a leaked partial response, and no site data reaches
       the browser for that caller (confirmed via the network response, not just the rendered screen).
-- [ ] CI build+lint stays green, matching `5-06`'s own precedent for what this repository automates
-      versus verifies by hand for `ago-console`.
+      Confirmed on the wire: `403` with `Content-Length: 0` for both an `"Operator"` and an `"Admin"`
+      token, `401` with an empty body unauthenticated, and the refusal branch rendering with no table
+      and no site id in the DOM.
+- [x] CI build+lint stays green, matching `5-06`'s own precedent for what this repository automates
+      versus verifies by hand for `ago-console`. `npm run typecheck`, `lint`, `test` (82 tests, 9
+      files — 8 new) and `build` all run green locally.
+
+## Outcome
+
+**Route**: `/owner`, rendering `OwnerSitesPage`, navigation label **"Platform sites"**. No segment,
+label or heading contains "admin" — `5-08`'s `/admin` is a tenant's own supervisor, this is the
+operator of the service, and `12-02` drew the same line server-side (`/api/v1/owner/`). The two share
+no route, no endpoint and no component tree.
+
+**Mounted outside the operator layout**, unlike `/admin` and `/settings/widget`: the platform owner is
+a Keycloak realm role, not an operator seat, so the route may not assume an `operators` row exists —
+which `OperatorConnectionProvider` does, opening a per-operator hub connection this screen has no use
+for. `PermissionsProvider` is kept and fails soft, which is what lets the header offer a way back into
+the console only when the caller demonstrably holds a seat as well. Same reasoning `/onboarding`
+already applies to the same providers.
+
+**The client-side eligibility signal, stated as the item asks**: one `GET /api/v1/owner/sites?limit=1`
+per signed-in session (`probeOwnerEligibility` / `useOwnerEligibility`), whose HTTP status *is*
+`12-01`'s `RequirePlatformOwner` decision arriving in the browser. The console never inspects
+`realm_access.roles` — following `10-03`'s own precedent, where a `403` from `RequireOperatorIdentity`
+is reused instead of re-deriving the server's resolution. It gates exactly one thing, the navigation
+link, and fails closed on anything that is not an explicit yes. The screen itself does **not** trust
+it: it re-asks the real endpoint and renders whatever the server answers, so a wrong "eligible" costs
+an ordinary "not authorized" state rather than a leak, and a refused response carries no body to leak.
+
+**The two nullables and the window, rendered as what they are**: `createdAt: null` renders "Not
+recorded" (never a date, never today); `lastMessageAt: null` renders "None in the last 30 days" —
+built from the response's own `recentWindowDays`, never the word "never", because the API's value is
+windowed and a long-dormant tenant is indistinguishable from a brand-new one. Every label naming a
+number of days is computed from `recentWindowDays` (the message-volume column header included), and
+unit tests cover that so a hardcoded "30" cannot creep back in.
+
+**No new package**, and no twelfth component: the screen is `Table`, `Panel`, `Badge`, `Alert`,
+`Button` and `Spinner`/`Skeleton` from `11-05`'s closed eleven, inside `AppShell`, and it added no CSS
+at all (the production stylesheet is byte-for-byte the size it was). Two small additions are pure
+functions with tests, not components: `time/format.ts`'s `formatDateStamp` and `owner/ownerSites.ts`'s
+byte/count/window formatters.
+
+**Deliberately absent**: any action on a row (no suspend, no edit, no "grant a bonus feature") and any
+computed verdict — no colour threshold, no ranking, no sort. The table's caption says the order is the
+API's own cursor order (site id descending) rather than implying a chronological or usage ranking.
+
+**Verified live** against the local stack (compose infra, `Ago.Chat.Api` built from `12-02`'s branch on
+`:5009`, migrations applied): three sites — the seeded demo tenant plus **two** created through
+`10-02`'s real registration flow — returned in one response, with `createdAt: null` on the demo row
+and real timestamps on the new ones, `lastMessageAt: null` on the two quiet ones, `recentWindowDays:
+30`, and `attachmentBytes: 5009`. Keyset paging walked all three rows at `limit=1` and then returned
+the empty final page `12-02`'s cursor rule allows, which the UI's "load more" handles. The negative
+case was confirmed **on the wire**, not on screen: an ordinary operator token and an `"Admin"`-role
+token each got `403` with `Content-Length: 0`, an unauthenticated cross-origin call from the console's
+own origin got `401` with a zero-length body, and revoking the realm role mid-session turned the same
+identity that had just seen three sites straight back into a `403`. The rendering was checked against
+that exact live JSON in a throwaway fixture harness (deleted afterwards): the real columns, the real
+"Not recorded" / "None in the last 30 days" cells, the exact byte count in the cell title, the
+zone-labelled instant in the timestamp title, `role="alert"` and **no table and no site id anywhere in
+the DOM** on the refusal branch.
+
+**Not verified, and why**: the interactive pass — signing in as a real owner identity through
+Keycloak's hosted login and looking at `/owner` in a browser — was not done, because the implementing
+session cannot type a password into a login form. What was confirmed is that `/owner` exists and is
+behind `RequireAuth` (an anonymous visit redirects to Keycloak's Authorization Code + PKCE login).
+Everything behind that form is the remaining check. The local Keycloak also needed the `platform-owner`
+realm role created by hand through the admin API: the running container's realm was imported before
+`12-01` added the role to `keycloak-realm-import.json`, and Keycloak imports a realm only on first
+start. The role was left in place (it matches `main`'s import); the *grant* was revoked.
 
 ## Open questions
 
