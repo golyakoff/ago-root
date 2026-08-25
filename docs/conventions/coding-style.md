@@ -40,6 +40,12 @@ Formatting is settled by `.editorconfig` and is not a review topic. What follows
   A lost optimistic-concurrency race is `Debug`, not `Error` - noisy logs train people to ignore logs.
 - Never log message bodies, tokens, presigned URLs or anything from a visitor's keyboard.
   Log identifiers, and correlate through the trace id.
+- **This rule is not only about C#.** `17-02` found the hub's bearer token in the edge's access log, in
+  full, on every successful WebSocket upgrade — not because any code logged it, but because nothing
+  configured NGINX's log format and its default logs the whole request line. A component whose logging
+  nobody has chosen is logging whatever its default logs. When a request carries a secret anywhere but
+  a header (a WebSocket handshake has no other option), every logger on its path is in scope for this
+  rule, including ones configured in YAML (`architecture/edge.md`).
 
 ## Comments
 

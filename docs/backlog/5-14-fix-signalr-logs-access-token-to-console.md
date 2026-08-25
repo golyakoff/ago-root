@@ -95,6 +95,13 @@ reasoning. What must never be recorded — here or in a commit message — is an
   written to disk outlives one in a browser console.
   `17-02-does-the-hub-token-reach-the-edge-log.md` owns that half. Still not this item's job — this
   note only stops "not implicated" from reading as "checked".
+  **Answered the same day, by `17-02`**: the access log did carry the full token on every successful
+  hub upgrade, and it reached a file on the node's disk — now fixed, in both overlays, by an
+  `NginxProxy` access-log format that drops the query string. The traces did not: OpenTelemetry's
+  ASP.NET Core instrumentation already redacts query-parameter values, so the span reads
+  `url.query = ?access_token=Redacted` and no platform change was needed. `17-02` also corrects one
+  aside made here — a visitor token is smaller in *scope* than an operator one but lives 30 days
+  against the operator token's 5 minutes, so in a log it is the worse of the two, not the milder.
 
 ## Done when
 

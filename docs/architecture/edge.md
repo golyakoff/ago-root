@@ -94,6 +94,44 @@ lands on exactly one pod by construction.
 - Forwarding real client IP (`X-Forwarded-For`), which the app must be configured to trust, or every
   per-IP limit silently applies to the ingress itself.
 
+## Access logging, and the one thing it must not contain
+
+The edge logs every request, which makes it the one component that sees the *whole* request line of a
+WebSocket handshake — and a browser's SignalR client has nowhere to put its bearer token on that
+handshake except the query string (`realtime.md`; a browser cannot set a header on a WebSocket
+upgrade). So the edge's log format is a security decision, not a formatting preference.
+
+Until `17-02` it was neither — nothing in `ago-deploy` configured logging, and NGF's generated config
+sets `access_log` only on its own internal server blocks, so **NGINX's compiled-in default applied**:
+`combined`, which logs `$request`, the full original request line. Found live rather than assumed: a
+successful hub upgrade (`101`) wrote a complete, valid, unexpired visitor JWT to the Gateway's log,
+and from there to a file on the node's disk. `coding-style.md` has banned exactly this since it was
+written ("Never log message bodies, tokens, presigned URLs...") — the rule simply had never been
+applied to a component whose logging nobody had configured.
+
+**Now** (`k8s/overlays/{local,demo}/gateway.yaml`, a Gateway-scoped `NginxProxy` with
+`logging.accessLog.format`): the format keeps `combined`'s shape but logs `$uri` — the normalised path,
+query string already stripped — in place of `$request`. The whole query string goes rather than the one
+known parameter, because redacting by name is a denylist that fails open for the next secret to travel
+that way. Both overlays, not just the public one: this is about not writing a secret down, and a local
+disk is a disk.
+
+Two limits of that fix, both real:
+
+- **The error log is not covered and cannot be.** nginx's `[error]` lines print `request: "..."` plus
+  the full upstream URI, query string included, and neither string is configurable. A *failing* hub
+  connect — a 502 during a rolling deploy, an upstream timeout — therefore still writes the token to
+  disk. Turning the error level up past `error` would hide those lines along with every upstream
+  failure worth seeing. The only real close is moving the token out of the query string, which
+  `5-14` and `17-02` both scope out; `17-02` records this as its one open question.
+- **Retention is a separate question and still open.** These lines carry client IPs whatever the
+  format, and nothing here says how long they are kept — `16-05` owns that.
+
+The trace side of the same request is clean and needs no equivalent rule: the .NET ASP.NET Core
+instrumentation redacts query-parameter values by default, so the span carries
+`url.query = ?access_token=Redacted`. What protects it is an environment variable staying unset
+(`OTEL_DOTNET_EXPERIMENTAL_ASPNETCORE_DISABLE_URL_QUERY_REDACTION`), not any code in this project.
+
 ## What the edge must **not** be responsible for
 
 Auth decisions, CORS logic that depends on a site's `allowed_origins` (that is a database lookup,
