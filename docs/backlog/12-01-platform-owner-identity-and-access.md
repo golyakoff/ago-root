@@ -1,7 +1,7 @@
 # Platform owner identity and access control
 
 - **Stage**: 12
-- **Status**: ready
+- **Status**: done — `adr/0032`
 - **Depends on**: nothing new architecturally — reuses `5-05`'s Keycloak realm and `adr/0022`'s
   direct-JWT-validation shape unchanged. The new pieces are a realm role and one new authorization
   policy, not a new identity architecture.
@@ -98,20 +98,40 @@ owner-role *assignment* itself must never live in a committed file.
 
 ## Done when
 
-- [ ] `adr/00XX` written and accepted, naming the Keycloak-realm-role mechanism and explicitly stating
+- [x] `adr/00XX` written and accepted, naming the Keycloak-realm-role mechanism and explicitly stating
       why it is structurally distinct from `5-08`'s per-site `"Admin"` role and from `adr/0016`'s
-      per-site `Role`/`Permission` model.
-- [ ] Keycloak realm-import config: the `platform-owner` realm role exists, assigned to one fixed local
-      test identity for automated tests and manual local verification.
-- [ ] `RequirePlatformOwner` policy exists on `JwtSchemes.Operator`, independent of
-      `OperatorIdentityClaimsTransformation`.
-- [ ] `Ago.Chat.Integration.Tests`: three real tokens against `RequirePlatformOwner` — (1) a token
+      per-site `Role`/`Permission` model. — `adr/0032`.
+- [x] Keycloak realm-import config: the `platform-owner` realm role exists, assigned to one fixed local
+      test identity for automated tests and manual local verification. — **Partly different from as
+      written, deliberately.** The role is *defined* in both realm-import files this project maintains
+      (`ago-chat/tests/Ago.Chat.Integration.Tests/keycloak-realm-import.json` and
+      `ago-deploy/k8s/base/keycloak-realm-import.json`) and *assigned* only in the first, to the fixed
+      `platform-owner-test` identity that exists solely inside a Testcontainers container. It is
+      assigned to nobody in `ago-deploy`'s file, because that one file is the *same* file the compose
+      loop, the local k8s overlay **and the public demo realm** (`auth.reserve-me.ru`) all import — this
+      item's own scope note assumed local dev and the demo had separate realm configs, and they do not.
+      Every credential in that file is committed to a public repository, so a committed grant of a role
+      conferring cross-tenant access would be exactly the leak this item exists to prevent. Manual local
+      verification therefore needs one admin-console click first (Realm roles → `platform-owner` → Users
+      in role), which is the same manual action the real grant already required.
+- [x] `RequirePlatformOwner` policy exists on `JwtSchemes.Operator`, independent of
+      `OperatorIdentityClaimsTransformation`. — `Ago.Chat.Api/Program.cs`, backed by
+      `PlatformOwnerRequirement`/`PlatformOwnerAuthorizationHandler` (`Ago.Chat.Api/Auth/`). "Independent
+      of" means *does not depend on*, not *does not run*: `OperatorIdentityClaimsTransformation` is a
+      global `IClaimsTransformation` and still runs for any token on this scheme, resolving nothing for
+      an owner identity. The owner test user deliberately has no `operators` row, so the passing test is
+      itself the proof of independence.
+- [x] `Ago.Chat.Integration.Tests`: three real tokens against `RequirePlatformOwner` — (1) a token
       carrying the `platform-owner` realm role passes; (2) an ordinary operator token, including one
       holding `5-08`'s `"Admin"` role, is rejected; (3) a Keycloak token with no matching `operators` row
       (`10-01`'s `RequireKeycloakIdentity`-eligible state) is also rejected. All three prove the policy
       is checking the realm role specifically, not merely "any valid Keycloak token" or "any token with
-      elevated site permissions."
-- [ ] `docs/architecture/authorization.md`'s actor table gains a fourth row (**Platform owner**),
+      elevated site permissions." — `PlatformOwnerPolicyTests` (six real-token cases, including the
+      mirror direction: the owner token is *rejected* by `RequireOperatorIdentity`, and the `demo-admin`
+      token is proven to hold `site:configure` against `PermissionChecker` before being rejected), plus
+      `PlatformOwnerAuthorizationHandlerTests` for the fail-closed shapes a real Keycloak never mints
+      (absent/non-JSON/non-array/case-different claim).
+- [x] `docs/architecture/authorization.md`'s actor table gains a fourth row (**Platform owner**),
       matching how every other authentication mechanism in this table was recorded as fact once shipped.
 
 ## Open questions
