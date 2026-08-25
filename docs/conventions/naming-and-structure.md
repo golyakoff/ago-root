@@ -37,7 +37,12 @@ src/
   Ago.Platform.Storage.S3/
   Ago.Platform.Realtime/              connection registry, node routing, hub base types
   Ago.Platform.Resilience/            timeout, retry, circuit breaker, bulkhead policies
-  Ago.Platform.Hosting/               IProductModule, health checks, OpenTelemetry, config binding
+  Ago.Platform.Hosting/               IProductModule, AddPlatformKernel, SystemClock - and nothing
+                                      else: every host of every product must reference this one, so
+                                      what it declares, every host pays for (adr/0046)
+  Ago.Platform.Observability/         OpenTelemetry wiring: AddPlatformObservability, Otel:* options,
+                                      the "Ago.*" ActivitySource/Meter wildcards. Web hosts only -
+                                      its Prometheus scrape endpoint needs an IEndpointRouteBuilder
 tests/
   Ago.Platform.Tests/
   Ago.Platform.Architecture.Tests/    the platform's own smaller half of the arch-test list -

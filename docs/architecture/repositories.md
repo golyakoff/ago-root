@@ -23,7 +23,7 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 
 | Repository | Contains | Produces | Depends on |
 |---|---|---|---|
-| `ago-platform` | `Ago.Platform.*` — Kernel, Abstractions, adapters (Postgres, RabbitMQ, Redis, S3), Realtime, Hosting, Resilience | **NuGet packages** | nothing of ours |
+| `ago-platform` | `Ago.Platform.*` — Kernel, Abstractions, adapters (Postgres, RabbitMQ, Redis, S3), Realtime, Hosting, Observability, Resilience | **NuGet packages** | nothing of ours |
 | `ago-chat` | `Ago.Chat.*` — Domain, Application, Contracts, Infrastructure, Module, **and the hosts** (Api, Worker, Webhooks) | Docker images | `Ago.Platform.*` packages |
 | `ago-widget` | the embeddable script | a versioned CDN bundle | the public API contract |
 | `ago-console` | operator console SPA | static bundle | the public API contract |
@@ -46,11 +46,22 @@ merge requests, a version bump, and a package publish.
 
 A host owned by the platform would have to reference `Ago.Chat.Module` in order to compose it, which
 inverts the dependency direction at the repository level. So the hosts belong to the product: the platform ships
-`Ago.Platform.Hosting` (module contract, health checks, telemetry, configuration binding) as a
+`Ago.Platform.Hosting` (the `IProductModule` contract, `AddPlatformKernel`, `SystemClock`) as a
 library, and each product assembles its own deployables from it. AGO Calendar ships its own hosts
 the same way (`Ago.Calendar.Api`/`Worker`, `roadmap.md` Stage 20), and the cluster runs both.
 
 Names are therefore `Ago.Chat.Api`, `Ago.Chat.Worker`, `Ago.Chat.Webhooks`.
+
+**`Ago.Platform.Hosting` is the one package with no opt-out**, and that has a consequence worth
+stating where the package boundary is explained rather than only in an ADR: a host is *defined* as
+the thin composition root that loads one `IProductModule`, so every host of every product must
+reference it, and its dependency list is a bill every host pays. Telemetry wiring therefore ships
+separately, as `Ago.Platform.Observability` — it used to sit in `Ago.Platform.Hosting`, which meant a
+`Microsoft.NET.Sdk.Worker` generic host resolved eight OpenTelemetry packages (one of them a
+never-stable prerelease) for a scrape endpoint it structurally cannot serve. `adr/0046` records the
+decision, the measurement and the two rejected shapes; the short version is that a package's
+dependency list is the part of its API a consumer cannot decline, so the mandatory package must
+declare as little as it can.
 
 ## Versioning and the development loop
 
