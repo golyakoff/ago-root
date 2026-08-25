@@ -67,6 +67,11 @@ Everything above must be visible without attaching a debugger:
 - Queue depth, channel occupancy, batch size histogram, outbox lag, DLQ count.
 - Cache hit ratio per key namespace, breaker state.
 - Connection count per node, assignment attempts vs conflicts.
+- Fan-out delivery: recipients resolved and how many of them the connection registry believed
+  present, and how many dispatches met a connection the target node still held (`7-08`,
+  `adr/0044` for why those dimensions and not a raw count). Without it, a message that reached
+  nobody is indistinguishable from one that reached everybody - which is what made a real incident
+  take an hour instead of a minute.
   (`7-02` — every bullet above is a real, tagged, tested OTel instrument; queue depth and channel
   occupancy are the same metric, `concurrency.md`'s pipeline has exactly one bounded channel. Full
   metric-name/tag catalogue: `Ago.Chat.Contracts.ChatMetrics` and `Ago.Platform.*.{ResilienceMetrics,
