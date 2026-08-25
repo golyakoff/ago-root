@@ -115,6 +115,30 @@ product-specific; routing *where* is generic.
    to `VisitorHub` or `OperatorHub` (via `LocalConnectionTracker`, the same map `3-01`'s
    `HubConnectionRegistration` populates on connect).
 
+**Shipped in `7-08`**: the path above is instrumented end to end, after an incident where "did the
+server even try to deliver that message to the operator's connection?" took an hour to answer because
+nothing in the running system could. Delivery behaviour is unchanged - every delivery is still
+acknowledged regardless of per-connection outcome, and a stale registry entry is still a harmless
+no-op - but the difference between reaching everybody and reaching nobody is now visible:
+
+- **Step 3 writes to the span that already brackets it** (`7-01`'s `"{topic} process"` span, not a new
+  child): `ago.fanout.recipients`, `ago.fanout.connections` (three open tabs is three, not one) and
+  `ago.fanout.nodes`. `INodeFanoutPublisher.PublishAsync` also *returns* those per-recipient counts as
+  a `FanoutResult`.
+- **Step 2 turns that into `ago.chat.delivery.recipients`**, one point per recipient per fan-out,
+  tagged `method`, `recipient_kind` (`visitor`/`operator`) and `presence` (`connected`/`absent`). The
+  dimensioning is the decision, not the counter: a visitor with no connection is ordinary, an operator
+  with none is not, and a raw "delivered to zero" count could not tell them apart (`adr/0044`).
+- **Step 4 turns the per-connection outcome into `ago.platform.realtime.dispatches`**, tagged `node`
+  and `outcome` (`delivered` / `connection_not_local` / `failed`). `ILocalConnectionDispatcher` now
+  returns a `DispatchOutcome` so that number comes from the code that actually decides it, rather than
+  from a proxy for the same fact next to the call - `7-07`'s lesson applied before shipping instead of
+  after. `ConnectionDrainCoordinator` uses the same port and deliberately does not feed this counter.
+
+No alert reads any of it yet; `15-03` decides that with real data. The one thing this must not be read
+as saying is that `connection_not_local` is a fault - it is this file's own "advice, not truth"
+contract working exactly as designed, and only its *rate* is interesting.
+
 The sender's own connection gets an immediate local echo (`Clients.Caller`) without waiting on this
 whole round trip - a latency optimisation, not a second delivery mechanism (`VisitorHub`'s
 `EchoToCallerAsync`). It also receives the real fan-out delivery again once that completes; nothing
