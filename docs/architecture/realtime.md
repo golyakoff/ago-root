@@ -6,7 +6,20 @@ SignalR over WebSockets, with long-polling as the fallback the widget must toler
 proxies exist). Two hubs on `Ago.Chat.Api`:
 
 - `/hubs/visitor` - authenticated by a signed visitor token (JWT), scoped to one site. Issued by
-  `POST /api/v1/visitor-sessions` on first contact - the real mechanism, not a stub (`1-06`).
+  `POST /api/v1/visitor-sessions` on first contact - the real mechanism, not a stub (`1-06`) - and
+  **renewed for the same `VisitorId`** by `POST /api/v1/visitor-sessions/renew` (`17-07`,
+  `adr/0048`), which is what lets the token's lifetime be short without a returning visitor losing
+  their conversation.
+
+  The renewal has one consequence that belongs here rather than in an auth document, because it is a
+  property of the *connection*: **a client's access-token factory is called on every negotiate, the
+  first connect and every automatic-reconnect attempt alike, so it must read the current token
+  rather than close over one.** A connection established days ago and dropped renegotiates with
+  whatever that factory returns at that moment; a captured token means the reconnect presents a
+  credential renewal has already replaced, and the client sits in "reconnecting" forever against a
+  server that is right to reject it. Both clients in this project reached that shape independently -
+  `ago-console` in `5-16` (an OIDC renewal used to rebuild the whole connection), `ago-widget` in
+  `17-07` (the capture was harmless only while the visitor token never rotated).
 - `/hubs/operator` - authenticated by the operator's JWT, scoped to one site. **Shipped in `5-05`**:
   a real Keycloak-issued OIDC token, validated directly against Keycloak's own JWKS (`adr/0022`) -
   `POST /dev/operator-session`, the Development-only stub that traded an operator id for a token with

@@ -121,6 +121,22 @@ the credential actually presented on every request cheap to steal and useless qu
 
 ### The visitor token: 30 days, and why it is not 7 yet
 
+> **Superseded in part by `adr/0048` (2026-08-25).** `17-07` built the renewal path this section says
+> does not exist, so the premise underneath the number is gone and the decision is now **7 days,
+> sliding, with no absolute cap**. What survives is everything below about *why* the number could not
+> be lowered on its own — that reasoning is why `0048` exists and it is still the honest account of
+> the state this project was in.
+>
+> **What has and has not shipped, so nothing here reads as truer than it is.** `ago-widget` renews
+> (`VisitorSessionManager`, `tokenExpiry.ts`) and is lifetime-agnostic: it derives its renewal window
+> from the token itself, so it is correct against both numbers. The `Ago.Chat.Api` half — the
+> `POST /api/v1/visitor-sessions/renew` endpoint `0048` specifies, and
+> `JwtTokenService.VisitorTokenLifetime` moving to seven days — is **queued, not applied**, behind an
+> open PR in that repository. Until it lands, the constant is still 30 days and the widget's renewal
+> attempts fail the way an unreachable API fails, which `0048` covers deliberately: the visitor keeps
+> their existing valid token and nothing regresses. `authorization.md`'s two paragraphs on this move
+> with that change, not before it.
+
 **The lifetime stays 30 days**, and now has a stated reason.
 
 The number is a product promise before it is a security parameter: the widget's
@@ -282,7 +298,8 @@ paragraph exists rather than a line in either file.
   realm guards anything real.
 - **Shortening the visitor token to 7 days now** — rejected as sequencing, not as direction. Without
   renewal it breaks returning visitors four times sooner while buying nothing, because the minting
-  endpoint is public. `17-07` makes it correct; the number moves with it.
+  endpoint is public. `17-07` makes it correct; the number moves with it. **It did**: `adr/0048`,
+  2026-08-25.
 - **A Redis deny-list for visitor tokens** — rejected: no caller, and it would make an authentication
   decision depend on Redis, which `adr/0009` forbids as a source of truth.
 - **Reducing the visitor token to a session cookie or an opaque server-side session** — considered,

@@ -49,3 +49,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0045 | Alerting reaches a person by email through the node's own Postfix; Prometheus rules and Alertmanager, not Grafana | Accepted |
 | 0046 | `Ago.Platform.Hosting` carries only the module seam; telemetry ships as `Ago.Platform.Observability` | Accepted |
 | 0047 | Images go to GHCR under a commit-SHA tag, and a rollback is a first-class operation | Accepted |
+| 0048 | Visitor sessions renew at the point of use; the token drops to seven days, sliding, with no absolute cap | Accepted, server half queued |
