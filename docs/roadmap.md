@@ -277,6 +277,20 @@ Deliverables:
 README answers "why" before they have to ask. **Done, live and verified** (2026-08-24) — every
 item `8-00` through `8-05`.
 
+**Two items added afterwards, 2026-08-25**, from a consequence of "a public operator login" that the
+stage never stated: everyone who opens the console is the *same* operator, so every conversation
+started from a demo page is readable by every stranger looking at the same time, and capacity, unread
+counts and the queue are shared state between them.
+
+- `8-06` — say so on the demo pages and on the way into the console. Two lines of copy, and the only
+  control that works before somebody types something real into a chat box.
+- `8-07` — mint demo credentials on request, expiring in about a day, so two viewers are two
+  operators instead of two windows onto one inbox (author's decision, 2026-08-25). It reuses
+  `10-02`'s registration bootstrap to create and `16-02`'s deletion to expire — which also gives
+  erasure its first continuous consumer, exercised daily against real data rather than once by a
+  test. And it needs no mail, since minted credentials are shown on screen, so it is one of the few
+  things currently queued that can ship while `10-05` is still open.
+
 ---
 
 ## Stage 9 — Prove the abstractions (deprioritized 2026-08-24)
