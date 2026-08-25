@@ -908,8 +908,39 @@ is briefly ahead of `ago-deploy`'s `main`:
   Once `ago-deploy`'s branch merges, `git pull` in `~/ago/ago-deploy` puts them in `k8s/` where the
   runbooks say they are, and `/tmp/15-06/` can be forgotten (it does not survive a reboot anyway).
 
+## Backups
+
+There are some, since 2026-08-25, and one restore has actually been performed rather than assumed —
+[`backup-and-restore.md`](backup-and-restore.md) and `adr/0050`. Two systemd timers run on this node:
+`ago-backup.timer` daily at 02:30 UTC, and `ago-backup-watchdog.timer` hourly. Neither is installed by
+`redeploy.sh` or by `kubectl apply -k`; `k8s/backup/install-node.sh` is the only thing that installs
+them, and it has to be re-run after a `git pull` that touches `k8s/backup/`.
+
+The artifacts staged in `~/ago/backups` on this node are **not** the backup. The backup is what
+`backup-pull.sh` collects onto the author's own machine, and the node's hourly watchdog mails
+`alerts@` when that has stopped happening.
+
 ## Known gaps, named plainly
 
+- **This node's `ago-deploy` checkout matches no commit anywhere** — found 2026-08-25 while installing
+  the backup timers. It is 5 commits behind `origin/main` and carries local, uncommitted modifications
+  to twelve tracked files (`k8s/base/postgres.yaml`, `minio.yaml`, `redis.yaml`, `rabbitmq.yaml`,
+  `grafana.yaml`, `prometheus.yaml`, `prometheus-scrape-config.yml`, `kustomization.yaml`,
+  `redeploy.sh`, `smoke.sh` and the two build scripts) plus an untracked `k8s/base/node-exporter.yaml`.
+  The running cluster was built from *that*, so reading the repository does not tell you what is
+  deployed. `redeploy.md`'s "checkouts first" note describes the milder version of this — a checkout
+  that is merely behind. This is the harder one, and it is why a plain `git pull` here is not a safe
+  operation: it would conflict, and a `git checkout .` would discard whatever those edits are. Nothing
+  in this pass touched them. Untangling it belongs with `15-06`, which is the item about knowing what
+  is running.
+- ~~**Nothing is backed up**~~ — closed 2026-08-25, see above.
+- ~~**MinIO has no bucket, so every attachment upload fails**~~ — found and closed 2026-08-25 while
+  `15-02` was looking for an attachment to restore. The `attachments` bucket had never existed on this
+  deployment (`seed/create-minio-bucket.sh` targets docker-compose's network by name and cannot run
+  here), so the API had been handing out presigned URLs into nothing since day one — unnoticed because
+  nobody had tried an upload. Created by hand with `mc mb`, and the whole path verified end to end.
+  **Still open, and unchanged**: nothing in `ago-deploy` provisions it, so a rebuilt cluster starts
+  without one. `architecture/file-storage.md` carries that gap.
 - **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
   inherited unchanged from the local realm import, per this item's own instruction to reuse `5-05`'s
   mechanism rather than invent a new one. Tightening this to `external` (require TLS for

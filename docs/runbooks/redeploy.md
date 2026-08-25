@@ -113,6 +113,12 @@ half-finished manifest change is its own hazard — but it means **a change that
 `ago-deploy/k8s/` does not reach the node through this script**, no matter how many times it is run,
 and nothing in its output says so.
 
+**The same is true one level further out, for anything under `k8s/backup/`** (`15-02`). Those are
+systemd units on the node, not Kubernetes objects at all, so neither `redeploy.sh` nor
+`kubectl apply -k` reaches them: `k8s/backup/install-node.sh` is the only thing that does. Re-run it
+after any `git pull` that touches that directory. [`backup-and-restore.md`](backup-and-restore.md) has
+the detail.
+
 `15-01` is the first change of that shape: Keycloak's move onto a persistent database is entirely
 manifest plus one new `.env` key. `public-deploy.md`'s "Applying `15-01` to this deployment" section is
 the procedure, and it starts with `kubectl apply -k k8s/overlays/demo` for exactly this reason. The
