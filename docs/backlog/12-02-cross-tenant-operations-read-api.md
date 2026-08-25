@@ -1,7 +1,9 @@
 # Cross-tenant operations read API
 
 - **Stage**: 12
-- **Status**: ready
+- **Status**: implemented (`ago-chat`, branch `feat/12-02-cross-tenant-read-api`, stacked on `12-01`'s
+  own unmerged branch) — see **What shipped** below for every decision this file left open, and for the
+  two places implementation found the item's own text wrong.
 - **Depends on**: `12-01-platform-owner-identity-and-access.md` — needs its `RequirePlatformOwner`
   policy to gate the endpoint this item adds; blocked transitively by nothing else, since `12-01` itself
   has no open question.
@@ -105,19 +107,108 @@ must not assume any billing/subscription record exists yet; it reads today's act
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: seed several sites with deliberately varied seat counts, conversation
+- [x] `Ago.Chat.Integration.Tests`: seed several sites with deliberately varied seat counts, conversation
       counts, message volumes spanning both a recent and an older `messages` partition, and attachment
       byte sizes; call the endpoint against a real Postgres and assert the returned numbers match ground
       truth exactly for every site — not merely that a response with the right shape came back.
-- [ ] A normal operator token (with or without `5-08`'s `"Admin"` role) receives `401`/`403`, proven with
-      a real token, not asserted from `12-01`'s policy definition alone.
-- [ ] Pagination proven with more sites seeded than fit on one page: a second call using the returned
-      cursor returns the remaining sites with no gap and no duplicate.
-- [ ] The recent-message-volume window is stated explicitly in this file (updated in place) once
-      implemented, along with the partition-touching reasoning above.
-- [ ] `docs/architecture/data-model.md` gets a short note that this is the first genuinely cross-tenant
+      **`PlatformOverviewReadStoreTests` + `PlatformOverviewFixture`** (five tenants: 0–3 seats, 0–3
+      conversations, messages at −1/−2/−3/−28/−95, −10/−40, −45/−60 and −5 days, attachment totals
+      3500/0/0/777/4096 bytes), and **`OwnerSitesEndpointTests`** for the same over real HTTP.
+- [x] A normal operator token (with or without `5-08`'s `"Admin"` role) receives `401`/`403`, proven with
+      a real token, not asserted from `12-01`'s policy definition alone. **`OwnerSitesEndpointTests`,
+      against real Keycloak-signed tokens: ordinary operator → `403`, `demo-admin` (whose
+      `site:configure` grant is re-proven through the real `PermissionChecker` in the same test) → `403`,
+      no token → `401`, owner → `200`.**
+- [x] Pagination proven with more sites seeded than fit on one page: a second call using the returned
+      cursor returns the remaining sites with no gap and no duplicate. **Walked two-at-a-time over five
+      sites and compared against the single-page result (order, no duplicate, no gap), plus a cursor past
+      the oldest site returning an empty page; and again over HTTP with `?before=&limit=`.**
+- [x] The recent-message-volume window is stated explicitly in this file (updated in place) once
+      implemented, along with the partition-touching reasoning above. **30 days — see below.**
+- [x] `docs/architecture/data-model.md` gets a short note that this is the first genuinely cross-tenant
       read query in the codebase, if implementation surfaces anything about the query's shape not already
       obvious from the existing table definitions (state explicitly, once written, whether it does).
+      **It did — two things: `sites` had no `created_at` column at all, and `messages` carries no
+      `site_id`, so tenant-scoping the message window is a join through `conversations`. Both recorded
+      there.**
+
+## What shipped
+
+**Names.** Port `IPlatformOverviewReadStore.ListSitesAsync` (`Ago.Chat.Application/Abstractions`, with
+`SiteOverviewItem`/`SiteOverviewPage`), adapter `PlatformOverviewReadStore`
+(`Ago.Chat.Infrastructure.Postgres`), use case `ListSitesForOwner`/`ListSitesForOwnerHandler`, wire shape
+`OwnerSitesResponse`/`OwnerSiteSummaryDto` (`Ago.Chat.Contracts`), endpoint
+`OwnerSitesEndpoints.MapOwnerEndpoints` → `GET /api/v1/owner/sites`, gated by `RequirePlatformOwner` and
+nothing else.
+
+**Recent-message window: 30 days**, `ListSitesForOwnerHandler.RecentWindowDays`, computed from `IClock`
+in the handler and passed to the port as an instant — the port takes a bound, never a policy. Thirty days
+because `messages` is partitioned monthly (`2-06`), so a 30-day window spans at most two partitions
+whatever day of the month the query runs, while still covering a full month-shaped period of activity.
+It is a *chosen* number, not a measured one, and no performance claim rests on its exact value; what is
+load-bearing is only that the window is bounded, which is what keeps the query off every partition that
+has ever existed. The window width is returned in every response (`recentWindowDays`) so no client has to
+assume it. **Proven, not asserted**: `TheRecentWindowPredicate_KeepsOlderMessagePartitionsOutOfThePlan`
+runs `EXPLAIN` against the real planner and checks the −95-day partition is absent from the bounded plan
+and present in the same plan without the predicate — a structural check of which partitions are read,
+with no timing measured.
+
+**Seat count = rows in `operators`**, not distinct `operator_roles` holders. An `operators` row is what a
+seat is: it is created once per person who can sign in (`5-05` links it to a Keycloak subject) and it
+carries the `capacity`/`active_chats` an assignment decision consumes. Counting role holders would be
+wrong in both directions — it drops an operator holding no role yet (a real state, since nothing but
+`10-02`'s bootstrap and `1-05`'s seed script grants roles), and it needs a `DISTINCT` not to count
+`10-02`'s self-registered operator twice for holding both `"Operator"` and `"Admin"`.
+
+**Last activity is windowed, and this is a correction to this item's own text.** The item asked for "most
+recent message `created_at` for the site (`NULL` for a site with no messages yet)". An all-time
+`MAX(created_at)` per site has exactly the cost profile the bounded count exists to avoid — it cannot be
+answered from one partition, so it re-reads every one. `lastMessageAt` is therefore the maximum *within
+the same 30-day window*, and `null` means "no messages in the window", which includes but is not limited
+to "none ever". A quiet-but-old tenant and a brand-new empty one are indistinguishable in that one field;
+`conversationCount` still separates them, and the wire contract says so in as many words rather than
+letting the field name imply an all-time value.
+
+**`sites.created_at` did not exist** — the item assumed a column the schema never had (`conversations`,
+`messages` and `attachments` all carry one; the tenant row never did). Added as one additive, reversible
+migration, `Stage12AddSiteCreatedAt`: nullable, **no default and no backfill**, written by
+`RegisterSiteHandler` from `IClock`. A `DEFAULT now()` would stamp every pre-existing row — the demo
+tenant, every site registered before this migration — with the instant the migration ran and present that
+as fact, which is the invented figure `CLAUDE.md` forbids. Those rows report `createdAt: null`, meaning
+"not recorded".
+
+**Sort parameter: not included**, and the reason is structural rather than effort. The nice-to-have was
+"if trivial to add alongside the same query"; it is not. Sorting by seat count or recent message volume
+orders by a per-request aggregate, and this endpoint's pagination is keyset — a cursor has to be a
+stored, unique, indexed column the next page's `WHERE` can resume from, which an aggregate is not.
+Delivering it honestly needs either a composite cursor over `(aggregate, id)` with the aggregate
+recomputed identically per page — a genuinely different query — or `OFFSET`, which `data-model.md` bans.
+"The ten busiest tenants" is a different, ranked question, and belongs to whoever needs it.
+
+**Tier is the literal `"free"`.** Stated again here because it is the field most likely to be misread as
+a stub: it is not a simplification and not a computation over usage — it is the only tier the system has
+(`10-02`: "no tier/plan column anywhere"), and it is in the response now so Stage 13 can populate a real
+column without a breaking change (`api-design.md` allows adding fields within a version, not renaming
+them).
+
+**Attachment bytes include `pending` attachments** (the filter is `state <> 'Deleted'`, matching this
+item's "non-deleted" wording). A pending row carries a size declared at presign time for an upload that
+may never have completed — `5-04`'s orphan sweep is what eventually removes those. Seeded deliberately in
+the fixture so the inclusion is a decision the suite proves rather than an accident; narrowing it to
+`state = 'Ready'` is a one-line change if the reading of "stored bytes" should ever be "bytes we have
+certainly got".
+
+**Pagination spelling.** `?before=&limit=` verbatim from `api-design.md`, rather than the
+`?beforeId=&pageSize=` spelling `5-08`'s site-scoped list happens to use — a new surface with no client
+to keep compatible follows the convention as written. The cursor is a site id, never `created_at`, since
+that column is nullable and so not a total order.
+
+**Why this is not a caching concern** (`CLAUDE.md` rule 8, stated in `IPlatformOverviewReadStore`'s own
+remarks): nothing this query returns feeds a write, a compare-and-set or a capacity check anywhere — no
+cap is enforced from these numbers, no assignment reads them, nothing branches on them but a human's
+eyes. It is pure observability, the category `7-02`'s metrics already occupy. Equally, nothing here *is*
+cached: one query, run by one person, at human frequency — a cache would be inventing a hot path that
+does not exist.
 
 ## Open questions
 
