@@ -49,6 +49,13 @@ Concurrency row, `2-01`'s `IInboxChecker`.
   2's `Api` surface asks for this yet, and `GetConversationHistory`'s existing shape does not need it
   to keep working. Wiring the number into a response is a small, separate follow-up once something
   actually displays it (Stage 5's frontends), not invented here.
+  **Both halves landed later**: `5-07` put `operatorUnreadCount` on the queue response, and `5-15`
+  added the reset-on-read this item deferred - `POST /api/v1/conversations/{id}/read`, which clears up
+  to a watermark rather than to zero. `5-15` is also the one change to this item's consumer: the
+  increment now carries the message's `sequence` and skips anything at or below that watermark, so the
+  two writers compose under `xmin` instead of overwriting each other's answer. The path itself - same
+  handler, same inbox dedup, same broker retry - is unchanged. The *visitor* side named below is still
+  unreset, deliberately; `5-15`'s Decisions section says why.
 - `Broadcast`-mode consumers, cache invalidation, anything else in `messaging.md`'s topics table -
   `MessageAccepted`'s only other named consumer ("fan-out to connections") is Stage 3, blocked on the
   Redis registry as already established.
