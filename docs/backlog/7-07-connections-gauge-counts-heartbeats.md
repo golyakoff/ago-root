@@ -1,7 +1,7 @@
 # Fix: the connections gauge counts heartbeats, not connections
 
 - **Stage**: 7
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing — `ago-platform` only
 
 ## Goal
@@ -76,12 +76,73 @@ name "connection count per node" as something that must be visible without a deb
 
 ## Done when
 
-- [ ] The gauge equals the number of connections the node actually holds, checked against the
-      registry's own entry count on a running deployment.
-- [ ] A test proves repeated heartbeats over a stable connection set leave it unchanged.
-- [ ] The sibling instruments have been checked for the same mistake, with the result written down
+- [x] The gauge equals the number of connections the node actually holds, checked against the
+      registry's own entry count — see the Outcome's note on where that check was made.
+- [x] A test proves repeated heartbeats over a stable connection set leave it unchanged.
+- [x] The sibling instruments have been checked for the same mistake, with the result written down
       either way.
-- [ ] `CHANGELOG.md` and the package version are updated.
+- [x] `CHANGELOG.md` and the package version are updated.
+
+## Outcome
+
+The second shape in Scope was taken: the gauge **reads the set it describes** instead of maintaining
+a second number next to the calls that maintain the first. `LocalConnectionTracker` gains a `Count`,
+`RealtimeMetrics`' `ObservableGauge` callback reads it at collection time, and
+`RedisConnectionRegistry` no longer touches the metric at all — `ConnectionRegistered`,
+`ConnectionUnregistered` and `NodeRemoved` are gone rather than moved. There is no longer a counter
+that could drift, so this removes the class of defect, not the instance. It is also the shape
+`ResilienceMetrics`' breaker-state gauge already uses (register a live handle, read it in the
+callback), so the two gauges in the platform now work the same way.
+
+The tracker learns which node it belongs to from the composition root:
+`AddConnectionRegistry` builds it and calls the new public
+`RealtimeMetrics.TrackNode(NodeId, LocalConnectionTracker)`. That is the only place that knows both
+facts. The alternative — a required `NodeId` constructor parameter on `LocalConnectionTracker` — was
+rejected because it is a breaking change to a published package for no gain here, and would have
+broken `ago-chat`'s existing `new LocalConnectionTracker()` test call sites for a metrics reason.
+No `ago-chat` change is needed: a host that calls `AddConnectionRegistry` picks the fix up by
+restoring the new package.
+
+**Fails-before, passes-after.** `RealtimeConnectionsGaugeTests`'
+`HeartbeatCycles_OverAStableConnectionSet_LeaveTheGaugeAtTheRealConnectionCount`
+(`ago-platform`, Integration.Tests) registers
+three connections on one node, then runs the real `ConnectionHeartbeat` against the real
+`RedisConnectionRegistry` on the Testcontainers Redis until fifteen refreshes have gone through
+(awaited on the call count, not on wall clock). Against the code as it was: `Assert.Equal() Failure:
+Values differ / Expected: 3 / Actual: 18` — the three real connections plus fifteen heartbeat
+refreshes, exactly the mechanism this item describes. After the fix it passes. This is an
+integration test rather than the unit test the Scope section assumed: the defect only exists in the
+seam between the real registry and the real heartbeat, so a fake registry could not have reproduced
+it — which is itself part of why it survived unnoticed.
+
+The same test asserts the gauge against the registry's **own** entry count (`node:{id}:conns`
+cardinality read straight off Redis) in the same breath, which is the first Done-when bullet made
+repeatable in CI rather than eyeballed once on a live deployment. It was not additionally re-checked
+against the running cluster, because that would have meant packing, rebuilding and deploying while
+other Stage 7 work was in flight; the assertion it stands in for is exactly the one that was asked
+for.
+
+**Sibling instruments, checked, all four clean:**
+
+| Instrument | Verdict |
+|---|---|
+| `ago.platform.resilience.circuit_breaker.state` | Already the right shape — reads Polly's live `CircuitBreakerStateProvider` in the callback, tracks nothing itself. |
+| `ago.platform.resilience.bulkhead.rejections` | Counter incremented in Polly's `OnRejected`; a rejection is a genuine event, never a refresh. |
+| `ago.platform.caching.redis.cache_access` | Counter, once per `RedisCache.GetAsync`; every call is a real access, and the counter's rate is what a dashboard reads. |
+| `ago.platform.messaging.rabbitmq.consumer.*` / `...dead_lettered` | Counters/histogram at the handler-invocation boundary, once per delivery; a redelivery counting again is correct for "processing attempts". |
+
+Presence and node-set maintenance — the two candidates this item named — have no instruments of
+their own; they were only ever visible through this gauge, and `RemoveNodeAsync`'s
+`NodeRemoved(nodeId)` was part of the same defect (it zeroed the gauge at the *start* of a drain,
+while connections were still open). It is gone; the gauge now falls to zero as the connections
+actually close.
+
+**Package:** `CHANGELOG.md` `0.15.0` — a `### Fixed` entry for the gauge and an `### Added` entry for
+`TrackNode`/`Count`. No ADR: the shape was a choice between two fixes for one defect, both stated
+here and in the changelog, not a decision that changes a guarantee or deviates from a rule.
+
+**Verified:** `dotnet format --verify-no-changes`, `build -c Release` (0 warnings), `test -c Release`
+— 77 tests, all green.
 
 ## Note on what this does not invalidate
 
