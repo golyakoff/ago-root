@@ -93,9 +93,18 @@ protect.
   verification actually work, because at that moment the cost of a tenant drops to "one deliverable
   mailbox". `adr/0034`'s "Registration CAPTCHA" section carries the reasoning, including the point
   that `17-06`'s new brute-force settings are explicitly *not* the answer here: they protect existing
-  accounts from password guessing and do nothing about account creation. What actually bounds abuse
+  accounts from password guessing and do nothing about account creation. ~~What actually bounds abuse
   today is this realm having no SMTP server, so a spam account can never lift its own `verifyEmail`
-  required action and never reaches `10-02`'s bootstrap endpoint.
+  required action and never reaches `10-02`'s bootstrap endpoint.~~ **That bound is gone as of
+  2026-08-25** — `10-05`/`adr/0040` built the delivery path, which is precisely `adr/0034`'s own stated
+  trigger, and `10-02` had already shipped, so both halves of it are true. Locally it is true already;
+  publicly it becomes true the moment the demo's `KEYCLOAK_SMTP_*` keys are filled in, which waits on
+  the provider decision. `adr/0040` names what replaces the accidental bound — a deliverable mailbox
+  per tenant, the provider's own default 200-messages/24h quota as a deliberate finite ceiling, and
+  the edge's flood backstop that `adr/0034` already declined to count — and hands the actual choice
+  (CAPTCHA, or the cheaper invite/waitlist gate that needs no third party) forward rather than
+  answering it inside a mail-delivery item. The deferral above therefore now rests on one fewer reason
+  than it was written with.
 - Any email-sending/deliverability setup (SMTP config, templates) beyond enabling Keycloak's built-in
   "Verify Email" required action — Keycloak's own default flow handles sending; a custom sender or
   template is a separate concern this item does not scope. **Corrected 2026-08-25**: "Keycloak's own
@@ -103,7 +112,12 @@ protect.
   `smtpServer`, and there is none, so registration fails with `SEND_VERIFY_EMAIL_ERROR ...
   email_send_failed` and the required action never lifts. Still not this item's job;
   `10-05-transactional-email-delivery.md` owns it, and until that lands the admin-API shortcut in
-  `runbooks/local-dev.md` is the only way past this gate.
+  `runbooks/local-dev.md` is the only way past this gate. **Landed locally 2026-08-25** (`adr/0040`):
+  the local loop has a Mailpit sink, the realm's `smtpServer` comes from `KEYCLOAK_SMTP_*` in the
+  `infra-credentials` Secret, and the full browser flow — register, open the captured mail, click
+  through, land verified with `requiredActions: []` — was performed for real. The admin-API shortcut
+  is now a convenience for repeated testing rather than the only path. On the demo deployment the gate
+  is still closed, waiting on `10-05`'s provider decision.
 
 ## Done when
 

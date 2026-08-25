@@ -78,6 +78,14 @@ the procedure, and it starts with `kubectl apply -k k8s/overlays/demo` for exact
 same applies to any future resource-limit, probe, route or env change. If the fix is in a `.yaml` under
 `k8s/`, `./redeploy.sh` is not the tool.
 
+`10-05` adds a second shape of the same problem, one step further removed: a change that does not
+reach the node through `kubectl apply -k` either. The realm's `smtpServer` — and every realm-level
+setting since `15-01` — is state inside Keycloak's database, not a manifest. Applying the overlay
+updates the Secret; it does not update the realm. `k8s/apply-smtp-settings.sh` (SMTP, from the Secret)
+and `k8s/apply-realm-settings.sh` (everything in `keycloak-realm-import.json`) are the tools, and
+neither is run by anything automatic. If mail stops sending after a credential rotation, this is why:
+the `.env` changed, the Secret changed, the realm did not.
+
 ## What this does not solve
 
 Everything `15-06` covers: images are still built on the node under a mutable `:local` tag, there is

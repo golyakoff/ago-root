@@ -44,3 +44,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0032 | The platform owner is a Keycloak realm role, deliberately outside the per-site RBAC model | Accepted |
 | 0033 | A capacity claim is a receipt on the conversation, not an assumption about assignment | Accepted |
 | 0034 | The realm's login-security policy, and every token lifetime, chosen rather than inherited | Accepted |
+| 0040 | Keycloak's SMTP is a realm setting supplied as a Secret; a sink locally; the sending provider is the author's call | Accepted, provider sub-decision open |

@@ -689,6 +689,63 @@ Realm-level settings go through `k8s/apply-realm-settings.sh`; clients, roles an
 `kcadm.sh` call. Never `kc.sh import --override true` — it replaces the realm and takes every account
 with it.
 
+## Turning on transactional email — `10-05` **(you, and it needs a decision first — NOT DONE)**
+
+Right now **no visitor can finish signing up on this deployment.** The realm has
+`registrationAllowed: true` and `verifyEmail: true` with no `smtpServer`, so Keycloak accepts the
+registration, fails to send the verification mail (`SEND_VERIFY_EMAIL_ERROR ...
+error="email_send_failed"` in its own log), and leaves the account holding a required action that can
+never be lifted. Password reset is in the same state.
+
+`10-05` built everything that does not depend on a decision only you can make: **which sending
+provider.** `adr/0040` carries the comparison, the real costs, and the recommendation (Yandex Cloud
+Postbox — free at this volume, payable with a Russian card, and processing inside Russia, which
+`architecture/personal-data.md`'s residency constraint requires). The keys are deliberately blank in
+`k8s/overlays/demo/.env.example` until you choose; blank means Keycloak fails *visibly*, which is
+better than the silent failure a wrong value would produce.
+
+Once chosen, on the node:
+
+```bash
+cd ~/ago-deploy
+
+# 1. Verify the sending domain in the provider's console, and publish SPF, DKIM and DMARC for it.
+#    Do this BEFORE the first real send. Without them the mail is accepted and filed as spam, which
+#    from the visitor's side is indistinguishable from the failure above.
+
+# 2. Fill the KEYCLOAK_SMTP_* block in k8s/overlays/demo/.env from the provider's console.
+#    Never commit it - it is gitignored, like every other value in that file.
+
+# 3. Push the new keys into the Secret and let Keycloak pick them up.
+kubectl apply -k k8s/overlays/demo
+kubectl rollout restart deployment/keycloak -n ago-chat
+kubectl rollout status deployment/keycloak -n ago-chat --timeout=180s
+
+# 4. Apply them to the live realm. The Secret changing does NOT change the realm by itself -
+#    smtpServer is realm state, and since 15-01 realm state only arrives through a script.
+k8s/apply-smtp-settings.sh
+
+# 5. Password reset also needs `resetPasswordAllowed: true`, which 10-05 added to the realm import
+#    file. On a realm that already exists that flag arrives the same way every other realm setting
+#    does - not by restarting.
+k8s/apply-realm-settings.sh
+```
+
+**Then prove it, from a mailbox on a domain we do not control** (Yandex, Mail.ru, Gmail — not the
+sending domain): register through `https://auth.reserve-me.ru`'s hosted form with a real browser,
+confirm the mail arrives **in the inbox and not the spam folder**, follow the link, and reach `10-02`'s
+bootstrap call with no admin-API step anywhere in it. Then do a password reset the same way. Until
+both have been run here, `10-05`'s last three "Done when" boxes stay unticked.
+
+**Two things about the recommended provider that will bite if forgotten**: every accepted message is
+billed whether it is delivered or not, and the default quota is 200 messages per 24 hours — enough for
+a demo, not enough for a launch, and raising it is a request to the provider rather than a setting.
+
+**And one consequence that is not about mail at all.** `adr/0034` deferred the registration CAPTCHA
+partly because a spam account could never lift `verifyEmail` and so could never create a tenant.
+Completing the steps above deletes that bound. `adr/0040` says what replaces it and hands the choice
+between a CAPTCHA and an invite/waitlist gate forward — read it before turning this on, not after.
+
 ## Known gaps, named plainly
 
 - **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
@@ -722,6 +779,12 @@ with it.
   answered `401` as well. After it, the same requests return nothing at all. Whether `32669` was ever
   reachable from outside was never actually established — that one only ever produced an ambiguous TLS
   error, and the earlier note claiming otherwise overstated what the evidence supported.
+- **No visitor can complete self-registration here, and password reset does not exist** — the realm
+  has no `smtpServer`, so Keycloak accepts a registration and then cannot send the verification mail;
+  the account is created and permanently stuck. `10-05`/`adr/0040` built the whole delivery mechanism
+  and proved it locally; what is missing on this deployment is the one thing a session cannot decide,
+  the sending provider. "Turning on transactional email" above is the procedure. This is the largest
+  functional gap on this deployment, not a hardening one.
 - **k3s Secrets are unencrypted at rest** — `k3s secrets-encrypt status` reports `Disabled`. Host-level
   access is required to read them, so it is defence-in-depth; `17-05` owns the decision.
 - **Unattended security upgrades are on and working** — checked 2026-08-25, zero pending, no reboot
