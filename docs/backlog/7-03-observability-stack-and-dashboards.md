@@ -55,8 +55,17 @@ brought up and verified live, not just applied.
   retention is enough, and tuning it without a real multi-day usage pattern would be inventing a number
   `CLAUDE.md` already forbids.
 - Alerting (Alertmanager) — not asked for anywhere in `roadmap.md` or `nfr.md`. **Asked for since
-  2026-08-24**: `roadmap.md`'s Stage 15, built by `15-03-alerting-and-notification.md` against the very
-  stack this item deploys.
+  2026-08-24, and shipped 2026-08-25**: `roadmap.md`'s Stage 15, built by
+  `15-03-alerting-and-notification.md` against the very stack this item deploys — and it did turn out
+  to be Alertmanager rather than Grafana's own alerting, for reasons `adr/0045` records. Two things
+  this item's shape decided for it: the `loop: compose` / `loop: k8s` label convention introduced here
+  is what makes `up{loop="k8s"} == 0` a usable alert (without it the rule would fire forever on
+  targets that point at a developer's machine), and Prometheus living in `base/` while the rules live
+  in `overlays/demo/` is what keeps alerting off the local cluster.
+  - One correction to this item's own artefacts, made by `15-03`: `prometheus-scrape-config.yml`'s
+    header still carried the "no `Ago.Chat.*` host serves `/metrics` at all, expect every target DOWN"
+    note long after that gap was closed in `7-02`'s branch. A stale "expect everything to be down" is
+    how a real outage gets read as the known gap, so it was rewritten rather than deleted.
 
 ## Done when
 
