@@ -4,6 +4,9 @@
 - **Date**: 2026-08-25
 - **Stage**: 15
 - **Amends**: `adr/0026` (its "Image delivery" section only — every other decision in that ADR stands)
+- **Extended by**: `adr/0051` (`15-07`) — the four static bundles this ADR could not reach. Its
+  Consequences below said the 2026-08-25 failure was still possible in the one place this decision
+  did not touch; `0051` is that place, and it is closed.
 
 ## Context
 
@@ -175,11 +178,16 @@ started all of this.
   visibility and set it to public if it is not. Nothing else changes if it is public; if it is left
   private, every pull needs a `read:packages` PAT as an `imagePullSecret`, which is a second
   credential this decision exists partly to avoid.
-- **The four static bundles did not move.** `ago-console`, both `ago-demo-shop*`, and `ago-landing`
-  still build on the node under `:local`. `15-06` could not change those repositories (all three had
-  open PRs), so what closed is the backend half. **The 2026-08-25 failure was a console bundle** —
-  meaning the specific incident that motivated this ADR is still possible, in the one place this ADR
-  did not reach. What each needs is small and named in `15-06`'s own follow-up notes.
+- ~~**The four static bundles did not move.**~~ **Resolved the same day by `15-07`/`adr/0051`.**
+  `ago-console`, both `ago-demo-shop*` and `ago-landing` were still building on the node under
+  `:local` when this ADR was written, because `15-06` could not change those repositories (all three
+  had open PRs) — so what closed here was the backend half, while **the 2026-08-25 failure was a
+  console bundle**. `adr/0051` publishes all four from their own repositories' CI, under the same
+  full-SHA tag and the same no-new-secret mechanism, and makes each serve `/version.json` so a
+  running frontend pod can name its own commit the way `/healthz/version` does here. It also answers
+  the one question the frontends raise and these three hosts do not: a bundle is configured at build
+  time, so an image is only environment-specific if a build *argument* made it so — and `0051`
+  removes the argument instead of encoding the environment in the tag.
 - **Building on the node is now the exception, not the mechanism.** `redeploy.sh` still builds — for a
   hotfix, or a cluster rebuilt ahead of CI — but it tags what it builds with the commit and the
   registry path, so an image built there and an image pulled from GHCR are interchangeable by name.

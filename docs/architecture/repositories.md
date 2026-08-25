@@ -99,8 +99,19 @@ not a commit SHA: a tag that names a moment cannot be rolled back to.
 A running pod names its own commit at `GET /healthz/version`, read out of the compiled assembly
 (`-p:SourceRevisionId`), not out of a manifest. That is the half a registry alone does not fix.
 
-**The four static bundles are not there yet.** `ago-console`, the two `ago-demo-shop*` images and
-`ago-landing` still build on the node under a mutable `:local` tag. `adr/0047` names what each needs.
+**The four static bundles publish the same way** (`15-07`, `adr/0051`): `ago-console`'s CI pushes
+`ghcr.io/golyakoff/ago-console`, `ago-widget`'s pushes `ago-demo-shop1` and `ago-demo-shop2` from one
+`Dockerfile` with different embedded demo pages, and `ago-landing`'s pushes `ago-landing` — full
+commit SHA, `main` only, no new secret. Four images out of three repositories that move
+independently, so each carries its own tag and `deploy.sh` moves one frontend at a time.
+
+A browser bundle has no process to ask for its version, so each image writes the commit into a
+`/version.json` it serves, and the widget additionally bakes it into the bundle as
+`window.AgoChat.commit` — the one artifact here that runs on an origin we do not control. The
+decision that makes those SHA tags truthful is `adr/0051`'s: **a frontend image takes no environment
+input from its build command.** Every value that would vary by environment is a committed file
+(`ago-console`'s `.env.production`, `ago-widget`'s `Dockerfile` default), so the commit determines
+the artifact. Adding a `VITE_*` or API-origin build argument to any of them re-opens that decision.
 
 ## Cross-repository changes
 

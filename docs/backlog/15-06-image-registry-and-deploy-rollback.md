@@ -1,8 +1,8 @@
 # An image registry, a repeatable deploy, and a rollback that works
 
 - **Stage**: 15
-- **Status**: done (2026-08-25) — `adr/0047`; **one follow-up and one author step remain, both named
-  at the bottom of this file**
+- **Status**: done (2026-08-25) — `adr/0047`. The follow-up named at the bottom of this file was
+  taken up as `15-07` and is done (`adr/0051`); **the author step remains**
 - **Depends on**: nothing hard, but sequenced after `15-02-backup-and-verified-restore.md` in practice —
   that item's restore drill is the first thing that needs a repeatable way to get images onto a fresh
   cluster, and doing it by hand once is exactly what this item removes
@@ -82,23 +82,37 @@ yet" note is the statement being changed.
 
 ## What is not done
 
-- **The four static bundles.** `ago-console`, both `ago-demo-shop*` and `ago-landing` still build on
+- ~~**The four static bundles.**~~ **Done by `15-07` (`adr/0051`), 2026-08-25.** All four are
+  published by their own repositories' CI under the full commit SHA, each serves `/version.json`, the
+  four `imagePullPolicy: Never` declarations are gone, and `deploy.sh`/`rollback.sh`/`smoke.sh` cover
+  seven Deployments instead of three. `15-07` also had to answer the question these three hosts do
+  not raise — a browser bundle is configured at build time, so a build *argument* is what made the
+  image environment-specific; `adr/0051` removes the argument rather than encoding the environment
+  in the tag. The original note is kept below, because it is the honest record of what shipping this
+  item did and did not close:
+
+  > `ago-console`, both `ago-demo-shop*` and `ago-landing` still build on
   the node under a mutable `:local` tag with `imagePullPolicy: Never`, and still cannot say which
   commit they carry. This is not an oversight — those three repositories all had open PRs while this
   item ran and could not be touched — but it is worth being blunt about: **the 2026-08-25 incident
   that motivated this whole item was a stale *console* bundle**, so the specific failure is still
   possible in the one place this item did not reach. Each needs three small things, none of them
   hard:
-  1. `Dockerfile`: `ARG GIT_COMMIT`, the `org.opencontainers.image.{source,revision}` labels, and the
-     commit written into the served bundle (a Vite `define`, or a `version.json` next to
-     `index.html`) so the browser can report it the way `/healthz/version` does for the backend.
-  2. `.github/workflows/ci.yml`: a `publish-images` job mirroring `ago-chat`'s — `docker login ghcr.io`
-     with `GITHUB_TOKEN`, `packages: write`, tag `${{ github.sha }}` plus `main`, `main`-only.
-     `ago-widget` builds twice, once per demo page (`DEMO_PAGE_DIR`).
-  3. `ago-deploy`: `build-static-images.sh` gains `IMAGE_REPO`/`IMAGE_TAG`, the four
-     `*-static.yaml` files lose `imagePullPolicy: Never`, and the overlay's `images:` block gains
-     four entries.
-- **The GHCR packages' visibility** — the one step a session cannot do. See below.
+  > 1. `Dockerfile`: `ARG GIT_COMMIT`, the `org.opencontainers.image.{source,revision}` labels, and the
+  >    commit written into the served bundle (a Vite `define`, or a `version.json` next to
+  >    `index.html`) so the browser can report it the way `/healthz/version` does for the backend.
+  > 2. `.github/workflows/ci.yml`: a `publish-images` job mirroring `ago-chat`'s — `docker login ghcr.io`
+  >    with `GITHUB_TOKEN`, `packages: write`, tag `${{ github.sha }}` plus `main`, `main`-only.
+  >    `ago-widget` builds twice, once per demo page (`DEMO_PAGE_DIR`).
+  > 3. `ago-deploy`: `build-static-images.sh` gains `IMAGE_REPO`/`IMAGE_TAG`, the four
+  >    `*-static.yaml` files lose `imagePullPolicy: Never`, and the overlay's `images:` block gains
+  >    four entries.
+
+  All three landed as written. The one thing the estimate missed: `ago-console`'s CI overrode every
+  `VITE_*` with a localhost placeholder in its build step, which was harmless while it published
+  nothing and would have shipped a localhost console under a truthful-looking SHA the moment it did.
+- **The GHCR packages' visibility** — the one step a session cannot do. See below. `15-07` adds four
+  more packages needing the same one-time check.
 
 ## Open questions
 

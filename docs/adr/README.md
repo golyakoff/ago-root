@@ -52,3 +52,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0048 | Visitor sessions renew at the point of use; the token drops to seven days, sliding, with no absolute cap | Accepted, server half queued |
 | 0049 | AGO Calendar's time model, and no-overlap as a database exclusion constraint | Accepted |
 | 0050 | Backup scope per store, the author's own machine as the destination, and a key the node does not hold | Accepted |
+| 0051 | A frontend image takes no environment input from its build command; the commit determines the artifact | Accepted |

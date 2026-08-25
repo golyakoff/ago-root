@@ -632,16 +632,22 @@ original mechanism, kept as the record.
    `apply -k` also moves the three hosts to whatever tag is committed there. Check it matches what
    `./deploy.sh --current` reports before applying for an unrelated reason.
 
-**Rebuilding the widget/console static bundles specifically (`8-02`/`8-05`) is a different mechanism
-from steps 1-3 above**, not covered by them: `git pull` in `ago-console`/`ago-widget` on the VPS,
-re-run step 12's own `build-static-images.sh` + `k3s ctr images import` block (now builds all three
-images), then `kubectl rollout restart deployment/ago-console deployment/ago-demo-shop1
-deployment/ago-demo-shop2 -n ago-chat` — re-running
-`kubectl apply -k overlays/demo` alone does **not** pick up new image content here, since the
-Deployment manifest itself is unchanged (same `:local` tag) even though what that tag points to in
-containerd changed; a rollout restart is what actually re-pulls (imports) the new content into a fresh
-pod, the same reasoning `edge.md`'s rolling-deploy sequence already relies on for the three
-`ago-chat-*` hosts above.
+**Rebuilding the widget/console/landing static bundles specifically (`8-02`/`8-05`) used to be a
+different mechanism from steps 1-3 above. Since `15-07`/`adr/0051` it is the same one**: all four
+images are published by their own repositories' CI to `ghcr.io/golyakoff/{ago-console,
+ago-demo-shop1,ago-demo-shop2,ago-landing}` under the full commit SHA, and moving to new code is
+`./deploy.sh <console|demo-shop1|demo-shop2|landing> <sha>` — one at a time, because the four come out
+of three repositories that move independently. `./deploy.sh --current` shows all seven Deployments
+with the tag beside the commit each pod reports about itself (`/version.json` for the frontends,
+`/healthz/version` for the hosts).
+
+The old advice — `git pull`, re-run `build-static-images.sh`, `k3s ctr images import`, then
+`kubectl rollout restart` — is now the **fallback**, for a hotfix or a cluster rebuilt before CI has
+published: `IMAGE_REPO=ghcr.io/golyakoff IMAGE_TAG=commit ./build-static-images.sh` produces exactly
+the names CI would have pushed, so the manifests do not care which route the bytes took. A rollout
+restart is no longer the right verb for the same reason `adr/0047` says it is not for the three
+hosts: a restart only re-reads a tag that has not changed, which was all that was possible while
+every image was `:local`, and it records no revision for a rollback to return to.
 
 No CI/CD auto-redeploy exists for this environment, deliberately (`8-01`'s own "Out of scope") — this
 manual sequence is the whole story until a later item decides differently.
