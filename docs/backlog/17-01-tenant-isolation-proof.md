@@ -56,6 +56,13 @@ are deliberately not tenant-scoped (`CheckCorsOriginHandler`, `GetSiteConfigByPu
 `RegisterSiteHandler`, the `Resolve*` consumer-side handlers). There is no written list of which is
 which, and no mechanism that notices when a new one joins the wrong group.
 
+## A note on writing this down
+
+Everything above is derivable from the source, which is public. Describing it vaguely here would cost
+the reasoning a session needs and protect nothing, so it stays specific — and the real mitigation is
+that the item is small enough to close rather than admire (`17-05` carries the general rule this
+follows).
+
 ## Context to read first
 
 `docs/architecture/authorization.md` — the RBAC model and `adr/0016`. `docs/backlog/0-02-arch-tests.md`

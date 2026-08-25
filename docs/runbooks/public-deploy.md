@@ -23,7 +23,16 @@ Claude Code session with SSH access to the real VPS can run it directly.
 location, Ubuntu 24.04 LTS) — not the Timeweb Cloud MSK 80 originally recommended below; the author
 independently shopped and bought before applying the recommendation verbatim. `adr/0026`'s own
 "Post-decision update" has the real memory-headroom tradeoff of 6 GB vs. the recommended 8 GB, accepted
-knowingly, not silently. Public IPv4: **`217.177.74.184`**.
+knowingly, not silently. Public IPv4: **`<node-ip>`** — see the note below.
+> **The node's public IPv4 is deliberately not written here** (2026-08-25). `CLAUDE.md`'s standing rule
+> is "never write a secret, a token, a real endpoint or anyone's data into any of these repositories",
+> and a node address is an endpoint. It is derivable from DNS, so removing it recovers no secrecy —
+> what it does is stop this repository from handing over the last step, and stop the rule from being
+> one this project keeps everywhere except where it was inconvenient. It is also still in this
+> repository's git history, which this change does not and cannot undo.
+>
+> The real value lives in the private `ago-business` repository. Everywhere below, `<node-ip>` means it.
+
 
 *(Original recommendation, kept for the reasoning trail: Timeweb Cloud MSK 80, 4 vCPU / 8 GB RAM /
 80 GB NVMe, Moscow region, ≈1 800 ₽/month, annual billing — Russian-issued cards work directly with
@@ -71,7 +80,7 @@ untouched (unused today, may be repurposed later, doesn't conflict with anything
 
 | Host | Type | Value |
 |---|---|---|
-| `reserve-me.ru` (apex) | A | `217.177.74.184` |
+| `reserve-me.ru` (apex) | A | `<node-ip>` |
 | `chat.reserve-me.ru` | CNAME | `reserve-me.ru` |
 | `auth.reserve-me.ru` | CNAME | `reserve-me.ru` |
 | `console.reserve-me.ru` | CNAME | `reserve-me.ru` |
@@ -79,7 +88,7 @@ untouched (unused today, may be repurposed later, doesn't conflict with anything
 | `demo-shop2.reserve-me.ru` | CNAME | `reserve-me.ru` (reserved now, unrouted until `8-02`) |
 
 **Propagation, checked live** (2026-08-24, against `8.8.8.8` to bypass any local cache):
-`chat.`/`auth.`/`console.reserve-me.ru` resolved to `217.177.74.184` within minutes of being added —
+`chat.`/`auth.`/`console.reserve-me.ru` resolved to `<node-ip>` within minutes of being added —
 the three hostnames `tls.yaml`'s `Certificate` actually needs for step 6's HTTP-01 challenge.
 `demo-shop1`/`demo-shop2`/the bare apex had not resolved yet at last check — not a blocker (neither is
 routed by any `HTTPRoute` yet; both are `8-02`'s own future work), left to finish propagating in the
@@ -88,7 +97,7 @@ background.
 ## 3. Install k3s, disabling the bundled Traefik **(session) — done 2026-08-24**
 
 ```bash
-ssh -i ~/.ssh/ago-vps-ed25519 ago@217.177.74.184
+ssh -i ~/.ssh/ago-vps-ed25519 ago@<node-ip>
 curl -sfL https://get.k3s.io | sh -s - --disable traefik
 sudo k3s kubectl get nodes   # confirms the node is Ready before anything else
 ```

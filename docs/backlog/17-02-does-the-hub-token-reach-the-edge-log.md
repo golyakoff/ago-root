@@ -75,6 +75,13 @@ method as well as its result.
 - Check whether the `Ago.Chat.Webhooks` and `Ago.Chat.Worker` hosts share the API's logging
   configuration or diverge from it — same one-line question, two more `appsettings.json` files.
 
+## On writing this down publicly
+
+Kept specific on purpose, per `architecture/repositories.md`'s rule: both clients' logging
+configuration is in public source, so a vaguer description here would protect nothing and cost a
+session the reasoning. The one thing this item must *not* record is a captured token or a log line
+containing one — the Scope below says so explicitly for that reason.
+
 ## Out of scope
 
 - The browser-client fix — `5-14`, and it should land whenever it lands; neither item blocks the other.

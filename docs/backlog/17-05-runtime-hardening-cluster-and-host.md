@@ -43,18 +43,15 @@ the VPS. These replace the "unverified" list this item originally carried.
   means any authentication-bypass advisory in k3s or the kubelet becomes immediately reachable by
   anyone, with no network layer to fall back on. That is also what makes `17-04`'s absence of any CVE
   tracking compound with this one rather than sit beside it.
-- **`PasswordAuthentication` is effectively `yes`, contrary to what the runbook says.**
-  `/etc/ssh/sshd_config` line 66 sets `PasswordAuthentication no`, but line 12 is
-  `Include /etc/ssh/sshd_config.d/*.conf` and `50-cloud-init.conf` sets it back to `yes`. OpenSSH takes
-  the *first* value obtained, and the include comes first, so the hardening edit never took effect.
-  `sshd -T` — the authoritative view — reports `passwordauthentication yes`.
-  **Not exploitable as it stands**: `ago`'s password is locked (`passwd -S` reports `L`) and `root` is
-  barred by `PermitRootLogin no`, so no account can actually be logged into by password today. What is
-  missing is the layer that keeps that true the moment any account acquires a usable password. The box
-  logged **2018 failed password attempts in 24 hours**, so the exposure is actively probed rather than
-  theoretical, and `fail2ban` is inactive.
+- **An SSH hardening setting did not take effect, for a reason worth knowing.** Ubuntu's
+  `sshd_config` opens with `Include /etc/ssh/sshd_config.d/*.conf`, and OpenSSH keeps the **first**
+  value it obtains — so a cloud-image drop-in silently wins over an edit made further down the main
+  file. `sshd -T` is the authoritative view and disagreed with the file. The current state is not
+  exploitable, and this item deliberately does not spell out which setting or which account while it is
+  unfixed (see the note at the end of this file); the work is to correct the drop-in and verify with
+  `sshd -T` rather than by reading the file that lost.
 - **`ago` holds `NOPASSWD:ALL`** — deliberate and documented (single-admin demo box), and worth keeping
-  in view alongside the point above: the SSH key is the only thing between the internet and root.
+  in view: the SSH key is the only thing between the internet and root.
 - **Unattended security upgrades are on and working.** `unattended-upgrades` is enabled and active,
   `20auto-upgrades` sets both periodic keys, there are zero pending security updates and no reboot
   outstanding. This was on the original unverified list and turns out to need nothing.
@@ -95,11 +92,11 @@ deliberately public, so a `NetworkPolicy` does not break the thing the deploymen
   reachable and closes `6443`, `10250` and `32669` to everything except whatever genuinely needs them;
   if `kubectl` from the author's machine is one of those, say so and allow it by source address rather
   than leaving the port open to everyone.
-- **Fix `PasswordAuthentication` for real**: the drop-in that overrides it, not the main file, and
-  verified with `sshd -T` rather than by reading the file that lost. Restart `ssh` and confirm a *new*
-  session works before closing the current one — the same lockout-avoiding order the original hardening
-  used. Consider `fail2ban` in the same pass, and note that it becomes near-irrelevant once password
-  authentication is genuinely off.
+- **Make every `sshd` setting the runbook claims actually hold**, by editing the drop-in that
+  overrides them rather than the main file, and verifying with `sshd -T` rather than by reading a file
+  that may have lost. Restart `ssh` and confirm a *new* session works before closing the current one —
+  the same lockout-avoiding order the original hardening used. Consider `fail2ban` in the same pass, and
+  note it becomes near-irrelevant once password authentication is genuinely off.
 - **Decide on encryption at rest for Kubernetes Secrets** in k3s, and record the decision either way.
 - Every change verified against the running deployment, not just applied: a pod that fails to start
   under a new `securityContext` is the normal outcome of this work and the reason it is done
@@ -128,6 +125,16 @@ deliberately public, so a `NetworkPolicy` does not break the thing the deploymen
       the change was considered done.
 - [ ] The Secrets-at-rest decision is recorded.
 - [ ] `public-deploy.md`'s "Known gaps" no longer lists what this item closed.
+
+## Writing about this while it is unfixed
+
+The general rule now lives in `architecture/repositories.md`'s "Everything is public" section, added
+2026-08-25 after the author asked whether recording findings publicly increases the risk. Briefly, as
+it applies here: the manifests are public, so what they already reveal is not protected by vaguer prose
+and the only remedy is fixing it — but live host configuration that no manifest describes is worth
+naming as a mechanism without its current value, which is why the `sshd` finding above reads the way it
+does. The firewall entry in this file was found, fixed and rewritten as closed inside a day; that gap is
+the actual control.
 
 ## Open questions
 
