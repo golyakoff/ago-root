@@ -545,8 +545,19 @@ shipping none of them properly. Abuse controls beyond `3-05`'s rate limits turne
 their own item — registration abuse sits in `17-06` next to the brute-force settings it interacts
 with, and owner-facing abuse signals across tenants are already `12-02`'s.
 
-**Done when:** for the first item, no tenant-scoped operation lets a caller from another tenant reach
-anything, and that is enforced by something that fails automatically rather than by remembering.
+**Done when:** no tenant-scoped operation lets a caller from another tenant reach anything, and that
+is enforced by something that fails automatically rather than by remembering (`17-01`); no live bearer
+token is written anywhere that keeps it (`5-14`, `17-02`); every secret has a rotation procedure that
+states what it breaks, and rotating the visitor signing key is no longer a mass logout (`17-03`); a
+newly published vulnerability in a shipped dependency or base image reaches a person without anyone
+going to look (`17-04`); no container runs as root or can reach a database it has no business
+reaching, by statement rather than by inheritance (`17-05`); and the realm's password, brute-force and
+token-lifetime settings are values somebody chose rather than defaults nobody saw (`17-06`).
+
+Note what this stage does *not* claim when it is done: that the system is secure. It claims that six
+specific properties are enforced by something other than memory, and that the facts behind them were
+established rather than assumed — which is the only kind of security claim this project is in a
+position to make honestly.
 
 ---
 
