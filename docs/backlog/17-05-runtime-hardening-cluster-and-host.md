@@ -28,13 +28,40 @@ Checked 2026-08-25 against `ago-deploy` and the Dockerfiles.
   runs as root.
 - **Keycloak's realm still has `sslRequired: "none"`.** Already named in `runbooks/public-deploy.md`'s
   "Known gaps" as a deferred hardening step; recorded here so it has an owner.
-- **The host's SSH is properly hardened and documented** — non-root sudo user, key-only, root login and
-  password authentication disabled, verified 2026-08-24. That part is done and this item should not
-  redo it.
-- **Everything else about the host is unverified.** Nothing in any repository states whether a firewall
-  exists, or whether k3s's API server on `6443` and the kubelet on `10250` are reachable from the
-  internet. k3s also stores Secrets unencrypted in its datastore by default, which nothing here has
-  turned on or off deliberately.
+### The host, established live 2026-08-25
+
+Checked directly on the VPS over SSH, read-only, plus an external port probe from a machine that is not
+the VPS. These replace the "unverified" list this item originally carried.
+
+- **No firewall of any kind.** `ufw` is `inactive`, and the provider does not filter either: an external
+  probe found `22`, `80`, `443`, `6443`, `10250` and `32669` all reachable from the public internet.
+  The `nftables` ruleset present is k3s's own service routing, not a policy.
+- **`6443` (k3s API), `10250` (kubelet) and `32669` (k3s-server) are exposed but authenticated.**
+  Anonymous requests get `401` from the first two — including `/version`, so not even the version leaks
+  — and `32669` rejects the TLS handshake outright. So this is not an open cluster; it is three
+  control-plane authentication surfaces facing the entire internet with nothing in front of them, which
+  means any authentication-bypass advisory in k3s or the kubelet becomes immediately reachable by
+  anyone, with no network layer to fall back on. That is also what makes `17-04`'s absence of any CVE
+  tracking compound with this one rather than sit beside it.
+- **`PasswordAuthentication` is effectively `yes`, contrary to what the runbook says.**
+  `/etc/ssh/sshd_config` line 66 sets `PasswordAuthentication no`, but line 12 is
+  `Include /etc/ssh/sshd_config.d/*.conf` and `50-cloud-init.conf` sets it back to `yes`. OpenSSH takes
+  the *first* value obtained, and the include comes first, so the hardening edit never took effect.
+  `sshd -T` — the authoritative view — reports `passwordauthentication yes`.
+  **Not exploitable as it stands**: `ago`'s password is locked (`passwd -S` reports `L`) and `root` is
+  barred by `PermitRootLogin no`, so no account can actually be logged into by password today. What is
+  missing is the layer that keeps that true the moment any account acquires a usable password. The box
+  logged **2018 failed password attempts in 24 hours**, so the exposure is actively probed rather than
+  theoretical, and `fail2ban` is inactive.
+- **`ago` holds `NOPASSWD:ALL`** — deliberate and documented (single-admin demo box), and worth keeping
+  in view alongside the point above: the SSH key is the only thing between the internet and root.
+- **Unattended security upgrades are on and working.** `unattended-upgrades` is enabled and active,
+  `20auto-upgrades` sets both periodic keys, there are zero pending security updates and no reboot
+  outstanding. This was on the original unverified list and turns out to need nothing.
+- **k3s Secrets are unencrypted at rest**: `k3s secrets-encrypt status` reports
+  `Disabled, no configuration file found`. Reading them requires host-level access, so this is
+  defence-in-depth rather than a live hole — but every credential in `17-03`'s inventory sits in that
+  datastore in plaintext.
 
 ## Context to read first
 
@@ -63,9 +90,16 @@ deliberately public, so a `NetworkPolicy` does not break the thing the deploymen
   is worse than none, because it reads like protection.
 - **Tighten Keycloak's `sslRequired`** to `external` and verify it against the real
   `--proxy-headers=xforwarded` configuration, which is the reason it was left alone the first time.
-- **Establish the host's exposure**: whether a firewall exists, what is reachable on `6443` and
-  `10250` from outside, and whether unattended security updates are on. Then decide and apply, and
-  record the result — including "already closed by the provider" if that is the answer.
+- **Close the host's exposure** — established above, so this is now application rather than
+  investigation. A host firewall (or the provider's, if it has one) that leaves `22`, `80` and `443`
+  reachable and closes `6443`, `10250` and `32669` to everything except whatever genuinely needs them;
+  if `kubectl` from the author's machine is one of those, say so and allow it by source address rather
+  than leaving the port open to everyone.
+- **Fix `PasswordAuthentication` for real**: the drop-in that overrides it, not the main file, and
+  verified with `sshd -T` rather than by reading the file that lost. Restart `ssh` and confirm a *new*
+  session works before closing the current one — the same lockout-avoiding order the original hardening
+  used. Consider `fail2ban` in the same pass, and note that it becomes near-irrelevant once password
+  authentication is genuinely off.
 - **Decide on encryption at rest for Kubernetes Secrets** in k3s, and record the decision either way.
 - Every change verified against the running deployment, not just applied: a pod that fails to start
   under a new `securityContext` is the normal outcome of this work and the reason it is done
@@ -88,8 +122,10 @@ deliberately public, so a `NetworkPolicy` does not break the thing the deploymen
 - [ ] `NetworkPolicy` is in place and enforced — proven by a connection that used to work and now
       fails, from a pod that should never have had it.
 - [ ] Keycloak's realm requires TLS externally, verified behind the real proxy configuration.
-- [ ] The host's firewall status, `6443`/`10250` exposure and update behaviour are established,
-      decided and recorded.
+- [ ] `6443`, `10250` and `32669` are no longer reachable from an arbitrary internet address, proven
+      by an external probe from a machine that is not the VPS.
+- [ ] `sshd -T` reports `passwordauthentication no`, and a new SSH session was confirmed working before
+      the change was considered done.
 - [ ] The Secrets-at-rest decision is recorded.
 - [ ] `public-deploy.md`'s "Known gaps" no longer lists what this item closed.
 

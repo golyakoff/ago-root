@@ -37,7 +37,25 @@ and password authentication were then disabled in `/etc/ssh/sshd_config`
 (`PermitRootLogin no`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`), **verified live
 before reporting done**: `ago` login confirmed working from the new key location, *then* `root` login
 confirmed refused (`Permission denied (publickey,password)`) — in that order, specifically to avoid a
-lockout. The private key lives at `~/.ssh/ago-vps-ed25519` on the machine running the managing
+lockout.
+
+> **Correction, 2026-08-25.** One of those three did not take. `PasswordAuthentication no` sits at line
+> 66 of `/etc/ssh/sshd_config`, but line 12 is `Include /etc/ssh/sshd_config.d/*.conf`, and Ubuntu's
+> `50-cloud-init.conf` sets `PasswordAuthentication yes`. OpenSSH keeps the **first** value it obtains,
+> and the include is read first, so the edit below it never applied. `sshd -T` — the authoritative
+> view — reports `passwordauthentication yes` today.
+>
+> The evidence was in this paragraph the whole time: `Permission denied (publickey,password)` names
+> the methods still on offer. Had the setting taken, that message would have read `(publickey)`.
+>
+> **Not exploitable as it stands**: `ago`'s password is locked (`passwd -S` → `L`) and `root` is barred
+> by `PermitRootLogin no`, so no account can be logged into by password. It is a missing layer rather
+> than an open door — and the box logged 2018 failed password attempts in 24 hours, so it is a layer
+> under active probing. `17-05` owns the fix, which must edit the drop-in rather than the main file and
+> verify with `sshd -T` rather than by reading the file that lost.
+>
+> The lesson worth keeping: verifying a hardening change by observing a *refusal* proves the refusal,
+> not the reason for it. `sshd -T` was always the check that would have caught this. The private key lives at `~/.ssh/ago-vps-ed25519` on the machine running the managing
 session — not committed to any repository (`repositories.md`: "no secrets, ever").
 
 ## 2. DNS records **(you) — done 2026-08-24**
@@ -579,6 +597,14 @@ manual sequence is the whole story until a later item decides differently.
 - **Keycloak runs in `start-dev` mode publicly**, not its own hardened `start` production mode —
   `adr/0026`'s own "Consequences" section names this a deliberate, stated gap: a demo IdP for one
   seeded operator, not a production identity provider.
+- **No firewall, and the k3s control plane faces the internet** (established 2026-08-25): `ufw` is
+  inactive, the provider filters nothing, and an external probe reaches `6443` (API), `10250` (kubelet)
+  and `32669` (k3s-server). All three reject anonymous requests — `401`, not even a version string — so
+  this is exposure of an authentication surface, not an open cluster. `17-05` owns closing it.
+- **k3s Secrets are unencrypted at rest** — `k3s secrets-encrypt status` reports `Disabled`. Host-level
+  access is required to read them, so it is defence-in-depth; `17-05` owns the decision.
+- **Unattended security upgrades are on and working** — checked 2026-08-25, zero pending, no reboot
+  outstanding. Recorded here because it is the kind of thing later assumed to be missing.
 - **One node, still** — `k8s-local.md`'s own "Known limits" (no pod anti-affinity, no real node-drain
   or network-partition testing) carry over unchanged to this real deployment. `nfr.md`'s "not an
   uptime SLA — this is a demo cluster" framing is the bar this deployment is held to, not a new one
