@@ -47,8 +47,20 @@ What belongs at each level, stated so it is not re-argued per item:
   the client resumes from the right `sequence` and does not duplicate (`3-03`).
 - **The widget's isolation claim gets a test on a hostile page.** It runs inside a stranger's
   document; that the Shadow DOM holds, that nothing leaks into the global scope, and that the host's
-  CSS cannot reach in are the claims the `embeddable-widget` skill is built on, and they are testable
-  in a DOM without a browser.
+  CSS cannot reach in are the claims the `embeddable-widget` skill is built on.
+
+  **Three of those four are testable in a DOM without a browser; the CSS cascade is not**, and this
+  sentence originally claimed otherwise. Measured while building `11-08` (2026-08-25): jsdom matches
+  selectors against the flattened document and implements no shadow-boundary scoping in
+  `getComputedStyle`, so a host page's `button { background: red !important }` *does* apply to a
+  button inside an open shadow root there, and the shadow root's own `<style>` does not apply at all.
+  An assertion on computed style would therefore fail against correct code and prove nothing if it
+  passed. What the automated test asserts instead is the DOM boundary underneath the cascade rule -
+  the widget's markup is unreachable from the host document's own selector queries and its stylesheet
+  is inside the shadow root, which in a real browser is exactly *why* the host's rules cannot reach
+  it. The browser's own half of the claim stays with the hostile demo page and live verification.
+  Naming the split is the point: an isolation test that quietly asserts less than it appears to is
+  worse than one that says what it cannot see.
 - **Live verification stays a real level, not a confession.** `5-07` and `11-06` were both verified by
   working the real screen against a running stack, and that caught things no unit test would have. It
   does not survive a refactor, which is what the levels above are for — the two are complements.
