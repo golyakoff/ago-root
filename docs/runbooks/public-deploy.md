@@ -238,7 +238,8 @@ piped straight into `sed -i` on the file, never `echo`'d:
 
 ```bash
 sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -base64 24)|" .env
-# ...repeat for RABBITMQ_PASSWORD, MINIO_ROOT_PASSWORD, KEYCLOAK_ADMIN_PASSWORD, GRAFANA_ADMIN_PASSWORD (base64 -24),
+# ...repeat for RABBITMQ_PASSWORD, MINIO_ROOT_PASSWORD, KEYCLOAK_ADMIN_PASSWORD, GRAFANA_ADMIN_PASSWORD,
+# KEYCLOAK_DB_PASSWORD (15-01 - Keycloak's own Postgres role) (all base64 -24),
 # and AUTH_JWT_SIGNING_KEY (base64 -32)
 chmod 600 .env
 ```
@@ -486,15 +487,21 @@ reserve-me.ru") landed *before* the fixes that got Keycloak's pod to first reach
 VPS (step 8's `66feeec`/`90c4016`) — so the very first successful `--import-realm` on the real cluster
 already saw the updated file. Confirmed live with a real console login, not just reasoned about.
 
-**Correction to an assumption this section originally stated as fact**: `local-dev.md`'s own finding
-for a *fresh* Keycloak install ("`--import-realm` only imports a realm that does not already exist")
-does not fully generalize to a restart of an *already-provisioned* realm. `8-05` found, live, that
-editing `keycloak-realm-import.json` to add a brand-new user and then restarting the pod (a normal
-`kubectl apply` picking up the changed ConfigMap) **does** add that user to the live realm — a real,
-working account with the exact fixed id from the JSON, confirmed before this session's own Admin API
-call ever succeeded. Whether an *update* to an already-existing entity behaves the same way is still
-untested — treat that specific case as open, but "a new entity added via the committed JSON plus a
-rollout restart reaches an already-provisioned realm" is now a confirmed fact, not a stated assumption.
+**~~Correction to an assumption this section originally stated as fact~~ — the correction was itself
+wrong, and `15-01` found out why (2026-08-25).** This section used to record `8-05`'s live finding that
+editing `keycloak-realm-import.json` to add a brand-new user and restarting the pod **does** add that
+user to an already-provisioned realm. The observation was real; the conclusion drawn from it was not.
+The reason the new user appeared is that this Keycloak had no persistent store at all — the restart
+destroyed its embedded H2 database, so the realm did not exist any more and `--import-realm` rebuilt
+it from scratch, new entity and all. What looked like "the import merges into a live realm" was "the
+live realm is gone every time you look away".
+
+Retested directly under `15-01`'s persistent store: a new realm role *and* a changed
+`accessTokenLifespan` were added to the file, the pod was restarted, and **neither reached the realm**.
+Keycloak's own log is unambiguous about it — `Strategy: IGNORE_EXISTING` / `Realm 'ago-chat' already
+exists. Import skipped`. `Import skipped` means the whole file, not just the realm's own attributes.
+`adr/0036` has the mechanism; `k8s/apply-realm-settings.sh` is how realm-level settings reach a live
+realm now, and clients/roles/groups need their own `kcadm.sh` call.
 
 **Verify — from outside this network, same bar as step 11**: load `https://demo-shop1.reserve-me.ru`,
 send a message through the widget in the corner; from a second tab, `https://console.reserve-me.ru`
@@ -563,8 +570,11 @@ kubectl exec -i -n ago-chat deploy/redis -- redis-cli FLUSHALL
 ```
 
 **The `demo-operator-2` Keycloak user** was added by `kubectl apply`'s own Keycloak rollout restart
-picking up the changed `keycloak-realm-import.json` (see step 12's corrected note above) — no separate
-Admin API call was actually needed to *create* it, though this session used the Admin API anyway to
+picking up the changed `keycloak-realm-import.json` — which worked only because the restart wiped
+Keycloak's H2 store and re-imported the realm wholesale; see step 12's corrected note above, which
+`15-01` corrected a second time. That route no longer exists: since `15-01` the realm survives the
+restart and the import is skipped, so a new seeded user needs an Admin API call. No separate Admin API
+call was needed *at the time*, though this session used the Admin API anyway to
 diagnose a real problem: the first version of this user (`lastName: "Operator (tenant 2)"`) was
 created successfully but could never log in (`invalid_grant: "Account is not fully set up"`) —
 Keycloak's declarative User Profile silently rejects that shape of `lastName` at login time, not at
@@ -606,6 +616,79 @@ pod, the same reasoning `edge.md`'s rolling-deploy sequence already relies on fo
 No CI/CD auto-redeploy exists for this environment, deliberately (`8-01`'s own "Out of scope") — this
 manual sequence is the whole story until a later item decides differently.
 
+## Applying `15-01` to this deployment — a one-time step with real data loss **(you, on the node — NOT DONE)**
+
+`15-01`/`adr/0036` moves Keycloak's user store off the embedded H2 file in the pod's writable layer and
+onto its own `keycloak` database in the existing Postgres. Verified locally, on the Docker Desktop
+cluster; **not applied here.** It is a manifest-only change, so `redeploy.sh` does not carry it — that
+script pulls, builds, migrates and restarts, and never applies manifests. This needs a `kubectl apply -k`.
+
+**Read this before running it. It destroys the realm's current runtime state, and there is no
+migration.** Keycloak starts against a brand-new empty database; the H2 file the running pod uses is
+not read or converted. What goes:
+
+- every account created at runtime through `10-01`'s self-registration flow;
+- the `platform-owner` realm role **grant** (`12-01`/`adr/0032`) — the role definition comes back from
+  the realm import, the grant to a specific user does not;
+- any other by-hand realm change made through the admin console since the pod last started.
+
+What comes back automatically: the realm itself, the `ago-console` client, and the seeded demo
+operators — everything in `keycloak-realm-import.json`, because the new database is empty and
+`--import-realm` therefore runs with `OVERWRITE_EXISTING` on that first boot.
+
+There is genuinely no export path worth building: the Admin API never returns credentials, so exported
+users would arrive without passwords, and `kc.sh export` cannot run against a live `start-dev` H2 file
+because H2 allows one process to hold it open. So the procedure is: write down what exists, apply, put
+back what can be put back, and tell anyone else affected to register again.
+
+**1. Capture what is there (before touching anything):**
+
+```bash
+kubectl exec -n ago-chat deploy/keycloak -- sh -c '
+  /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master \
+    --user "$KEYCLOAK_ADMIN" --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+  echo "== users ==";               /opt/keycloak/bin/kcadm.sh get users -r ago-chat --fields username,email,firstName,lastName,enabled,emailVerified
+  echo "== platform-owner ==";      /opt/keycloak/bin/kcadm.sh get "roles/platform-owner/users" -r ago-chat --fields username
+' | tee ~/keycloak-pre-15-01.txt
+```
+
+**2. Add the new key to the overlay's `.env`** (it is gitignored and lives only on this node), with a
+freshly generated value — `openssl rand -base64 24`:
+
+```
+KEYCLOAK_DB_PASSWORD=<generated>
+```
+
+Without it the Keycloak pod fails in its init container with `KEYCLOAK_DB_PASSWORD: not set` and never
+starts. That is the intended failure: loud, and before anything else moves.
+
+**3. Apply and watch the pod, not the rollout:**
+
+```bash
+cd ~/ago/ago-deploy && git pull --ff-only origin main
+kubectl apply -k k8s/overlays/demo
+kubectl get pods -n ago-chat -l app=keycloak -w        # Init:0/1 -> Running -> 1/1, ~60-90s
+kubectl logs -n ago-chat deploy/keycloak -c create-keycloak-database   # CREATE ROLE / CREATE DATABASE
+kubectl logs -n ago-chat deploy/keycloak -c keycloak | grep KC-SERVICES0030
+#   expect: Strategy: OVERWRITE_EXISTING   ->  Realm 'ago-chat' imported     (first boot, empty DB)
+```
+
+**4. Put back what the capture recorded**: re-grant `platform-owner` to the right user (the direct
+Admin API snippet is in `local-dev.md`'s own section, and works identically against
+`https://auth.reserve-me.ru`), and re-seed any second demo operator that is missing. Self-registered
+accounts cannot be restored — those people register again, once.
+
+**5. Prove the thing this whole item exists for**, on this deployment and not only locally: register or
+create an account, `kubectl rollout restart deployment/keycloak -n ago-chat`, and log in as that
+account afterwards. Keycloak's log on that second boot should read `Strategy: IGNORE_EXISTING` /
+`Realm 'ago-chat' already exists. Import skipped`, and the account should still be there. Until that
+has been run here, `15-01`'s "verified live on the demo deployment" box stays unticked.
+
+**From then on**, editing `keycloak-realm-import.json` and restarting does nothing to this realm.
+Realm-level settings go through `k8s/apply-realm-settings.sh`; clients, roles and groups need their own
+`kcadm.sh` call. Never `kc.sh import --override true` — it replaces the realm and takes every account
+with it.
+
 ## Known gaps, named plainly
 
 - **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
@@ -614,8 +697,16 @@ manual sequence is the whole story until a later item decides differently.
   non-private-network requests) is a real, deferred hardening step, not evaluated live against this
   deployment's own `--proxy-headers=xforwarded` config in this session.
 - **Keycloak runs in `start-dev` mode publicly**, not its own hardened `start` production mode —
-  `adr/0026`'s own "Consequences" section names this a deliberate, stated gap: a demo IdP for one
-  seeded operator, not a production identity provider.
+  `adr/0026`'s own "Consequences" section named this a deliberate, stated gap: a demo IdP for one
+  seeded operator, not a production identity provider. **`15-01`/`adr/0036` re-opened that decision**
+  (one of its justifications had expired — `adr/0028` opened the realm to public self-registration, and
+  the store `start-dev` defaulted to was destroying those accounts) and kept `start-dev` deliberately,
+  with the reasoning recorded rather than inherited. The gap is now one concrete precondition instead
+  of an open-ended "hardening" wish: verify end to end on this node that Keycloak trusts the
+  `X-Forwarded-Proto` header NGINX Gateway Fabric sets, raise `sslRequired` from `none` to `external`
+  (the bullet above), and only then evaluate `start` — which additionally wants `--optimized` and
+  therefore a derived, built Keycloak image, which this deployment's registry-less image delivery does
+  not have a place for yet (`15-06`).
 - ~~**No firewall, and the k3s control plane faces the internet**~~ — **closed the same day it was
   found, 2026-08-25.** `ufw` now runs with `deny incoming`, allowing `22`, `80` and `443` plus the k3s
   pod (`10.42.0.0/16`) and service (`10.43.0.0/16`) ranges and the `cni0` bridge.
