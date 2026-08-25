@@ -36,62 +36,73 @@ a stage number stays a name.
 
 ### Now — in this order
 
-Row order is the queue. It is not a dependency chain: nothing here blocks anything else below it
-except where the row says so. Ordered by cost-to-close first, so the list shortens quickly, then by
-what is worst if left.
+Row order is the queue. It is not a dependency chain: nothing here blocks anything below it except
+where the row says so.
 
-**Refilled 2026-08-25**, when the queue drained to a single item that was itself waiting on somebody
-else. A queue whose only entry cannot be started is not a queue, so the top of "Soon" was promoted —
-and two entries are marked **parked** rather than removed, because the difference between "not next"
-and "cannot be started" is the thing a working list has to keep visible.
+**Deepened and reordered 2026-08-25**, on the author's call that the backlog had been circling
+operational work while two whole products sat scoped and unbuilt. Checking that: `20-00`-`20-06` and
+`14-01`-`14-04` are all `ready` — eleven items, fully written, waiting. Nothing needed planning; the
+list needed ordering.
 
-| # | Item | Why here, and why in this position |
+**This reverses the ordering argued earlier the same day, and the reason is that the situation
+changed.** That argument was made while the firewall was open, Keycloak was losing users on restart,
+signup could not complete and three live defects were open. All of that is now closed or in progress.
+What remains of the safety work is *insurance*, and insurance has a low marginal return on a
+deployment with no customers — whereas `20-00` is the only item in the entire backlog that tests the
+claim every ADR rests on. The one piece of ops work kept high is `15-06`, and only because Calendar is
+about to double the deploy surface that is already the weak point.
+
+Three items sit parked below the table rather than in it, because they cannot be started.
+
+| # | Item | Why here |
 |---|---|---|
-| 1 | `15-05` capacity and disk | Half-answered already: the measurement was taken 2026-08-25 and overturned the premise several items were written on — `local-path` does not enforce a PVC's requested size, so the "2Gi volume" everything reasons about is a number with nothing behind it. What is left is deciding headroom against the node's real 79G, the deliberate fill test, and handing thresholds to `15-03`. Still first because it produces the retention number `13-05` and `13-06` are both waiting on |
-| 2 | `15-06` a registry, tagged images, a rollback | Three costs in one day on 2026-08-25: a console bundle a week stale, no way to tell from a running pod which commit it is, and a build that failed on a NuGet feed nobody had repacked. `redeploy.sh` fixed the sequence; none of those three is a sequence problem |
-| 3 | `5-13` presigned upload size never enforced | Its own "not exploitable today" holds only while nobody can create an account unaided — `8-07` and `10-05` both end that. And the measurement above sharpens it: the bytes land on the node's shared 60G, not in a capped volume, so filling it takes the whole box down rather than one service |
-| 4 | `11-08` frontend behaviour tests | `5-16` was exactly the class of defect this item exists for, and its own fix already needed a test at this level — so some of the machinery is likely there. Worth taking before that momentum is lost, and before the three behaviours it names quietly become "we already have frontend tests" |
-| 5 | `8-07` demo credentials minted on request | One of the very few things that can ship while `10-05` is stuck: credentials are shown on screen, so it needs no mail at all. It also gives `16-02`'s erasure its first continuous consumer |
-| 6 | `7-08` delivery observability | Small, and 2026-08-25 showed exactly what its absence costs: answering "did the server try to deliver to that connection" took an hour of reading code and querying Redis by hand |
-| 7 | `15-02` backup and a restore drill | **Unparked 2026-08-25**: the destination is the author's own machine, pulled over the SSH access that already exists — no paid service while there are no customers (`ago-business`'s `decisions/0001` line), no new daemon, no new credential. Last because it is the largest of the seven, not because it matters least |
-| — | `10-05` transactional email | **In progress elsewhere, 2026-08-25.** The server side is built and verified (Postfix send-only, DKIM signing, the pod-to-host path proven), the PTR is granted, and the item was handed to a development session. Listed rather than removed so nothing here is started against it twice |
+| 1 | `5-13` presigned upload size never enforced | Hours, and its own premise expires the moment `8-07` or `10-05` lands. Cheapest thing here |
+| 2 | `7-08` delivery observability | Small, and 2026-08-25 measured what its absence costs: an hour of reading code to answer one question |
+| 3 | `17-07` visitor session silent renewal | The visitor-side twin of `5-16`, which was a live defect in the operator console. Same class, same size |
+| 4 | `8-07` demo credentials minted on request | Ends one shared public operator, and needs no mail — so it does not wait on anything |
+| 5 | `15-06` a registry, tagged images, a rollback | **Placed here on purpose.** `20-00` below adds a second product to deploy, and deploying is already the known weak point — three separate costs on 2026-08-25 alone. Doing this after Calendar means building the second product on top of it |
+| 6 | `20-00` the `ago-calendar` scaffold | The single most valuable thing left. Every ADR asserts the platform is defensible without knowing about chat; this is where that stops being an assertion and becomes code, and the first commit already tests it |
+| 7 | `20-01` Calendar domain and persistence | `Event` as the one real row a booking transitions through, never a computed slot |
+| 8 | `20-02` availability materialisation | Materialised ahead to a rolling horizon, with already-materialised days directly editable |
+| 9 | `20-03` booking and the lead card | An atomic compare-and-set claim on an `Available` row — the same discipline operator capacity already uses |
+| 10 | `20-04` confirmation sweep and operator queue | The same Worker-job shape as `OutboxDispatcher`, not a new mechanism |
+| 11 | `20-06` Calendar console and booking widget | Reuses per-site CORS and the OIDC pattern rather than inventing a second of either |
+| 12 | `14-01` external channel identity and inbound port | AGO Inbox starts here: the domain concept and the port every adapter plugs into |
+| 13 | `14-04` offline auto-reply | Channel-agnostic by design, so it needs no adapter and no vendor — the one Inbox item with no external dependency |
+| 14 | `14-02` MAX channel adapter | The first concrete channel, chosen because it has an open Bot API and no regulatory friction |
+| 15 | `13-01` operator invitations and seat entitlement | Also carries seat assignment and operator removal, which `decisions/0006` made a prerequisite of everything else in billing |
+| 16 | `13-02` ЮKassa checkout and webhook | The first successful payment; state confirmed by webhook through the outbox, never by trusting a redirect |
+| 17 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
+| 18 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
+| 19 | `15-04` retention and pruning jobs | Bounded pruning of everything that grows without limit, and the mechanism `13-06` builds on |
+| 20 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
+| 21 | `11-08` frontend behaviour tests | `5-16` and `17-07` are both exactly the class this exists for. Here rather than later because two examples is when the argument is easiest to make |
+| 22 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
+| 23 | `15-02` backup, and a restore performed | Destination decided 2026-08-25. Rises the moment there is a customer whose data is not ours to lose |
+| 24 | `15-03` alerting that reaches a person | Now buildable: something finally collects the machine's own metrics |
+| 25 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
+| 26 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
+| 27 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
+| 28 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
+| 29 | `17-04` dependency and image scanning | Only meaningful once `15-06` gives images somewhere to be pushed |
+| 30 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
+| 31 | `17-05` runtime hardening | `securityContext` and `NetworkPolicy` everywhere. Limits blast radius rather than reducing the chance of a breach, which is why it is not higher |
+| 32 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
+| 33 | `11-07` finish the login theme | Error pages, and the anti-drift mechanism for the tokens that the first pass owed |
+| — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
+| — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
+| — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |
 
-### Soon — the current stage, and what the "Now" band leaves half-finished
+### Soon — folded into the queue above, 2026-08-25
 
-Ordered, 2026-08-25, and widened — it had been listing four items while nine were scoped, which made
-the band useless for deciding anything:
+This band held its own ordered list until the queue was deepened to thirty-three, at which point the
+two described the same thing in two places — the failure this file has already corrected twice, once
+for ordering and once for the pulled-ahead list. Everything that was here is in the table above, in
+position, with its reason.
 
-1. `15-06` (a registry, tagged images, a proven rollback). Cost twice in one day on 2026-08-25 — a
-   console bundle a week stale, and no way to tell from a running pod which commit is in it.
-   `redeploy.sh` made the sequence repeatable; it did not make the image identifiable, and that is the
-   half that keeps costing. It also has to land before `17-04`'s image scanning means anything, since
-   scanning belongs where images are published and there is nowhere to publish them.
-2. `15-05` (capacity and disk). The highest leverage per hour on this list: it produces the storage
-   measurement that `13-05` and `13-06` are both waiting on, so one measurement unblocks two items and
-   completes a decision already made in shape (`adr/0031`).
-3. `5-13` (presigned upload size never enforced by storage). Its own note says "not exploitable
-   today" — true only while nobody can create an account unaided. `8-07` hands out credentials on
-   request and `10-05` opens self-registration, so this wants doing **before** either, not after.
-4. `15-02` (backup, and a restore that has been performed). After `8-07` and `10-05` the deployment
-   holds other people's real accounts, and the only reason no backup has cost anything is that
-   nothing bad has happened yet.
-5. `8-07` (demo credentials minted on request), `11-07` (the login page's theme), `11-08` (frontend
-   behaviour tests), `10-03` (console signup UI, real only once `10-05` lands), `13-06` (retention
-   class and archive), `7-08` (delivery observability), and `15-03` (alerting).
-
-`15-03` moved down deliberately. It was worth more this morning than it is tonight: the 2026-08-25
-failures — a stale bundle, a dead widget — are visible only from outside and only by reading a
-response body, which is `smoke.sh`'s job, and that now exists. Alerting keeps its own value for what
-breaks slowly and from within: outbox lag, DLQ growth, a filling disk.
-
-**Two of these will stall halfway if started as ordinary work.** `10-05` (in the queue above) needs a
-sending provider and `15-02` needs a backup destination — both the author's decisions, both
-constrained by data residency (`16-01`), and both sit in the middle of otherwise buildable items. A
-half-built item is worse than an unstarted one, so decide before starting rather than during.
-
-Stage 11 is finished as a stage: `11-05` and `11-06` both landed 2026-08-25, leaving only the notice
-field `16-04` adds later. Both surfaced live defects on the way out — `5-14` and `5-15`, both since
-closed the same day — which is what a real verification pass is for.
+What belongs here now is only what is genuinely *not* queued and not parked: nothing. When the queue
+drains past the point where thirty-three entries is more list than anyone reads, this band comes back
+as the tail of it rather than as a second opinion about it.
 
 ### After — in roughly this order, each already scoped
 
