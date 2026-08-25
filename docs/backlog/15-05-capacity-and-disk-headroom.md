@@ -47,6 +47,29 @@ That matters more than the numbers, because several items reason from a ceiling 
 
 Correcting those three is part of this item's work, not a separate cleanup.
 
+## What is already done, 2026-08-25 — do not redo it
+
+Two things were finished ahead of this item being picked up, because both needed node access and
+somebody had it. Neither was a numbered item; both belong here.
+
+**Nothing was collecting disk metrics at all.** `7-03` wired Prometheus to the three `Ago.Chat.*`
+hosts and to nothing about the machine they run on, so this item's threshold work and `15-03`'s disk
+rule were both unbuildable — there was no series to threshold. A `node-exporter` DaemonSet now runs
+(`ago-deploy`), scraped as job `node`, reporting 78.6 GiB total and 59.6 GiB free. The hand
+measurement above is the first point; the slope this item actually needs starts accumulating from
+here, so **the useful next step is to let it run and then read the rate**, not to measure again.
+
+**A rollout defect was found while applying that**, and is fixed: all six Deployments owning a PVC had
+the default `RollingUpdate`, and on a single node that means the replacement pod crashes on the
+application's own single-writer lock while the outgoing pod holds it — a rollout that can never
+complete. All six now declare `Recreate`. Recorded here because it is the kind of thing this item's
+own fill test would otherwise have discovered the hard way.
+
+**What remains** is the part that was always the substance: decide headroom against the node's real
+disk rather than against PVC numbers the storage class ignores, decide whether a real quota is wanted
+at all, run the deliberate fill test somewhere that is not the live deployment, derive `15-03`'s
+thresholds from the measured rate, and correct the three items that reason from the 2Gi ceiling.
+
 ## Context to read first
 
 `deploy/k8s/base/*.yaml`'s PVC declarations — the six sizes above, and the fact that `overlays/demo`
