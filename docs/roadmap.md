@@ -99,9 +99,33 @@ Stage 12 left this list on 2026-08-25, finished.
 Not work, and not blocked on effort — these have calendar latency that is not ours, so they are worth
 starting earlier than the work that needs them:
 
-- The **legal consultation** gating `16-04` and the whole `ago-business` legal block.
-- The **email provider** (`10-05`) and the **backup destination** (`15-02`) — both the author's
-  decisions, both now constrained by data residency (`16-01`).
+**Completed 2026-08-25**, because this list had three entries while six decisions were outstanding,
+and the missing three gate a whole set rather than a single item. Sorted by what they hold up:
+
+- The **email provider** (`10-05`) — the most urgent, because `10-05` sits in the queue above and will
+  reach the provider question mid-item. Constrained by data residency (`16-01`).
+- The **backup destination** (`15-02`) — same constraint, and `15-02` is near the top of "Soon", so it
+  has weeks rather than days.
+- The **legal consultation** gating `16-04` and the whole `ago-business` legal block. The longest
+  calendar latency of anything here and the one with no substitute, which is why it is worth starting
+  before the work that needs it rather than when it blocks.
+- **Four subscription-lifecycle questions** (`13-03`, blocked on them): what a failed recurring charge
+  does — immediate downgrade, a grace period, or a dunning schedule; whether an explicit cancellation
+  is immediate or paid-until-period-end; whether a mid-cycle change is prorated or deferred; and what
+  happens when a downgrade would leave fewer seats than the account has operators. Pure product
+  decisions, no code involved, and they unblock a Stage 13 item outright.
+- **What "site-count cap" means** (`13-05`): the identity-correlation problem `13-01` already named, or
+  a genuinely new feature letting one paying account hold several sites. `10-02` deliberately rejected
+  an `Account` aggregate above `Site`, so the second reading reopens that decision — which is exactly
+  why the item refuses to guess between them.
+- **The attachment-storage byte cap** (`13-05`) — partly a decision and partly a measurement: the shape
+  (per tier, per seat, or flat per site) is a product call available now; the number waits on `15-05`
+  like the retention window did.
+
+What this list has stopped being is a footnote. Two days ago the bottleneck was scope — items were
+unwritten and work could not start. It is now the other way round: nearly everything ahead is scoped,
+and what stands between the current set and the next one is six answers, four of which need nothing
+but an afternoon and a decision.
 - ~~The **free-tier retention window**~~ — **decided in shape 2026-08-25** (`adr/0031`): time-boxed,
   per tier, via an immutable retention class in the partition key, archived rather than deleted. What
   is left is the window's *length*, which is no longer waiting on anyone's decision — it waits on
