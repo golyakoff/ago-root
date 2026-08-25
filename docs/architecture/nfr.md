@@ -76,6 +76,21 @@ matter to this document specifically:
   the node it watches, so it cannot report that the node is gone. An external check is a separate
   mechanism and is still an open question in `15-03`.
 
+**The "coming back" half exists too** (`15-02`, 2026-08-25, `adr/0050`), and it produced the first
+recovery numbers this project has that are measurements rather than estimates. Restoring both Postgres
+databases and the object store from one encrypted artifact into an empty target took **14–17 s** end to
+end, over two complete runs; the artifact is **1.08 MB** and takes **4–5 s** to produce. Two readings of that, both of which
+belong here rather than in the runbook:
+
+- **Recovery time on this deployment is not bounded by moving data.** At this size the data is
+  seconds. What a real recovery costs is rebuilding the cluster and getting images onto it — `15-06`'s
+  subject. Any future effort to shorten recovery belongs there, not in faster backups.
+- **This is still not an RPO, and the reason is not the schedule.** The node backs up daily, but the
+  copy that survives losing the node is the one collected onto a personal machine, so the honest
+  recovery point is "since that machine was last on and ran the pull". `adr/0050` states that plainly
+  as the cost of the destination the author chose. Writing a number here instead would be inventing
+  one.
+
 ## Observability requirements
 
 Everything above must be visible without attaching a debugger:

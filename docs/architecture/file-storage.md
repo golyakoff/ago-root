@@ -178,6 +178,18 @@ app-startup magic" treatment - most likely an `ago-deploy` script or a `mc`/AWS-
 the existing seed scripts - but no session has actually written that step yet. Flagging it again here
 rather than silently carrying it forward a second time.
 
+**And on 2026-08-25 it cost something, exactly as flagged.** `15-02` went looking for an attachment to
+prove a restore with, and found the public deployment had **no bucket at all** - `seed/create-minio-
+bucket.sh` targets docker-compose's network by name and can never have run there. Every attachment
+upload on that deployment would have failed since the day it went live, and nobody had noticed because
+nobody had tried one; the API had been serving presigned URLs for a bucket that did not exist. The
+bucket was created by hand and the whole path - presign, `PUT`, confirm, download - was verified end to
+end on the real deployment for the first time, byte-identical on the way back. **The standing gap is
+unchanged**: nothing in `ago-deploy` provisions it, so a rebuilt cluster starts without one again, and
+`backup-and-restore.md`'s "Restoring onto a rebuilt node" now carries the bucket-creation step
+explicitly for that reason. Two flags and a live outage-in-waiting is enough evidence that the note is
+not the fix.
+
 **Also still open, found live while verifying `5-10`**: neither `k8s/base/api.yaml` nor
 `k8s/base/worker.yaml` sets any `Storage__S3__*` env var at all, even though `minio.yaml` deploys the
 service both hosts need it for - the full k8s-cluster deployment path (`k8s-local.md`) has never

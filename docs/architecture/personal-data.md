@@ -66,7 +66,7 @@ not who is legally answerable for them — that second question is `16-04`'s and
 |---|---|---|---|---|---|
 | `messages.body` (Postgres) | Free text; anything a visitor or operator typed | AGO, on its own node (`adr/0026`) | **Forever.** No pruning exists today | Row deletion; `ON DELETE CASCADE` from `conversations`, and from `sites` through it. Partition drop once `15-04` exists | `AgoChatDbContextModelSnapshot.cs`; `Stage1CreateChatSchema.cs` FKs; `PartitionMaintenanceJob` **only creates** partitions, never drops |
 | `attachments` rows + the MinIO objects they point at | Attachment bytes — a photo, a document, a screenshot — plus content type and size | AGO | **Forever.** No retention job | `DeleteAttachmentHandler` deletes the object *and* the thumbnail; `5-04`'s sweeper deletes only objects whose row never got a `message_id`. **Gap: deleting a conversation cascades the `attachments` rows and leaves the MinIO objects behind** — nothing joins the two | `DeleteAttachmentHandler.cs:55-95`; `AttachmentOrphanSweepJob`; `Stage5AddAttachments.cs` cascade FKs |
-| Keycloak's user store | Email (required — `verifyEmail: true`), username, first/last name, password hash, sessions | AGO | Until the account is deleted. **New since 2026-08-25**: it now survives restarts | Keycloak user deletion | `adr/0036`; `k8s/base/keycloak-realm-import.json` |
+| Keycloak's user store | Email (required — `verifyEmail: true`), username, first/last name, password hash, sessions. **Also, verified 2026-08-25**: `username_login_failure` carries an attempted username and `last_ip_failure`, and `offline_user_session` carries offline sessions — both in this same database | AGO | Until the account is deleted. **New since 2026-08-25**: it now survives restarts. Nothing prunes the login-failure or offline-session tables | Keycloak user deletion | `adr/0036`; `k8s/base/keycloak-realm-import.json`; `psql` against the live `keycloak` database (`15-02`) |
 | `visitors` | `id`, `site_id`, `first_seen_at`, `last_seen_at` — **and nothing else** | AGO | Forever | Row deletion; cascades from `sites` | `Stage1CreateChatSchema.cs:69-86`, `Visitor.cs` |
 | `conversations` | The visitor↔operator pairing, timestamps, unread counters | AGO | Forever | Row deletion; cascades from `sites` | schema snapshot |
 | `sites.name`, `sites.allowed_origins` | The customer's business identity, not a natural person's — though a sole trader's business name often is their name | AGO | Forever | Row deletion | `Stage10AddSiteName.cs`, schema snapshot |
@@ -83,7 +83,7 @@ not who is legally answerable for them — that second question is `16-04`'s and
 | Metrics (Prometheus) | Aggregates, on a PVC. Labels are site/consumer/topic-shaped, not person-shaped, as far as `7-02`'s instruments go | AGO | Until the PVC is reclaimed; no retention flag set | Nothing automatic | `k8s/base/prometheus.yaml` |
 | Application logs | Structured, and scanned for this item: every log statement in `Ago.Chat.*` interpolates ids, counts, statuses and object keys — **no message body, no email, no IP** was found | AGO, via the container runtime | Whatever the node's log rotation does — **not defined by anything in this project** | Nothing this project owns | grep over every `Log*(` call in `ago-chat/src` |
 | Edge access logs | Client IP per request, by NGINX's own default logging | AGO | **Undefined.** No retention policy exists | Nothing | `edge.md`; `17-02` is the item that owns this surface |
-| Backups | Copies of everything above that lives on a PVC | **Open — this is `15-02`'s decision, and it is the reason this file exists now** | The retention window `15-02` sets | The window expiring | `backlog/15-02` |
+| Backups | One encrypted artifact per run holding both Postgres databases, the roles, the MinIO objects and the overlay's `.env`. **Not** Redis and **not** RabbitMQ — see below | AGO. Staged on the node (newest 7 runs), collected onto the author's own machine, which is where the backup actually is. No third party holds a copy; nothing leaves Russia (`adr/0050`) | **30 days** on the collected copies — a choice, not a derivation, and it must be set to whatever the published privacy policy states | The window expiring, enforced by `backup-pull.sh` on every run | `adr/0050`, `runbooks/backup-and-restore.md` |
 | Retention archive | Expired conversation history in `16-03`'s export format | AGO, or a destination `adr/0031` has not chosen | `adr/0031`: archived rather than deleted | Object deletion — and the store's class must permit it, which `adr/0031` records as a selection constraint | `adr/0031` |
 
 ### Two corrections `16-01` made to the first draft
@@ -155,13 +155,16 @@ What this file does assert, because they are facts about this system rather than
 | Item | The vendor question | What crosses the boundary if answered carelessly |
 |---|---|---|
 | `10-05` transactional email | Which sending provider | Every account holder's email address, plus the content of verification and password-reset mail |
-| `15-02` backup and verified restore | Which off-node destination | A complete copy of every store in the table above — the single largest transfer this project could make |
+| ~~`15-02` backup and verified restore~~ — **answered 2026-08-25, `adr/0050`**: the destination is the author's own machine over existing SSH, encrypted to a key the node does not hold. No vendor, no boundary crossed | — | — |
 | `20-05` / `14-03` SMS and channel vendors | Which gateway | Phone numbers, and message text on any channel that carries it |
 | `adr/0031`'s archive store | Where expired history is archived | Whole conversation transcripts |
 | Any future object-storage vendor | Where attachment bytes live | Documents and photographs visitors uploaded |
 
-`10-05` and `15-02` each carry this constraint in their own Open questions as of 2026-08-25, so
-neither can be answered without meeting it.
+`10-05` and `15-02` each carried this constraint in their own Open questions as of 2026-08-25.
+`15-02` has since been answered and it did not cross the boundary at all — the backup never leaves
+machines the author owns. `10-05` was answered the same way and for related reasons (`adr/0040`'s
+amendment: self-hosted Postfix, not a sending provider). Two out of two so far; the rows still open
+above are the ones where that will be harder.
 
 **A related trap, named because it is easy to walk into:** `adr/0034` declined a registration CAPTCHA
 partly because Google's reCAPTCHA "would attach a Google call to the sign-up path just as `16-01` is
@@ -175,11 +178,26 @@ which deletion is complete because no copy survives — written into the privacy
 than claimed as immediate (author's decision, 2026-08-25). The alternative considered and rejected was
 a deletion journal replayed after every restore: more precise, but the journal is itself a list of
 people who asked to be forgotten, which is a worse thing to hold than the short window it removes.
-`15-02` must set its retention to a number the policy can state.
+`15-02` must set its retention to a number the policy can state. **It set 30 days** (`adr/0050`),
+labelled there as a choice rather than a derivation precisely because the policy does not exist yet;
+it lives in one variable so that aligning it later is one edit.
 
 `16-01` adds one item to that reasoning: the window has to cover **RabbitMQ's PVC and the leaked node
 queues too**, not only Postgres and MinIO, because that is where the map found message text outside
 the two places everyone thinks about.
+
+**`15-02` answered that in the opposite direction, and the reasoning is worth keeping here rather than
+only in `adr/0050`.** RabbitMQ is **not** backed up — so no window has to cover it, because no copy is
+made. Backing it up would have taken the message text stranded in the leaked
+`deliver-to-connections.{node}` queues and replicated it into every daily artifact, extending its life
+to the backup retention window and turning a bounded leak into a distributed one. The queues remain a
+real problem; copying them was not the way to manage it. The same argument excluded Redis: its RDB
+snapshot carries a rate-limit bucket keyed by client IP, and not copying it is the privacy-preferable
+answer as well as the operationally correct one.
+
+What *is* covered by the window: both Postgres databases (so `messages.body`, and Keycloak's accounts
+and credentials) and the MinIO objects. That is the full set of places a person's data can outlive its
+own deletion by 30 days, and it is small enough to state in a policy.
 
 ### Who answers to whom
 
@@ -194,14 +212,19 @@ supplies the mechanism, the tenant owns the text and its accuracy.
 
 Written down rather than guessed, because a map is most dangerous where it is confident and wrong.
 
-- **What Keycloak's brute-force protection stores, and where.** `adr/0034` turned
-  `bruteForceProtected` on, and Keycloak's attack-detection view reports per-user failure counts — its
-  model also carries a last-failed-login IP. Whether that record lives in the `keycloak` database
-  (persistent since `adr/0036`) or in an in-memory Infinispan cache in this Keycloak version was not
-  verified against a running instance and is **not** asserted here either way. Worth ten minutes with
-  `psql` before `15-02` decides what a backup contains.
-- **Whether Keycloak sessions are persisted** in this version and configuration — same reason, same
-  method.
+- ~~**What Keycloak's brute-force protection stores, and where.**~~ **Established 2026-08-25 by
+  `15-02`**, with `psql` against the live deployment, because a backup cannot be scoped against a
+  guess. The `keycloak` database — persistent since `adr/0036`, and therefore in every backup — holds
+  a `username_login_failure` table whose columns are `realm_id`, `username`, `failed_login_not_before`,
+  `last_failure`, `last_ip_failure`, `num_failures`. So **an attempted username and the IP it was
+  attempted from are durable personal data in this system**, not an in-memory cache. It holds 0 rows
+  today, which is a fact about today and not about the design. Nothing prunes it; the table's own row
+  belongs in this file's inventory if that ever stops being 0.
+- **Whether *online* Keycloak sessions are persisted** is still not asserted. What was established:
+  `offline_user_session` and `offline_client_session` exist in that database and `offline_user_session`
+  held 3 rows. Whether the ordinary session cache is also written there in this version and
+  configuration was not separately checked — same method, ten more minutes, and it changes nothing
+  about the backup's scope since the whole database is copied either way.
 - **What trace spans actually carry.** `16-05` is the audit and it needs running instrumentation to
   look at, not a reading of the code. The table's Traces row says only what the manifest proves.
 - **What the node's own log rotation does** with container stdout and with NGINX's access log. Nothing
