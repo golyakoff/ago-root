@@ -78,7 +78,12 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
    the managing session only, not every session or every worker, and merge stays manual regardless.)
 10. **Work happens on a feature branch**, one branch per slice/backlog item. An MR is the branch
     *rebased onto `main`* with the full suite green **after** the rebase — never `main` merged into
-    the branch (`docs/conventions/git-workflow.md`).
+    the branch (`docs/conventions/git-workflow.md`). "Rebased onto `main`" means `main`'s tip **at
+    push time**, not at branch-cut time: `git fetch` and confirm `git merge-base HEAD origin/main`
+    equals `git rev-parse origin/main` **before the first push**, and rebase while the branch is
+    still local if it does not. After the branch is pushed a stale base is no longer rebasable by
+    anyone but the author — it becomes close-the-PR-and-rebuild — so the check is cheapest exactly
+    once, just before pushing.
 11. **Time is UTC `DateTimeOffset`, always.** Store `timestamptz`, transport ISO-8601 with an
     explicit offset, render in the user's IANA zone when supplied and otherwise render UTC *labelled
     as UTC*. `DateTime` and `DateTime.UtcNow` are banned outside Infrastructure; time comes from
