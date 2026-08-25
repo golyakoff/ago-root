@@ -1,5 +1,15 @@
 # Runbook: public deployment (k3s VPS)
 
+> **This is the record of the first bring-up, not the procedure for updating.** Every step below is
+> marked with the date it was done, because each was done once. To redeploy, use
+> [`redeploy.md`](redeploy.md) and the script it points at.
+>
+> The distinction is not pedantry: on 2026-08-25 a redeploy followed this file, skipped step 9
+> (migrations) because a step marked "done" does not read like a step, and left the API running
+> against a schema three migrations behind. Every page still returned 200 while every query loading a
+> `Site` failed. This file stays as it is — it is a good record, and rewriting it into a procedure
+> would lose what it records — and `redeploy.md` carries the repeatable sequence instead.
+
 > **Status: fully live and verified end to end** (2026-08-24) — every step below, including step 12
 > and step 13, has actually run against the real VPS. This runbook was originally written by a
 > session with no VPS to deploy to ("design only" as of its first version); the managing session then
