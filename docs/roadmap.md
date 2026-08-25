@@ -53,8 +53,8 @@ and "cannot be started" is the thing a working list has to keep visible.
 | 4 | `11-08` frontend behaviour tests | `5-16` was exactly the class of defect this item exists for, and its own fix already needed a test at this level — so some of the machinery is likely there. Worth taking before that momentum is lost, and before the three behaviours it names quietly become "we already have frontend tests" |
 | 5 | `8-07` demo credentials minted on request | One of the very few things that can ship while `10-05` is stuck: credentials are shown on screen, so it needs no mail at all. It also gives `16-02`'s erasure its first continuous consumer |
 | 6 | `7-08` delivery observability | Small, and 2026-08-25 showed exactly what its absence costs: answering "did the server try to deliver to that connection" took an hour of reading code and querying Redis by hand |
-| — | `10-05` transactional email | **Parked, not next.** The server side is built and verified (Postfix send-only, DKIM signing, pod-to-host path proven); it waits on reg.ru publishing the zone and on Fornex setting the PTR, neither of which is ours. Do not start it as ordinary work — it will stall at the provider question |
-| — | `15-02` backup and a restore drill | **Parked.** Needs the off-node destination decided first, and that decision is constrained by residency (`16-01`). Starting it means building everything except the part that matters |
+| 7 | `15-02` backup and a restore drill | **Unparked 2026-08-25**: the destination is the author's own machine, pulled over the SSH access that already exists — no paid service while there are no customers (`ago-business`'s `decisions/0001` line), no new daemon, no new credential. Last because it is the largest of the seven, not because it matters least |
+| — | `10-05` transactional email | **In progress elsewhere, 2026-08-25.** The server side is built and verified (Postfix send-only, DKIM signing, the pod-to-host path proven), the PTR is granted, and the item was handed to a development session. Listed rather than removed so nothing here is started against it twice |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
@@ -112,8 +112,13 @@ and the missing three gate a whole set rather than a single item. Sorted by what
 
 - The **email provider** (`10-05`) — the most urgent, because `10-05` sits in the queue above and will
   reach the provider question mid-item. Constrained by data residency (`16-01`).
-- The **backup destination** (`15-02`) — same constraint, and `15-02` is near the top of "Soon", so it
-  has weeks rather than days.
+- ~~The **backup destination**~~ — **decided 2026-08-25**: the author's own machine, pulled over the
+  SSH access that already exists. No monthly bill while there is no revenue to justify one, no SFTP
+  daemon (SSH already is one, and adding a service would reopen surface `17-05` closed the same day),
+  and the copy that leaves the host is what makes it a backup at all — the dump on the VPS is staging.
+  It also inherits an obligation nobody had noticed: those pulled copies are personal data on a
+  personal disk, so they expire on the same window the privacy policy states, or `16-02`'s "deletion
+  is complete when the last backup ages out" is not true.
 - The **legal consultation** gating `16-04` and the whole `ago-business` legal block. The longest
   calendar latency of anything here and the one with no substitute, which is why it is worth starting
   before the work that needs it rather than when it blocks.
