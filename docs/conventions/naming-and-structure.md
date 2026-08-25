@@ -12,7 +12,6 @@ ago/
   ago-root/        this one — docs, ADRs, conventions, .claude skills, backlog, load/
   ago-platform/    Ago.Platform.*    -> NuGet packages
   ago-chat/        Ago.Chat.*        -> Docker images (Api, Worker, Webhooks)
-  ago-calendar/    Ago.Calendar.*    -> Docker images (Api, Worker)
   ago-widget/      embeddable script -> versioned CDN bundle
   ago-console/     operator SPA
   ago-deploy/      docker-compose, Kustomize, seed
@@ -20,9 +19,9 @@ ago/
 
 Cross-repository links in documentation are always relative (`../ago-root/docs/...`), so the tree can
 be moved or renamed without rewriting them. From `ago-root` the others are additionally reachable as
-`platform/`, `chat/`, `calendar/`, `widget/`, `console/`, `deploy/` through Windows junctions — a
-convenience for sessions, gitignored, and recreated after any move (`runbooks/workspace.md`). Each
-repository is still committed in its own checkout.
+`platform/`, `chat/`, `widget/`, `console/`, `deploy/` through Windows junctions — a convenience for
+sessions, gitignored, and recreated after any move (`runbooks/workspace.md`). Each repository is
+still committed in its own checkout.
 
 ## `ago-platform`
 
@@ -38,7 +37,12 @@ src/
   Ago.Platform.Storage.S3/
   Ago.Platform.Realtime/              connection registry, node routing, hub base types
   Ago.Platform.Resilience/            timeout, retry, circuit breaker, bulkhead policies
-  Ago.Platform.Hosting/               IProductModule, health checks, OpenTelemetry, config binding
+  Ago.Platform.Hosting/               IProductModule, AddPlatformKernel, SystemClock - and nothing
+                                      else: every host of every product must reference this one, so
+                                      what it declares, every host pays for (adr/0046)
+  Ago.Platform.Observability/         OpenTelemetry wiring: AddPlatformObservability, Otel:* options,
+                                      the "Ago.*" ActivitySource/Meter wildcards. Web hosts only -
+                                      its Prometheus scrape endpoint needs an IEndpointRouteBuilder
 tests/
   Ago.Platform.Tests/
   Ago.Platform.Architecture.Tests/    the platform's own smaller half of the arch-test list -
@@ -82,43 +86,6 @@ tests/
 One folder per use case, holding everything that use case owns. A reviewer opening
 `UseCases/SendMessage/` should see the whole feature without navigating elsewhere — the
 vertical-slice half of the structure, coexisting with the layer rule rather than replacing it.
-
-## `ago-calendar`
-
-The second product, scaffolded by `backlog/20-00-repository-scaffold-and-platform-consumption.md`.
-Project for project it mirrors `ago-chat` above, with three deliberate differences and no others:
-
-```
-src/
-  Ago.Calendar.Domain/
-  Ago.Calendar.Application/
-    Abstractions/                     product-specific ports only
-    UseCases/
-  Ago.Calendar.Contracts/             integration events, public and versioned
-  Ago.Calendar.Infrastructure.Postgres/
-  Ago.Calendar.Module/                IProductModule: DI, endpoints, consumers
-  Ago.Calendar.Api/                   host: commands, queries
-  Ago.Calendar.Worker/                host: consumers, outbox dispatch, scheduled jobs
-tests/
-  Ago.Calendar.Architecture.Tests/
-  Fixtures/                           arch-test fixtures, deliberately outside the scanned set
-```
-
-1. **No `Webhooks` host.** Nothing in this product needs an outbound-delivery bulkhead the way AGO
-   Chat's CRM integrations do (`adr/0013`); it gets one when a real caller needs it, not before.
-2. **No `Infrastructure.MySql`, no `Concurrency.Tests`, no `Domain`/`Application` test projects
-   yet.** They arrive with the code they would test — `20-00` builds no product behaviour at all, and
-   the arch tests are the one suite a scaffold can honestly carry.
-3. **`tests/Fixtures/` exists and `ago-chat`'s equivalent does not.** `adr/0027`'s rule (no
-   `Ago.Calendar.*` assembly references any `Ago.Chat.*` assembly) is the one boundary here that the
-   repository split does *not* make true by construction, so the fixtures that prove it can go red
-   are separate assemblies rather than types inside the test project. They are never listed among
-   the assemblies the real rules scan.
-
-`Ago.Calendar.Domain` gets its own `Operator`, `Worker`, `Customer`, `Service` and `Event` — never a
-reference to `Ago.Chat.Domain`'s (`adr/0027`). Note that `Worker` is a domain concept here (the
-person a booking is made with) and *also* a host name; the host is `Ago.Calendar.Worker` and the
-entity is `Ago.Calendar.Domain.Worker`, which the namespace keeps apart.
 
 ## `ago-widget` and `ago-console`
 
