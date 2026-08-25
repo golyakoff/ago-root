@@ -48,3 +48,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0044 | Delivery is dimensioned by recipient kind and presence; the platform reports facts, the product names them | Accepted |
 | 0045 | Alerting reaches a person by email through the node's own Postfix; Prometheus rules and Alertmanager, not Grafana | Accepted |
 | 0046 | `Ago.Platform.Hosting` carries only the module seam; telemetry ships as `Ago.Platform.Observability` | Accepted |
+| 0047 | Images go to GHCR under a commit-SHA tag, and a rollback is a first-class operation | Accepted |

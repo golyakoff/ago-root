@@ -1,7 +1,8 @@
 # An image registry, a repeatable deploy, and a rollback that works
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-08-25) — `adr/0047`; **one follow-up and one author step remain, both named
+  at the bottom of this file**
 - **Depends on**: nothing hard, but sequenced after `15-02-backup-and-verified-restore.md` in practice —
   that item's restore drill is the first thing that needs a repeatable way to get images onto a fresh
   cluster, and doing it by hand once is exactly what this item removes
@@ -60,17 +61,53 @@ yet" note is the statement being changed.
 
 ## Done when
 
-- [ ] Every `ago-chat-*` image is published to a real registry under an identifying tag, by CI.
-- [ ] The demo overlay pulls those tags; no `imagePullPolicy: Never` patch remains, and the Keycloak
-      comment that reasoned about it is updated rather than orphaned.
-- [ ] A deploy of a specific tag and a rollback to the previous one have both actually been performed
-      on the live deployment.
-- [ ] The migration-versus-rollback interaction is written down.
-- [ ] `adr/0026` is updated or superseded on image delivery, and `architecture/repositories.md`'s
-      "no hosted registry yet" note is corrected.
+- [x] Every `ago-chat-*` image is published to a real registry under an identifying tag, by CI.
+      GHCR, full 40-character commit SHA, pushed by `ago-chat`'s CI on `main` after `build-test`
+      passes. **Not yet observed running** — the job lands with this item's own merge, so its first
+      execution is the merge itself.
+- [x] The demo overlay pulls those tags; no `imagePullPolicy: Never` patch remains, and the Keycloak
+      comment that reasoned about it is updated rather than orphaned. The three patches are gone and
+      an `images:` block replaces them; the Keycloak comment is rewritten to keep the 2026-08-24 bug
+      it records now that the rule it was an exception to no longer exists. Four `imagePullPolicy:
+      Never` declarations **do** remain — the static bundles, see the follow-up below.
+- [x] A deploy of a specific tag and a rollback to the previous one have both actually been performed
+      on the live deployment. Deploy → deploy → **rollback** → deliberately-broken deploy →
+      **rollback**, on the real node on 2026-08-25. `adr/0047`'s "What was actually performed"
+      section has the sequence, the evidence and what it exposed.
+- [x] The migration-versus-rollback interaction is written down. `adr/0047` §6, `redeploy.md`'s
+      "Rolling back, and what it does not roll back", and both scripts print it.
+- [x] `adr/0026` is updated on image delivery (an amendment note on the section, its Consequences and
+      its Alternatives, not a silent edit), and `architecture/repositories.md` gained a "Container
+      images" section replacing the "no hosted registry" position.
+
+## What is not done
+
+- **The four static bundles.** `ago-console`, both `ago-demo-shop*` and `ago-landing` still build on
+  the node under a mutable `:local` tag with `imagePullPolicy: Never`, and still cannot say which
+  commit they carry. This is not an oversight — those three repositories all had open PRs while this
+  item ran and could not be touched — but it is worth being blunt about: **the 2026-08-25 incident
+  that motivated this whole item was a stale *console* bundle**, so the specific failure is still
+  possible in the one place this item did not reach. Each needs three small things, none of them
+  hard:
+  1. `Dockerfile`: `ARG GIT_COMMIT`, the `org.opencontainers.image.{source,revision}` labels, and the
+     commit written into the served bundle (a Vite `define`, or a `version.json` next to
+     `index.html`) so the browser can report it the way `/healthz/version` does for the backend.
+  2. `.github/workflows/ci.yml`: a `publish-images` job mirroring `ago-chat`'s — `docker login ghcr.io`
+     with `GITHUB_TOKEN`, `packages: write`, tag `${{ github.sha }}` plus `main`, `main`-only.
+     `ago-widget` builds twice, once per demo page (`DEMO_PAGE_DIR`).
+  3. `ago-deploy`: `build-static-images.sh` gains `IMAGE_REPO`/`IMAGE_TAG`, the four
+     `*-static.yaml` files lose `imagePullPolicy: Never`, and the overlay's `images:` block gains
+     four entries.
+- **The GHCR packages' visibility** — the one step a session cannot do. See below.
 
 ## Open questions
 
-None. Registry choice is a decision a session can make and defend from the constraints above; if the
-chosen registry turns out to cost money, that returns to the author the same way `15-02`'s destination
-does.
+None left about the choice itself. One thing needs the author, once:
+
+**After CI's first publish to `main`, check that the three container packages are public.** GitHub
+may create a new container package as private even when it is published by a public repository's own
+workflow. While one is private, the node's anonymous pull fails with `403 Forbidden` — the exact
+symptom observed live during this item's rollback exercise, against packages that did not exist yet.
+If they land private, flipping each to public in its package settings is the whole fix and nothing
+else changes. Leaving them private works too, but costs a `read:packages` PAT held as an
+`imagePullSecret` — a second credential `adr/0047` chose GHCR partly to avoid.

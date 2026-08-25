@@ -182,6 +182,18 @@ uses the `gatewayHTTPRoute` solver.
 
 ## 6. Get source and build images on the VPS **(session) — done 2026-08-24**
 
+> **Amended 2026-08-25 by `15-06`/`adr/0047`.** The three `Ago.Chat.*` hosts no longer have to be
+> built here: CI publishes `ghcr.io/golyakoff/ago-chat-{api,worker,webhooks}:<full-commit-sha>` on
+> every push to `main`, the demo overlay pulls them (`imagePullPolicy: Never` is gone), and
+> `ago-deploy/k8s/deploy.sh <sha>` moves the cluster onto a specific one. A **fresh** bring-up on a
+> new node therefore skips the .NET SDK, Docker and Buildx installs below for the backend entirely —
+> which is the point, since `15-02`'s restore drill cannot assume any of them. What is still built
+> here is the four static bundles (step 12), whose repositories do not publish images yet.
+>
+> The rest of this step stays as the record of how it was first done, and as the fallback for a
+> hotfix that has not been merged. `redeploy.sh` still runs it, now tagging what it builds with the
+> commit and the GHCR path so the artifact is the same shape either way.
+
 `adr/0026`'s "Image delivery" decision: no registry, build directly on the node, import straight into
 k3s's own containerd. Needs the .NET SDK and Docker installed on the VPS in addition to k3s itself
 (`sudo apt-get install -y dotnet-sdk-10.0 docker.io` on Ubuntu, or follow each project's own upstream
@@ -263,6 +275,12 @@ kubectl get pods -n ago-chat -w
 
 Same rendering-without-a-cluster trick as `k8s-local.md` names for the local overlay, for reviewing
 before applying: `kubectl kustomize k8s/overlays/demo`.
+
+> **`imagePullPolicy: Never` no longer exists for the three `ago-chat-*` Deployments** (2026-08-25,
+> `adr/0047`) — they carry a GHCR image under a commit-SHA tag and the default `IfNotPresent`, which
+> uses a locally-imported image when there is one and pulls when there is not. Bug #1 below is kept
+> because the lesson outlived the rule: a patch copied because its neighbours have one is a patch
+> nobody reasoned about.
 
 **Real bug #1 — `keycloak` got `ErrImageNeverPull`**: the demo overlay's `imagePullPolicy: Never`
 patch had been copied onto `keycloak`'s own Deployment by pattern-matching the three `ago-chat-*`
@@ -593,14 +611,26 @@ re-issue for the new SAN.
 
 ## Redeploying after a change
 
+**Use [`redeploy.md`](redeploy.md), not this list** — that is the whole reason it exists. The short
+version since `15-06`/`adr/0047`: `./deploy.sh <commit-sha>` for a build CI has already published,
+`./redeploy.sh` to build from source on the node, `./rollback.sh` to go back. The steps below are the
+original mechanism, kept as the record.
+
 1. On the VPS: `git pull` in whichever of `ago-platform`/`ago-chat` changed, re-run the relevant part
    of step 6 (re-pack the platform feed only if `ago-platform` changed; always rebuild the `ago-chat`
    images whose source changed), re-import into containerd.
 2. `kubectl rollout restart deployment/ago-chat-api deployment/ago-chat-worker deployment/ago-chat-webhooks -n ago-chat`
    as needed — `edge.md`'s own rolling-deploy sequence (`preStop`, drain, reconnect) applies unchanged;
-   this is the same mechanism `3-06` already proved locally, now running on a real node.
+   this is the same mechanism `3-06` already proved locally, now running on a real node. **Since
+   `adr/0047` a restart is the wrong verb for the three .NET hosts**: their tag is the commit, so
+   moving to new code is `kubectl set image` (what `deploy.sh` and `redeploy.sh` now do), which
+   records a revision and therefore gives a rollback something to return to. A restart only re-reads
+   a tag that has not changed, which is all that was possible while every image was `:local`.
 3. If `k8s/overlays/demo/` itself changed (a new route, a new resource limit): `kubectl apply -k
    k8s/overlays/demo` again — kustomize + `kubectl apply` is declarative, so this is safe to re-run.
+   **One caution added by `adr/0047`**: that overlay's `images:` block names an exact tag, so an
+   `apply -k` also moves the three hosts to whatever tag is committed there. Check it matches what
+   `./deploy.sh --current` reports before applying for an unrelated reason.
 
 **Rebuilding the widget/console static bundles specifically (`8-02`/`8-05`) is a different mechanism
 from steps 1-3 above**, not covered by them: `git pull` in `ago-console`/`ago-widget` on the VPS,
@@ -859,6 +889,25 @@ Turning mail on deletes that bound — and `adr/0040` section 6's named replacem
 200-messages-per-24-hours quota, **does not exist on a self-hosted Postfix.** So the trigger has fired
 and its mitigation is gone. Read `adr/0040`'s amendment before treating that as settled.
 
+## What `15-06` changed on this node, 2026-08-25
+
+Recorded here because it was done live and by hand, ahead of the branches being merged, so the node
+is briefly ahead of `ago-deploy`'s `main`:
+
+- The three `ago-chat-*` Deployments were patched from `imagePullPolicy: Never` to `IfNotPresent`
+  (a targeted `kubectl patch` per Deployment — **not** `kubectl apply -k`, which would have
+  overwritten the monitoring resources applied from an unmerged branch).
+- Six images were built from two real commits of `ago-chat` (`4e83908…`, `f3ecc0d…`), tagged
+  `ghcr.io/golyakoff/ago-chat-{api,worker,webhooks}:<full-sha>` and imported into containerd. They
+  are still there, which is what makes `./rollback.sh` able to return to `4e83908…` today.
+- Deploy → deploy → rollback → deliberately-broken deploy → rollback was performed end to end
+  (`adr/0047`'s "What was actually performed" section has the sequence and the evidence).
+- The node was left on `f3ecc0d…` — byte for byte the code it was running before the exercise, now
+  under a tag that names it. 18 pods Running, smoke green on all thirteen pre-existing checks.
+- `deploy.sh`, `rollback.sh` and the updated `smoke.sh`/`build-images.sh` were run from `/tmp/15-06/`.
+  Once `ago-deploy`'s branch merges, `git pull` in `~/ago/ago-deploy` puts them in `k8s/` where the
+  runbooks say they are, and `/tmp/15-06/` can be forgotten (it does not survive a reboot anyway).
+
 ## Known gaps, named plainly
 
 - **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
@@ -875,8 +924,11 @@ and its mitigation is gone. Read `adr/0040`'s amendment before treating that as 
   of an open-ended "hardening" wish: verify end to end on this node that Keycloak trusts the
   `X-Forwarded-Proto` header NGINX Gateway Fabric sets, raise `sslRequired` from `none` to `external`
   (the bullet above), and only then evaluate `start` — which additionally wants `--optimized` and
-  therefore a derived, built Keycloak image, which this deployment's registry-less image delivery does
-  not have a place for yet (`15-06`).
+  therefore a derived, built Keycloak image. **That last obstacle is gone since 2026-08-25**
+  (`15-06`/`adr/0047`): there is a registry now, images are published by CI under a commit-SHA tag,
+  and the overlay pulls them, so a derived `ago-keycloak` image would have somewhere to live and a
+  way to be deployed and rolled back. What remains is the proxy-header verification and the
+  `sslRequired` raise, in that order.
 - ~~**No firewall, and the k3s control plane faces the internet**~~ — **closed the same day it was
   found, 2026-08-25.** `ufw` now runs with `deny incoming`, allowing `22`, `80` and `443` plus the k3s
   pod (`10.42.0.0/16`) and service (`10.43.0.0/16`) ranges and the `cni0` bridge.
