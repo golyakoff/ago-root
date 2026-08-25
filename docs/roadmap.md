@@ -359,6 +359,12 @@ Deliverables:
 - The operator workspace itself (`11-06`): a three-region layout, a thread that reads as a
   conversation instead of `[sequence] authorKind: body`, a real composer, visible wait times, and a
   connection indicator instead of the raw hub state printed as text.
+- Behaviour tests for both frontends (`11-08`, added 2026-08-25). The two TypeScript repositories
+  test only what needs neither a DOM nor a network — the reconnect primitives and a few pure
+  functions — because `conventions/testing.md` described only .NET and said nothing about either of
+  them. Two of six repositories were outside the document governing testing, and what got written was
+  whatever a backend instinct recognised as testable. The convention now has a frontend section, and
+  this item is the four behaviours worth protecting under it.
 - The login page (`11-07`, added 2026-08-25 after the rest of the stage shipped). Noticed only once
   the designed console was live on the public deployment: the path runs from a landing page in Manrope
   and Unbounded, through Keycloak's stock theme with no AGO identity at all, into a console that was

@@ -123,6 +123,7 @@ If a request would violate a rule above, say so before writing code, and propose
 | HTTP/realtime protocol, versioning | `docs/conventions/api-design.md` |
 | Folder layout, project naming | `docs/conventions/naming-and-structure.md` |
 | How to run things, workspace layout | `docs/runbooks/` |
+| Updating the live demo environment | `docs/runbooks/redeploy.md` |
 | What to build next | `docs/roadmap.md`, `docs/backlog/` |
 | Available skills | `SKILLS.md` |
 

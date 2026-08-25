@@ -14,6 +14,54 @@
 Rule of thumb: a test that needs a container to prove a business rule means the business rule leaked
 out of the Domain.
 
+## The frontends
+
+Added 2026-08-25, after the author asked why the two TypeScript repositories had almost no tests. The
+answer was in this file: it described only .NET, and had said nothing about `ago-widget` or
+`ago-console` since it was written. Two of six repositories were not covered by the document that
+governs testing, so what got tested there was whatever a backend instinct recognised as testable —
+pure functions with no DOM and no network (`backoff`, `dedup`, `sequence`, a validator). Every
+component, every page, the auth flow and the permission gating had none. That was not a decision, and
+this section exists so the next one is.
+
+| Level | Where | Uses | Runs |
+|---|---|---|---|
+| Pure unit | beside the module | Nothing — no DOM, no network | Every build, milliseconds |
+| Component / behaviour | beside the component | A DOM (jsdom or equivalent), fakes for the API and the hub | Every build |
+| Widget isolation | `ago-widget` | A DOM plus a deliberately hostile host page | Every build |
+| Live verification | a real browser against a running stack | Nothing automated | Before calling a UI item done |
+| Deployment smoke | `ago-deploy/k8s/smoke.sh` | A deployed environment | After every deploy |
+
+What belongs at each level, stated so it is not re-argued per item:
+
+- **Test behaviour, not rendering.** "Enter sends and Shift+Enter does not", "a conversation the
+  operator lacks permission for is not offered", "a failed send can be retried". Never "the button has
+  class `x`" and never a snapshot — those fail on every restyle and pass through every real defect,
+  which is the worst combination available.
+- **The permission gating is worth testing even though it is not the real gate.** `usePermissions`
+  hides what a caller may not do, and its own comment correctly says the server is the actual
+  enforcement (`17-01`). Showing an admin control to a non-admin is still a defect, and it is one only
+  a frontend test can catch.
+- **Reconnect and resume is the widget's most valuable behaviour**, and the pure `backoff` function
+  being tested is not the same as testing it. The behaviour is: the connection drops, sends queue,
+  the client resumes from the right `sequence` and does not duplicate (`3-03`).
+- **The widget's isolation claim gets a test on a hostile page.** It runs inside a stranger's
+  document; that the Shadow DOM holds, that nothing leaks into the global scope, and that the host's
+  CSS cannot reach in are the claims the `embeddable-widget` skill is built on, and they are testable
+  in a DOM without a browser.
+- **Live verification stays a real level, not a confession.** `5-07` and `11-06` were both verified by
+  working the real screen against a running stack, and that caught things no unit test would have. It
+  does not survive a refactor, which is what the levels above are for — the two are complements.
+
+**Coverage percentage is not a target here either** (see below), and on a UI it is actively
+misleading: rendering every component once in a test buys a high number and proves nothing.
+
+**Deployment smoke is a level, not an afterthought.** On 2026-08-25 the API was redeployed against a
+database three migrations behind. Every page returned 200 — nginx was serving files perfectly — while
+every query loading a `Site` failed. No unit test at any level above could have caught it, in either
+language: the defect lived in the gap between deployed code and deployed schema. `smoke.sh` exists for
+that gap and each of its checks names the incident it came from.
+
 ## How tests are written
 
 - Names state the rule: `AssignTo_WhenOperatorAtCapacity_ReturnsCapacityExceeded`.
