@@ -59,8 +59,20 @@ to the pipeline builder itself, not a new pipeline per boundary).
 - Grafana panels and the Prometheus scrape config — `7-03`. This item's Done-when is provable against
   an in-memory metric reader, not a running Prometheus.
 - Alerting rules — not asked for anywhere in `nfr.md` or `roadmap.md`; a demo cluster, not an on-call
-  system. **True when written, superseded 2026-08-24**: `roadmap.md`'s Stage 15 asks for exactly this,
-  and `15-03-alerting-and-notification.md` builds it on top of the instruments this item ships.
+  system. **True when written, superseded 2026-08-24, and closed 2026-08-25**: `roadmap.md`'s Stage 15
+  asked for exactly this, and `15-03-alerting-and-notification.md` shipped it on top of the instruments
+  this item ships. Exactly one of them is read by a rule — `ago_chat_outbox_lag_seconds`, in
+  `OutboxLagGrowing` — which is the honest measure of how much of this item's 18 instruments alerting
+  actually needed. The rest are dashboard and diagnosis material, which is what `nfr.md`'s
+  Observability section asked for; `15-03` deliberately did not promote them, on the grounds that a
+  dashboard panel and an alert-worthy condition are not the same thing.
+  - One gap this item left is worth naming here rather than in `15-03` alone: **`nfr.md`'s "DLQ count"
+    has no instrument in `Ago.Chat.*` or `Ago.Platform.*`**. `RabbitMqMetrics` counts consumer
+    outcomes (`success`/`error`), which is not the same thing — an error that self-heals through the
+    retry queue is normal, and the question "is anything parked in a DLQ right now" is answerable only
+    from the broker. `15-03` answered it by scraping RabbitMQ's own `rabbitmq_prometheus` endpoint
+    rather than adding an instrument, since the broker already owns that state and a per-queue gauge
+    maintained by the application would be a second, lagging copy of it.
 - Instrumenting `6-05`'s webhook dispatcher specifically — the generic pipeline-name-tagged instrument
   this item ships covers it automatically the moment `6-05` registers a `Webhooks` named pipeline; no
   extra work is needed here, and none should be added speculatively before `6-05` exists.

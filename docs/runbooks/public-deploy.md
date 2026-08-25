@@ -783,9 +783,14 @@ a handful of aliases in `/etc/aliases` delivering into one local mbox, `/var/mai
 | `no-reply@` | Keycloak's envelope sender, so **this is where bounces come back to**. A mistyped registration address produces a hard bounce that now lands here instead of nowhere. |
 | `dmarc@` | DMARC `rua=` aggregate reports — **the alias exists, the DNS tag does not yet.** See below. |
 | `root@` | cron and `unattended-upgrades`, otherwise silently dropped. |
+| `alerts@` | **`15-03`, added 2026-08-25.** Where Alertmanager sends. The only alias that does not stop at the local mbox: it expands to *both* `ago` and the author's real mailbox, so an alert reaches a person while a local copy survives an outbound-mail failure. The real address is written here and in **no repository** (`CLAUDE.md` — nobody's data goes in these repos), which also means changing who gets alerted is one edit plus `newaliases`, with no Secret to regenerate. See [`alerting.md`](alerting.md). |
 
 Read it with `sudo less /var/mail/ago` (or `mail -f /var/mail/ago`). **Nothing reads it on a
-schedule** — that is a real gap, not an oversight, and `15-03` is where notifying on it would belong.
+schedule** — that is a real gap, not an oversight. `15-03` built the notification path that would close
+it, and did **not** close it: `alerts@` notifies, `postmaster@` and `abuse@` still do not. Pointing
+them at the same forwarding destination is now a one-line alias change rather than a missing
+mechanism, and it is deliberately left as the author's call, since a blocklist operator's mail is not
+the same kind of interruption as a firing alert.
 
 Anything not aliased is rejected at RCPT time rather than accepted and bounced, so this node is not a
 backscatter source. Adding an address means adding an alias and running `sudo newaliases`.

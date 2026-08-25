@@ -46,3 +46,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0034 | The realm's login-security policy, and every token lifetime, chosen rather than inherited | Accepted |
 | 0040 | Keycloak's SMTP is a realm setting supplied as a Secret; a sink locally; the sending provider is the author's call | Accepted, provider sub-decision open |
 | 0044 | Delivery is dimensioned by recipient kind and presence; the platform reports facts, the product names them | Accepted |
+| 0045 | Alerting reaches a person by email through the node's own Postfix; Prometheus rules and Alertmanager, not Grafana | Accepted |

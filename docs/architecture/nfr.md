@@ -59,6 +59,23 @@ alert rules that reach a person, bounded growth, and deliberate capacity. The di
 promising uptime would need a second node and a second of everything under it (`adr/0026`), whereas
 being able to come back from a lost disk, and to find out that something broke, does not.
 
+**The "finding out" half now exists** (`15-03`, 2026-08-25, `adr/0045`): five Prometheus rules
+evaluated on the public deployment, delivered by Alertmanager as email through the node's own Postfix,
+with `runbooks/alerting.md` carrying what each means and what to check first. Two things about it
+matter to this document specifically:
+
+- **No rule on this page's latency targets, and that is deliberate.** The numbers above are targets to
+  validate under load, not promises to a user, and the demo carries no load. Alerting on a p99 nobody
+  promised, measured on traffic that does not exist, produces noise rather than signal. Only two of
+  the five rules derive a threshold from this file at all — the outbox-lag rule reads its 60 s from
+  the 300 ms cross-node p99 the table above says the dispatch interval lives inside, and the
+  dead-letter rule reads its zero from "Correctness under stress" being binary. The disk rule's 15% is
+  labelled in `adr/0045` as a headroom *choice*, because this document states no disk target and
+  inventing one to alert against would be exactly backwards.
+- **Still not an SLA, and now demonstrably not an availability guarantee**: the alerting path runs on
+  the node it watches, so it cannot report that the node is gone. An external check is a separate
+  mechanism and is still an open question in `15-03`.
+
 ## Observability requirements
 
 Everything above must be visible without attaching a debugger:
