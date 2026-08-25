@@ -50,8 +50,36 @@ if left.
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
-`10-03` (console signup UI, which only becomes real once `10-05` lands), `15-02` (backup and a
-restore drill), `15-03` (alerting), `5-13` (presigned upload size never enforced by storage).
+Ordered, 2026-08-25, and widened — it had been listing four items while nine were scoped, which made
+the band useless for deciding anything:
+
+1. `15-06` (a registry, tagged images, a proven rollback). Cost twice in one day on 2026-08-25 — a
+   console bundle a week stale, and no way to tell from a running pod which commit is in it.
+   `redeploy.sh` made the sequence repeatable; it did not make the image identifiable, and that is the
+   half that keeps costing. It also has to land before `17-04`'s image scanning means anything, since
+   scanning belongs where images are published and there is nowhere to publish them.
+2. `15-05` (capacity and disk). The highest leverage per hour on this list: it produces the storage
+   measurement that `13-05` and `13-06` are both waiting on, so one measurement unblocks two items and
+   completes a decision already made in shape (`adr/0031`).
+3. `5-13` (presigned upload size never enforced by storage). Its own note says "not exploitable
+   today" — true only while nobody can create an account unaided. `8-07` hands out credentials on
+   request and `10-05` opens self-registration, so this wants doing **before** either, not after.
+4. `15-02` (backup, and a restore that has been performed). After `8-07` and `10-05` the deployment
+   holds other people's real accounts, and the only reason no backup has cost anything is that
+   nothing bad has happened yet.
+5. `8-07` (demo credentials minted on request), `11-07` (the login page's theme), `11-08` (frontend
+   behaviour tests), `10-03` (console signup UI, real only once `10-05` lands), `13-06` (retention
+   class and archive), `7-08` (delivery observability), and `15-03` (alerting).
+
+`15-03` moved down deliberately. It was worth more this morning than it is tonight: the 2026-08-25
+failures — a stale bundle, a dead widget — are visible only from outside and only by reading a
+response body, which is `smoke.sh`'s job, and that now exists. Alerting keeps its own value for what
+breaks slowly and from within: outbox lag, DLQ growth, a filling disk.
+
+**Two of these will stall halfway if started as ordinary work.** `10-05` (in the queue above) needs a
+sending provider and `15-02` needs a backup destination — both the author's decisions, both
+constrained by data residency (`16-01`), and both sit in the middle of otherwise buildable items. A
+half-built item is worse than an unstarted one, so decide before starting rather than during.
 
 Stage 11 is finished as a stage: `11-05` and `11-06` both landed 2026-08-25, leaving only the notice
 field `16-04` adds later. Both surfaced live defects on the way out — `5-14` and `5-15`, both since
