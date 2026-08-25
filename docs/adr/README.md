@@ -43,3 +43,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0031 | History retention: an immutable retention class in the partition key, an archive instead of deletion | Accepted |
 | 0032 | The platform owner is a Keycloak realm role, deliberately outside the per-site RBAC model | Accepted |
 | 0033 | A capacity claim is a receipt on the conversation, not an assumption about assignment | Accepted |
+| 0034 | The realm's login-security policy, and every token lifetime, chosen rather than inherited | Accepted |

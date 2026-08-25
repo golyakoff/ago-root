@@ -87,7 +87,15 @@ protect.
 - The console's signup entry point, redirect, and callback handling — `10-03`.
 - Configuring Keycloak's reCAPTCHA (or any other bot-detection) authenticator on the registration flow
   — a real, named deferral (see Scope above), not forgotten. Purely realm configuration; adding it
-  later touches nothing in `Ago.Chat.Api` or `ago-console`.
+  later touches nothing in `Ago.Chat.Api` or `ago-console`. **Revisited and answered 2026-08-25**:
+  `17-06`/`adr/0034` decided **still no**, and named the trigger that changes it — the day a
+  self-registered account can create a tenant with no human in the loop *and* `10-05` makes email
+  verification actually work, because at that moment the cost of a tenant drops to "one deliverable
+  mailbox". `adr/0034`'s "Registration CAPTCHA" section carries the reasoning, including the point
+  that `17-06`'s new brute-force settings are explicitly *not* the answer here: they protect existing
+  accounts from password guessing and do nothing about account creation. What actually bounds abuse
+  today is this realm having no SMTP server, so a spam account can never lift its own `verifyEmail`
+  required action and never reaches `10-02`'s bootstrap endpoint.
 - Any email-sending/deliverability setup (SMTP config, templates) beyond enabling Keycloak's built-in
   "Verify Email" required action — Keycloak's own default flow handles sending; a custom sender or
   template is a separate concern this item does not scope. **Corrected 2026-08-25**: "Keycloak's own

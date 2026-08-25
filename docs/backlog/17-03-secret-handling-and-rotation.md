@@ -57,9 +57,13 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
   rather than pretending otherwise.
 - **Make the signing key rotatable without a mass logout.** The mechanism is well-trodden: accept more
   than one key for validation while issuing with only the newest, so an old key can be retired after
-  the longest token lifetime has passed. Decide whether the thirty-day lifetime is itself right while
-  looking at this — it is the number that sets how long a rotation takes, and nothing recorded why it
-  is thirty (`17-06` owns the lifetime question; this item owns the rotatability).
+  the longest token lifetime has passed. ~~Decide whether the thirty-day lifetime is itself right
+  while looking at this~~ — **answered 2026-08-25 by `17-06`/`adr/0034`: it stays thirty**, and now
+  for a stated reason. It is a product promise (how long a returning visitor still sees their own
+  conversation) more than a security parameter, because the minting endpoint is public and
+  unauthenticated — anyone who can read a token off a page can mint their own. So this item's drain
+  window is thirty days, and it becomes seven when `17-07` gives the widget a renewal path; build the
+  multi-key acceptance so the retirement delay is configuration rather than a constant.
 - **A leak procedure**: what to do when a secret is known to be exposed, per secret, given the above.
   One page in the runbook, not a policy document.
 - Note the packages PAT's expiry somewhere a human will see it before CI breaks.
@@ -87,5 +91,7 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
 
 ## Open questions
 
-None for the work itself. The thirty-day visitor-token lifetime is a real question and it belongs to
-`17-06`; this item makes rotation possible at whatever lifetime that one settles on.
+None for the work itself. ~~The thirty-day visitor-token lifetime is a real question and it belongs to
+`17-06`~~ — **settled 2026-08-25**: `adr/0034` kept it at thirty and named `17-07` as what lets it
+drop to seven. This item still makes rotation possible at whatever lifetime that number is, which is
+now a value with reasoning attached rather than an open question.

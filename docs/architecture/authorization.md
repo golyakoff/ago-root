@@ -30,7 +30,7 @@ JWKS is the signature source there, no local key involved at all.
 
 | Actor | Identification today | Authorization today |
 |---|---|---|
-| **Visitor** | Signed token (cookie/localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`) | None beyond the token's `site_id` claim |
+| **Visitor** | Signed token (localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`); 30-day lifetime, no renewal and no revocation - a decision, not an accident, since `17-06`/`adr/0034` | None beyond the token's `site_id` claim |
 | **Operator** | `/hubs/operator` expects a JWT (`realtime.md`) - **issued by Keycloak** (`5-05`, `adr/0022`), validated directly against its JWKS; `OperatorId`/`site_id` are resolved from the token's `sub` via `OperatorIdentityClaimsTransformation`, not read from the token directly | `adr/0016`'s RBAC, resolved per request from `OperatorId`/`site_id` regardless of how they were resolved |
 | **Webhook/API integrations** | Outbound only today: deliveries to a tenant's endpoint are HMAC-signed (`adr/0013`) so *they* can verify *us*. There is no inbound integration API yet, so "how does a third party authenticate to AGO Chat" is entirely unplanned | N/A - does not exist |
 | **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants exactly one thing as of `12-02`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview. No write or action surface for this actor exists |
@@ -217,6 +217,64 @@ or action surface anywhere, by design (`12-02`'s Out of scope). Proven with real
 an ordinary operator and a `site:configure`-holding `demo-admin` both get `403`, an anonymous caller
 `401` (`OwnerSitesEndpointTests`).
 
+## The tokens themselves: reviewed once, deliberately, in `17-06`
+
+**Shipped in `17-06`** (`adr/0034`). Everything above is about what a validated token is trusted to
+assert. This section is about the tokens themselves — how long they last, what protects the accounts
+behind them, and whether the two kinds can be confused for one another. Read `adr/0034` for the
+reasoning behind each number; only the facts are stated here.
+
+**The realm's login-security policy is now chosen, not inherited.** Brute-force protection is on with
+ten failures and a temporary, self-clearing lockout (never permanent — on a realm with open
+self-registration, permanent lockout would be a denial-of-service handed to anyone who can guess a
+username). The password policy states a 12-character minimum and forbids the username and email as
+passwords, with no composition rules. TOTP parameters are set but no required action forces enrolment:
+**there is no mandatory second factor**, and the trigger that would change that is the first account
+in this realm that is not a demo account. Every value lives in both realm-import files this project
+maintains and is verified against a running Keycloak by `RealmLoginSecurityTests`, which drives a real
+failed-login sequence rather than reading the file back.
+
+**Keycloak's operator-side lifetimes are set explicitly**: a 5-minute access token behind a 4-hour
+idle / 12-hour maximum SSO session — short credential, long session, which is what a console someone
+sits in all day needs. Keycloak has no separate refresh-token lifetime for standard sessions; the SSO
+session *is* it.
+
+**The visitor token's lifetime is a decision now**: 30 days, unchanged in value and changed in status.
+It is a product promise (how long a returning visitor still sees their own conversation) more than a
+security parameter, because `POST /api/v1/visitor-sessions` is public and unauthenticated by design —
+anyone who can read a token off a page can mint a fresh one. It drops to 7 days together with
+`17-07`'s silent renewal, not before, because the widget has no renewal path today and a shorter
+lifetime would only break returning visitors sooner.
+
+**Visitor sessions have no revocation, by decision.** Not a deny-list, not a shorter-lived token with
+server-side state. There is no caller: nothing in this system can currently decide that one visitor
+token should stop working. Global revocation exists (rotating the visitor signing key — `17-03`), and
+a per-token deny-list would additionally make an authentication decision depend on Redis, which
+`adr/0009` forbids as a source of truth. The trigger that would change this is the first "end this
+session" surface, visitor- or operator-facing.
+
+**The two schemes genuinely cannot be substituted for one another, and this is now tested rather than
+inferred** (`TokenSchemeSeparationTests`): a real visitor token gets `401` on an operator route — not
+`403`, meaning it never authenticated at all — and a real Keycloak operator token gets `401` on a
+visitor route. On the shared attachment route (`5-03`) each is classified as its own kind.
+
+The review did find a **third** state that route had no answer for, and it is worth recording as a
+correction to the sentence this document used to imply: "not an operator" was read as "therefore a
+visitor". A signature-valid Keycloak token whose `sub` matches no `operators` row is neither, and
+since `10-01` anyone can create one through the public registration form. It was mis-classified as a
+visitor whose id was Keycloak's own `sub`; **nothing was reachable through it**, because the
+participant checks inside every handler on that route compare that id against the conversation's real
+visitor. `17-06` closed it at the policy layer — the route now requires the `kind` claim to be one of
+two known values, so the third state is a clean `403` before any handler runs. `12-01`'s
+platform-owner token lands there too, which is correct: an owner is not a party to any conversation.
+
+**Registration abuse still has no CAPTCHA, by decision** (`10-01` deferred it; `adr/0034` answers it).
+The brute-force settings above are explicitly *not* the answer — they protect existing accounts from
+password guessing and do nothing about account creation. What bounds it today is that a registered
+account cannot finish email verification while the realm has no SMTP server (`10-05`), so it can never
+reach `10-02`'s bootstrap endpoint and never becomes a tenant. The trigger is the day that stops being
+true.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
@@ -226,3 +284,6 @@ an ordinary operator and a `site:configure`-holding `demo-admin` both get `403`,
 - [x] The admin/supervisor role and `attachment:delete` ship - `5-08`, above.
 - [x] An ADR decides how a caller that is not scoped to any site is represented - `adr/0032`, a
       Keycloak realm role, outside the RBAC model rather than a wildcard inside it (`12-01`).
+- [x] Every token lifetime and the realm's own login-security policy are values somebody chose -
+      `adr/0034` (`17-06`), including the two answers that are "no" (per-visitor-token revocation, and
+      a registration CAPTCHA), each with the trigger that would reopen it.
