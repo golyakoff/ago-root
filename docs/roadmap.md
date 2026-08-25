@@ -43,15 +43,14 @@ if left.
 
 | # | Item | Why here, and why in this position |
 |---|---|---|
-| 1 | `5-14` the token in the browser console | Both SignalR clients print the negotiated WebSocket URL, token included, on every connect, because neither calls `configureLogging`. First because it is minutes in two repositories and a stated convention violation — the cheapest thing on the list |
-| 2 | `5-15` unread count never clears | `OperatorUnreadCount` only ever increments — no decrement, no reset, no `MarkRead` in the aggregate — so `11-06`'s badge and title count are a session-local approximation that over-reports after a reload. A visible defect in a feature that shipped days ago |
-| 3 | `6-09` release operator capacity on close | An operator's usable capacity decays with every conversation they close until their connection drops, so the waiting queue quietly stops being served. Paired with the row above because both are the operator queue, and this one also unblocks the `11-06` verification sub-check it currently prevents |
-| 4 | `17-06` the realm's login settings | Keycloak's login-security settings are inherited defaults on a realm that has been open to public self-registration since Stage 10. The only thing on this list an ordinary attacker could act on without waiting for someone else's CVE — and it is a realm-import change today, an operation on live accounts once there are real customers |
-| 5 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
-| 6 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
-| 7 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users |
-| 8 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other |
-| 9 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
+| 1 | `5-15` unread count never clears | `OperatorUnreadCount` only ever increments — no decrement, no reset, no `MarkRead` in the aggregate — so `11-06`'s badge and title count are a session-local approximation that over-reports after a reload. A visible defect in a feature that shipped days ago |
+| 2 | `6-09` release operator capacity on close | An operator's usable capacity decays with every conversation they close until their connection drops, so the waiting queue quietly stops being served. Paired with the row above because both are the operator queue, and this one also unblocks the `11-06` verification sub-check it currently prevents |
+| 3 | `17-06` the realm's login settings | Keycloak's login-security settings are inherited defaults on a realm that has been open to public self-registration since Stage 10. The only thing on this list an ordinary attacker could act on without waiting for someone else's CVE — and it is a realm-import change today, an operation on live accounts once there are real customers |
+| 4 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
+| 5 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
+| 6 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users |
+| 7 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other |
+| 8 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
@@ -64,10 +63,12 @@ what a real verification pass is for.
 
 ### After — in roughly this order, each already scoped
 
-Stage 12 (owner admin panel), Stage 13 (billing — partly blocked, see below), the rest of Stage 15,
-the rest of Stage 16, Stage 14 (AGO Inbox), Stage 20 (AGO Calendar), Stage 21 (the two products'
-integration). Stage 9 stays deprioritized. Stages 17-19 hold security (`17-01` is its first item) and
-operator-productivity work, neither fully scoped yet.
+Stage 13 (billing — partly blocked, see below), the rest of Stage 15, the rest of Stage 16, Stage 14
+(AGO Inbox), Stage 20 (AGO Calendar), Stage 21 (the two products' integration). Stage 9 stays
+deprioritized. Stages 17-19 hold security (`17-01` heads the queue's tail above, the rest is scoped)
+and operator-productivity work, not yet scoped.
+
+Stage 12 left this list on 2026-08-25, finished.
 
 ### Waiting on someone else's clock
 
@@ -90,9 +91,13 @@ match what happened. If this list and reality disagree, this list is what is wro
 added to "Now" for a reason that can be stated in one sentence about present-tense breakage or a
 dependency with a date; "it would be nice to do next" is what the "Soon" band is for.
 
-When a row is closed, delete it rather than striking it through — the stage sections and the backlog
-items are where finished work is recorded, and a queue that keeps its dead entries stops being a queue.
-Renumber the rest; the numbers are positions, not identifiers.
+When a row is closed, **delete it** rather than striking it through or moving it to the bottom with a
+timestamp, and renumber the rest — the numbers are positions, not identifiers. The reasoning, since the
+question came up on 2026-08-25 and will again: closing is already recorded in three places — the
+backlog item's own `Status` line with its date and merge reference, the stage section, and git history.
+A fourth copy inside the queue differs from those three only in that it will eventually disagree with
+them, which is the same failure that made the ordering live in two places once before. A queue answers
+one question: what to take next. Everything else about it is written down more accurately elsewhere.
 
 ---
 
