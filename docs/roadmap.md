@@ -527,10 +527,23 @@ Deliverables:
   log and the trace spans, neither of which has ever been looked at, and neither of which is covered by
   the API's own logging configuration being clean.
 
-Named, not yet scoped, and explicitly *not* bundled into `17-01`: secret handling and rotation,
-dependency and container scanning, VPS and cluster hardening, authentication bypass and token
-handling review, and abuse controls beyond the rate limits `3-05` already ships. Each is real, none
-is the tenancy boundary, and folding them together would mean shipping none of them properly.
+- `17-03` — a secret inventory and a rotation procedure per secret. Handling is already sound;
+  rotation does not exist, and the visitor signing key turns out to be a customer-visible incident to
+  rotate rather than routine maintenance.
+- `17-04` — dependency and image scanning. There is none: no Dependabot in any of the seven
+  repositories, no vulnerability check in any of the four CI workflows, and two repositories with no
+  CI at all, one of which builds a container image.
+- `17-05` — runtime hardening. Not one `securityContext` and not one `NetworkPolicy` exists anywhere,
+  so every default applies unchosen, and three images run nginx as root by inheritance.
+- `17-06` — authentication and tokens. The realm sets no password policy and no brute-force protection
+  while being open to public self-registration, and the visitor token is a thirty-day, globally
+  signed, irrevocable credential whose lifetime nobody chose.
+
+Scoped 2026-08-25, each against a real audit rather than a checklist, and each kept separate from
+`17-01` on purpose: none of them is the tenancy boundary, and folding them together would mean
+shipping none of them properly. Abuse controls beyond `3-05`'s rate limits turned out not to need
+their own item — registration abuse sits in `17-06` next to the brute-force settings it interacts
+with, and owner-facing abuse signals across tenants are already `12-02`'s.
 
 **Done when:** for the first item, no tenant-scoped operation lets a caller from another tenant reach
 anything, and that is enforced by something that fails automatically rather than by remembering.
