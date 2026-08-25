@@ -15,16 +15,23 @@ Keycloak's defaults, on a realm that has been open to public self-registration s
 
 Checked 2026-08-25.
 
-**The realm sets no security policy whatsoever.** `keycloak-realm-import.json` specifies none of
-`bruteForceProtected`, `failureFactor`, `passwordPolicy`, or any OTP policy, so Keycloak's own
-defaults apply — and its default for brute-force protection is *off*. With `registrationAllowed: true`
-(Stage 10) this means anyone can register an account with a password of any length or triviality, and
-nothing slows down repeated failed login attempts against an existing one.
+**The realm's security policy is inherited, not chosen.** `keycloak-realm-import.json` leaves
+Keycloak's login-security settings unset, so upstream defaults apply — and upstream defaults are
+written for a realm an administrator will configure, not for one that has been open to public
+self-registration since Stage 10. Nobody looked at them; that is the finding. The specific settings and
+their current values are visible to anyone reading that file in this public repository, so this item
+does not restate them — writing them out more vaguely would protect nothing and writing them out
+precisely would be a notice. The remedy is to set them, not to describe them better.
 
-**The visitor token is long-lived, globally signed, and irrevocable.**
-`JwtTokenService.IssueVisitorToken` sets `expires: now.AddDays(30)` with a single symmetric key shared
-by every site. Nothing recorded why thirty days. There is no revocation, no logout, and no per-site
-key, so the only lever is the key itself — see `17-03` for what pulling it currently costs.
+Worth being clear about the size of it: as a demo with no real tenants this costs little today, and it
+becomes expensive at exactly the moment it stops being a demo. Doing it before the first real customer
+is a realm-import change; doing it after is an operation on live accounts.
+
+**The visitor token is long-lived, globally signed, and irrevocable.** A single symmetric key shared
+by every site, a lifetime nothing recorded a reason for, and no revocation, no logout and no per-site
+key — so the only lever is the key itself, and `17-03` covers what pulling it currently costs. Stated
+here as design rather than as a hole: the token grants its own visitor's own conversation and nothing
+else, which is why this sits below the realm settings above in urgency despite sounding worse.
 
 **Two things are already right and should be confirmed rather than changed.** The hub token in the
 query string is accepted only on the two hub paths (`HubTokenFromQueryString` in `Program.cs`), which

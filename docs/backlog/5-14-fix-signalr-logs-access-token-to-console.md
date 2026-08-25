@@ -32,6 +32,12 @@ the console output contained the full `wss://.../hubs/operator?id=...&access_tok
 every connect. Not a hypothetical: an actual, valid `demo-admin` token was visible in devtools, and
 the same would be true for a real operator on the public deployment.
 
+## On writing this down publicly
+
+Kept specific per `architecture/repositories.md`'s rule (added 2026-08-25): the clients' logging
+configuration is in public source, so describing it vaguely here would protect nothing and cost the
+reasoning. What must never be recorded — here or in a commit message — is an actual captured token.
+
 ## Scope
 
 - `configureLogging(...)` on both `HubConnectionBuilder` call sites (`ago-console`, and `ago-widget`

@@ -103,6 +103,23 @@ Consequences that must be respected from the first commit:
   `appsettings.Local.json` and `.env`; the repositories carry `.example` files only.
 - **No personal or employer data**: no real customer names, no internal hostnames, no third-party
   endpoints, no anything from anyone's job.
+- **No real endpoints.** The deployment's own node address is not written here either (removed
+  2026-08-25); it lives in the private `ago-business` repository, and public docs say `<node-ip>`. It
+  is derivable from DNS, so this recovers no secrecy - what it does is stop this repository from
+  handing over the last step, and stop the rule above from being one the project keeps everywhere
+  except where it was inconvenient.
+- **Writing about a security finding while it is still open** (added 2026-08-25). Three distinctions,
+  because "do not publish vulnerabilities" and "write everything down for a stranger" genuinely pull
+  against each other here:
+  - **The code is public.** Anything a reader could derive by opening a manifest or a source file is
+    already published by that file. Describing it vaguely in a backlog item buys nothing and costs the
+    reasoning that makes the item worth having. For those, the only real remedy is fixing it.
+  - **Live state that no repository describes is different** - host configuration, runtime settings, an
+    address. That is worth naming as a mechanism and a fix without spelling out the current value while
+    it is open.
+  - **The control that actually matters is the gap, not the wording.** A finding recorded and closed the
+    same day is a record; one recorded and left open for months is a notice. Keep the gap short, and
+    when it closes, rewrite the entry to say so rather than leaving the open-state description standing.
 - **Everything is written for a stranger.** Backlog items, working notes and skills are read as
   evidence of how the author thinks. That is the point - and it means a sloppy note is not private
   scruff, it is published work.

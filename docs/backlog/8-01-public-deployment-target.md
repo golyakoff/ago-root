@@ -135,7 +135,7 @@ cluster" — the honest bar this deployment is held to, not a production SLA it 
 (`8-02`'s own future backend), `https://grafana.reserve-me.ru` (author's own call, mid-deployment —
 public over TLS + Grafana's own real generated password, gated the same way console/chat are, not
 kept SSH-tunnel-only) — all TLS-terminated via a real Let's Encrypt certificate, all live on a real
-Fornex VPS (`217.177.74.184`). Full bring-up in `runbooks/public-deploy.md`, real numbers/decisions in
+Fornex VPS (address in the private `ago-business` repository, not here — `runbooks/public-deploy.md` has the reasoning). Full bring-up in `runbooks/public-deploy.md`, real numbers/decisions in
 `adr/0026` including its own "Post-decision update" for where the live purchase (Fornex Cloud NVMe 6,
 domain `reserve-me.ru`) differs from the ADR's original recommendation (Timeweb MSK 80,
 `*.ago.golyakov.net`).
@@ -188,7 +188,7 @@ step it was found, not just listed here:
   mapping, including one addition the original plan above did not name: `auth.reserve-me.ru` for
   Keycloak, required by `5-05`'s own exact-issuer-match validation and `8-02`'s planned browser
   redirect, neither of which works against an internal-only Keycloak hostname. The real VPS now exists
-  (Fornex, `217.177.74.184`) and DNS records for all five subdomains above are being added at reg.ru
+  (Fornex; address kept out of this repository, see `runbooks/public-deploy.md`) and DNS records for all five subdomains above are being added at reg.ru
   as this item's own live deployment work proceeds — `runbooks/public-deploy.md` §2 has the exact
   records.
 
