@@ -139,6 +139,39 @@ the `Site`/`Operator`/`Role` rows - after that call succeeds, the same token (re
 `OperatorIdentityClaimsTransformation` resolves it fresh) works against any `RequireOperatorIdentity`
 route exactly like `demo-operator`'s does above.
 
+### "Invalid user credentials" for a password you know is right (`17-06`)
+
+**Shipped in `17-06`** (`adr/0034`): the realm has brute-force protection now, so a locked-out account
+is a real thing a local session can hit — including by mistyping a password twice inside one second,
+which trips `quickLoginCheckMilliSeconds` long before the ten-failure threshold. Keycloak deliberately
+returns the same `{"error":"invalid_grant","error_description":"Invalid user credentials"}` for a
+locked account as for a wrong password (no user enumeration), so the symptom is a correct password
+that suddenly stops working while every other account keeps working.
+
+It clears itself after a minute (`permanentLockout: false`, so an account is never stuck). To clear it
+immediately — or to check whether that is really what happened:
+
+```
+cd C:/git/ago/ago-deploy
+
+# Is this account actually locked? `disabled: true` is the unambiguous answer.
+curl -s http://127.0.0.1:8081/admin/realms/ago-chat/attack-detection/brute-force/users/00000000-0000-0000-0000-000000000004 \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Clear every lockout in the realm.
+curl -s -X DELETE http://127.0.0.1:8081/admin/realms/ago-chat/attack-detection/brute-force/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+(`$ADMIN_TOKEN` is the one minted in the self-registration section above; the UUID is
+`demo-operator`'s fixed realm-import id.)
+
+The same item put a **12-character minimum** on the realm's password policy, plus "not the username"
+and "not the email". It applies to accounts created through the admin API too, not just the hosted
+form — a `reset-password` call with a short value comes back `400
+invalidPasswordMinLengthMessage`, which is worth recognising before assuming the admin token is
+wrong. Every seeded and documented password in this project already satisfies it.
+
 ### Becoming the platform owner locally (`12-01`/`12-03`)
 
 `12-01` defines the `platform-owner` realm role in `k8s/base/keycloak-realm-import.json` and grants it

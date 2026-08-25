@@ -86,9 +86,18 @@ It is also the first place two authentication schemes are accepted on one route
 (`RequireAuthorization(policy => policy.AddAuthenticationSchemes(JwtSchemes.Visitor, JwtSchemes.Operator)...)`) -
 every hub before this was single-role by construction (`VisitorHub` vs `OperatorHub`), but presigning
 an upload is something both a visitor and an operator legitimately do. The two schemes' `aud` claims
-are mutually exclusive, so exactly one ever authenticates a real token; a new `kind` JWT claim
+are mutually exclusive, so at most one ever authenticates a real token; a `kind` JWT claim
 (`"visitor"`/`"operator"`, `JwtTokenService`) is how the handler tells them apart afterward, since
 `aud` alone answers "is this token valid for this route", not "which principal is this".
+
+**Corrected in `17-06`** (`adr/0034`): "exactly one" was the wording here, and it is wrong by one
+case. The Operator scheme also authenticates a Keycloak token whose `sub` matches no `operators` row —
+a state anyone can reach through the realm's public registration form since `10-01` — and that
+principal gets no `kind` claim at all, so it is neither. The rule for a multi-scheme route is
+therefore: **require the `kind` claim to hold one of the values the route actually understands**, in
+the policy, not in the handler's branch. `AuthorizationPolicies.EitherTokenKind` is the one instance,
+and `TokenSchemeSeparationTests` is what holds it. If a second multi-scheme route is ever added, this
+is the shape to copy - "not kind A, therefore kind B" is the mistake.
 
 **Shipped in `5-09`**: the widget's `@microsoft/signalr` client defaults to `withCredentials: true`
 on its HTTP transport (negotiate, long-polling), which sends the browser's cookie jar cross-origin

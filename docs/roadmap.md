@@ -46,12 +46,11 @@ if left.
 | 1 | `8-06` say the demo is public | Every conversation started from a demo page is readable by every stranger with the console open, because they are all the same operator — and nothing says so. First on the list's own rule, cost-to-close: two lines of copy, verified by looking at the page. Until it ships, every demo visitor is uninformed, and it is the only control that works before somebody types something real |
 | 2 | `5-16` token renewal orphans the open conversation | The operator's thread stops receiving messages the first time their access token renews, while the UI still shows the conversation as open. Reported live 2026-08-25 and pinned by the reporter's own decisive detail — switching to another chat and back recovered it. First because it is a live defect in the screen an operator works in all day, and because it is also why one operator held twelve connections in the registry |
 | 3 | `7-07` the connections gauge counts heartbeats | `ago.platform.realtime.connections` counts `RegisterAsync` calls, and the heartbeat calls it every ten seconds per connection to extend the TTL — so on an idle deployment it climbed 564 → 2476 in half an hour against thirteen real entries. Second because it is small, and because it is the instrument the next investigation of this kind will need |
-| 4 | `17-06` the realm's login settings | Keycloak's login-security settings are inherited defaults on a realm that has been open to public self-registration since Stage 10. The only thing on this list an ordinary attacker could act on without waiting for someone else's CVE — and it is a realm-import change today, an operation on live accounts once there are real customers |
-| 5 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
-| 6 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
-| 7 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users |
-| 8 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other |
-| 9 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
+| 4 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
+| 5 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
+| 6 | `15-01` Keycloak persistent user store | `start-dev`, no `KC_DB`, no volume: every runtime-created user is destroyed by the next pod restart, and Stage 10's whole premise is runtime-created users. Gained a second reason on 2026-08-25: `17-06`'s realm settings only reach a Keycloak whose realm can actually be re-imported, and `--import-realm` is skip-if-exists — the two are the same problem seen from opposite ends |
+| 7 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other. Also the trigger `17-06`/`adr/0034` named for revisiting the registration CAPTCHA: until this lands, a spam account can never lift its own required action, and once it does, the cost of one drops to a deliverable mailbox |
+| 8 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
@@ -591,9 +590,18 @@ Deliverables:
   CI at all, one of which builds a container image.
 - `17-05` — runtime hardening. Not one `securityContext` and not one `NetworkPolicy` exists anywhere,
   so every default applies unchosen, and three images run nginx as root by inheritance.
-- `17-06` — authentication and tokens. The realm sets no password policy and no brute-force protection
-  while being open to public self-registration, and the visitor token is a thirty-day, globally
-  signed, irrevocable credential whose lifetime nobody chose.
+- ~~`17-06`~~ — **done 2026-08-25.** Authentication and tokens. The realm now sets brute-force
+  protection, a password policy and TOTP parameters, and every Keycloak lifetime; the visitor token's
+  thirty days is a stated decision rather than an unexamined number; per-token revocation and a
+  registration CAPTCHA are both answered "no" with the trigger that reopens each (`adr/0034`). Two
+  things the item did not expect. The two token schemes really cannot be substituted for one another —
+  now tested, both directions — but the shared attachment route had a *third* principal it silently
+  classified as a visitor (a Keycloak identity with no `operators` row, creatable by anyone since
+  `10-01`); nothing was reachable through it and it is closed at the policy layer. And the visitor
+  token's lifetime turned out not to be a free knob: the widget has no renewal path, so shortening it
+  breaks returning visitors sooner without buying anything — hence `17-07`.
+- `17-07` — silent renewal for visitor sessions, so the lifetime can drop to seven days. Created by
+  `17-06`; not in the "Now" queue, since nothing is broken while it is undone.
 
 Scoped 2026-08-25, each against a real audit rather than a checklist, and each kept separate from
 `17-01` on purpose: none of them is the tenancy boundary, and folding them together would mean
@@ -608,10 +616,12 @@ states what it breaks, and rotating the visitor signing key is no longer a mass 
 newly published vulnerability in a shipped dependency or base image reaches a person without anyone
 going to look (`17-04`); no container runs as root or can reach a database it has no business
 reaching, by statement rather than by inheritance (`17-05`); and the realm's password, brute-force and
-token-lifetime settings are values somebody chose rather than defaults nobody saw (`17-06`).
+token-lifetime settings are values somebody chose rather than defaults nobody saw (`17-06` — **done**,
+`adr/0034`).
 
-Note what this stage does *not* claim when it is done: that the system is secure. It claims that six
-specific properties are enforced by something other than memory, and that the facts behind them were
+Note what this stage does *not* claim when it is done: that the system is secure. It claims that the
+six properties above (`17-01`..`17-06` — `17-07` is follow-up work `17-06` produced, not a seventh
+property) are enforced by something other than memory, and that the facts behind them were
 established rather than assumed — which is the only kind of security claim this project is in a
 position to make honestly.
 

@@ -57,6 +57,10 @@ end to end against real Postgres, RabbitMQ, and MinIO (`AttachmentThumbnailEndTo
 one endpoint - the first in this codebase to do that (every hub before this was single-role by
 construction) - disambiguated by a new `kind` JWT claim, since the two schemes' `aud` values alone
 answer "is this token valid for this route" but not "which principal is this handler talking to".
+Since `17-06`/`adr/0034` the claim is also *required* by the route's own authorization policy, not
+merely read by the handler: a Keycloak token that resolves to no operator is neither kind, and used to
+be classified as a visitor by default (nothing was reachable through it - the participant checks below
+still applied - but the route now rejects it outright).
 Step 5 (`SendVisitorMessage`/`SendOperatorMessage` gaining an optional attachment reference,
 validated - exists, `Ready`, belongs to this conversation - inside `MessageBatchWriter`'s own
 transaction, `4-05`) is proven at the pipeline level, not the domain level: `Attachment` is its own
