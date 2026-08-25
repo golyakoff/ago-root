@@ -103,6 +103,35 @@ Two failures this has actually caused, both worth the check being written down:
   later opened a fresh PR from it, which would have silently reverted the fixes that landed in the
   meantime. Every rebuild ends with `git push origin --delete <old-branch>`, not just a local delete.
 
+### One item's PRs land together, and the code lands first
+
+A backlog item usually spans repositories - a fix in `ago-chat` and its record in `ago-root`, or a
+change in `ago-deploy` plus the runbook it makes wrong. Those PRs are one change wearing several
+numbers, and they are merged **as a group, in one sitting**, never one now and the rest later.
+
+Within the group, **code before docs**, without exception.
+
+The failure this prevents is specific and quiet. `ago-root` is the only place that records what is
+considered done: an item's `Status` line, its Done-when boxes, its Outcome, and the queue. Merge the
+`ago-root` half while its `ago-chat` half is still open and every one of those becomes false at once -
+the item says `done`, the queue has dropped its row, and the code is not on `main`. Nothing fails, no
+test goes red, and the next session reads the claim as fact and plans on top of it. That is worse than
+an unmerged branch, because an unmerged branch is visibly unfinished.
+
+The reverse order is harmless: code on `main` with its documentation a few minutes behind is a gap
+that closes itself and misleads nobody while it is open.
+
+Two practical consequences:
+
+- **Do not merge a docs PR that says "done" until the thing it describes is on `main`.** If the code
+  half is blocked - a red check, a review, a conflict - the docs half waits with it, however clean it
+  looks on its own.
+- If one half genuinely cannot land, say so in the other's PR rather than merging it anyway with the
+  Status line quietly softened. A half-landed item is a decision worth stating, not a wording problem.
+
+Branches for one item are given the same name across repositories precisely so the group is visible at
+a glance (`feat/17-01-tenant-isolation` in both `ago-chat` and `ago-root`).
+
 ### The queue table has one writer
 
 `docs/roadmap.md`'s "Now" table is the single most conflict-prone file in this repository, and the
@@ -146,4 +175,5 @@ Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`, `build`. Scop
 - New behaviour has tests at the right level (`testing.md`).
 - Docs updated in the same branch if the change made one wrong.
 - The branch does **not** touch `docs/roadmap.md`'s queue table - the merger edits it once, afterwards.
+- If the item spans repositories, every half is ready - they merge as a group, code first.
 - No commented-out code, no `TODO` without an issue or backlog file reference.
