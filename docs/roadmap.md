@@ -47,7 +47,6 @@ if left.
 | 2 | `17-02` does the token reach the edge log | An hour of verification, not construction: read the gateway's access log and one trace span after a real hub connect. Here because its answer decides its own position — if the token is on disk, it belongs at the top; until someone looks, nobody knows |
 | 3 | `16-01` personal-data map and residency | A small document, no mechanism. Ahead of the two rows below because both `10-05` and `15-02` are about to move personal data somewhere, and answering a vendor question without the constraint written down is how a residency problem gets acquired |
 | 4 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other. Also the trigger `17-06`/`adr/0034` named for revisiting the registration CAPTCHA: until this lands, a spam account can never lift its own required action, and once it does, the cost of one drops to a deliverable mailbox |
-| 5 | `17-01` tenant-isolation proof | The largest piece here, and the character changed when `12-02` shipped: its exemption list is no longer preparation for a legitimate cross-tenant reader, it is catching up to one that now exists. Last because everything above is hours and this is not — but it is the one to take first if the preference is a single substantial piece over a run of small ones |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 
