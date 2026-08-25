@@ -59,6 +59,24 @@ They are a public API: once published, the shape is a promise.
   removed field is not. A breaking change means `V2` published alongside `V1` until consumers move.
 - Payloads are small: identifiers plus what a consumer cannot cheaply look up. Do not ship a whole
   conversation because it is convenient.
+- **Integration events carry no message body, and that is now a privacy property, not only a size
+  one** (`16-01`, `personal-data.md`). `MessageAccepted` ships ids, kinds and a sequence; a consumer
+  that needs the text reads `GetConversationHistory`. The consequence is that `outbox.payload` -
+  a table nothing ever prunes - holds no copy of anything a visitor typed, which is the single reason
+  erasure in this event-driven system is a two-place problem instead of a five-place one. Adding a
+  body field to a contract is therefore not an additive change in the sense the rule above means: it
+  is additive on the wire and load-bearing for deletion. Say so in the change, and update
+  `personal-data.md` in the same commit.
+
+**The one place a body does cross the broker, so nobody rediscovers it the hard way.** The realtime
+fan-out path is not an integration event in this sense: `NodeFanoutPublisher` publishes a
+`NodeDelivery` whose `PayloadJson` is a serialised `MessageDto`, body included, because its whole job
+is to hand the bytes to a socket on another node (`realtime.md`, `adr/0020`). Those messages are
+`Persistent = true` on durable queues, consumed in milliseconds in steady state - but a node queue
+outlives the pod it was named after, so a replaced pod can leave message text sitting in RabbitMQ
+indefinitely. This is accepted rather than solved (`NodeDeliveryConsumer`'s own remarks: nothing here
+has a queue-retention policy yet); it is recorded in `personal-data.md` so a backup or residency
+decision counts the broker's volume as a personal-data store rather than as plumbing.
 
 Domain events (inside `Domain`) and integration events (in `Contracts`) are different things and must
 not be the same type. Mapping happens in Application when writing to the outbox - otherwise a

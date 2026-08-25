@@ -14,6 +14,30 @@
   numbers, no `OFFSET` (`data-model.md`).
 - Timestamps are ISO-8601 with offset (`date-and-time.md`).
 
+## Outbound webhooks
+
+The tenant-facing half of the HTTP surface, and the only place this system sends a request to a server
+it does not control. Added in `16-01` because the rule below had been decided in `6-02`/`6-05`, held
+in the code, and written down nowhere a reader would look before changing it.
+
+- **A webhook payload carries no message body.** The delivered JSON is
+  `(eventType, conversationId, occurredAt)` and nothing else, built once and sent identically to every
+  endpoint of a site (`DispatchWebhooksForEventHandler`). A receiver that wants the text calls the API
+  for it, with its own credentials, against its own permissions.
+- **This is now a privacy property as well as a scope decision** (`personal-data.md`). Two things
+  follow from it. Message content never leaves the deployment as a side effect of a tenant configuring
+  a URL - so an erasure request does not have to chase copies sitting on third-party servers this
+  project has no relationship with. And `webhook_deliveries.payload`, a row nothing ever prunes, holds
+  no transcript.
+- **Adding a field to that payload is a personal-data change**, whatever its size. It is also
+  irreversible in a way an API response is not: once delivered, the data is on someone else's disk.
+  Argue it in the change, and update `personal-data.md` in the same commit.
+- What *is* stored from the other direction: `webhook_deliveries.response_snippet` keeps up to 2000
+  characters of the receiver's own response body, for debugging. That is a third party's content held
+  indefinitely, listed in `personal-data.md` rather than treated as log noise.
+- Signing, secret lifecycle and the delivery/retry contract are `adr/0024`'s subject, not this
+  section's.
+
 ## Realtime protocol
 
 - Hub methods are thin transports; payload shapes live in `Ago.Chat.Contracts` and are versioned with
