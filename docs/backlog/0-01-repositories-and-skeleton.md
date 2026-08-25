@@ -1,7 +1,10 @@
 # Repositories, packages and skeleton
 
 - **Stage**: 0
-- **Status**: ready
+- **Status**: done — Stage 0 shipped in 2026-08; the repositories exist, build, and consume each other
+  through published packages, which is the whole of this item. The status line simply never got
+  updated and said `ready` for a fortnight (corrected 2026-08-25, while auditing what was actually
+  available to work on).
 - **Depends on**: nothing
 
 ## Goal

@@ -1,9 +1,8 @@
 # Say on the demo page that anyone can read what you type there
 
 - **Stage**: 8
-- **Status**: in progress — the copy is written and verified rendered at desktop and phone width in a
-  real browser against real builds of both repositories; the third done-when box (the *live*
-  deployment) stays open until this is deployed, and is the only thing left
+- **Status**: done — deployed and verified live 2026-08-25, which was the one box left open. The
+  notice is on both demo pages and inside the widget bundle itself
 - **Depends on**: nothing
 
 ## Goal

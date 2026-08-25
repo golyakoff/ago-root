@@ -58,7 +58,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `17-07` visitor session silent renewal | The visitor-side twin of `5-16`, which was a live defect in the operator console. Same class, same size |
 | 2 | `8-07` demo credentials minted on request | Ends one shared public operator, and needs no mail — so it does not wait on anything |
-| 3 | `15-06` a registry, tagged images, a rollback | **Placed here on purpose.** `20-00` below adds a second product to deploy, and deploying is already the known weak point — three separate costs on 2026-08-25 alone. Doing this after Calendar means building the second product on top of it |
+| 3 | `15-07` publish the frontends too | `15-06` gave the three `Ago.Chat.*` hosts an identifiable tag and left the console, the two demo pages and the landing on mutable `:local` — which is the surface the stale-bundle incident actually happened on. Here while the shape it copies is fresh |
 | 4 | `20-01` Calendar domain and persistence | `Event` as the one real row a booking transitions through, never a computed slot |
 | 5 | `20-02` availability materialisation | Materialised ahead to a rolling horizon, with already-materialised days directly editable |
 | 6 | `20-03` booking and the lead card | An atomic compare-and-set claim on an `Available` row — the same discipline operator capacity already uses |
@@ -76,15 +76,20 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 18 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
 | 19 | `15-02` backup, and a restore performed | Destination decided 2026-08-25. Rises the moment there is a customer whose data is not ours to lose |
 | 20 | `15-03` alerting that reaches a person | Now buildable: something finally collects the machine's own metrics |
-| 21 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
-| 22 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
-| 23 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 24 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
-| 25 | `17-04` dependency and image scanning | Only meaningful once `15-06` gives images somewhere to be pushed |
+| 21 | `16-01` personal-data map and residency | Fell out of the queue during a reshuffle rather than by decision. Small, and it is the file every other Stage 16 item reads before deciding what it must reach |
+| 22 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
+| 23 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
+| 24 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
+| 25 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
 | 26 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
 | 27 | `17-05` runtime hardening | `securityContext` and `NetworkPolicy` everywhere. Limits blast radius rather than reducing the chance of a breach, which is why it is not higher |
 | 28 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
 | 29 | `11-07` finish the login theme | Error pages, and the anti-drift mechanism for the tokens that the first pass owed |
+| 30 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
+| 31 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 32 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 33 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 34 | `18-05` shortcuts and notifications | Extends `11-06`'s attention model; both defaults off, because a permission prompt on first load teaches people to click Block |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
 | — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |
@@ -702,15 +707,49 @@ position to make honestly.
 
 ---
 
-## Stages 18-19 — reserved for further AGO Chat and AGO Platform work
+## Stage 18 — Operator productivity
 
-Not yet planned. Stage 14 was the first item to use the range Stage 10 froze open (2026-08-23),
-Stage 15 the second (2026-08-24), Stage 16 the third and Stage 17 the fourth (both 2026-08-25); the
-rest stays reserved so later `ago-chat`/`ago-platform` work does not collide with Stage 20's own
-number. One named candidate is already waiting: operator-productivity work — canned responses, search
-across conversations, transfer between operators, notes and tags, shortcuts, notifications — named in
-`11-06`'s out-of-scope as wanting a stage of its own rather than being a tail of a stage about
-appearance.
+**Goal:** the console stops being a place where an operator can only do the obvious thing slowly.
+Scoped 2026-08-25 from the list `11-06` deliberately refused to grow into — canned responses, search,
+transfer, notes and tags, shortcuts and notifications — which had been named and left unsliced ever
+since.
+
+Placed after Calendar and Inbox on purpose. None of it is broken, none of it blocks anything, and a
+support product with no customers gains less from a faster console than from a second product proving
+the platform claim. It is here so the queue does not run dry, and because two of its five items are
+genuinely interesting rather than filler.
+
+Deliverables:
+- `18-01` — search across conversations. **The hard one**, and not for the obvious reason: `messages`
+  is partitioned by month and, after `adr/0031`, by retention class too, so a full-text index over it
+  is one index per leaf partition and a search touches all of them unless the query prunes — and
+  pruning needs a time bound the operator has not given. The item therefore decides what a search may
+  *cost*, and requires the bound to be visible rather than a silent truncation.
+- `18-02` — transfer a conversation to a named operator. **The second hard one**: a contended change to
+  exactly the state `4-02` exists to protect, two compare-and-sets that must agree, and `adr/0037`'s
+  lock order to respect or reproduce `6-10`'s deadlock. `6-09` and `6-10` are the evidence this area
+  punishes carelessness.
+- `18-03` — canned responses, reusing `14-04`'s per-site scripted replies rather than inventing a
+  second store of canned text.
+- `18-04` — internal notes and tags. Its one correctness property: a note is invisible to the visitor,
+  and the visitor-facing read path must be *incapable* of returning one rather than merely filtering
+  it — which is also the argument for where a note is stored.
+- `18-05` — shortcuts and notifications, extending `11-06`'s attention model, both defaults off.
+
+Interface i18n stays out of scope (`vision.md`), and is the one entry on `11-06`'s original list that
+did not become work here.
+
+**Done when:** an operator can find an old conversation, hand one to a colleague without losing the
+capacity accounting, answer a repeated question without retyping it, leave a note the visitor can never
+see, and be told a conversation arrived without watching the tab.
+
+---
+
+## Stage 19 — reserved
+
+Not yet planned, and now the only number left in the range Stage 10 froze open (2026-08-23). Stages 14
+through 18 took the rest; 19 stays reserved so later `ago-chat`/`ago-platform` work does not collide
+with Stage 20's own number.
 
 ---
 
