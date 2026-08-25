@@ -39,11 +39,17 @@ PostgreSQL is the only source of truth. Everything else is a cache, a queue, or 
   true by construction, not by convention.
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
   (`waiting|assigned|closed`), `last_sequence`, `visitor_unread_count`, `operator_unread_count`,
-  timestamps. Optimistic concurrency uses Postgres's built-in `xmin` system column (`1-04`), not an
-  extra column of our own to keep in sync by hand - which is also what lets the unread counters
-  (`2-05`) use a plain load-mutate-save through the aggregate instead of a raw atomic `UPDATE`: a
-  losing concurrent save throws rather than silently overwriting the other side's increment, and the
-  broker's own redelivery is the retry.
+  `operator_last_read_sequence`, timestamps. Optimistic concurrency uses Postgres's built-in `xmin`
+  system column (`1-04`), not an extra column of our own to keep in sync by hand - which is also what
+  lets the unread counters (`2-05`) use a plain load-mutate-save through the aggregate instead of a
+  raw atomic `UPDATE`: a losing concurrent save throws rather than silently overwriting the other
+  side's increment, and the broker's own redelivery is the retry.
+  `operator_last_read_sequence` (`5-15`) is what makes that counter clearable without losing a
+  message: mark-read moves the watermark and subtracts what it covers rather than zeroing, and the
+  increment skips anything at or below it, so a message arriving in the same instant as a mark-read is
+  still counted whichever of the two saves wins the `xmin` race. There is no visitor-side twin -
+  nothing reads `visitor_unread_count` yet (`5-15`'s own Decisions section). No index: the column is
+  only ever read as part of an aggregate already located by primary key.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
   `created_at`, `delivered_at?`, `read_at?`.
 - `outbox` - `id`, `occurred_at`, `type`, `version`, `payload` (jsonb), `partition_key`,
@@ -191,6 +197,11 @@ already has a real writer (`2-02`'s handlers). `inbox` gained its first real wri
 Postgres, real RabbitMQ) that a redelivered event increments exactly once, not twice.
 `Stage2AddConversationUnreadCounts` (`2-05`) adds `visitor_unread_count`/`operator_unread_count` to
 `conversations`, both `integer not null default 0` - additive, reversible, no table rewrite.
+`Stage5AddOperatorLastReadSequence` (`5-15`) adds `operator_last_read_sequence` the same way, and
+deliberately does **not** backfill it from `last_sequence`: no operator has ever marked a conversation
+read, so zero is the truthful value for every existing row, and claiming otherwise would be inventing
+a fact. The visible consequence is intended - the first open after this ships clears the accumulated
+backlog that `5-15` exists to fix.
 `Stage2PartitionMessages` (`2-06`) is verified against a real Postgres (`Ago.Chat.Integration.Tests`,
 via `PostgresFixture`'s from-scratch migration run): the rename-copy-drop conversion applies
 cleanly, an insert landing in the current month succeeds without `PartitionMaintenanceJob` having run
