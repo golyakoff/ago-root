@@ -36,14 +36,25 @@ a stage number stays a name.
 
 ### Now — in this order
 
-Row order is the queue (made deliberate 2026-08-25, when the author said they would work straight down
-this table). It is not a dependency chain: nothing here blocks anything else below it except where the
-row says so. It is ordered by cost-to-close first, so the list shortens quickly, then by what is worst
-if left.
+Row order is the queue. It is not a dependency chain: nothing here blocks anything else below it
+except where the row says so. Ordered by cost-to-close first, so the list shortens quickly, then by
+what is worst if left.
+
+**Refilled 2026-08-25**, when the queue drained to a single item that was itself waiting on somebody
+else. A queue whose only entry cannot be started is not a queue, so the top of "Soon" was promoted —
+and two entries are marked **parked** rather than removed, because the difference between "not next"
+and "cannot be started" is the thing a working list has to keep visible.
 
 | # | Item | Why here, and why in this position |
 |---|---|---|
-| 1 | `10-05` transactional email | `verifyEmail: true` with `smtpServer: null` — a registration is accepted and the mail can never be sent, so no real visitor can finish signing up. Paired with the row above: each is only half a working signup without the other. Also the trigger `17-06`/`adr/0034` named for revisiting the registration CAPTCHA: until this lands, a spam account can never lift its own required action, and once it does, the cost of one drops to a deliverable mailbox |
+| 1 | `15-05` capacity and disk | Half-answered already: the measurement was taken 2026-08-25 and overturned the premise several items were written on — `local-path` does not enforce a PVC's requested size, so the "2Gi volume" everything reasons about is a number with nothing behind it. What is left is deciding headroom against the node's real 79G, the deliberate fill test, and handing thresholds to `15-03`. Still first because it produces the retention number `13-05` and `13-06` are both waiting on |
+| 2 | `15-06` a registry, tagged images, a rollback | Three costs in one day on 2026-08-25: a console bundle a week stale, no way to tell from a running pod which commit it is, and a build that failed on a NuGet feed nobody had repacked. `redeploy.sh` fixed the sequence; none of those three is a sequence problem |
+| 3 | `5-13` presigned upload size never enforced | Its own "not exploitable today" holds only while nobody can create an account unaided — `8-07` and `10-05` both end that. And the measurement above sharpens it: the bytes land on the node's shared 60G, not in a capped volume, so filling it takes the whole box down rather than one service |
+| 4 | `11-08` frontend behaviour tests | `5-16` was exactly the class of defect this item exists for, and its own fix already needed a test at this level — so some of the machinery is likely there. Worth taking before that momentum is lost, and before the three behaviours it names quietly become "we already have frontend tests" |
+| 5 | `8-07` demo credentials minted on request | One of the very few things that can ship while `10-05` is stuck: credentials are shown on screen, so it needs no mail at all. It also gives `16-02`'s erasure its first continuous consumer |
+| 6 | `7-08` delivery observability | Small, and 2026-08-25 showed exactly what its absence costs: answering "did the server try to deliver to that connection" took an hour of reading code and querying Redis by hand |
+| — | `10-05` transactional email | **Parked, not next.** The server side is built and verified (Postfix send-only, DKIM signing, pod-to-host path proven); it waits on reg.ru publishing the zone and on Fornex setting the PTR, neither of which is ours. Do not start it as ordinary work — it will stall at the provider question |
+| — | `15-02` backup and a restore drill | **Parked.** Needs the off-node destination decided first, and that decision is constrained by residency (`16-01`). Starting it means building everything except the part that matters |
 
 ### Soon — the current stage, and what the "Now" band leaves half-finished
 

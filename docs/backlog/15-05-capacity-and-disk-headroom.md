@@ -15,6 +15,38 @@ never storage. They all sit on one node's local-path provisioner, which means th
 whichever component fills it takes the others down with it, and Postgres in particular does not
 degrade gracefully when it cannot write.
 
+## Measured 2026-08-25, and it overturns this item's own premise
+
+Taken on the live node, so these replace the estimates this item was written against.
+
+| Volume | Requested in the PVC | Actually used |
+|---|---|---|
+| `postgres-data` | 2Gi | 85M |
+| `prometheus-data` | 1Gi | 20M |
+| `grafana-data` | 512Mi | 15M |
+| `rabbitmq-data` | 1Gi | 10M |
+| `minio-data` | 2Gi | 100K |
+| `redis-data` | 512Mi | 8K |
+
+Node disk: **79G total, 15G used, 60G free.** Everything above adds up to about 130M.
+
+**The requested sizes are not enforced.** The storage class is `local-path`, which backs a volume with
+a directory on the node's own filesystem and does not apply a quota. Postgres inside its pod reports
+`78.6G total, 59.7G free` for its data directory — the node's root filesystem, not a 2Gi volume.
+
+That matters more than the numbers, because several items reason from a ceiling that does not exist:
+
+- This item's own scope said to "resize deliberately where the inherited local-dev number is wrong".
+  Resizing changes nothing while the class ignores the value; the question is headroom on the node,
+  and whether a real quota is wanted at all.
+- `5-13` describes a stranger writing unbounded bytes "to a shared 2Gi volume". They would write to
+  the node's shared 60G — less urgent by volume, worse in kind, since filling it takes down every
+  component at once rather than one.
+- `15-04`'s operational default and `adr/0031`'s retention window were both framed as "sized to keep a
+  2Gi volume alive". The number they need comes from the node's free space and its growth rate.
+
+Correcting those three is part of this item's work, not a separate cleanup.
+
 ## Context to read first
 
 `deploy/k8s/base/*.yaml`'s PVC declarations — the six sizes above, and the fact that `overlays/demo`
