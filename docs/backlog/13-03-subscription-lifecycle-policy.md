@@ -1,7 +1,8 @@
 # Subscription lifecycle: renewal, failure, cancellation, and mid-cycle changes
 
 - **Stage**: 13
-- **Status**: blocked
+- **Status**: ready — the four policy questions were answered 2026-08-25 (`ago-business`'s
+  `decisions/0006`); what was missing was policy, and it is no longer missing
 - **Depends on**: `13-02-yookassa-subscription-checkout-and-webhook.md` (the stored `payment_method_id`
   and the checkout/webhook mechanism this item's recurring-charge job and cancellation/downgrade
   endpoints both build on)
@@ -92,16 +93,53 @@ answered; writing checkable Done-when statements against unstated policy would i
 policy by the back door. Once the author answers, whoever picks this item back up writes a Scope and
 Done-when section with the same rigor `13-01`/`13-02` used, and updates this item's Status.
 
+## The policy, decided 2026-08-25
+
+Recorded in full, with reasoning, in the private `ago-business` repository as
+`decisions/0006`. Restated here because an item a session picks up must be buildable from this file.
+
+**A failed recurring charge** puts the subscription in `past_due` with **full access retained** while
+retries run for roughly a week; if none succeeds, the account drops to Free. The commonest cause of a
+declined charge is a reissued or expired card rather than a refusal to pay, and this is a support
+product — cutting a shop off on the first failure darkens its line to its own customers, who did
+nothing. The exact retry schedule inside that window is this item's own choice; state it when built.
+
+**An explicit cancellation** turns off auto-renewal and leaves the paid tier running until the end of
+the period already paid for. No refund. Mechanically a flag the recurring-charge job honours.
+
+**A mid-cycle change** is asymmetric on purpose: **upgrades apply immediately** and the difference for
+the remainder of the period is charged at once; **downgrades apply at the next renewal**, with no
+credit for unused time. This removes credit accounting entirely — ЮKassa has no balance concept, so a
+refund-the-difference policy would mean building and reconciling our own. The asymmetry costs the
+customer nothing: an upgrade is wanted *now* because someone was hired today, while a downgrade
+deferred simply means keeping the tier already paid for until it lapses.
+
+**More operators than paid seats** puts the account in an over-seats state in which **nothing is
+deleted and nobody is chosen for the customer**: every operator account and all its data stay intact,
+but only the owner and as many operators as are paid for can sign in, and the owner decides which.
+Both rejected alternatives are worse in kind rather than in degree — disabling "the newest" or any
+other rule means making an arbitrary decision about somebody else's staff, and a person loses access
+mid-shift because an owner pressed a button; allowing the downgrade while merely blocking new invites
+means charging for fewer seats than are in use, which retires per-seat pricing as a concept.
+
+**This last one is one behaviour covering two paths, and that is the reason it is shaped this way.**
+The same collision arises without any downgrade at all: an account that drops to Free after a failed
+payment has one seat and may have six operators. There, "do not apply it until the customer complies"
+is impossible — they are not answering, which is why the charge failed. Some automatic behaviour is
+unavoidable, so the only real question was whether it destroys anything. This one does not.
+
+## Consequences for other items
+
+- **`13-01` gains seat assignment and operator removal.** Choosing who holds a seat needs a surface,
+  and removing an operator does not exist anywhere today. It is needed regardless of billing — people
+  leave — so this is a dependency being named rather than scope being invented.
+- **Two new subscription states** beyond `13-02`'s: `past_due`, and over-seats. Whether over-seats is a
+  state on the subscription or a derived condition is an implementation choice, not a policy one.
+- **No credit or refund machinery is built.** That is a direct saving and a direct consequence of the
+  mid-cycle decision.
+- A Free account after non-payment keeps its history: retention class is stamped at write time
+  (`adr/0031`), so returning to a paid tier restores seats, not data — the data never went anywhere.
+
 ## Open questions
 
-- Failed recurring charge: immediate downgrade, grace period (and if so, how long), or a dunning
-  retry schedule (and if so, what shape)?
-- Explicit cancellation: immediate downgrade, or paid-until-period-end?
-- Mid-cycle upgrade/downgrade: prorated and immediate, or deferred to next renewal with no proration?
-- Downgrade below current operator count: blocked until operators are removed (which itself needs an
-  unbuilt removal flow), allowed with new-invites-blocked-until-compliant, or something else?
-
-This item does not start until the author answers these. None of them is an implementation detail this
-project's own conventions would tolerate a guessed default for — each is exactly the kind of policy
-question a real business, and a reviewer reading this repository, would expect to see stated and
-deliberate.
+None. The four that blocked this item are answered above.

@@ -146,6 +146,21 @@ different case, applied correctly to this one instead.
   card fingerprint — but that is speculative future work, not decided or built anywhere in this item or
   `13-02`.
 
+## Two additions from `13-03`'s policy decision (2026-08-25)
+
+`ago-business`'s `decisions/0006` settled what happens when an account holds more operators than paid
+seats: nothing is deleted and nobody is chosen for the customer — the owner decides which operators
+hold the seats, and everyone else keeps their account and data but cannot sign in. That needs two
+things this item is the right home for, since seat counting already lives here:
+
+- **Seat assignment**: a surface where the owner says who holds a seat, and the notion of an operator
+  who has an account but no seat.
+- **Operator removal**, which exists nowhere today. Needed independently of billing — people leave —
+  so this is a dependency being named rather than scope being invented.
+
+Both apply to the involuntary path too: an account dropping to Free after a failed payment lands in
+exactly this state, and there the customer is by definition not responding.
+
 ## Out of scope
 
 - Removing an operator, or decrementing seat usage — no such flow exists anywhere in this codebase today
