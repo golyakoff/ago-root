@@ -131,7 +131,9 @@ so a process death in that window leaks exactly one slot. Releasing before the c
 a save that then loses on `xmin` would leave the conversation assigned with its slot already handed
 back, and the operator over-subscribable for the rest of that slot's life. Making the window vanish
 would mean driving the release from the `ConversationEnded` outbox event in `Ago.Chat.Worker`, at the
-cost of freeing the slot only after the dispatcher and broker hop; `adr/0033` weighs both.
+cost of freeing the slot only after the dispatcher and broker hop; `adr/0033` weighs both. `6-10`
+added exactly one more way into that same residual - a release that loses a Postgres deadlock five
+times running - and no new kind of residual; see the lock-order section below.
 
 In-process, each Worker's assignment loop is single-threaded per shard, so intra-process contention
 is designed away rather than locked away.
@@ -166,6 +168,62 @@ same site's operators in a different order can genuinely deadlock - Postgres det
 aborts one side (`SqlState 40P01`). Handled exactly like every other "lost the race" outcome here:
 caught per-site inside the tick, logged at `Debug`, retried next tick - one site's contention must
 not stall every other site's batch in the same tick.
+
+### The lock order on `operators`, and who absorbs the cycle (`6-10`)
+
+**There is no global lock order, deliberately, and this is the record of that.** Both write paths
+touch exactly one table under lock - `operators` - and they take it very differently:
+
+| Path | `operators` rows locked | Order | Held for |
+|---|---|---|---|
+| `SkipLockedAssignmentClaimer` / `RedisLockAssignmentClaimer` (`TryClaimAsync`) | **several**, one per operator the batch assigned to | least-`active_chats`-first, so it depends on who had room at that instant - genuinely varies between batches | the rest of the batch transaction |
+| `CloseConversationHandler` (`ReleaseAsync`) | **exactly one** | n/a - one row has no order | one statement, no transaction of its own |
+| `OperatorConversationReleaser` (`ReleaseAsync`, `4-04`) | **exactly one** (one operator's sweep) | n/a | the sweep's transaction |
+
+Only the first row of that table can invert against itself, and it is the only one that can start a
+cycle. **The close cannot fix this by locking in a different order, because it takes one row.**
+
+That matters because `6-09` made the close a *participant* in the engine's pre-existing cycle without
+being able to cause it. `6-10` reproduced it deliberately and captured the graph (verbatim in
+`docs/backlog/6-10-close-and-assign-deadlock-on-operator-capacity.md`); the mechanism is worth stating
+here because it is not obvious from the source:
+
+> Before a statement waits for the transaction that currently owns a row version, it takes a
+> heavyweight **tuple lock** on that tuple - Postgres's FIFO queue for would-be updaters of one row.
+> A single-row `UPDATE` in its own implicit transaction therefore *does* hold something while it
+> waits, even though it owns no row lock, and an assignment batch already holding a different
+> `operators` row can queue behind it. The cycle runs through a statement that had no locks of its own
+> to create it, and Postgres aborts whichever process ran the deadlock check first - repeatedly the
+> innocent release.
+
+The captured graphs are unambiguous on two points that rule out the obvious wrong story: every wait is
+on `operators` (`relation 16396`, resolved against the live container, and the only relation oid
+anywhere in the log), and every participating statement is `active_chats + 1` or `active_chats - 1`.
+There is no `conversations`↔`operators` ordering inversion; `conversations` is not in the graph.
+
+**The decision, `adr/0037`: the release absorbs it, the engine is not changed.**
+`OperatorCapacityStore.ReleaseAsync` retries its single statement on `40P01`, bounded at 5 attempts
+with a jittered backoff, and **only when it owns no caller transaction** - inside one (the `4-04`
+sweep) the deadlock has already aborted the transaction, so the retry unit is the caller's, and its
+caller is a broker consumer whose delivery is redelivered. A `40P01` that survives becomes
+`OperatorCapacityContentionException` at the port boundary (`Ago.Chat.Application.Abstractions`, the
+same translation `6-08` gave `ConversationConcurrencyConflictException`); `CloseConversationHandler`
+catches it, **keeps the close successful** - it already committed - logs at `Warning` and counts
+`ago.chat.assignment.capacity_release_deadlocks{outcome="abandoned"}`. The residual is the one
+`adr/0033` already accepts: one leaked slot, recovered by the disconnect sweep. **An operator never
+sees `40P01` for pressing "close".**
+
+Giving the engine a canonical order is the root fix and is deliberately deferred - it means either
+pre-locking every online operator per batch (serialising assignment across replicas) or restructuring
+`4-02`'s batch to decide in memory and apply one grouped update per operator in id order. Both are
+performance changes this project may not merge without a load run behind them. `adr/0037` weighs both.
+
+The rule for anyone adding a third writer to `operators`: **take one row, in no transaction, or take
+many rows and own the retry.** `Ago.Chat.Concurrency.Tests` enforces the consequence rather than the
+rule - `ConcurrencyTestFixture` runs Postgres with `deadlock_timeout=10ms` and `log_lock_waits=on`, and
+`ClosesStormingAssignmentBatches_NeverSurfaceADeadlockAndNeverCorruptTheCount` runs a sustained storm
+that asserts no close escapes with an exception, that the exact claim/assignment invariant survives,
+and that Postgres genuinely detected deadlocks during the run, so a quiet run cannot pass vacuously.
 
 Both participants are notified through the same fan-out path `3-02` built:
 `ConversationAssignedToOperator` (a new integration event, named differently from the domain event
