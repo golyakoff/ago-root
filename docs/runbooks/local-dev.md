@@ -139,6 +139,47 @@ the `Site`/`Operator`/`Role` rows - after that call succeeds, the same token (re
 `OperatorIdentityClaimsTransformation` resolves it fresh) works against any `RequireOperatorIdentity`
 route exactly like `demo-operator`'s does above.
 
+### Becoming the platform owner locally (`12-01`/`12-03`)
+
+`12-01` defines the `platform-owner` realm role in `k8s/base/keycloak-realm-import.json` and grants it
+to **nobody**, deliberately (that same file provisions the public demo realm). Nothing in the product
+can grant it either - it is a realm role, so Keycloak's own admin API is the only way in, which is the
+point. Grant it to a seeded user, verify, then take it away:
+
+```
+export $(grep -v '^#' deploy/docker/.env | xargs)
+KC=http://127.0.0.1:8081
+ADMIN_TOKEN=$(curl -s -X POST $KC/realms/master/protocol/openid-connect/token \
+  -d "grant_type=password&client_id=admin-cli&username=$KEYCLOAK_ADMIN_USER&password=$KEYCLOAK_ADMIN_PASSWORD" \
+  | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+USER_ID=$(curl -s "$KC/admin/realms/ago-chat/users?username=demo-admin&exact=true" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+ROLE=$(curl -s "$KC/admin/realms/ago-chat/roles/platform-owner" -H "Authorization: Bearer $ADMIN_TOKEN")
+
+curl -s -X POST "$KC/admin/realms/ago-chat/users/$USER_ID/role-mappings/realm" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d "[$ROLE]"
+# ... verify, then revoke - same call, DELETE instead of POST:
+curl -s -X DELETE "$KC/admin/realms/ago-chat/users/$USER_ID/role-mappings/realm" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" -d "[$ROLE]"
+```
+
+Two things found by actually doing this (`12-03`, 2026-08-25), both of which cost time otherwise:
+
+- **The master admin token expires in about a minute.** Fetch it inside the same script that uses it;
+  a token pasted from a previous command reliably returns `401` on the next call.
+- **A Keycloak container started before `12-01` merged does not have the role**, because
+  `--import-realm` imports a realm only when it does not already exist - the mounted file changing
+  afterwards does nothing. `curl .../roles/platform-owner` returning `{"error":"Could not find role"}`
+  on an otherwise healthy realm is this, not a typo. Either recreate the Keycloak volume, or create the
+  role once by hand (`POST /admin/realms/ago-chat/roles` with `{"name":"platform-owner"}`), which is
+  what the import would have done.
+
+The role has to be in the token, not just in the database: re-fetch the user's access token after
+granting (the direct-grant snippets above), and `realm_access.roles` should contain `platform-owner`.
+`GET /api/v1/owner/sites` (`12-02`) answers `200` with it and `403` with `Content-Length: 0` without
+it - the console's `/owner` screen (`12-03`) renders whichever of those two the server returns, and
+holds no opinion of its own about who the owner is.
+
 ### Running the widget demo locally
 
 **Shipped in `5-09`**: `ago-widget/demo/` is a deliberately hostile host page proving the widget's
