@@ -1,8 +1,9 @@
 # Demo credentials minted on request, expiring in a day
 
 - **Stage**: 8
-- **Status**: ready — the shape is the author's decision (2026-08-25); one real fork remains, named
-  below, and it is this item's own to decide
+- **Status**: **partly done** (2026-08-26). The backend is built and proven; the button and the demo
+  page's side are not. Both forks are resolved and recorded in `adr/0058`. See Done-when for exactly
+  which boxes are ticked and why the others are not.
 - **Depends on**: `10-02-site-and-operator-registration.md` (shipped) for the registration path this
   reuses. Deliberately **not** on `10-05` — see "Why this sidesteps email".
 
@@ -91,13 +92,49 @@ Pick one with the reasoning written down. If it is the first, the credential's h
 
 ## Done when
 
-- [ ] A stranger can obtain working console credentials without the author doing anything.
-- [ ] Two simultaneous viewers are two distinct operators, demonstrated with two browsers.
-- [ ] A minted account and everything under it is gone after its window, proven by letting one expire
+- [ ] A stranger can obtain working console credentials without the author doing anything. **Moved to `8-09`** - the endpoint does this and there is no button, so a stranger has a terminal, not a browser.
+      *At the API: one unauthenticated `POST /api/v1/demo/credentials`, and the credentials it returns
+      genuinely authenticate against the realm - `DemoTenantLifecycleTests.AMintedTenantsCredentialsActuallyLogIn`
+      runs a real password grant against a real Keycloak, which is what the console's own login does.*
+      **Left unticked deliberately.** The item says "a stranger", and a stranger has a browser, not a
+      terminal. The mechanism is done and the affordance is not.
+- [ ] Two simultaneous viewers are two distinct operators, demonstrated with two browsers. **Moved to
+      `8-09`** - proven here as a property (two mints, two sites, two working logins), which is not the
+      same claim as two people in two browsers.
+      *`TwoMintsAreTwoTenantsWithNothingShared` asserts two mints produce two usernames, two site rows
+      and two working logins - the property the two browsers would have been showing. **Left unticked
+      deliberately**: the item asks for a demonstration with two browsers and there was none.*
+- [x] A minted account and everything under it is gone after its window, proven by letting one expire
       rather than by reading the job.
-- [ ] The creation endpoint is rate-limited and capped.
-- [ ] The Keycloak-user decision is recorded, and any new credential is in `17-03`'s inventory.
-- [ ] The seeded `8-05` tenants still exist and still demonstrate isolation.
+      *`WhenTheWindowPasses_TheTenantAndEverythingUnderItIsGone`: a tenant is minted with a visitor, a
+      conversation, a message and an attachment under it; the clock passes its window; one sweep runs;
+      then every table is checked individually, the Keycloak user is checked with a different credential
+      than the one that deleted it, and the credentials are checked to have stopped working.*
+      **The deletion is narrow and `adr/0058` states exactly what it does not reach** - `outbox` rows,
+      backups, node queues, traces, logs and Redis entries all survive. It is not `16-02`; it is the
+      shape `16-02` can absorb.
+- [x] The creation endpoint is rate-limited and capped.
+      *Both, and the cap is a correctness property with a boundary test on each side
+      (`MintDemoTenantHandlerTests`). Counted from the database inside the request, never cached.*
+- [x] The Keycloak-user decision is recorded, and any new credential is in `17-03`'s inventory.
+      *`adr/0058` Decision 2 - including the argument that the pre-seeded pool does not avoid the
+      credential, which this item found and the item above did not anticipate.
+      `KEYCLOAK_DEMO_PROVISIONER_SECRET` is in `17-03`.*
+- [x] The seeded `8-05` tenants still exist and still demonstrate isolation.
+      *They carry no `demo_expires_at`, so the sweeper cannot see them however old they get -
+      `ASiteWithNoExpiryIsNeverSweptAwayHoweverOldItIs` moves the clock five years forward and checks.*
+
+## Not done, and not claimed
+
+- **The button.** `8-07`'s Scope says "an endpoint and a button"; this is the endpoint. Nothing in
+  `ago-console` or `ago-landing` calls it, so Done-when #1 and #2 hold at the API and not in a browser.
+- **The demo page's `?site=` handling.** The mint returns a `visitorUrl` carrying the new tenant's own
+  public key, and the tenant allows that page's origin - but the page still boots the widget against
+  its baked-in key. Until `ago-widget`'s two `public-demo*/index.html` pages read the parameter, a
+  minted viewer has a console of their own that no visitor can reach. `adr/0058` Decision 1 states this
+  plainly, because it is the cost of choosing a per-viewer tenant and it is not yet paid.
+- **A live MinIO in the expiry test**, and **cache invalidation on deletion** (`16-02` requires it).
+- **Any deployment.** Nothing here has run against a cluster, local or public.
 
 ## Open questions
 
