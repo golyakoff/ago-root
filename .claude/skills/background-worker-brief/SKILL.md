@@ -55,6 +55,37 @@ When work already exists, say so in the brief: what shipped, what its author rec
 what specifically remains. A brief that describes remaining work is far shorter than one that
 describes the whole item, which is the second reason to check.
 
+## 0.7. A worker is a colleague, not a disposable process
+
+**Decided by the author, 2026-08-26**, after a day in which every task got a freshly spawned worker
+and each one paid the full cold start again.
+
+**Continue an existing worker rather than spawning a new one.** A worker that has already read
+`CLAUDE.md`, the conventions and a repository's layout keeps all of that; a new one buys it again at
+full price. Send the next task to the worker that is already carrying the relevant context. **A task
+is always finished in the worker where it started** — a follow-up, a fix, a review comment and a
+rebase all belong to whoever did the original work, and handing one to a fresh worker is strictly
+worse than handing it to the one that has the file open.
+
+The saving grows with parallelism, which is why it is worth establishing while running one worker:
+with three, three cold starts per wave is most of the wave.
+
+**Each new task still begins with its own fresh worktree**, per repository, exactly as before. The
+worker keeps its context; it does not keep its working directory. Two tasks sharing a worktree is
+the problem that rule was written for and reusing a worker does not change it.
+
+**The operator cleans up.** After a task's PRs merge, the managing session removes that task's
+worktrees (`git worktree remove`, and the branch once it is merged). The worker does not do this —
+it is not what a worker is good at, and a half-cleaned worktree is worse than an abandoned one.
+
+### Where reuse stops paying
+
+Retained context is only an asset while it is *relevant*. A worker that has done three unrelated
+items carries three transcripts, and every later request pays for all of them — so route by area,
+not round-robin: give a worker tasks in the repository and subsystem it already knows. When the next
+task shares nothing with what a worker holds, a fresh one is the cheaper choice, and saying so is
+part of the operator's job rather than a defeat.
+
 ## 1. Standing rules — put every one of these in every brief
 
 These do not vary by item. Restating them from memory is how they drift; copy them.
