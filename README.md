@@ -12,8 +12,16 @@
 
 ## Try it live
 
-Two independent demo shops, deliberately different-looking, on the same running deployment — proof
-that tenant isolation is real, not asserted:
+**Get a tenant of your own.** Open either demo shop below and press *Get your own tenant*: you get a
+private operator account, your own site, and conversations nobody else can read. It deletes itself
+after about a day, along with everything in it — no email, no signup, nobody to ask. The password is
+shown once and is stored nowhere, so copy it before you navigate away.
+
+The two shared logins below are still here, and stay here, because they are the thing that
+demonstrates **tenant isolation** live: two seeded tenants, two operator accounts, neither able to see
+the other's conversations. A tenant of your own proves privacy; these two prove isolation, and those
+are different claims. Everything typed through a shared login is readable by anyone else using it —
+which is exactly why the button above exists.
 
 | | Shop's own page (widget) | Operator login |
 |---|---|---|
@@ -26,6 +34,11 @@ browser context), log in with that tenant's own operator credential, and answer 
 login can see the other tenant's conversations — every value above is a real, working, deliberately
 public credential, safe to publish (it only ever grants access to its own disposable demo data, never
 anything real).
+
+A minted tenant works the same way, with one extra step: the credentials come with a link back to the
+shop page carrying **your** site key (`?site=…`), and that page's widget talks to your tenant instead
+of the shared one. Without the parameter the page behaves exactly as it always has, so every link on
+this page keeps working.
 
 ## Stack
 
