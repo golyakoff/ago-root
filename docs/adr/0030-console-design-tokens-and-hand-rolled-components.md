@@ -1,8 +1,62 @@
 # ADR-0030: Design tokens and a closed hand-rolled component set for the console, not a component library
 
-- **Status**: Accepted
-- **Date**: 2026-08-25
+- **Status**: Accepted, and **amended on 2026-08-26** — a second surface now reads these tokens (the
+  Keycloak login theme, `11-07`), and it answers the webfont question in the last "Negative"
+  consequence below *differently* from the console. That bullet still describes the console
+  correctly; it no longer describes the whole product. The amendment immediately following says what
+  changed and why the same trade-off came out the other way one screen earlier.
+- **Date**: 2026-08-25 (amended 2026-08-26)
 - **Stage**: 11
+
+## Amendment (2026-08-26): the login page loads no webfont, and the tokens now have a second consumer
+
+`11-07` put an AGO theme on Keycloak's login, registration, password-reset, email-verification, info
+and error pages — the screens that sit between the landing page and the console, and that until then
+were whatever the upstream image shipped. Two things in this ADR need updating as a result.
+
+**1. The webfont trade-off was re-examined for a different context, and reversed there.** The
+"Negative" list below says fonts come from Google Fonts, and weighs that for a dashboard an operator
+opens after signing in. The login page is not that: it is the one page in the product where a
+third-party request sits next to a password field, and it is the first screen of the first visit, so
+its font is the one most likely to be fetched cold rather than served from cache.
+
+**The login theme therefore loads no webfont at all.** It uses the system tail of the console's own
+stack — `--ago-font-sans` with `"Manrope"` dropped — under its own name, `--ago-login-font`. The
+identity survives on colour, spacing, radii and elevation, which is the larger part of what these
+tokens are; a reviewer sees the same palette and the same geometry, set in the platform's UI face.
+
+This is deliberately *not* extended to the console, and the reason is not consistency-for-its-own-sake
+in reverse. The console's whole visual argument rests on matching a landing page we do not get to
+change, it is a shift-long tool where the fetch happens once, and `11-05` already spent real effort
+on Unbounded as the shell's identity. A login page has one line of chrome and no wordmark to set.
+
+Measured rather than argued: driven through headless Chrome over CDP against a local Keycloak, the
+sign-in page issues **eleven requests, all same-origin** — Keycloak's own PatternFly stylesheets, the
+theme's two stylesheets, three of its scripts, and one FontAwesome `.woff2` that the upstream image
+serves itself. There is no third-party origin in the list, so there is no font host that can be slow,
+blocked or watching. That also makes the degraded state trivial in a way the console's is not: there
+is nothing to fail.
+
+Self-hosting Manrope inside the theme stays the upgrade path if the type turns out to matter. It is a
+bigger change than it sounds — the theme is delivered as a ConfigMap precisely because it is two text
+files, and font binaries are the thing that ends that.
+
+**2. Point 1 of the Decision — "one token source" — now spans two repositories.** The theme cannot
+`@import` `tokens.css`: it is mounted into a container that has no `ago-console` anywhere near it, so
+the values have to physically be in the stylesheet. That is a vendored copy, and a vendored copy of a
+colour is exactly the failure this project has had before.
+
+The copy is therefore **generated and checked, never typed**: `ago-deploy/k8s/check-theme-tokens.sh`
+reads `ago-console/src/design/tokens.css`, collects the tokens the theme's own stylesheet actually
+references, rebuilds the block between `GEN-BEGIN`/`GEN-END` markers, and exits non-zero on any
+difference. `redeploy.sh` runs it after pulling both checkouts. The one deliberate divergence — the
+font stack — is checked too, as a suffix relation rather than an equality.
+
+The rule in point 1 is thus unchanged in substance and wider in reach: `tokens.css` is still the
+single source; a literal colour in the login theme is still a defect; and there is now a script that
+says so rather than a convention that hopes so. `ago-deploy` has no CI to hang that check on
+(`adr/0015`'s pipelines are the two backend repositories only), so outside a redeploy it runs when a
+person runs it — stated here rather than implied.
 
 ## Context
 
@@ -107,7 +161,9 @@ component library, no CSS framework, no CSS-in-JS runtime.** Concretely:
   self-hosted npm package. That keeps `package.json` unchanged but adds a third-party request on first
   paint and a privacy consideration once the console is public. Every stack falls back to a system
   font, so a blocked request degrades rather than breaks. Self-hosting is the obvious follow-up when
-  the console gets a Content-Security-Policy.
+  the console gets a Content-Security-Policy. **This bullet is about the console only** — see the
+  2026-08-26 amendment above: the login theme reached the opposite answer for the screen that carries
+  a password field.
 
 ## Alternatives considered
 

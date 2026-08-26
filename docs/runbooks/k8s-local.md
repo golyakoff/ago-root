@@ -86,6 +86,13 @@ constraint, not Keycloak, so the probe delays were left unchanged.
 `postgres-data` PVC (which drops `ago_chat` too, so re-run migrations and the seed afterwards) and the
 next boot is a first boot, realm import and all.
 
+**`11-07`'s login theme rides the same skip-if-exists rule**, because `loginTheme` is a realm-level
+setting like any other: a fresh cluster gets it from the import, an existing realm needs
+`apply-realm-settings.sh`. The theme's *files* are separate — a `keycloak-login-theme` ConfigMap whose
+name carries a content hash, so `kubectl apply -k k8s/base` after editing the stylesheet rolls the pod
+by itself. `local-dev.md`'s "Changing the login theme" section has the rest, including the two ways a
+missing theme fails and which of them is silent.
+
 ## Migrations and seeding
 
 **Verified against this cluster's own Postgres, `3-06`** - the commands below were run for real, not
