@@ -59,3 +59,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0055 | External channel identity, and the shape of the inbound channel port | Accepted |
 | 0056 | Schema migrations are a separate deployable that runs before the hosts | Accepted |
 | 0057 | How long logs, traces and metrics are kept, and what actually enforces it | Accepted |
+| 0058 | Demo credentials are minted per viewer, with a tenant of their own | Accepted |

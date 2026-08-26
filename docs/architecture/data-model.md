@@ -36,6 +36,14 @@ denial.
   rows `DEFAULT now()` would stamp the demo tenant and every previously-registered site with the instant
   the migration ran and present that as fact. `null` means "not recorded"; the only writer is
   `RegisterSiteHandler`, from `IClock`.
+  **`demo_expires_at timestamptz NULL` added in `8-07`** (`Stage8AddSiteDemoExpiry`,
+  additive/reversible), with a partial index `ix_sites_demo_expiry` on `(demo_expires_at) WHERE
+  demo_expires_at IS NOT NULL` - proportional to the demo tenants alive rather than to every tenant ever
+  registered, the same shape `ix_conversations_waiting` has. Non-null is the *only* thing that makes a
+  site a demo tenant: there is deliberately no second `is_demo` boolean, because two columns that must
+  agree are two columns that can disagree, and this is the one the expiry sweeper reads. `null` for every
+  ordinary tenant and for the seeded `8-05` demo sites, which are not created on demand and must never
+  expire (`adr/0058`).
 - `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, and nothing else.
   **Corrected in `16-01`**: this bullet listed a `token_hash` column that was never built. There is no
   such column in `Stage1CreateChatSchema`, in the EF model snapshot, or in `Visitor.cs`, and the string
@@ -166,6 +174,13 @@ denial.
   actually skipping each other's locked rows, not just asserted from the SQL text.
 - `outbox` partial index on `(id) WHERE published_at IS NULL` - the dispatcher must never scan
   already-published rows.
+- **Every table holding a tenant's data cascades from `sites`** - EF's default for a required
+  relationship, which is what all of them are. `8-07` is the first thing to depend on that rather than
+  merely benefit from it: `DemoTenantRepository.DeleteSiteAsync` is one `DELETE FROM sites`, and what it
+  reaches is a property of this schema rather than of that method. A hand-ordered list of deletes would
+  be a second, weaker copy of this graph that silently stops being complete the first time a table is
+  added. `DemoTenantLifecycleTests` asserts emptiness table by table rather than trusting the cascade,
+  which is the half that has to be independent.
 - `channel_identities` unique `(site_id, kind, external_address)` (`ux_channel_identities_site_kind_address`,
   `14-01`) - both the lookup `IChannelIdentityRepository.FindAsync` serves and the storage-level backstop
   that stops two processes racing the same first inbound message from creating two visitors for one

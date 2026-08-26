@@ -39,6 +39,20 @@ from the same Secret; `GRAFANA_ADMIN_PASSWORD`, which now guards a **publicly re
 (`grafana.reserve-me.ru`, a deliberate call recorded in `gateway.yaml`); and
 `AGO_PLATFORM_PACKAGES_TOKEN`, a classic GitHub PAT scoped to `read:packages`.
 
+**Added by `8-07` (2026-08-26): `KEYCLOAK_DEMO_PROVISIONER_SECRET`.** The client secret of the
+`ago-demo-provisioner` confidential client, held by `Ago.Chat.Api` and `Ago.Chat.Worker` — the first
+credential in this system that lets a web-facing process *write* to the identity provider, which is the
+class `13-01` named and had until now avoided. `adr/0058` argues why it is worth holding and how it is
+narrowed: its service account carries exactly one role, `realm-management:manage-users` on the
+`ago-chat` realm, so it can neither read the realm's configuration nor reach another realm, and it is
+deliberately not the `master`-realm admin `apply-realm-settings.sh` uses from the node.
+
+Two properties make it easier to rotate than the signing key above, and this item should say so when it
+lands: it is a Keycloak client secret, so rotating it is a change in one place plus a redeploy, and
+**nothing holds a token signed by it** — the access tokens it exchanges for last minutes and are cached
+in-process, so a rotation costs at most one failed mint. It is the opposite of `AUTH_JWT_SIGNING_KEY` in
+exactly the way that matters here. `Ago.Chat.Webhooks` deliberately does not receive it.
+
 **Recorded 2026-08-25, since this item asked for it and the answer now exists.** One value, held as a
 repository secret in **two** repositories — `ago-chat` and `ago-calendar`, the latter added when the
 second product's CI needed the same feed. **Scope: `read:packages` only. Expires 2027-08-25.** Rotating

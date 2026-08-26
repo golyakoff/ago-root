@@ -56,7 +56,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 
 | # | Item | Why here |
 |---|---|---|
-| 1 | `8-07` demo credentials minted on request | Ends one shared public operator, and needs no mail — so it does not wait on anything |
+| 1 | `8-09` the half of demo credentials a stranger can see | `8-07` built the endpoint and shipped its flag off, because a minted viewer gets a console with no widget pointing at it - worse than the shared account, not merely incomplete. The widget reading `?site=`, a button, and then the flag |
 | 2 | `20-03` booking and the lead card | An atomic compare-and-set claim on an `Available` row — the same discipline operator capacity already uses |
 | 3 | `7-10` load run on the provisioned server | Stage 7 measured 1-3% of target on a workstation because there was no server. There is one now, and what a cheap named box actually holds beats both an apology and a deleted section |
 | 4 | `20-04` confirmation sweep and operator queue | The same Worker-job shape as `OutboxDispatcher`, not a new mechanism |
