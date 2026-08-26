@@ -123,7 +123,9 @@ denial.
   deployed database - shipping the fix alone would leave every existing environment exactly as jammed
   as it is, because nothing in the new code path ever revisits a conversation that was already closed.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
-  `created_at`, `delivered_at?`, `read_at?`.
+  `created_at`, `delivered_at?`, `read_at?`, and - added by `14-06` - `content_kind?`,
+  `content?`, `actions?`. See **Structured message content** below for why those three are
+  `text` rather than `jsonb` and why they are three columns rather than one.
 - `outbox` - `id`, `occurred_at`, `type`, `version`, `payload` (jsonb), `partition_key`,
   `correlation_id`, `published_at?`, `attempts`. See `adr/0005`. `version`/`correlation_id` were
   missing from the first cut - added once `2-04`'s dispatcher needed to reconstruct a complete
@@ -201,6 +203,47 @@ changes, so a tier change moves no rows; the product statement is "history is ke
 plan it was written under". Every unique constraint widens by that column again, extending `adr/0019`
 rather than reopening it. The rest of this section describes what is shipped today and stays true of
 each class's own monthly grid.
+
+### Structured message content (`14-06`)
+
+A message may carry a **kind**, an opaque **payload** and a list of **actions**, so that a product can
+put something interactive into a conversation that renders on a widget, on Telegram and over SMS
+alike. AGO Chat never interprets the payload - `adr/0061` argues that, and
+`MessageOpacityTests` enforces it. The storage decisions are here because they are not free: this is
+the largest table in the system and it is partitioned.
+
+- **`text`, not `jsonb`, for `content`.** The question that decides it is "does anything ever need to
+  query *into* the payload", and the answer is **no, by design and permanently** - AGO Chat cannot
+  filter, group or index on contents it is forbidden to understand, and the day it could would be the
+  day the boundary had already been crossed. Everything `jsonb` buys (`->`, `@>`, GIN) is exactly that
+  capability, and it is paid for with a parse and a binary re-encode on every insert. Two side effects
+  happen to be what this field wants: `text` round-trips the producer's own bytes verbatim, so a
+  payload a product signed still verifies (`jsonb` reorders keys and drops duplicates), and a payload
+  over roughly 2 KB TOASTs out of line and compressed rather than widening the heap the hot
+  keyset-by-`sequence` read scans.
+- **Three nullable columns, not one composite.** On a prose message - which is every message today -
+  three NULLs cost **zero additional bytes**: Postgres records them in the row's null bitmap, which is
+  sized in bytes and already exists for `attachment_id`/`client_message_id`. The table goes from 9
+  mapped columns to 12, and both round to the same two bytes of bitmap.
+- **The migration adds columns and nothing else.** Three nullable columns with no default and no
+  backfill is a catalogue-only change in Postgres - no table rewrite, which on a partitioned table
+  would have meant rewriting every partition.
+- **`actions` is the one column AGO Chat reads.** The asymmetry is the design: AGO Chat owns the
+  actions' schema (a label and an opaque value) because a channel with no UI has to *enumerate* the
+  choices to print them as a numbered list; it owns no schema for the payload. Stored as a JSON array
+  in one `text` column rather than a child table, because this table is `PARTITION BY RANGE` and a
+  child table would need its own partitioning or a foreign key pointing at a partitioned parent - the
+  same reason `attachments.message_id` carries no FK - and because the hot read would grow a join for
+  a list that is empty on virtually every row.
+- **`ck_messages_content_length`** - `CHECK (content IS NULL OR char_length(content) <= 16384)`. The
+  ceiling also lives in `MessagePayload.MaxLength`, and the duplication is deliberate: this page's own
+  rule is "anything enforcing a guarantee gets a constraint, not just application code", and the
+  guarantee is not politeness - it bounds an opaque field on the one write path that accepts
+  unauthenticated input from the public internet. An integration test writes a payload at exactly the
+  limit so the two statements of the number cannot drift apart unnoticed. No matching constraint on
+  `actions`: its bound is a *count*, which a cheap CHECK cannot express.
+- **What may travel in a payload** is `personal-data.md`'s row, not this page's - an opaque field is
+  where personal data hides, and the map is what erasure and export read.
 
 **Shipped in `2-06`**: `messages` is `PARTITION BY RANGE (created_at)`, monthly. Rationale: bounded
 index size, cheap retention (`DROP` a partition instead of a mass `DELETE`), and a concrete thing to

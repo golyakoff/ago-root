@@ -61,3 +61,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0057 | How long logs, traces and metrics are kept, and what actually enforces it | Accepted |
 | 0058 | Demo credentials are minted per viewer, with a tenant of their own | Accepted |
 | 0059 | The booking claim is a compare-and-set, and a lost race is not an error | Accepted |
+| 0061 | A message can carry structure AGO Chat does not understand | Accepted |
