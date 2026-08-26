@@ -1,8 +1,67 @@
 # ADR-0063: A principal's kind is answered per surface, by asking the positive question
 
-- **Status**: Accepted
-- **Date**: 2026-08-26
+- **Status**: Accepted, and **amended on 2026-08-26** — one *consequence* of this ADR was reversed by
+  `12-05` on the same day it was written: `POST /api/v1/sites` no longer refuses a platform-owner
+  identity. The decision itself is unchanged and the reversal is an application of it, not an
+  exception to it. The amendment immediately following says why.
+- **Date**: 2026-08-26 (amended 2026-08-26)
 - **Stage**: 12
+
+## Amendment (2026-08-26): the registration refusal is withdrawn — `12-05`
+
+`12-04` shipped two changes. One was routing: the console stopped sending a platform-owner identity
+to `10-02`'s registration form. The other was a refusal: `AuthorizationPolicies.NotThePlatformOwner`,
+a second policy on `POST /api/v1/sites`, answering that identity `403`.
+
+**`12-05` removed the refusal and kept everything else.** The route is back to
+`RequireAuthorization("RequireKeycloakIdentity")` alone, the policy method is deleted, and one
+identity may now hold Keycloak's `platform-owner` realm role *and* an `operators` row of its own.
+
+**Why it was wrong to be there — and this ADR is the argument against it.** The section below
+rejects a central classifier chiefly because "platform owner" and "operator" are **orthogonal axes,
+not alternatives**, and one identity is legitimately both. The refusal made them exclusive at exactly
+one endpoint. It is the same claim, contradicted by its own item.
+
+**What the danger actually was.** Not that the owner could have a tenant — that the owner was *shown
+a form they never asked for*, whose one button converted them silently. That is a routing defect, and
+routing is where `12-04` fixed it. Filling in a site display name and an embed origin and pressing
+"Finish setup" is not something anybody does by accident, which is the difference between a trap and
+an action. `10-03`'s form is the same deliberate act for every caller; nothing about this identity
+makes it less deliberate.
+
+**Why the endpoint is safe without it**, stated plainly so a later reader does not have to reconstruct
+it:
+
+- Registering is a **deliberate, multi-field, authenticated act**, not a redirect target. No caller
+  reaches the transaction without typing two values and pressing a button.
+- The **routing fix is what stands between an owner and that form**, and it is unchanged. `12-04`'s
+  fourth state still sends the owner to `/owner`; `/onboarding` is reached only on purpose, and says
+  what registering will do to *this* account before it is done.
+- The refusal **protected nothing else**. It guarded one endpoint against one identity for one
+  outcome — an `operators` row — that this item positively wants to be reachable.
+- **`adr/0032` is untouched.** The platform-owner *role* still carries no tenant: it is a realm role,
+  granted in Keycloak, readable from no table this codebase writes. What changed is that the *person*
+  holding it may separately hold an ordinary operator seat. The role remains tenant-less; the human
+  is allowed to be two things.
+- **Nothing was silently depending on the owner having no tenant.** The one place it could have
+  mattered is `12-02`'s cross-tenant read: giving the owner a tenant makes
+  `OperatorIdentityClaimsTransformation` start resolving, so every request that identity makes now
+  carries a `site_id`, `GET /api/v1/owner/sites` included. That read consults no claim, and a narrowed
+  read would have failed *silently* — a shorter list of tenants looks exactly like a platform with
+  fewer tenants. `PlatformOwnerAsTenantTests.AnIdentityHoldingBoth_StillSeesEveryTenant_NotOnlyItsOwn`
+  establishes it with an identity that genuinely holds both, and was checked to turn red against a
+  deliberately narrowed read before being relied on.
+
+**The one guarantee genuinely given up.** The refusal was a server-side backstop; there is now no
+server-side "are you sure" between a platform owner and a permanent `operators` row, only the form
+itself. That is accepted, and it is the same protection every other caller has always had. Whether
+`10-03`'s form should warn *every* caller that registering cannot be undone is left open — it is a
+question about the form, true of all callers, and belongs with `10-03` rather than with the identity
+this item is about.
+
+**What survives verbatim**: the decision, the rule ("a surface may act on 'this principal is an X'
+only when something authoritative said X"), the rejection of a central classifier, and every
+alternative below. The one bullet this amendment rewrites is marked in *Consequences*.
 
 ## Context
 
@@ -94,10 +153,15 @@ consumer — and `adr/0032` already placed platform-owner recognition inside `Ag
   has.
 - **`authorization.md`'s actor table is the register of what a principal can be**, and stays the
   thing to read before writing a fourth branch. It now says so explicitly.
-- **The rule has teeth where it matters most.** `12-04` puts the platform-owner refusal on
+- ~~**The rule has teeth where it matters most.** `12-04` puts the platform-owner refusal on
   `POST /api/v1/sites` at the policy layer (`AuthorizationPolicies.NotThePlatformOwner`), the same
   layer `17-06` used, with a test that turns red if the check is removed. Client-side gates in
-  `ago-console` are courtesy; neither is load-bearing.
+  `ago-console` are courtesy; neither is load-bearing.~~
+  **Withdrawn by `12-05`** (the amendment at the top of this file). The refusal is gone; the
+  endpoint's only gate is `RequireKeycloakIdentity` again. The half of that bullet which still holds
+  is the last sentence: client-side gates in `ago-console` remain courtesy, never the rule. What
+  replaced the refusal is not a weaker check but the absence of one — the act of registering is
+  itself deliberate, and the routing fix is what keeps an owner from being led to it.
 - **One duplication remains and is deliberate**: the console asks two endpoints in sequence
   (`/api/v1/operators/me`, then `/api/v1/owner/sites?limit=1`) to route one sign-in. That is one
   extra request per sign-in for the identity that has no operator row, and zero extra for everyone

@@ -95,6 +95,10 @@ ambiguity, and how it was closed there.
       `SiteRegistrationTests.RegisterSite_WithThePlatformOwnersToken_Is403AndWritesNothing`. With the
       policy removed the same test observes `201 Created` and a committed `operators` row — checked,
       not assumed.
+      **Reversed by `12-05` the next day** (`adr/0063`'s amendment): the refusal made platform owner
+      and operator exclusive at one endpoint, which is the opposite of what this item's own ADR
+      concluded. Both the policy and this test are gone; the routing outcome above, which is what
+      actually closed the defect, stands. `12-05`'s file has the full argument.
 - [x] An operator and a new registrant are both unaffected, proven rather than assumed: all three
       existing states still route where they did. `CallbackPage.test.tsx` keeps its original six
       cases and adds an assertion that an operator's sign-in never asks the owner question at all.
@@ -133,7 +137,8 @@ way, and if it is built per-surface again, that choice should be recorded rather
 
 ## How it was closed
 
-- **`ago-chat`** — `AuthorizationPolicies.NotThePlatformOwner`, a second policy on
+- **`ago-chat`** — *(withdrawn by `12-05`; kept here as the record of what this item did.)*
+  `AuthorizationPolicies.NotThePlatformOwner`, a second policy on
   `POST /api/v1/sites` beside the unchanged `RequireKeycloakIdentity`. Policy layer, matching
   `17-06`'s fix for the same ambiguity and `adr/0032`'s "recognising the owner is a property of the
   token, decided before any use case runs". A delegate rather than a named policy so it travels with
