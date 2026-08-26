@@ -1,12 +1,26 @@
 ---
 name: commit-prep
-description: Prepare a change for the human to commit and push - verify it, stage it precisely, draft the message, then stop. Use whenever a slice of work is finished and ready to hand back, in any AGO repository.
+description: Prepare a change for commit and push - verify it, stage it precisely, draft the message, then hand it back. Use whenever a slice of work is finished, in any AGO repository. Background workers always stop here; a managing session may run the block it drafts.
 ---
 
 # Preparing code for commit and push
 
-`CLAUDE.md` rule 9: committing and pushing are always the author's action. This skill ends at a
-drafted `git commit`/`git push` command block for the human to run - it never executes one.
+This skill ends at a drafted `git commit`/`git push` block. **Who may then run it depends on who is
+asking**, and `CLAUDE.md` rule 9 is the authority:
+
+- **A background worker never runs it.** It hands the block back to the managing session, always.
+  Rule 9's delegation is deliberately narrow and does not reach workers.
+- **The managing session may run it directly** on a feature branch, once the slice's own done-when
+  criteria are verified and the local suite is green — since 2026-08-23. It then follows
+  `land-a-slice`, which is the other half of this procedure.
+- **Nobody pushes to `main`.** Every change reaches `main` through a PR the author merges by hand.
+  Opening a PR is not merging it. `--force`, `--amend` and rebasing an already-pushed branch remain
+  the author's exclusively.
+
+This skill said "committing and pushing are always the author's action" for three days after rule 9
+changed. That is worth noting rather than quietly deleting: a skill that contradicts `CLAUDE.md`
+loses, gets fixed, and the fix is cheap — but only once somebody reads both. `git-workflow.md`
+carried the same contradiction over the same days.
 
 ## 0. Before adding a new commit to an EXISTING branch, confirm it isn't already merged
 

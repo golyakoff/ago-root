@@ -17,7 +17,9 @@ and in `docs/`.
 | `load-test` | Before any performance claim; tuning batch sizes or worker counts; Stage 6. |
 | `adr-writer` | A decision was made between real alternatives, or a rule was deliberately bent. |
 | `embeddable-widget` | Any change to the script that runs on third-party sites. |
-| `commit-prep` | A slice of work is finished and ready to hand back for commit and push. |
+| `commit-prep` | A slice of work is finished and ready for commit and push. |
+| `land-a-slice` | The managing session is turning finished work into merged commits: verify, base check, PR order, queue sweep. |
+| `background-worker-brief` | About to delegate a backlog item to a background worker — including deciding whether it deserves one. |
 | `rebase-cleanup` | A branch looks wrong after a GitHub rebase-merge, or before deleting any branch. |
 | `context-resume` | The start of a session continuing after a `/compact` context refresh. |
 
@@ -26,6 +28,14 @@ and in `docs/`.
 `vertical-slice` is the spine: it calls into `clean-architecture-guard` for placement decisions,
 `db-migration` for schema, `messaging-contract` for events, and `testing-guide` for coverage. The
 others are situational.
+
+Three of them describe one loop and are best read as a sequence rather than alternatives.
+`background-worker-brief` decides whether to delegate an item at all and, if so, what the worker
+must be told. `commit-prep` is where any finished work stops — a worker hands its block back there
+and goes no further. `land-a-slice` is what the managing session does with that block: verify
+independently, check the base, open the PRs in the right order, sweep the queue. The split matters
+because `CLAUDE.md` rule 9 grants the managing session something it deliberately does not grant a
+worker.
 
 ## Rules for skills themselves
 
