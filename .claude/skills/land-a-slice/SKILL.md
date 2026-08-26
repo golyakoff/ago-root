@@ -22,6 +22,23 @@ them cannot be rendered off-node; an ADR written but never added to its index; a
 as protective that refuses nothing. Ask of each headline claim: *what would I see if this were
 false?* Then go look at that.
 
+### "0 failed" is not the same as "the suite ran"
+
+`dotnet test` can abort part way — a crashed test host, a killed process — and still print
+`Пройден!` for every assembly it *did* finish, print no total, and **exit 0**. A truncated run is
+indistinguishable from a clean one unless you look at what is missing.
+
+So read the assembly list, not just the failure count: **all six `Ago.Chat.*` projects, all five
+`Ago.Calendar.*` ones, and the per-project counts summing to the number being claimed.** A run that
+silently dropped thirteen integration tests happened twice in one day here, once to a worker and once
+to me, and both times the summary looked green.
+
+**And do not kill test hosts by process name.** `taskkill /IM testhost.exe` ends every one on the
+machine, including the runs of other workers — which is what caused one of those two truncations, and
+then cost a worker a paragraph in its report puzzling over a hazard that was me. If a stale process
+holds a DLL (`MSB3027`), find the PID the error names and kill that one; the error message contains
+it. Better still, wait: a background suite finishes on its own.
+
 ### If you mutate code to check a test bites, mutate a copy — and re-run the suite afterwards
 
 Re-proving one of a worker's fails-before entries is the best check there is, and it is the one that
