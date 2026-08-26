@@ -1,7 +1,10 @@
 # Secrets: what exists, who holds it, and what rotating it actually costs
 
 - **Stage**: 17
-- **Status**: ready
+- **Status**: implemented 2026-08-27 — the mechanism, the inventory, both procedures and the reminder
+  are in. **Nothing has been rotated**: the Done-when that asks for a rotation performed in a live
+  environment is proven by tests and not by an act, and says so below. The sweep also turned up one
+  finding this item deliberately did not fix, recorded in the inventory's "Open finding" section.
 - **Depends on**: nothing
 
 ## Goal
@@ -21,8 +24,10 @@ never values, with a header saying so explicitly. `git check-ignore` confirms
 file that only exists on the machine doing the deploy. This is the part that usually goes wrong in a
 public repository, and here it did not.
 
-**Rotation is undefined, and one key is much worse than the others.**
-`Ago.Chat.Api.Auth.JwtTokenService` issues visitor tokens with `expires: now.AddDays(30)`, signed with
+**Rotation is undefined, and one key is much worse than the others.** *(As found. The third bullet is
+what `adr/0067` closed — see "What shipped" at the foot of this file. The lifetime read `AddDays(30)`
+when this was written and is `JwtTokenService.VisitorTokenLifetime`, seven days, since `17-08`.)*
+`Ago.Chat.Api.Auth.JwtTokenService` issues visitor tokens signed with
 a single symmetric key (`AUTH_JWT_SIGNING_KEY`) shared by every site, and there is no revocation
 mechanism of any kind. Three consequences follow, none of them recorded anywhere:
 
@@ -116,13 +121,72 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
 
 ## Done when
 
-- [ ] The inventory exists and lists every secret named above, plus any the sweep adds.
-- [ ] Each has a written rotation procedure stating what breaks during it.
-- [ ] The visitor signing key can be rotated with overlapping validation, proven by rotating it in a
-      local environment without invalidating a live token.
-- [ ] A leak procedure exists in the runbook.
-- [ ] The packages PAT's expiry is recorded **in something that fires**, not only written down. The
-      date itself (2027-08-25) is already in this file.
+- [x] The inventory exists and lists every secret named above, plus any the sweep adds.
+      `docs/architecture/secrets.md`. Its own first section states the six sweeps it was built from, so
+      completeness is checkable rather than asserted. **The sweeps added five entries this file did not
+      name**: `KEYCLOAK_DB_PASSWORD`, the cluster-managed TLS and ACME keys, the node's OpenDKIM key,
+      the backup GPG keypair (which `adr/0050` had already assigned here), and
+      `Webhooks:SecretEncryptionKey` — the last of which is the open finding below.
+- [x] Each has a written rotation procedure stating what breaks during it.
+      `docs/runbooks/secret-rotation.md`, one section per secret, each with an explicit "what breaks
+      during it". The signing key's says what a *visitor* experiences at each step, in a table, because
+      that is the one where the answer is not obvious.
+- [ ] ~~The visitor signing key can be rotated with overlapping validation~~ — **the mechanism is
+      built and proven, the live rotation is not performed.** `adr/0067`; `VisitorSigningKeyRingTests`
+      and `VisitorKeyRotationTests` in `ago-chat`. A token minted under the previous key still
+      validates after the key has changed, and one signed by a key whose drain window has closed does
+      not — both through a real `JwtBearer` handler, both shown failing against the code without the
+      mechanism. What is *not* done is running the procedure against the demo deployment. That is
+      deliberate: this item builds the mechanism, and rotating a live credential is the author's act on
+      the author's schedule. Tick this when it has been done once.
+- [x] A leak procedure exists in the runbook.
+      The second half of `docs/runbooks/secret-rotation.md`. Three common steps, then the part that is
+      specific per secret — including the one case where the mass logout is the *correct* answer, which
+      `adr/0067` deliberately kept reachable.
+- [x] The packages PAT's expiry is recorded **in something that fires**.
+      `ago-chat/.github/workflows/credential-expiry.yml` — a scheduled workflow that fails 30 days
+      before the date and after it. It fails rather than warns, because a green job with a warning in
+      its log is a notification nobody receives. Its own limitation is in its header and repeated in
+      the runbook: GitHub disables scheduled workflows in a repository idle for 60 days, so a dormant
+      repository is a dormant reminder. Best available with no deployment and no third party; not a
+      guarantee.
+
+## What shipped, 2026-08-27
+
+**`ago-chat`** — `adr/0067`'s mechanism. `Auth:VisitorSigningKeys` is a key *set*:
+`IVisitorSigningKeyRing` / `VisitorSigningKeyRing` / `VisitorSigningKeyOptions` beside
+`JwtTokenService`, which now takes the ring and can reach only the one key that signs.
+`TokenValidationParameters.IssuerSigningKey` became `IssuerSigningKeyResolver`, which is the line that
+makes the difference: the former is one key captured while the host starts, the latter is asked on
+every token, so a retired key leaves the accepted set the moment its window closes with no restart.
+The old `Auth:SigningKey` still works and means "a set of exactly one active key", so **applying this
+change rotates nothing and logs nobody out**; setting both forms is a refusal to start.
+
+**`ago-deploy`** — `KEYCLOAK_DEMO_PROVISIONER_SECRET` added to both `.env.example` files (consumed by
+`base/api.yaml` and `base/worker.yaml` since `8-07`, documented in neither: the one thing sweep 2 found
+that sweep 1 did not); the signing-key comment in `base/api.yaml` now names the rotation procedure; the
+open finding is recorded in all three manifests that carry it.
+
+**`ago-root`** — the inventory, the runbook, `adr/0067`, and a correction to `17-02`'s lifetime table,
+which still said thirty days.
+
+## The open finding this item did not fix
+
+`Webhooks:SecretEncryptionKey` — the AES-256 key encrypting every tenant's webhook signing secret at
+rest — has its **value committed** in `ago-deploy/k8s/base/{api,worker,webhooks}.yaml`, and `base/` is
+inherited by the demo overlay. `7-03` put it there describing it as "the same throwaway local dev
+value", which was true of the local loop and stopped being true once `base/` served the public
+deployment.
+
+Not fixed here, and the reason is not effort: `adr/0024` chose reversible encryption so a secret can be
+shown to a tenant again, so the stored ciphertext is load-bearing, and changing the key makes every
+already-registered webhook secret permanently undecryptable — silently. The fix needs a second key
+setting and a re-encryption path, which is structurally what `adr/0067` just built for tokens in
+flight, applied to data at rest. That is an item with a migration in it, not a manifest edit, and this
+item's own Out-of-scope section is what says so ("something the present approach genuinely cannot hold
+becomes its own item with that finding as its argument"). `docs/architecture/secrets.md` carries the
+full write-up including what the fix looks like; `runbooks/secret-rotation.md` carries the honest
+interim procedure, which is "revoke and re-register".
 
 ## Open questions
 

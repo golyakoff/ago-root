@@ -118,6 +118,7 @@ If a request would violate a rule above, say so before writing code, and propose
 | Timeouts, retries, circuit breakers, bulkheads | `docs/architecture/resilience.md` |
 | Who can do what — current gap, open decision | `docs/architecture/authorization.md` |
 | What personal data is held, where, and how it is removed | `docs/architecture/personal-data.md` |
+| Which secrets exist, who holds them, what rotating one costs | `docs/architecture/secrets.md` |
 | Which repository, package boundary, cross-repo changes | `docs/architecture/repositories.md` |
 | Target numbers / SLOs | `docs/architecture/nfr.md` |
 | Why a decision was made | `docs/adr/` |
@@ -130,6 +131,7 @@ If a request would violate a rule above, say so before writing code, and propose
 | How to run things, workspace layout | `docs/runbooks/` |
 | Updating the live demo environment | `docs/runbooks/redeploy.md` |
 | Changing the live Keycloak realm, or making somebody a platform owner | `docs/runbooks/realm-operations.md` |
+| Rotating a secret, or reacting to one that leaked | `docs/runbooks/secret-rotation.md` |
 | What to build next | `docs/roadmap.md`, `docs/backlog/` |
 | Available skills | `SKILLS.md` |
 

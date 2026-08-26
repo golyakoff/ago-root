@@ -165,12 +165,19 @@ written to a **log**, lifetime matters at least as much as scope, and the two ru
 
 | | lifetime | where set |
 |---|---|---|
-| Visitor token | **30 days** | `JwtTokenService.VisitorTokenLifetime` |
+| Visitor token | **30 days** — **7 since `17-08`**, see below | `JwtTokenService.VisitorTokenLifetime` |
 | Operator access token | **5 minutes** | realm `accessTokenLifespan: 300` (`17-06`, `adr/0034`) |
 
 A logged operator token is stale before anyone could read the file; a logged visitor token stays usable
 for a month. So on this specific path the visitor token was the worse of the two, not the milder one —
 the opposite of the intuition, and worth stating because the intuition is otherwise correct.
+
+> **Corrected 2026-08-27 (`17-03`).** The thirty days was true when this was written and is not now:
+> `17-07`+`17-08`/`adr/0048` shipped visitor-session renewal and moved the lifetime to **seven days**.
+> The row is left as it stood with the correction beside it, because the *finding* — that lifetime
+> matters at least as much as scope for a credential written to a log, and that the two run opposite
+> ways here — is unchanged by the number. Seven days is still three orders of magnitude longer than
+> five minutes.
 
 ### A methodological trap, recorded because it nearly produced a false "all clear"
 

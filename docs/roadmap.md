@@ -69,13 +69,12 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 11 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
 | 12 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
 | 13 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 14 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
-| 15 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
-| 16 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
-| 17 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
-| 18 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
-| 19 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
-| 20 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
+| 14 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
+| 15 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
+| 16 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 17 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 18 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 19 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
