@@ -1,6 +1,7 @@
 # ADR-0056: Schema migrations are a separate deployable that runs before the hosts
 
-- **Status**: Accepted; implemented by `8-08` (2026-08-26), which answered all three open questions below
+- **Status**: Accepted; implemented by `8-08` (2026-08-26), which answered all three open questions
+  below, and amended by `8-10` (2026-08-26) — see "What deploying it changed" at the end
 - **Date**: 2026-08-26
 - **Stage**: 8 (deployment), with consequences for 13 and 15
 - **Specifies**: `backlog/8-08-schema-migrator-as-a-deployable.md` — this ADR is the specification;
@@ -41,8 +42,8 @@ is the same cut taken one step further: applying DDL fails differently from serv
 different privileges, and must be able to stop a deploy.
 
 It references `Ago.Chat.Infrastructure.Postgres` and nothing above it. It contains no use case, no
-endpoint and no domain logic — it opens a connection, applies what is pending, reports what it did,
-and exits.
+endpoint and no domain logic — it *waits for* a connection (`8-10`, below), applies what is pending,
+reports what it did, and exits.
 
 ### It runs to completion; it is not a service
 
@@ -244,3 +245,92 @@ already requires.
   environment variable, `AGO_CHAT_CONNECTION_STRING`, and uses no broker, cache or object store — it
   does not use `ChatModule` at all. So `17-03` now only has to point two manifests at two credentials;
   nothing else has to change. Still not done here, deliberately.
+
+## What deploying it changed — `8-10`, 2026-08-26
+
+The first deploy carrying `8-08` rolled a dozen workloads at once and the migrator Job started while
+Postgres was still restarting. It exited non-zero on `Connection refused`, `backoffLimit: 0` left the
+Job `Failed`, and the three hosts refused to start against a schema older than their own build. **The
+deployment sat correct-but-down until somebody deleted and re-applied the Job by hand.**
+
+Nothing misbehaved. The guard worked, the failure was loud, the outcome was safe. What was missing is
+that the safe outcome required a person — and this ADR exists because a step requiring a person is a
+step that gets skipped.
+
+### This ADR could not tell two different events apart
+
+"A non-zero exit must stop the deploy rather than be retried into a crash loop" is right about a
+*migration* failure and says nothing about this one, because **the migration never started**. Both
+leave the Job `Failed` and the manifest cannot distinguish them.
+
+The fix is therefore **not** raising `backoffLimit`, which would also retry a genuinely broken
+migration and undo the reasoning above. **It is to stop "the database is not there yet" from being a
+failure at all**: the migrator waits for its database, bounded, before it begins. `backoffLimit: 0`
+is unchanged and its reasoning is untouched.
+
+### The wait wraps the connectivity probe and nothing else
+
+This is the whole design, and the property most easily lost. `DatabaseAvailabilityWait.UntilReadyAsync`
+returns *before* the `DbContext` is constructed, so no wait and no retry can reach a migration: a
+genuinely failing migration still exits non-zero on the first attempt, exactly as this ADR requires.
+`SchemaMigratorTests` asserts that as a behaviour — a failing migration is given a two-minute wait
+budget and must spend none of it.
+
+### What is waited through, and what is not
+
+The item's open question was whether `Connection refused` is the only shape of *not yet*. It is not,
+and **the answer is an allow-list rather than a deny-list** — because the two mistakes are not
+symmetric. Wrongly failing on a transient condition produces a loud, accurate error quoting the
+provider; wrongly waiting on a permanent one reports a wrong password as a ninety-second timeout,
+which is a *worse* message than the one this fixes. So anything unrecognised fails.
+
+Waited through: `57P03` (the database system is starting up — **observed**, on a killed-and-restarted
+container), `57P01`/`57P02` (the server is shutting down or recovering from a sibling crash), `53300`
+(too many connections — its only resolution is time), the socket-level failures that mean the network
+path is not up yet (`ConnectionRefused` — the production one — plus reset, unresolved DNS,
+unreachable, timed out), Npgsql's connect timeout, and a connection **closed mid-handshake**.
+
+That last one was not anticipated and was **found by running it**: a just-started container does not
+answer `Connection refused`, because Docker's port proxy binds the published port immediately and
+accepts a connection the Postgres behind it is not yet listening for. Npgsql reports it as
+`EndOfStreamException`, which no reasoning-from-the-incident would have predicted.
+
+Never waited through, and this is the half that matters: `28P01` (invalid password), `28000` (rejected
+authorisation, including no `pg_hba.conf` entry), `3D000` (the database does not exist — creating it
+is not this deployable's job), `42501` (insufficient privilege — which `17-03`'s split makes
+reachable), `08P01` (whatever is on that port is not Postgres), and a malformed connection string.
+
+### The two failures are now distinguishable in the logs
+
+They need different reactions, so `redeploy.md` can now tell a reader which one they have:
+`MIGRATION FAILED` is a code problem, `WAITING FOR DATABASE FAILED` is an infrastructure problem, and
+`CANNOT CONNECT TO DATABASE` is a configuration problem. The latter two both state that no migration
+was attempted and the schema is unchanged, which is an operator's first question on a `Failed` Job.
+
+### In-process, not an init container — the same answer as the guard, re-argued
+
+`8-08` chose in-process for `SchemaVersionGuard` and that reasoning was re-read rather than assumed to
+transfer. It does, and gains one argument it did not have there: an init container would have to
+re-implement the classification above in shell, and a `pg_isready` loop **cannot tell a wrong password
+from a slow start** — which is exactly the mistake this change exists to avoid. It also, as before,
+reaches the docker-compose loop and a bare `dotnet run`, which no init container can.
+
+### The timeout is 90 seconds, and part of it is measured
+
+`postgres:17-alpine` on a development machine, warm image, three runs each, timed by the migrator's
+own probe loop: **4.2–4.3s** from `docker run` through `initdb` to an authenticated `SELECT 1`, and
+**4.3s** from `SIGKILL` to accepting again on a database with enough WAL for crash recovery to have
+real work. Each figure is an upper bound within one two-second poll of the true moment.
+
+What 90s is actually sized for is **not measured and is stated as such**: the incident was a Postgres
+*pod* restarting during a twelve-workload rollout, which adds scheduling, a volume re-attach and a
+loaded node, and the one component that was measured (crash recovery) scales with write volume. It is
+roughly twenty times the measured container figure, and it sits under `redeploy.sh`'s existing
+`kubectl wait --timeout=300s` on this Job so that the migrator reports its own reason first.
+`AGO_CHAT_DB_WAIT_TIMEOUT` overrides it; unset means the default, so the number of variables the
+migrator *requires* is still exactly one.
+
+### What this did not change
+
+The three hosts' guard, which behaved correctly throughout and needed nothing. `backoffLimit: 0`.
+The manifest set. There are no new EF migrations, no new packages, and no new required configuration.

@@ -1,7 +1,7 @@
 # The migrator waits for its database instead of losing a race to it
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: done (2026-08-26)
 - **Depends on**: `8-08` — merged and deployed, and this is a gap that deploying it revealed.
 
 ## Goal
@@ -65,19 +65,46 @@ all.
 
 ## Done when
 
-- [ ] A migrator started against a Postgres that is not yet accepting connections waits and then
+- [x] A migrator started against a Postgres that is not yet accepting connections waits and then
       succeeds, proven by starting it first — not by reading the code.
-- [ ] A migrator started against a Postgres that never arrives exits non-zero within the timeout, with
+      (`SchemaMigratorTests.AMigratorStartedBeforePostgres_WaitsAndThenSucceeds`: the migrator runs
+      against a port nothing is listening on, is asserted still alive four seconds later, and the
+      container is started only then.)
+- [x] A migrator started against a Postgres that never arrives exits non-zero within the timeout, with
       a message naming *waiting* as what failed rather than the migration.
-- [ ] A genuinely failing migration still exits non-zero immediately, without waiting or retrying —
+      (`ADatabaseThatNeverArrives_ExitsNonZeroNamingTheWaitRatherThanTheMigration` — the same
+      connection string produced `MIGRATION FAILED` before this item.)
+- [x] A genuinely failing migration still exits non-zero immediately, without waiting or retrying —
       the property `8-08` built and this item must not erode.
-- [ ] `redeploy.md` no longer needs the reader to know that a deploy which restarts Postgres may
+      (`AMigrationThatCannotBeApplied_ExitsNonZeroAndSaysWhy` now runs with a two-minute wait budget
+      and asserts that none of it is spent; it completes in ~150ms.)
+- [x] `redeploy.md` no longer needs the reader to know that a deploy which restarts Postgres may
       require re-running the Job by hand.
 
-## Open questions
+## Open questions — answered by the implementation, 2026-08-26
 
 **Whether `Connection refused` is the only shape of "not yet".** It was the observed one, but a
 Postgres mid-restart can also accept a TCP connection and then refuse authentication, or answer
 `the database system is starting up`. Enumerate what should be waited through and what should not,
 because a wait that swallows an authentication failure turns a wrong password into a timeout, and
 that is a worse error message than the one this item is fixing.
+
+### It is not the only shape, and one of them was not on anyone's list
+
+Full reasoning and the enumeration are in `adr/0056`'s "What deploying it changed" section. Three
+things are worth keeping here because they were found rather than decided:
+
+- **The shape of the rule matters more than its contents.** It is an **allow-list**: anything
+  unrecognised fails rather than waits, because the two mistakes are not symmetric. Wrongly failing
+  gives a loud, accurate error quoting the provider; wrongly waiting reports a wrong password as a
+  ninety-second timeout — worse than the error this item set out to fix. An authentication failure is
+  therefore reported on the first attempt, measured at **239 ms against a two-minute budget**.
+- **A shape nobody predicted, found by running it.** A just-started container does *not* answer
+  `Connection refused`: Docker's port proxy binds the published port immediately and accepts a
+  connection the Postgres behind it is not yet listening for, which Npgsql reports as
+  `EndOfStreamException`. It is waited through. `57P03 the database system is starting up` was also
+  reproduced for real, by `SIGKILL`-ing a container with a 300k-row table and restarting it.
+- **The timeout, 90s, is part measured.** `postgres:17-alpine` took 4.2–4.3s from `docker run` to an
+  authenticated `SELECT 1`, and 4.3s from `SIGKILL` to accepting again with WAL recovery to do — three
+  runs each, upper bounds within one two-second poll. What 90s is *sized* for — a pod restart during a
+  twelve-workload rollout — is **not** measured and is recorded as unmeasured.

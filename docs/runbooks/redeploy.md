@@ -101,6 +101,11 @@ Kubernetes records a revision, which is exactly what gives `rollback.sh` somethi
   thing that migrates and the things that serve can no longer disagree about which migrations exist,
   and the node needs no .NET SDK. `backoffLimit: 0`: a failed migration stops the deploy rather than
   retrying, and the script prints the Job's logs and exits non-zero.
+- **`8-10`: a deploy that restarts Postgres needs nothing from you.** The Job and everything else are
+  applied together, so the migrator can start while Postgres is still coming back — and it waits for
+  it (90s) instead of failing. `backoffLimit: 0` deliberately did not change: retrying the Job would
+  also retry a genuinely broken migration, which is the thing `8-08` argued must not happen. What
+  changed is that "the database is not there yet" stopped counting as a failure at all.
 - **`8-08`: skipping it is no longer silent, which is why this document exists.** The three hosts
   refuse to start against a schema older than the migrations they were compiled with. The incident
   this runbook was written after — every page returning 200 while every `Site` query failed — cannot
@@ -126,11 +131,23 @@ of consequence, and pretending otherwise is how a harmless check becomes somebod
 ## What to do when a step fails
 
 - **The migration Job fails**: the script stops there on purpose and prints its logs. Read them —
-  `Ago.Chat.Migrator` reports the provider's own error, not a summary. Re-running the script re-runs
-  the Job (it deletes the previous one first, because a Job's pod template is immutable). The two
-  entries that used to live here — a port-forward left behind, and a missing
-  `/tmp/nuget.migrations.config` — are gone with the step that needed them: `8-08` removed both the
-  port-forward and the SDK restore from the node.
+  `Ago.Chat.Migrator` reports the provider's own error, not a summary. **Since `8-10` the first line
+  says which of three things went wrong, and they need different reactions:**
+  - *`MIGRATION FAILED: …`* — the migration ran and threw. A code problem. The schema is at whatever
+    the last migration to complete left it at (`__EFMigrationsHistory` is truthful about that), and
+    re-running the Job will fail the same way until the migration is fixed.
+  - *`WAITING FOR DATABASE FAILED: gave up after …`* — Postgres never became reachable inside the
+    wait. An infrastructure problem. **No migration was attempted and the schema is unchanged**, so
+    re-running the Job once Postgres is up is safe and sufficient.
+  - *`CANNOT CONNECT TO DATABASE: …`* — Postgres answered and refused: a wrong credential, a database
+    that does not exist, a missing grant. Reported immediately rather than waited out, deliberately —
+    the alternative would report a wrong password as a ninety-second timeout. Nothing was attempted;
+    fix the configuration.
+
+  Re-running the script re-runs the Job (it deletes the previous one first, because a Job's pod
+  template is immutable). The two entries that used to live here — a port-forward left behind, and a
+  missing `/tmp/nuget.migrations.config` — are gone with the step that needed them: `8-08` removed
+  both the port-forward and the SDK restore from the node.
 - **Pods do not become ready and their logs mention `SchemaOutOfDateException`**: the migration did
   not run, or ran against a different database. This is `8-08`'s guard doing its job. Fix the
   migration step; the pods recover on their own once the schema catches up, and they wait 60s before
