@@ -165,6 +165,13 @@ before the tenth failure. Both thresholds are wanted; they catch different attac
   (`--proxy-headers=xforwarded`), which cannot be verified against the plain-HTTP local cluster and
   would lock out the login page if wrong. Named in `adr/0034`'s Consequences as follow-up rather than
   changed blind.
+
+  > **Closed 2026-08-26 by `17-05`/`adr/0054` §4** — raised to `"external"` and verified against the
+  > real `--proxy-headers=xforwarded` configuration on the public deployment (NGF does set
+  > `X-Forwarded-Proto`; login page, direct-grant token and the API's acceptance of the JWT all still
+  > 200). The instinct above was right about not changing it blind, and one thing it did not predict:
+  > with `--hostname=https://auth...` set, `"external"` refuses nothing on this deployment either. It
+  > is a guard against a future misconfiguration, not the closing of a live hole.
 - **The live cluster was not restarted to apply the new realm.** The verification ran against an
   isolated throwaway container on the identical Keycloak version with the identical file, which proves
   the same thing without destroying the running demo's runtime state (`15-01`: this Keycloak has no

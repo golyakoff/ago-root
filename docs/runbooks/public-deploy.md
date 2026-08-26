@@ -74,7 +74,20 @@ lockout.
 > verify with `sshd -T` rather than by reading the file that lost.
 >
 > The lesson worth keeping: verifying a hardening change by observing a *refusal* proves the refusal,
-> not the reason for it. `sshd -T` was always the check that would have caught this. The private key lives at `~/.ssh/ago-vps-ed25519` on the machine running the managing
+> not the reason for it. `sshd -T` was always the check that would have caught this.
+>
+> **Closed 2026-08-26 by `17-05`.** The fix is a new drop-in, `/etc/ssh/sshd_config.d/01-ago-hardening.conf`,
+> and the `01` prefix is the entire mechanism: includes are read in lexical order and OpenSSH keeps the
+> first value, so it has to sort *before* `50-cloud-init.conf`. It sets `PasswordAuthentication no`,
+> `KbdInteractiveAuthentication no`, `PermitRootLogin no`, `PermitEmptyPasswords no` and
+> `AuthenticationMethods publickey`. Validated with `sshd -t`, applied with `systemctl reload ssh`
+> rather than `restart`, and guarded by a dead-man switch that would have removed the file and reloaded
+> after five minutes if the confirming session had never arrived.
+>
+> `sshd -T` now reports `passwordauthentication no` and `authenticationmethods publickey`. A **new**
+> session was confirmed working before the switch was disarmed, and a password-only attempt is now
+> refused with `Permission denied (publickey)` — exactly the message this correction predicted would
+> appear once the setting took. The private key lives at `~/.ssh/ago-vps-ed25519` on the machine running the managing
 session — not committed to any repository (`repositories.md`: "no secrets, ever").
 
 ## 2. DNS records **(you) — done 2026-08-24**
@@ -914,6 +927,41 @@ is briefly ahead of `ago-deploy`'s `main`:
   Once `ago-deploy`'s branch merges, `git pull` in `~/ago/ago-deploy` puts them in `k8s/` where the
   runbooks say they are, and `/tmp/15-06/` can be forgotten (it does not survive a reboot anyway).
 
+## What `17-05` changed on this node, 2026-08-26
+
+Recorded for the same reason `15-06`'s section above exists: it was done live and by hand, ahead of the
+branch merging, so the node is briefly ahead of `ago-deploy`'s `main`.
+
+**In the cluster**, one workload at a time, by targeted `kubectl patch` per Deployment/DaemonSet — **not**
+`kubectl apply -k`, which would also have reset the image tags and picked up this checkout's
+uncommitted edits:
+
+- A `securityContext` on all seventeen workloads (`adr/0054` has the per-workload table).
+- Five `NetworkPolicy` resources: `static-sites-egress`, and ingress policies on `postgres`, `redis`,
+  `rabbitmq`, `minio`.
+- The three `Ago.Chat.*` `preStop` hooks moved from a shell `exec` — which had never run, see
+  `architecture/edge.md`'s 2026-08-26 correction — to Kubernetes' native `sleep` action.
+- `minio`'s Deployment gained a root init container that chowns its data path. **`minio` was down for
+  roughly four minutes** during this, the only workload this item interrupted; it was diagnosed and
+  restored inside the same step, not left and mentioned later.
+
+After the last change the branch was rendered on the node and compared field by field against the live
+cluster: every pod-level and container-level `securityContext`, every `lifecycle`, every init
+container — all match. So a later `kubectl apply -k` of the merged branch is a no-op for everything
+this item touched.
+
+**On the node's disk**, two things a manifest cannot express:
+
+- `chown -R 1000:1000` on MinIO's `local-path` PVC directory. The init container above now does this
+  on every boot, so it does not have to be repeated — but a cluster rebuilt from a `main` older than
+  this item would need it by hand.
+- `/etc/ssh/sshd_config.d/01-ago-hardening.conf`, described in step 1's correction above. It is not in
+  any repository and never will be; `sshd -T` is its record.
+
+**In Keycloak's realm**: `sslRequired` raised from `none` to `external` through the Admin API. The
+import file in `ago-deploy` matches, but `adr/0036` means the file alone would not have reached this
+realm.
+
 ## Backups
 
 There are some, since 2026-08-25, and one restore has actually been performed rather than assumed —
@@ -947,11 +995,20 @@ The artifacts staged in `~/ago/backups` on this node are **not** the backup. The
   nobody had tried an upload. Created by hand with `mc mb`, and the whole path verified end to end.
   **Still open, and unchanged**: nothing in `ago-deploy` provisions it, so a rebuilt cluster starts
   without one. `architecture/file-storage.md` carries that gap.
-- **Keycloak's realm still has `sslRequired: "none"`** (`k8s/base/keycloak-realm-import.json`) —
-  inherited unchanged from the local realm import, per this item's own instruction to reuse `5-05`'s
-  mechanism rather than invent a new one. Tightening this to `external` (require TLS for
-  non-private-network requests) is a real, deferred hardening step, not evaluated live against this
-  deployment's own `--proxy-headers=xforwarded` config in this session.
+- ~~**Keycloak's realm still has `sslRequired: "none"`**~~ — **raised to `external` 2026-08-26**
+  (`17-05`/`adr/0054`), in the import file and, because `15-01`/`adr/0036` means a changed import file
+  does not reach an existing realm, on the live realm through the Admin API. Verified behind the real
+  `--proxy-headers=xforwarded` configuration: NGF does set `X-Forwarded-Proto`, and the hosted login
+  page, the direct-grant token endpoint and `Ago.Chat.Api`'s acceptance of the resulting JWT all still
+  return 200.
+
+  **What it does not do, stated plainly**: it refuses nothing on this deployment today. Keycloak runs
+  with `--hostname=https://auth.reserve-me.ru`, which fixes the frontend URL scheme, so its SSL check
+  sees a secure request whatever the forwarded proto says — replaying the login request with
+  `X-Forwarded-Proto: http` and a public `X-Forwarded-For` returns a byte-identical page. What forces
+  TLS here is the Gateway's permanent 301. The setting is a guard against a *future* misconfiguration
+  (a removed `--hostname`, a second route, a NodePort onto 8080), which is a good reason to set it and
+  a bad reason to call the gap closed by enforcement.
 - **Keycloak runs in `start-dev` mode publicly**, not its own hardened `start` production mode —
   `adr/0026`'s own "Consequences" section named this a deliberate, stated gap: a demo IdP for one
   seeded operator, not a production identity provider. **`15-01`/`adr/0036` re-opened that decision**
@@ -964,8 +1021,13 @@ The artifacts staged in `~/ago/backups` on this node are **not** the backup. The
   therefore a derived, built Keycloak image. **That last obstacle is gone since 2026-08-25**
   (`15-06`/`adr/0047`): there is a registry now, images are published by CI under a commit-SHA tag,
   and the overlay pulls them, so a derived `ago-keycloak` image would have somewhere to live and a
-  way to be deployed and rolled back. What remains is the proxy-header verification and the
-  `sslRequired` raise, in that order.
+  way to be deployed and rolled back. ~~What remains is the proxy-header verification and the
+  `sslRequired` raise, in that order.~~ **Both were done on 2026-08-26** (`17-05`/`adr/0054`): NGF
+  sets `X-Forwarded-Proto`, Keycloak is configured to trust it, and the realm is now `external`. So
+  the precondition `adr/0036` set for even *considering* `start` is met, and what is left is `start`
+  itself plus the `--optimized` derived image it wants. `17-05` also found a second reason to want
+  that image: `start-dev` re-augments `/opt/keycloak` on every boot, which is why Keycloak is the one
+  workload that could not take `readOnlyRootFilesystem`.
 - ~~**No firewall, and the k3s control plane faces the internet**~~ — **closed the same day it was
   found, 2026-08-25.** `ufw` now runs with `deny incoming`, allowing `22`, `80` and `443` plus the k3s
   pod (`10.42.0.0/16`) and service (`10.43.0.0/16`) ranges and the `cni0` bridge.
@@ -987,10 +1049,24 @@ The artifacts staged in `~/ago/backups` on this node are **not** the backup. The
   and proved it locally; what is missing on this deployment is the one thing a session cannot decide,
   the sending provider. "Turning on transactional email" above is the procedure. This is the largest
   functional gap on this deployment, not a hardening one.
-- **k3s Secrets are unencrypted at rest** — `k3s secrets-encrypt status` reports `Disabled`. Host-level
-  access is required to read them, so it is defence-in-depth; `17-05` owns the decision.
+- **k3s Secrets are unencrypted at rest, and that is now a decision rather than a gap** —
+  `k3s secrets-encrypt status` still reports `Disabled`, deliberately. `17-05`/`adr/0054` §5 declined
+  it: k3s writes the AES key into `/var/lib/rancher/k3s/server/cred/`, the same tree as the datastore
+  it encrypts, so it defends only against an attacker who gets the datastore file and not its sibling —
+  and no path here produces that, since the k3s datastore is not in `adr/0050`'s backup at all and
+  anything that copies the disk copies both halves. Against that it adds a real new way to lose every
+  Secret permanently. What would reverse the decision: a backup or snapshot that takes the k3s
+  datastore off this node, or a second node.
 - **Unattended security upgrades are on and working** — checked 2026-08-25, zero pending, no reboot
   outstanding. Recorded here because it is the kind of thing later assumed to be missing.
+- **The four nginx static images still run their master process as root** — `ago-console`,
+  `ago-widget` (both demo shops) and `ago-landing` are built `FROM nginx:1.27-alpine-slim`. `17-05`
+  constrained them as far as a manifest can (five capabilities out of fourteen, no privilege
+  escalation, read-only root filesystem — a container that can no longer write into its own served
+  docroot) and deliberately did not change the images, because that is an edit in three other
+  repositories that moves the container port, the Service `targetPort` and the route target together.
+  The exact per-repository change is written out in `backlog/17-05`.
+
 - **One node, still** — `k8s-local.md`'s own "Known limits" (no pod anti-affinity, no real node-drain
   or network-partition testing) carry over unchanged to this real deployment. `nfr.md`'s "not an
   uptime SLA — this is a demo cluster" framing is the bar this deployment is held to, not a new one

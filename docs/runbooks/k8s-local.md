@@ -234,3 +234,15 @@ Only the cluster can answer these, so use it for them:
   rather than claiming coverage that does not exist.
 - Docker Desktop's resource limits are the effective ceiling for every load number produced locally,
   and every report must state them (`load-testing.md`).
+- **`17-05`'s `securityContext` blocks are in `k8s/base/`, so the local overlay gets them too — and
+  they were verified on the k3s node, not here.** They are image properties rather than cluster ones
+  (uid 70 for Postgres, 999:1000 for Redis, a root init container that chowns MinIO's and Postgres's
+  PVC directories), so they should behave identically on any conformant cluster. Should is not did. If
+  a pod fails to start locally after pulling this change, read its own manifest's comment first — every
+  non-obvious value there says what decided it — and report the difference rather than deleting the
+  block.
+- **The `NetworkPolicy` resources are deliberately *not* here.** They live in `overlays/demo` only,
+  because nothing has established that Docker Desktop's CNI enforces policy. A policy an unenforcing
+  CNI ignores is worse than none: it reads like protection. If someone establishes that it does
+  enforce, moving them to `base/` is the change — and it will need the same before/after connection
+  test the demo deployment got (`backlog/17-05`), not an assumption.
