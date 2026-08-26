@@ -1,9 +1,10 @@
 # AGO Inbox × AGO Calendar: unattended booking through a channel
 
 - **Stage**: 21
-- **Status**: blocked — and **re-scoped 2026-08-26**: it is blocked on two questions *before* the
-  UX-design one it was written around, and neither of those can be answered by picking a direction.
-  See "What this is actually blocked on".
+- **Status**: blocked on a real inbound channel — and **re-scoped twice on 2026-08-26**: first onto
+  two questions that came before its UX one, then again when both were answered (`adr/0061`,
+  `adr/0065`). What is left is the channel side and the tenant toggle. See "What this is actually
+  blocked on".
 - **Depends on**: at least one of `14-02`/`14-03`/`14-05` (a real inbound channel to book through) and
   `20-03`/`20-04` (a real booking flow to reach) — this is why this item is sequenced in Stage 21,
   after both Stage 14 and Stage 20, rather than inside either
@@ -24,6 +25,20 @@ choice:
    reading message bodies means AGO Calendar consumes AGO Chat's contracts. Both are defensible, they
    are **different** decisions, and this is **the first time either product would reference the other
    at all** — so it gets its own ADR when it is taken, and it is not a detail of whichever UX wins.
+
+**Both blockers are now answered, 2026-08-26.** Question 1 by `14-06`/`adr/0061` — a message can
+carry a kind, an opaque payload and actions. Question 2 by `adr/0065`: **in v1 nobody parses the
+intent.** A module being enabled means its entry point is present, and AGO Chat recognising that an
+inbound message is about booking is precisely the knowledge that ADR refuses it. That also settles the
+"which product references the other" half — neither does; a module declares offers and steps, and Chat
+carries them without opening the payload. The cross-product HTTP call this item anticipated is now
+`20-07`'s transport decision rather than this item's.
+
+What remains here is genuinely the channel side: a real inbound channel to book through, and the
+tenant toggle. `20-07` proves the same seam in the widget first and needs no new channel, so this item
+inherits a working step model rather than inventing one. Re-read the three candidate directions below
+against `adr/0065` before picking one — they were written before the closed primitive vocabulary
+existed, and free-text understanding is now out of scope by decision rather than by preference.
 
 The UX question below stays real and stays the author's. It is simply not the first one, and answering
 it first would bake an answer to question 2 into whichever direction was chosen.

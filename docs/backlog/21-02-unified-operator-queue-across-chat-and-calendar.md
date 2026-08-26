@@ -8,6 +8,10 @@
   into the same `Conversation`/queue) and `20-04-confirmation-sweep-and-operator-queue.md` (AGO
   Calendar's own pending-bookings queue, the second thing this item would merge in)
 
+**See `20-08` first (added 2026-08-26).** It asks what a chat operator may *do* to a booking, which
+comes before where they see it: a unified queue showing a booking nobody in that screen may act on is
+a worse outcome than two queues.
+
 ## Goal
 
 A conversation from the widget, a conversation from any of AGO Inbox's own channels, and a booking
