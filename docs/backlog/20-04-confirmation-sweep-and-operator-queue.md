@@ -1,7 +1,7 @@
 # AGO Calendar: confirmation sweep, operator queue, cancellation and no-show
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `20-03-booking-and-lead-card.md`
 
 ## Goal
@@ -68,25 +68,90 @@ action, since confirmation is the *default* outcome of doing nothing — the ope
 
 ## Done when
 
-- [ ] `Ago.Calendar.Integration.Tests`: an event whose `ConfirmationDeadline` has passed is flipped to
+- [x] `Ago.Calendar.Integration.Tests`: an event whose `ConfirmationDeadline` has passed is flipped to
       `Booked` by the sweep job on its next tick, and the `BookingConfirmed` outbox row exists in the
       same transaction (proven the same way `4-02`'s own atomic claim-plus-assignment was — inspecting
       the committed transaction, not just the end state).
-- [ ] `Ago.Calendar.Concurrency.Tests`: two concurrently running sweep-job ticks (simulating two
+- [x] `Ago.Calendar.Concurrency.Tests`: two concurrently running sweep-job ticks (simulating two
       `Worker` replicas) against the same batch of expired events do not double-process any row —
       `SKIP LOCKED` proven under real concurrent transactions, the same technique
       `WaitingConversationClaimQueryTests` already used.
-- [ ] `RejectBookingHandler`/`CancelBookingHandler`/`MarkNoShowHandler` each have a positive test and a
+      (`ConcurrentConfirmationSweepTests`, four tests: two sweepers on one row, then 4 and 12
+      sweepers on twenty rows with a batch bound of five so each one claims several times.
+      Contention is forced rather than hoped for — each sweeper opens its connection **before**
+      parking on a shared gate, because a handshake after release staggers the arrivals across
+      exactly the interval the claim is meant to be tested across. A fourth test isolates the
+      property `SKIP LOCKED` exists for, as opposed to a plain `FOR UPDATE`: with every expired
+      row held by an open transaction, a sweeper returns zero promptly instead of blocking. That
+      one takes 31 seconds and times out when `SKIP LOCKED` is removed, which is the clearest
+      evidence in the suite that the clause is load-bearing.)
+- [x] `RejectBookingHandler`/`CancelBookingHandler`/`MarkNoShowHandler` each have a positive test and a
       permission-denied test (an operator without the relevant permission is rejected).
-- [ ] The shared-queue read returns pending bookings across every calendar for a tenant, proven with two
+      (`BookingLifecycleHandlerTests`, twelve tests. Each denial asserts the stronger property:
+      a refused caller never reached the database *and never loaded the booking*, so the error
+      cannot be used to learn whether an id exists. A further test pins adr/0016's granularity
+      argument directly — holding `booking:reject` does not let an operator cancel a confirmed
+      visit. Permissions resolve against real `roles`/`operator_roles` rows in
+      `SharedPendingQueueTests` as well, because a permission model that resolved nothing would
+      leave every fake-backed test passing.)
+- [x] The shared-queue read returns pending bookings across every calendar for a tenant, proven with two
       calendars and two operators — any operator sees and can act on either calendar's pending bookings,
       neither is scoped to "their own."
-- [ ] `docs/architecture/messaging.md` (or `ago-calendar`'s own copy) gains the `BookingConfirmed`
+      (`SharedPendingQueueTests`, six tests, against real Postgres. Two calendars specifically,
+      because a queue accidentally scoped to one calendar looks entirely correct in a
+      single-calendar fixture — and the mutation that adds such a scope turns five of the six
+      red. Seeing is tested separately from acting: one test has an operator reject a booking on
+      the calendar they did not "belong" to.)
+- [x] `docs/architecture/messaging.md` (or `ago-calendar`'s own copy) gains the `BookingConfirmed`
       event's shape in its own "Topics" table, matching how every other integration event in this
       codebase is documented.
+      (`messaging.md` gains an **AGO Calendar's own topics** section rather than a row in AGO
+      Chat's table — separate product, separate vhost, separate database (`adr/0027`), and the
+      two consume nothing of each other's. `personal-data.md` gains a row for this product's
+      `outbox.payload` too, which the item did not ask for: the payload carries a `customer_id`,
+      an id that singles somebody out, and an opaque "just ids" wave-through is what `14-06`
+      taught me to stop doing.)
 
 ## Open questions
 
 None — the sweep's architectural shape, the shared-queue model, and the no-reschedule/no-self-service-
 cancel limits are all fixed by the product spec; nothing here needs the author's judgment beyond
 ordinary implementation mechanics already covered by `4-02`'s own precedent.
+
+## What shipped, and what it changed
+
+- **The exact permission names**, as the item asked: `booking:reject`, `booking:cancel`,
+  `booking:mark_no_show`. All three already existed in this product's own catalogue (`20-01`), which
+  is independent of AGO Chat's by `adr/0027` and shares no enum and no `roles` table with it. The read
+  is gated on `booking:reject` rather than a separate `booking:read` — the queue exists to be acted
+  on, so an operator who can see it and cannot act is watching a countdown they cannot stop.
+- **`Permission.BookingConfirm` still has no caller, and that is now a contradiction worth
+  resolving.** This item's own scope says v1 has no explicit confirm action, because confirmation is
+  what happens when nobody acts — and that is coherent: the queue is a veto list. But `20-01`'s
+  `Event.Confirm` doc comment names "an operator who is looking at the request right now" as one of
+  its two legitimate callers, and the permission was declared for it. One of the two should change:
+  either `20-06` builds an early-confirm action, or the permission goes. Not decided here.
+- **`Customer.NoShowCount` still has no writer.** `20-01`'s `EventNoShowRecorded` doc names the lead
+  card as its only consumer and points at `20-04`; this item's scope says "just the flag and its
+  persistence". The scope won, so the column stays structurally zero. Incrementing it means a
+  second aggregate in the same transaction and therefore a multi-aggregate port this item was not
+  asked to invent. Whoever builds the pre-payment rule needs that writer.
+- **`EventConfirmed` was widened** with `CalendarId` and `LocalDate`. It is an in-memory record with
+  no storage impact, and both were missing for reasons that turned out to be oversights rather than
+  decisions: `EventClaimed` already carried `CalendarId`, and `LocalDate` exists precisely so nothing
+  downstream re-derives a business day (`adr/0049`).
+- **Dapper arrived**, three items after `20-01` predicted it would. That prediction named `20-02`;
+  `20-02`'s reads were all write-side questions and `20-03` books a slot the caller already chose, so
+  the shared queue is genuinely the first projection. The stale prediction in
+  `Directory.Packages.props` is corrected in the same change.
+- **A real limitation found by running it**: EF cannot translate containment on a value-converted
+  `text[]`, so `PermissionChecker` materialises an operator's roles and tests membership through
+  `Role.Grants` instead. ago-chat's equivalent translates because its column is a plain `string[]`
+  with no converter; this product kept the strongly-typed `Permission`, and this is the price. Cheap
+  — one role, seven short strings — and it keeps the aggregate as the single definition of what a
+  role grants.
+
+Deliberately left: SMS delivery (`20-05`, which consumes `BookingConfirmed`); any pre-payment or
+no-show-history enforcement; a reschedule operation (cancel-and-rebook is the only path); per-operator
+assignment; and HTTP endpoints for the three actions — the item's scope names handlers, and `20-06`
+builds the console that calls them, matching `20-02`'s own handlers-only precedent.
