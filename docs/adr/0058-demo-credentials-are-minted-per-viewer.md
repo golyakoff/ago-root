@@ -194,15 +194,18 @@ that is simply available.
 
 **What is not built, and therefore what `8-07` does not deliver yet:**
 
-- **The button.** There is an endpoint and no UI. A stranger can obtain working credentials with one
-  unauthenticated `POST`; a stranger with a browser cannot. Done-when #1 is met at the API and not in a
-  browser, and Done-when #2 is proven as a property (two mints are two tenants with nothing shared)
-  rather than demonstrated with two browsers.
-- **The demo page's `?site=` handling**, without which a per-viewer tenant has no visitor side —
-  see Decision 1.
+- ~~**The button.**~~ **Built by `8-09`** — both public demo pages now carry a "Get your own tenant"
+  button that calls this endpoint and renders the credentials, the expiry, and the `visitorUrl`.
+- ~~**The demo page's `?site=` handling**~~ — **built by `8-09`**, in the place Decision 1 says it
+  belongs: `ago-widget/src/demo/`, a **separate esbuild bundle** from the widget, so "the widget never
+  reads `?site=`" is a property of the build output rather than a promise. The build's own metafile
+  confirms `dist/ago-chat.js` has zero inputs from `src/demo/`.
 - **A live MinIO in the expiry test.** The object-store step is asserted against a recording double.
 - **Cache invalidation on deletion**, which `16-02` requires and this does not do.
-- **Any deployment.** Nothing here has run against a cluster.
+- **Any deployment.** Neither `8-07` nor `8-09` has run against a cluster. `8-09` sets
+  `DemoTenant__Enabled` to `true` in `overlays/demo` and stops there, deliberately — the flag arms an
+  unauthenticated tenant-creating endpoint on a public URL, and that is a step to take deliberately
+  rather than as the tail of a merge.
 
 ## Alternatives considered
 

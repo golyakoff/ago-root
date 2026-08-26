@@ -1,7 +1,8 @@
 # The half of demo credentials a stranger can actually see
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: **built, not deployed** (2026-08-26). Everything below is done except the deploy, which
+  is deliberately left to a human — see the last Done-when.
 - **Depends on**: `8-07` — merged, and it built everything behind this. Nothing here is a redesign;
   `adr/0058` already decided the shape and named this gap as its own Consequence.
 
@@ -59,13 +60,49 @@ last step rather than its first. Until then the deployment behaves exactly as it
 
 - [ ] A stranger obtains working credentials with nobody intervening — the Done-when `8-07` left
       unticked, and it belongs here.
+      *Built and unit-tested, **not demonstrated**: it needs the flag on and a running stack, and this
+      item stops before deploying. What exists: a button on both public demo pages that calls
+      `POST /api/v1/demo/credentials` with no authentication and renders what comes back. Left unticked
+      because "a stranger obtains" is a claim about a running system, and nobody has yet.*
 - [ ] Two people doing this at the same time, **in two real browsers**, are two operators who cannot
-      see each other's conversations — the other one `8-07` left unticked. Proven end to end against
-      a running stack, not as a property of two API calls.
-- [ ] A demo page opened with `?site=` talks to the tenant that link belongs to, and the same page
+      see each other's conversations.
+      *Same reason. `8-07` already proves two mints are two tenants with nothing shared
+      (`TwoMintsAreTwoTenantsWithNothingShared`, real Postgres, real Keycloak); what is still missing is
+      the two browsers, which needs the deploy.*
+- [x] A demo page opened with `?site=` talks to the tenant that link belongs to, and the same page
       opened without one still works exactly as it does today.
-- [ ] Hitting the cap and hitting the rate limit each produce something a person can read.
+      *`resolveDemoSiteKey` (12 tests) plus `bootWidget` — the resolved key reaches the widget through
+      the same `data-site` attribute it has always read. **The fallback is the half that mattered**: a
+      page with no query string, or with a malformed one, boots its own baked-in key exactly as before,
+      so every existing link is unaffected.*
+- [x] Hitting the cap and hitting the rate limit each produce something a person can read.
+      *`mint.ts` separates them from each other and from an ordinary failure — they clear differently
+      (wait a moment vs wait for somebody else's tenant to expire), so they say different things.
+      `panel.ts` renders both; six tests cover the two states and their wording.*
 - [ ] The flag is on in the demo overlay, and the live demo does the whole walk.
+      *Half done, and deliberately so. The flag **is** on in `overlays/demo` and both overlays render.
+      The deploy is not done — see below.*
+
+## Not done, on purpose
+
+**The deploy.** Turning this on publishes an unauthenticated, tenant-creating endpoint on a public
+URL. The manifest change is made and reviewed; running it is a separate, deliberate act. What to
+expect when it happens is in the implementing session's report.
+
+## Decisions this item made
+
+- **The button lives on the two public demo shop pages, not on the landing page**, and
+  `ago-landing`'s demo section points at it in both languages. The credentials have to appear where
+  they can immediately be used: the `visitorUrl` a mint returns points back at a demo page carrying
+  `?site=`, so the demo page is the only place the whole loop closes without a cross-origin hop. A
+  landing-page button would have been a second implementation of the same call in a repository with no
+  build step, for a worse loop.
+- **The shared `demo-operator` logins stay in the README**, reframed rather than removed. A minted
+  tenant proves *privacy*; the two seeded tenants prove *isolation* — one operator account that cannot
+  see another's conversations — and those are different claims. Removing the seeded pair would have
+  removed the live proof of the second. The README now leads with the button and keeps the table
+  underneath, saying plainly that anything typed through a shared login is readable by anyone else
+  using it.
 
 ## Open questions
 
