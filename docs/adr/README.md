@@ -62,3 +62,5 @@ naming, formatting, or anything a convention doc already covers.
 | 0058 | Demo credentials are minted per viewer, with a tenant of their own | Accepted |
 | 0059 | The booking claim is a compare-and-set, and a lost race is not an error | Accepted |
 | 0061 | A message can carry structure AGO Chat does not understand | Accepted |
+| 0062 | *(never written - reserved for `5-19`, which turned out to need no decision of its own: `adr/0048` already carried the precedent. Kept vacant rather than reused)* | n/a |
+| 0063 | A principal's kind is answered per surface, by asking the positive question | Accepted |

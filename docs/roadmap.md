@@ -56,7 +56,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 
 | # | Item | Why here |
 |---|---|---|
-| 1 | `12-04` the platform owner is a fourth state the console does not have | Signing in as the owner lands on `10-03`'s "finish setting up your site" form, and pressing its button would commit an `operators` row for that identity - making the platform owner a tenant operator, on prod, with nothing in the product able to undo it. Third surface to guess at "a Keycloak identity with no operators row", third different guess |
+| 1 | `12-05` the platform owner may also be a tenant | `12-04` refused the owner the site-registration bootstrap outright, which is one notch stricter than the trap required and contradicts `adr/0063`'s own finding that owner and operator are orthogonal. Relax it, and prove the owner view is not narrowed by a `site_id` the token now carries |
 | 2 | `7-10` load run on the provisioned server | Stage 7 measured 1-3% of target on a workstation because there was no server. There is one now, and what a cheap named box actually holds beats both an apology and a deleted section |
 | 3 | `8-10` the migrator waits for its database | Found by the first deploy carrying `8-08`: Postgres was restarting, the Job lost the race, and `backoffLimit: 0` left it Failed until somebody re-ran it. The guard behaved correctly and the outcome was safe - it just needed a person. Not a migration failure; the migration never started, and the design cannot tell those apart |
 | 4 | `20-06` Calendar console and booking widget | Reuses per-site CORS and the OIDC pattern rather than inventing a second of either |
