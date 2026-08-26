@@ -46,5 +46,26 @@ the other half of the same intent, not a new leak.
   makes the ordering guarantee unimplementable. It leaks *silently*, which is worse than leaking loudly.
 - **MassTransit** - a mature answer to this exact problem, and the correct choice for production work
   with a deadline. Rejected here deliberately: it would supply the interesting part (outbox, retries,
-  dead-lettering, ordering) as a black box, and demonstrating that competence is the point. The
-  README states this explicitly so the choice does not read as ignorance.
+  dead-lettering, ordering) as a black box, and demonstrating that competence is the point.
+  `docs/known-limits.md` states this explicitly so the choice does not read as ignorance.
+
+  **The trigger that reverses it, added 2026-08-26.** This rejection rests entirely on the project's
+  goal being *demonstration*, and that goal has an expiry: `AGO Chat` is intended to carry real
+  customers. The reasoning above stops holding, and MassTransit should be adopted, at whichever of
+  these comes first:
+
+  1. **A second engineer joins.** Hand-built infrastructure is evidence exactly once - for the person
+     who wrote it. To everyone after, it is undocumented framework with no Stack Overflow answers, and
+     the demonstration value transfers to nobody.
+  2. **Sagas or message scheduling are needed.** Both are real features of that library and neither is
+     a small thing to hand-roll correctly. `14-04`'s auto-reply and `20-04`'s confirmation sweep are
+     the first places this could plausibly bite; both currently avoid it, and if one stops avoiding
+     it, that is the trigger firing rather than a reason to write a scheduler.
+  3. **An incident is traced to this code rather than to a decision it implements.** A bug in
+     hand-built delivery machinery costs more than the same bug in a library, because nobody else has
+     already hit it.
+
+  What would *not* be a trigger: finding the code tedious, or a reviewer preferring the library. The
+  point of writing the trigger down is that the switch becomes a planned migration with a stated
+  cause, rather than an admission that the original choice was wrong. It was not; it was correct for
+  the goal it was made under, and goals are allowed to change.
