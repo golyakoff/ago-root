@@ -22,6 +22,27 @@ them cannot be rendered off-node; an ADR written but never added to its index; a
 as protective that refuses nothing. Ask of each headline claim: *what would I see if this were
 false?* Then go look at that.
 
+### If you mutate code to check a test bites, mutate a copy — and re-run the suite afterwards
+
+Re-proving one of a worker's fails-before entries is the best check there is, and it is the one that
+can damage the change you are verifying. Two rules, both learned by breaking `14-06` on 2026-08-26:
+
+**Never `git checkout -- <file>` to undo your own edit.** It restores from the *index*, and a worker's
+work is still unstaged at that point, so it discards the file's real changes along with your mutation.
+That is what happened: `Message.cs` went back to `main`'s version while every other file kept its
+`14-06` changes, so `Conversation.cs` called a constructor that no longer existed. Copy the file
+aside first and restore from the copy, or stage everything before mutating so the index holds the
+work rather than `main`.
+
+**Run the full suite after the revert, not before the mutation.** The green run that mattered had
+already happened; what was rebuilt afterwards was one test project, which did not compile the caller.
+So the verification pass produced a broken commit and a passing report, and CI caught what the
+merging session had not.
+
+Both of these are the merger's failure mode specifically. Workers build fails-before tables in the
+hundreds without disturbing their trees, because they mutate and revert one file at a time inside a
+loop they wrote for it.
+
 ## 2. Check the base before the first push
 
 ```
