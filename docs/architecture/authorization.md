@@ -33,7 +33,7 @@ JWKS is the signature source there, no local key involved at all.
 | **Visitor** | Signed token (localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`); **7-day lifetime, renewed at the point of use** (`POST /api/v1/visitor-sessions/renew`), still no revocation - each a decision, not an accident: `17-06`/`adr/0034` for revocation, `17-07`+`17-08`/`adr/0048` for the lifetime and the renewal path | None beyond the token's `site_id` claim |
 | **Operator** | `/hubs/operator` expects a JWT (`realtime.md`) - **issued by Keycloak** (`5-05`, `adr/0022`), validated directly against its JWKS; `OperatorId`/`site_id` are resolved from the token's `sub` via `OperatorIdentityClaimsTransformation`, not read from the token directly | `adr/0016`'s RBAC, resolved per request from `OperatorId`/`site_id` regardless of how they were resolved |
 | **Webhook/API integrations** | Outbound only today: deliveries to a tenant's endpoint are HMAC-signed (`adr/0013`) so *they* can verify *us*. There is no inbound integration API yet, so "how does a third party authenticate to AGO Chat" is entirely unplanned | N/A - does not exist |
-| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants exactly one thing as of `12-02`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview. No write or action surface for this actor exists |
+| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants exactly one thing as of `12-02`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview. No write or action surface for this actor exists. **`12-04`: and one thing it is explicitly refused** - `10-02`'s `POST /api/v1/sites` registration bootstrap, which would otherwise turn this identity into an ordinary tenant operator permanently (`adr/0063`) |
 
 `site_id` scoping is the one piece already load-bearing everywhere (`vision.md`: "multi-tenant from
 day one") - **and "everywhere" is now a checked claim rather than an assumption**: every use case,
@@ -43,6 +43,13 @@ below keeps it; none of them replace it. The **platform owner** is
 the one deliberate exception, and it is an exception *outside* the model rather than a hole in it -
 `adr/0032`: an owner is not an `Operator` with a wider scope, it is a caller the RBAC model has no
 representation for at all, recognised by a claim that model can never write.
+
+**The rows are not mutually exclusive, and `12-04` is the item that made that cost something.** One
+Keycloak identity can hold the `platform-owner` realm role *and* have an `operators` row — the
+author's own account on the public deployment does — because the two are recognised from unrelated
+inputs. Any surface that has to pick one behaviour for such a caller is stating a **precedence** of
+its own, not reading a fact off the token, and should say which precedence it chose and why
+(`adr/0063`).
 
 ## Decided: the authorization model
 
@@ -120,6 +127,29 @@ but it does mean **that endpoint's `403` for a claimless principal is now a cont
 implementation detail. Changing it to a `404`, or to a `200` with an empty body, would silently send
 freshly-registered visitors to a queue that will never fill for them. Nothing needs to change today;
 whoever touches that route should know the console is reading its status code as an answer.
+
+**And that `403` means two different people, which `12-04` had to correct on the live deployment**
+(`adr/0063`). `adr/0032` gives the platform owner no `operators` row *deliberately*, so
+`GET /api/v1/operators/me` answers `403` for that identity exactly as it does for a fresh registrant —
+and the console sent the owner to `10-02`'s registration form, whose button would have committed a
+`Site`, its roles and an `Operator` row for the owner's `sub` in one transaction, with no un-register
+path in the product. Two changes closed it, and only one of them is a gate:
+
+- **Server-side, `POST /api/v1/sites` now refuses a platform-owner identity at the policy layer** —
+  `AuthorizationPolicies.NotThePlatformOwner`, a second policy on the same route alongside
+  `RequireKeycloakIdentity`, reading the same `PlatformOwnerRealmRole.IsHeldBy` that
+  `RequirePlatformOwner`'s own handler reads. Same layer `17-06` used for the attachment route's
+  version of this, and the same reasoning: recognising the owner is a property of the validated token,
+  not of this system's data (`adr/0032`).
+- **Client-side, `ago-console`'s callback asks a second question** — `12-03`'s existing
+  `GET /api/v1/owner/sites?limit=1` probe — and routes an accepted caller to `/owner`. Precedence is
+  operator first, owner second, registrant last, because the two identities are orthogonal and one
+  account can hold both.
+
+`adr/0063` records why the underlying ambiguity is answered per surface rather than by one central
+"what kind of principal is this token", and states the rule that replaces the guessing: **a surface
+may act on "this principal is an X" only when something authoritative said X** — never by reading the
+absence of one kind as the presence of another. That is the mistake all three instances made.
 
 Consequence this pinned down early, now realised: `Ago.Chat.Api` holds OIDC configuration
 (`Auth:Keycloak:Authority`/`Audience`) - not a secret itself (an issuer URL and a public client id,
