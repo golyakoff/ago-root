@@ -76,6 +76,11 @@ already exists. It used to appear to work only because the store was being destr
   four token/session lifetimes; `registrationAllowed`, `verifyEmail`, `sslRequired`) — edit the JSON,
   then:
 
+  > `sslRequired` became `"external"` on 2026-08-26 (`17-05`/`adr/0054`), and that is safe for both
+  > local loops rather than merely tolerated: `external` exempts private network addresses, and every
+  > client reaching a local Keycloak is loopback or a private CIDR. If a local login ever *does* get
+  > refused for TLS, the cause is a public address reaching it, which is worth knowing about.
+
   ```bash
   cd deploy && k8s/apply-realm-settings.sh compose   # or: k8s/apply-realm-settings.sh   (kubectl context)
   ```

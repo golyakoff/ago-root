@@ -65,6 +65,24 @@ prefer it.
 `terminationGracePeriodSeconds` must exceed `preStop` + drain time, otherwise Kubernetes kills the
 pod mid-drain and the "no loss after ack" guarantee becomes a lie.
 
+> **Correction, 2026-08-26 (`17-05`).** Step 2 above was written as shipped and was not. The hook was
+> `exec: ["sh", "-c", "sleep 15"]`, and `Ago.Chat.*`'s chiseled base image (`8-00`) contains no shell
+> and no coreutils — `kubectl exec ... -- true` in a running pod answers
+> `executable file not found in $PATH`. So every termination of every one of the three hosts logged a
+> `FailedPreStopHook` event and went straight to `SIGTERM`, and **the sleep this section describes as
+> the difference between a clean deploy and a burst of 502s had never once happened**.
+>
+> It stayed invisible because a failing `preStop` hook does not fail a rollout, and because `3-06`'s
+> own live verification — quoted below — looked for lost messages and readiness flapping and correctly
+> found neither: one replica draining slightly early loses nothing a client notices. The verification
+> was sound; it just did not test the hook.
+>
+> Fixed in `17-05` with Kubernetes' own `preStop.sleep` action (GA since 1.30), executed by the
+> kubelet rather than inside the container, so it needs nothing from the image. Same durations, same
+> reasoning. Proved by rollout: a pod carrying the new form produces no `FailedPreStopHook` event
+> where the old form produced one every time. The lesson is the one `public-deploy.md` already learned
+> about `sshd`: a mechanism verified by observing a good outcome proves the outcome, not the mechanism.
+
 **Shipped in `3-06`, `Ago.Chat.Api`** (`ago-deploy/k8s/base/api.yaml`): `preStop` sleeps 15s - the
 readiness probe's own worst case (`periodSeconds: 5` * `failureThreshold: 3`) before kubelet marks
 the pod `NotReady` and the Gateway stops routing to it - and `terminationGracePeriodSeconds` is 45s
@@ -138,6 +156,22 @@ The trace side of the same request is clean and needs no equivalent rule: the .N
 instrumentation redacts query-parameter values by default, so the span carries
 `url.query = ?access_token=Redacted`. What protects it is an environment variable staying unset
 (`OTEL_DOTNET_EXPERIMENTAL_ASPNETCORE_DISABLE_URL_QUERY_REDACTION`), not any code in this project.
+
+## What the edge is not: the only boundary
+
+Until `17-05` the edge was the *whole* network boundary. Everything behind it could reach everything
+else behind it, which meant the four static-file nginx pods — the ones with the largest public
+surface and the least reason to talk to anything — could open a TCP connection straight to Postgres,
+RabbitMQ or MinIO. Confirmed live before it was changed, not inferred from the manifests.
+
+Two `NetworkPolicy` sets now sit behind the edge (`ago-deploy/k8s/overlays/demo/network-policies.yaml`,
+`adr/0054`): the four static sites may reach DNS and nothing else, and the four stateful backends
+accept connections only from the workloads that have a reason to open one. Demo overlay only — the
+local cluster's CNI has never been shown to enforce policy here, and unenforced policy reads as
+protection.
+
+This does not change what the edge is responsible for. It changes what a mistake at the edge costs: a
+compromised static-file pod is now a compromised static-file pod, rather than a database client.
 
 ## What the edge must **not** be responsible for
 
