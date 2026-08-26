@@ -1,7 +1,11 @@
 # The platform owner is a fourth state the console does not have, and it offers to make them an operator
 
 - **Stage**: 12
-- **Status**: ready — and it is a live trap, not only an inconvenience
+- **Status**: **built and tested (2026-08-26); one Done-when deliberately unticked.** The server-side
+  refusal, the fourth destination and the banner all landed with tests, and the test that matters most
+  was checked against the pre-fix code and does fail there. The live browser pass as the owner is not
+  done and cannot be until this is deployed — it is listed unmet below rather than quietly ticked.
+  "How it was closed" has the shape of the change.
 - **Depends on**: nothing. `12-01`/`adr/0032` and `12-03` are what it corrects.
 
 ## What happens
@@ -82,14 +86,26 @@ ambiguity, and how it was closed there.
 
 ## Done when
 
-- [ ] The platform owner signing in lands on `/owner` without touching the address bar.
-- [ ] `10-02`'s bootstrap endpoint refuses a platform-owner identity, proven by a test that fails if
+- [x] The platform owner signing in lands on `/owner` without touching the address bar.
+      `CallbackPage` asks `12-03`'s existing `GET /api/v1/owner/sites?limit=1` probe once
+      `operators/me` has answered `403`, and routes an accepted caller to `/owner`.
+- [x] `10-02`'s bootstrap endpoint refuses a platform-owner identity, proven by a test that fails if
       the check is removed — the client-side gate alone does not count.
-- [ ] An operator and a new registrant are both unaffected, proven rather than assumed: all three
-      existing states still route where they did.
-- [ ] The banner says nothing false to a platform owner.
-- [ ] Verified in a browser on the live deployment, as the owner, because that is the only way this
-      was found in the first place.
+      `AuthorizationPolicies.NotThePlatformOwner` on `POST /api/v1/sites`;
+      `SiteRegistrationTests.RegisterSite_WithThePlatformOwnersToken_Is403AndWritesNothing`. With the
+      policy removed the same test observes `201 Created` and a committed `operators` row — checked,
+      not assumed.
+- [x] An operator and a new registrant are both unaffected, proven rather than assumed: all three
+      existing states still route where they did. `CallbackPage.test.tsx` keeps its original six
+      cases and adds an assertion that an operator's sign-in never asks the owner question at all.
+- [x] The banner says nothing false to a platform owner. `demoNotice.test.tsx`, five cases, including
+      that the two clauses which are true for every reader survive the owner variant.
+- [ ] **Not done: verified in a browser on the live deployment, as the owner.** Two reasons, both
+      structural rather than skipped work. The fix is not deployed — this change opens PRs and
+      deploying is a separate, deliberate step (`redeploy.md`) — so a live check today could only
+      re-observe the bug. And signing in as the owner needs that account's password, which the
+      session doing this work has no business holding. **This is the one Done-when to re-run by hand
+      after the redeploy**, and it is the one that found the defect in the first place.
 
 ## Open questions
 
@@ -100,3 +116,40 @@ next surface impossible to get wrong, and would be a genuine platform-shaped que
 product one. It is also the kind of abstraction `clean-architecture.md` warns about building from
 three examples rather than from a need. Worth deciding deliberately; this item can be built either
 way, and if it is built per-surface again, that choice should be recorded rather than defaulted into.
+
+> **Answered: per surface, chosen — `adr/0063`.** Not on "three examples is not a need", which is
+> true but would have been the lazy version of this answer. On the fact that **the central question
+> is not well-posed**: a classifier must return one kind, and "platform owner" and "operator" are
+> orthogonal, not alternatives. One identity can be both — the author's own account on the public
+> deployment is, which is exactly why `12-03` shipped without anyone hitting this — so a
+> single-valued answer would be wrong for one of the two surfaces asking it. What each surface is
+> really choosing is a *precedence*, which belongs to the surface.
+>
+> What is centralised instead is narrower and real: the **recognition rule** has one implementation
+> (`PlatformOwnerRealmRole.IsHeldBy`, shared by `RequirePlatformOwner`'s handler and the new
+> registration refusal), and the **defect class** is named — all three bugs read the *absence* of one
+> kind as the *presence* of another, and would have done so with a classifier available, because they
+> never asked anything at all.
+
+## How it was closed
+
+- **`ago-chat`** — `AuthorizationPolicies.NotThePlatformOwner`, a second policy on
+  `POST /api/v1/sites` beside the unchanged `RequireKeycloakIdentity`. Policy layer, matching
+  `17-06`'s fix for the same ambiguity and `adr/0032`'s "recognising the owner is a property of the
+  token, decided before any use case runs". A delegate rather than a named policy so it travels with
+  the route and no host can map the endpoint without it. The reading of `realm_access.roles` moved out
+  of `PlatformOwnerAuthorizationHandler` into `PlatformOwnerRealmRole` so both callers share one copy.
+- **`ago-console`** — a fourth destination in `CallbackPage` (operator → queue, then owner → `/owner`,
+  then registrant → `/onboarding`, in that precedence); `/onboarding` explains itself to an owner who
+  arrives anyway and links to `/owner`; the `8-06` demo strip takes a `demoNoticeAudience` whose
+  default is the stricter shared-login wording, narrowed only by the three callers holding the
+  server's own answer.
+- **Deliberately not done** — no `operators` row for the platform owner (`adr/0032` stands), no
+  central principal classifier (`adr/0063`), and no change to `12-02`'s API.
+
+**One thing the fix cannot cover, worth stating rather than leaving implied.** `/onboarding` renders
+the form until the probe answers, not a spinner. An owner who bookmarks that page sees the form for a
+moment before the explanation replaces it. That is the deliberate trade: gating the page on a probe
+that exists for one person on the deployment would strand the *common* reader — a real
+self-registering shop — on a spinner whenever the owner endpoint is slow. It is safe only because the
+server refuses the submission independently, which is why that half is the one with the test.
