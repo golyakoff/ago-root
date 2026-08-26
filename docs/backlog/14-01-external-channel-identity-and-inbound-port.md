@@ -1,7 +1,7 @@
 # AGO Inbox: external channel identity and the inbound channel port
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done (2026-08-26) — see Decisions below and `adr/0055`
 - **Depends on**: nothing new architecturally — `ago-chat` only, extends `Ago.Chat.Domain`/
   `Application`/`Infrastructure.Postgres` in place, no new repository (`adr/0027`: AGO Inbox is not a
   third product)
@@ -73,18 +73,59 @@ has ever been reached through, rather than replacing the existing token-based id
 
 ## Done when
 
-- [ ] `Ago.Chat.Domain.Tests`: a `Visitor` can be resolved from a `ChannelIdentity`, and a repeated
+- [x] `Ago.Chat.Domain.Tests`: a `Visitor` can be resolved from a `ChannelIdentity`, and a repeated
       message from the same external identifier resolves to the same `Visitor`/`Conversation`, not a
       new one each time.
-- [ ] `Ago.Chat.Architecture.Tests`: `IInboundChannelAdapter` lives in `Application.Abstractions`, no
+      *Split across two levels, deliberately: `ChannelIdentityTests` covers the aggregate (a link binds
+      the visitor it was given; one visitor may hold several identities), and the resolution behaviour
+      itself is `Ago.Chat.Application.Tests.ReceiveChannelMessageHandlerTests` —
+      `SecondMessageFromTheSameAddress_ResolvesToTheSameVisitorAndConversation` — because "resolves to
+      the same conversation" is a statement about the use case, not about the entity. Domain alone
+      could not have proved it.*
+- [x] `Ago.Chat.Architecture.Tests`: `IInboundChannelAdapter` lives in `Application.Abstractions`, no
       channel-specific type (a MAX API DTO, a Telegram `Update`) appears above the Infrastructure
-      boundary.
-- [ ] A fake channel adapter (test-only, logs instead of calling a real provider) proves the mapping end
+      boundary. *`ChannelPortTests`, five rules — placement, no provider vocabulary above
+      Infrastructure, `ChannelKind` stays a plain enum (the one deliberate exception), the inbound
+      command carries no provider timestamp, and Application never references the resilience machinery
+      that wraps its ports.*
+- [x] A fake channel adapter (test-only, logs instead of calling a real provider) proves the mapping end
       to end: a fake inbound message reaches `SendVisitorMessage`'s own pipeline and is persisted/
       delivered exactly like a widget message would be.
-- [ ] `docs/architecture/data-model.md` gains the new table/columns; `docs/architecture/resilience.md`
+      *`ReceiveChannelMessageHandlerTests` drives the real `StartConversationHandler` and
+      `SendVisitorMessageHandler` over a pipeline fake that actually applies the write, so the message
+      lands on the real `Conversation` aggregate with a real sequence.
+      **Not** proven end to end through the real `ChannelMessagePipeline`, `MessageBatchWriter`, outbox
+      and RabbitMQ — there is no host route or consumer to drive one from yet, and inventing one would
+      have been `14-02`'s work done badly. `FakeInboundChannelAdapter` covers the outbound half.*
+- [x] `docs/architecture/data-model.md` gains the new table/columns; `docs/architecture/resilience.md`
       gains a row (or a note under the existing table) naming "outbound channel provider APIs" as a
-      boundary this mechanism now covers.
+      boundary this mechanism now covers. *Both, plus a `personal-data.md` row that this change made
+      necessary: `channel_identities.external_address` is a phone number for SMS, which is the first
+      structured direct identifier in AGO Chat's own database.*
+
+## Decisions this item made (full reasoning in `adr/0055`)
+
+- **`ChannelIdentity` is its own aggregate and table**, not a value object on `Visitor` — one person can
+  hold several at once, and the link is worth keeping after it is unlinked.
+- **A widget visitor and an external-channel sender are two `Visitor` rows**, and nothing merges them by
+  inference. Many-to-one is representable so a future *verified* link costs one `UPDATE` and no
+  migration; no code writes that edge today, and `ChannelIdentity` ships with no re-link method.
+- **The port's methods are outbound-only.** Receiving already points inwards, so it is a command
+  (`ReceiveChannelMessage`), not a method — a `ParseInbound(bytes, headers)` would have encoded "a
+  channel arrives over HTTP", which is false for a long-polling adapter. The name
+  `IInboundChannelAdapter` is kept from this item anyway; the mismatch is recorded rather than hidden.
+- **Idempotency adds no new mechanism**: the provider's message id maps by a pure function to the
+  `ClientMessageId` that `5-07`'s `Conversation.AddMessage` already deduplicates on.
+- **No provider timestamp exists anywhere in the contract** — the refusal is structural, and an arch
+  test fails if a field is added.
+- **Canonicalising the raw address is the adapter's job**, not the Domain's; case is preserved.
+- **Resilience is keyed per channel, not per tenant** — the deliberate contrast with `6-05`'s per-site
+  bulkhead, since a channel provider is shared by every tenant on it.
+- **The handler composes `StartConversationHandler` + `SendVisitorMessageHandler`** — the first
+  handler-calls-handler here, taken so that channel messages cannot bypass the rate limits and body
+  validation a widget message goes through.
+- Use case named `ReceiveChannelMessage`, not this item's `ChannelMessageReceived`, to match the
+  verb-first `UseCases/` convention (`SendMessage`, `StartConversation`, `RecordUnread`).
 
 ## Open questions
 
@@ -92,3 +133,8 @@ None — the concept and port shape follow directly from the product spec's own 
 external channel identity needs to answer ("which external chat-id/phone-number corresponds to which
 visitor/conversation"); the aggregate-vs-value-object storage question is a real decision this item
 makes and records, not a blocking one.
+
+**Carried into `14-02`** (not blocking this item, but the first adapter is where each is settled):
+the resilience thresholds are unmeasured starting points; the terminal-versus-transient split in
+`ChannelSendOutcome` has never met a real provider API; and one human appearing as two visitors in one
+console has no operator-facing merge yet.

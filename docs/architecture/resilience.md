@@ -12,7 +12,34 @@ them inside our own process is cargo cult; omitting them at a third-party HTTP e
 | Redis | Down, slow, evicting | Short timeout, circuit breaker, **fallback to cache miss** — never surface an error (`adr/0009`) |
 | S3 / MinIO | Down, slow presign, slow HEAD | Timeout, retry, circuit breaker on the presign path; uploads themselves never touch our process |
 | Outbound webhooks to a shop's CRM | Slow (30s hangs), 5xx, disappeared endpoint, one tenant dragging everyone down | Timeout, retry with backoff, **circuit breaker per endpoint**, **bulkhead**, DLQ, per-tenant concurrency cap |
+| Outbound channel provider APIs (MAX, SMS, later Telegram/WhatsApp) | Provider outage, slow or hanging send, terminal refusal of one recipient | Timeout, retry with backoff, **circuit breaker per channel**, **bulkhead per channel** — see the note below |
 | Inbound traffic | Overload, abusive tenant | Rate limiting per tenant, bounded channels, load shedding, `429` with `Retry-After` |
+
+### Channel providers: same patterns, a different key (`14-01`, `adr/0055`)
+
+The row above uses no new concept — it is `Ago.Platform.Resilience`'s existing four patterns applied to
+one more boundary, wired once in `Ago.Chat.Module.Channels.ChannelResiliencePipelines` and applied by
+composition (`ResilientInboundChannelAdapter` decorates any `IInboundChannelAdapter`), so a concrete
+adapter is written as if the provider always answers and never references Polly. Two things about it
+are worth stating, because both differ from the webhook dispatcher directly above:
+
+- **Keyed per channel, not per tenant.** A webhook endpoint is chosen by each tenant, so one shop's
+  dead CRM is one shop's problem and per-site keys match the blast radius. A channel provider is chosen
+  by *us* and shared by every tenant on it: per-tenant keys would give N breakers all observing one
+  outage, each needing its own `MinimumThroughput` before reacting — slower to open and no better
+  isolated. An SMS aggregator's outage must not stop MAX replies; that is what the per-channel key buys.
+- **The port distinguishes terminal from transient, and the distinction is what makes retry safe.** A
+  provider refusing one recipient (unknown number, blocked chat) comes back as a *return value*, so it
+  is never retried — retrying it would never help. A timeout, 5xx or dropped connection is *thrown*,
+  because throwing is what the pipeline acts on. Retry is safe because the outbound message carries the
+  system's own `MessageId` as an idempotency key for the receiver — the same rule this page already
+  states for webhooks, and the reason "retrying non-idempotent operations blindly" stays on the
+  do-not-use list below.
+
+The mechanism is proven against a stub provider that hangs, throws and refuses
+(`ResilientInboundChannelAdapterTests`), including that the breaker opens for one channel and leaves
+another untouched. **It has never been run against a real provider** — `14-02` is the first item that
+can, and the thresholds are starting points modelled on the dispatcher's, not measured numbers.
 
 ## The webhook dispatcher: why it is a separate deployable
 
