@@ -419,3 +419,101 @@ waiting — with the single exception that moving the surface *out of `ago-chat`
 **Recommendation, stated plainly so it can be disagreed with: leave the boundary where it is, share the
 two things that are already duplicated, and settle the widget-embed question in `20-06`.**
 `adr/0027` appears to be correct, and the strongest evidence for that came from trying to break it.
+
+---
+
+# Second pass: the four product combinations
+
+Added 2026-08-26, after the author supplied the product model the first pass did not have. He asked
+for the conclusion to be re-tested rather than confirmed, and specifically for it to be tested
+*against* his own preferences.
+
+The combinations he intends to sell:
+
+1. AGO Chat alone.
+2. AGO Chat + AGO Calendar — a chat in whose window an appointment can be booked.
+3. AGO Chat + AGO Inbox — chat as one channel of a one-window system.
+4. All three — booking from any channel: the widget, Telegram, MAX.
+
+## What this changes: the conclusion holds, and its reasoning gets stronger
+
+**AGO Chat appears in every combination. There is no "Calendar alone" and no "Inbox alone."** That is
+the single most useful fact in the product model, and it is direct evidence for the shape that
+already exists: the communication surface is not a peer of the products, it is the thing they are all
+sold through, and it belongs to AGO Chat.
+
+Nothing here argues for moving `Operator`, `Tenant` or the widget. The first pass' measurements are
+unaffected.
+
+## What it does surface, which the first pass missed
+
+Combination 2 sets a trap the first pass never looked at. It asked whether the communication surface
+should *leave* AGO Chat. It did not ask **whether AGO Chat's widget would come to know about AGO
+Calendar** — which is the natural way to build "book inside the chat window", and which is a
+product-to-product dependency in the client, exactly the kind the repository split exists to prevent.
+
+**Combination 4 is what rescues the design from that trap**, and it is worth stating as the load-
+bearing constraint rather than as a nice-to-have: booking must work from Telegram, MAX and SMS, where
+**there is no widget at all**. So the booking interaction cannot be widget UI, cannot be per-channel
+bespoke, and has to be something the *conversation* carries.
+
+### The gap, in the current code
+
+`Ago.Chat.Domain.Message` is `MessageBody` plus an optional `AttachmentId`. **There is no structured
+or interactive content type.** Every message is prose or a file.
+
+The roadmap already names the consequence — `21-01`, "unattended booking through a channel with no
+rich UI" — and it is **blocked**, with three candidate directions listed (a step-by-step text Q&A
+tree, a channel-adaptive UX, free-text understanding). All three are framed as *UX* choices. The
+combinations above reframe it: before any of them can be chosen, the message model has to be able to
+carry the thing being rendered.
+
+### Why the shape of the fix keeps the boundary intact
+
+The requirement is a message that carries a **kind, an opaque structured payload, and actions**, which
+AGO Chat never interprets. AGO Calendar produces the payload; a widget or a channel adapter renders
+it; an action posts back to AGO Calendar's own API.
+
+The alternative — AGO Chat understanding what a booking is — is what would force one product to
+depend on the other's contracts, and that dependency is what the repository split exists to prevent.
+Opacity is not fastidiousness here; it is the whole mechanism.
+
+**This is an addition, not a move.** A message in a conversation is an AGO Chat concept, so it lands
+in `Ago.Chat.Domain`, and the boundary is confirmed a second time rather than relaxed.
+
+## The counter-argument the author did not make, and it is the strongest one
+
+If "Calendar alone" is never a product, in what sense is AGO Calendar a separate product at all — and
+does `adr/0027`'s premise ("two products sharing nothing but the platform") survive?
+
+Two claims have to be separated, because they are easy to say as one:
+
+- **Architectural independence holds.** AGO Calendar has its own hosts, its own database, its own
+  repository, and consumes `Ago.Platform.*` without AGO Chat present — `20-03` reused `IRateLimiter`
+  and its Redis implementation unchanged. The platform claim is intact and was tested by a second
+  caller, not asserted.
+- **Product independence is a commercial fiction** if the two are always sold together. That should be
+  said in those words rather than allowed to borrow credibility from the sentence above it.
+
+Merging them anyway is still the wrong call, for an asymmetry rather than a principle: an
+architecture that supports "Calendar always with Chat" supports "Calendar alone" at no extra cost,
+and the reverse is not true. Merging is cheap to do and expensive to undo, and the measured domain
+overlap (22% and 17%, diverging) says there is little to merge.
+
+## What would change this conclusion
+
+Stated so it can be checked later rather than re-argued from scratch:
+
+- **A "Calendar alone" product** — the packaging argument above would still hold, but the case for
+  keeping the surface in AGO Chat would rest on the domain measurements alone.
+- **A second product that needs to put structured content into a conversation *and* interpret AGO
+  Chat's own messages** — two-way knowledge is a different problem from one-way opaque payloads, and
+  is the point at which a mediating layer would deserve a real hearing.
+- **AGO Chat's message model gaining booking-shaped fields.** If that ever looks like the easy path,
+  the boundary is being crossed and this document is the place that said so in advance.
+
+## Verdict, unchanged
+
+**No refactoring.** One addition — structured, opaque, interactive message content — which belongs to
+AGO Chat, and which `21-01` should be reframed around before its UX question can be answered at all.
+The only deadline remains `20-06`'s embed decision.
