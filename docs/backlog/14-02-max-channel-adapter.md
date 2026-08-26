@@ -23,6 +23,100 @@ the rest of the system), so the same timeout/retry/circuit-breaker treatment app
 this item is its first real caller, and any gap found in the port's own shape while building this
 adapter belongs in a note on this item, not a silent workaround.
 
+## Tenant routing and credential ownership — decided 2026-08-27, before any code
+
+Neither this item nor `14-01` said **which tenant an inbound bot message belongs to**. `ChannelIdentity`
+maps an external identity to a `Visitor`, and a `Visitor` belongs to a `Site` — but an inbound bot
+message carries no site, so the mapping was ambiguous. Three shapes were weighed:
+
+1. **One bot per tenant**, registered by the shop itself, its token handed to AGO.
+2. **One platform-wide bot**, tenant selected by a deep-link start payload.
+3. AGO registering bots on a tenant's behalf — not possible; MAX requires the owner.
+
+**Decided: one bot per tenant (1).** It is the shape every comparable integration uses — a Telegram
+alerting bot is registered by whoever wants the alerts, not by the tool. It makes routing trivial
+(**token → site**, no ambiguity), it removes the unanswerable case in (2) — someone who finds the bot
+by search with no payload and therefore has no site — and the shop's customers see the shop's own
+brand rather than AGO's. (2) would also have made the bot's display name a positioning decision for
+every tenant at once, which is not this item's to take.
+
+### What (1) brings with it, and it is new to this repository
+
+**AGO now stores a credential that belongs to somebody else.** A bot token is not AGO's secret; it is
+the shop's, and it grants full control of that bot. The consequences are decisions, not details, and
+each belongs in this item:
+
+- **The leak scope is worse than most of what this system holds.** A leaked tenant token is not
+  "access to data" — it is the ability to message that shop's customers *as the shop*.
+- **A column is not storage.** It needs encryption at rest, and the encryption key is then itself a
+  rotatable secret — a row in `17-03`'s inventory, which is being built in parallel. Say which key,
+  and how it rotates, rather than deferring it to whoever writes the migration.
+- **Revocation and erasure.** Tenant offboarding and `16-02`'s erasure must remove it, not leave it in
+  a table for safety's sake.
+- **The console never shows it back.** Entered once, replaceable, never readable — the ordinary
+  treatment of a third-party API key.
+
+This is an ADR's worth of decision — *how AGO holds a credential belonging to a tenant* — and it is
+the first time the question arises. Write it as one.
+
+### The inbound half of the question, to be answered against MAX's real documentation
+
+With one bot per tenant, a webhook arrives at AGO and must be attributed. **How do we establish that
+an inbound webhook genuinely came from MAX, and belongs to that specific tenant?** A per-tenant path
+must be either unguessable or authenticated; otherwise anyone can inject "visitor messages" into
+another shop's conversation. `6-03` signs *outbound* webhooks — this is the mirror problem, and the
+answer must come from what MAX actually provides (a signature, a bot id in the payload, something
+else), confirmed against the documentation rather than assumed.
+
+### Confirmed against MAX's own documentation, 2026-08-27
+
+- Base URL **`https://platform-api2.max.ru`**; the token travels in the `Authorization` **header**,
+  not a query parameter. **30 rps.**
+- **Webhook and long polling both exist and are mutually exclusive** — one or the other, never both.
+  MAX's documentation calls long polling suitable for development only ("limited by speed and event
+  retention") and webhook the production mechanism. So this item's own "state which MAX's actual API
+  requires and place it there accordingly" resolves to **both**: a polling `BackgroundService` in
+  `Worker` for the local loop, a webhook receiver for the deployed one. Say so rather than picking one
+  and leaving the other loop broken.
+- **Webhooks require public HTTPS with a certificate from a trusted CA.** Since 2026-05-25 plain HTTP
+  and self-signed certificates are refused. The demo already satisfies this.
+- A bot is created by messaging **`@MasterBot`** inside MAX (`/newbot`). The API documentation
+  describes no separate developer console.
+
+**There is a moderation gate, and the API documentation does not mention it.** Observed directly on
+2026-08-27, registering this project's own demo bot through MAX's business flow: submitting the bot
+returns *"sent for moderation, the check takes up to 1 day, we will send a notification"*. An earlier
+draft of this section said there was no documented gate, which was true of the documentation and false
+of the product. **Trust the observation.**
+
+**But moderation is not a state AGO can ever hold** (author, 2026-08-27). The token is issued only
+once the bot has passed; a bot still in review has no token to hand over. So AGO's own states are
+*not connected* and *connected*, and the review happens entirely upstream, between the shop and MAX,
+before AGO is involved at all. A first draft of this section modelled *awaiting moderation / active /
+rejected* — that was wrong, and it is worth recording why: the delay is real and visible to the shop,
+which made it look like something to model, but nothing on our side can observe it.
+
+What it does change:
+
+- **Onboarding cannot be same-hour, and the copy must say so.** The shop leaves, waits up to a day,
+  and comes back with a token. `10-03`'s signup flow must not present the channel as a switch —
+  connecting MAX is an errand, not a toggle.
+- **Whatever this item builds must be testable before any token exists**, which is a further argument
+  for the local long-polling loop being a first-class path rather than a convenience.
+
+**Revocation, however, is a real state and a different one.** A shop can delete its bot or reset its
+token after connecting, and the credential AGO holds stops working. That surfaces as a rejected call
+at use time, not as a status to poll, and it needs a tenant-visible answer — the channel stops
+working and the shop is told which credential to replace, rather than messages silently failing.
+
+Also worth recording: the registration reached this project through MAX's **business** flow, which
+asks for a phone number and a website, not only the `@MasterBot` `/newbot` exchange the documentation
+describes. Whether those are two paths to the same thing is unknown and was not established.
+
+**Note on placement:** `Ago.Chat.Webhooks` is `adr/0013`'s bulkhead for *outbound* third-party
+latency — "expected to be slow and failing; must not affect the others". An inbound bot webhook has a
+different failure profile and is not automatically its home. Decide, and say why.
+
 ## Scope
 
 - `MaxChannelAdapter` (`Ago.Chat.Infrastructure.MaxBot`, one project per external technology matching
