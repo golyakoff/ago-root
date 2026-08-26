@@ -24,6 +24,28 @@ is not, internally, until an operator confirms it or a deadline passes unactione
 atomic-claim discipline `concurrency.md` already uses for operator capacity, applied to a calendar
 slot instead of a conversation.
 
+### "AGO Chat" names two things, and the difference matters when selling
+
+Recorded 2026-08-26, after the author — this system's own architect — had to stop and work out whether
+one of his product combinations removed AGO Chat or not. If the person who designed it has to check,
+the vocabulary is doing damage.
+
+- **The conversation substrate**: conversations, operators, messages, channel identities, the
+  assignment queue. It is present in **every** combination that has been described, without exception.
+- **The website-widget channel**: one entry point among several, and optional. `14-01` is what made it
+  one among several rather than the only one.
+
+A shop can buy "AGO Inbox and AGO Calendar, no AGO Chat" — meaning no widget on their site, customers
+reaching them through Telegram instead. **Architecturally nothing has been removed**: the conversation
+machinery is doing the work, one channel is simply not deployed. Said without this distinction, a
+statement about the price list reads as a statement about the architecture, and the two lead to very
+different conclusions about where things belong.
+
+This is a naming and packaging observation, not an architectural one. It is deliberately **not** an
+argument for renaming `Ago.Chat.*`, whose contents are coherent, nor for a new deployable — the
+boundary review tested both and rejected them (`reviews/2026-08-26-platform-boundary.md`). It is an
+argument for saying which of the two is meant, in the places customers and reviewers read.
+
 **AGO Inbox** - expanding AGO Chat's own incoming channels beyond the embedded widget (SMS, MAX,
 Telegram, WhatsApp), plus a tenant-toggleable offline auto-reply and unattended booking through those
 channels (`roadmap.md` Stage 14) - is **not a third product**. `adr/0027` makes the direct argument:

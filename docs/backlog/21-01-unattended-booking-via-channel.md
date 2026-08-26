@@ -1,11 +1,32 @@
 # AGO Inbox × AGO Calendar: unattended booking through a channel
 
 - **Stage**: 21
-- **Status**: blocked — a real, unresolved UX-design question (below); no implementation starts until
-  the author picks a direction
+- **Status**: blocked — and **re-scoped 2026-08-26**: it is blocked on two questions *before* the
+  UX-design one it was written around, and neither of those can be answered by picking a direction.
+  See "What this is actually blocked on".
 - **Depends on**: at least one of `14-02`/`14-03`/`14-05` (a real inbound channel to book through) and
   `20-03`/`20-04` (a real booking flow to reach) — this is why this item is sequenced in Stage 21,
   after both Stage 14 and Stage 20, rather than inside either
+
+## What this is actually blocked on
+
+`reviews/2026-08-26-platform-boundary.md` (third pass) found that this item's three candidate
+directions — a step-by-step text Q&A tree, a channel-adaptive UX, free-text understanding — all answer
+the question *what the interaction looks like*. Two questions come before it, and neither is a UX
+choice:
+
+1. **What carries the structure.** A `Message` today is prose plus an optional attachment; there is no
+   third shape, so there is nothing for a booking step to *be*. `14-06` adds a kind, an opaque payload
+   and actions, deliberately meaningless to AGO Chat. Until it exists, every candidate direction here
+   would have to invent its own encoding, and the two that are not free-text would invent it twice.
+2. **Who parses the intent**, without one product depending on the other's domain. AGO Chat deciding
+   that an inbound message is about booking means AGO Chat knows what a booking is. AGO Calendar
+   reading message bodies means AGO Calendar consumes AGO Chat's contracts. Both are defensible, they
+   are **different** decisions, and this is **the first time either product would reference the other
+   at all** — so it gets its own ADR when it is taken, and it is not a detail of whichever UX wins.
+
+The UX question below stays real and stays the author's. It is simply not the first one, and answering
+it first would bake an answer to question 2 into whichever direction was chosen.
 
 ## Goal
 
