@@ -560,6 +560,69 @@ rate-limit buckets (per phone, per calendar), through `IRateLimiter` reused unch
 `Ago.Platform.Abstractions`. Never a source of truth - the claim reads nothing from it
 (CLAUDE.md rule 8). What is stored in it, and for how long, is a row in `personal-data.md`.
 
+### The confirmation sweep (`20-04`)
+
+The second half of `20-03`'s two-step mechanic, and **no schema change at all** - it acts on rows
+`20-01` shaped and reads through an index `20-01` created. Recorded here because a background job
+that decides an outcome is part of the data model's shape, the same way `PartitionMaintenanceJob` and
+`20-02`'s materialiser are.
+
+- **Same shape as two mechanisms already shipped**, deliberately: `PeriodicTimer`, a
+  `SELECT ... FOR UPDATE SKIP LOCKED` batch claim, one transaction per batch, catch-and-continue -
+  `ConversationAssignmentJob` (`4-02`) and `OutboxDispatcher` (`2-04`). `SKIP LOCKED` is what makes
+  two `Worker` replicas safe with no lease, no advisory lock and no leader election: they split the
+  rows instead of racing for one, and a row somebody else holds is picked up next tick with no
+  un-claim step, because the lock dies with its transaction.
+
+```sql
+SELECT id FROM events
+WHERE tenant_id = @tenantId
+  AND status = 'PendingConfirmation'
+  AND confirmation_deadline <= @now
+ORDER BY confirmation_deadline
+LIMIT @batchSize
+FOR UPDATE SKIP LOCKED;
+```
+
+- **The claim and the transition commit together.** The claim is raw Npgsql on the `DbContext`'s own
+  connection; the `Event.Confirm` that follows is EF on that same connection inside that same
+  transaction, so the row lock is still held when the aggregate transitions. `4-02` reached the same
+  arrangement from the other direction when it refactored `OperatorCapacityStore`. The
+  `BookingConfirmed` outbox row is staged in the same `SaveChangesAsync` (rule 4) - proven by
+  comparing the two rows' `xmin`, which is a direct observation of one transaction rather than an
+  inference from both being present.
+- **`ix_events_pending_confirmation`** - `(tenant_id, confirmation_deadline) WHERE status =
+  'PendingConfirmation'`, created by `20-01` for exactly these two readers and now having both: the
+  sweep's claim and the operator queue's read.
+- **`confirmation_deadline <= @now` is the one place a clock decides an outcome in this product**
+  (`CLAUDE.md` rule 11). `now` is read once per tenant per tick and passed down as a parameter, never
+  read again further in, so every row in one tick is judged against one instant. The boundary is
+  inclusive and there is a test standing one second either side of it.
+- **The sweep's failure mode is inverted, and that is why it is documented here.** Everywhere else in
+  this system, a job that stops running means work does not happen. Here **doing nothing confirms the
+  booking**, so a dead sweep silently converts every pending booking into one that never confirms,
+  while the customer has already been told they are booked. The signal is an outcome count -
+  "bookings past their deadline and still pending" - not a liveness check, so it climbs whether the
+  loop died, the query broke or the transaction never committed. It surfaces as a `Warning` log line
+  per tenant per tick and as an `isOverdue` flag on the operator queue. **It is not yet a metric and
+  cannot yet raise a `15-03` alert**: `Ago.Calendar.Worker` deliberately takes no
+  `Ago.Platform.Observability` reference (`7-09`, `20-00`), so this host has no meter and no scrape
+  endpoint. Stated as a gap rather than implied to be covered.
+
+### The shared pending-bookings queue (`20-04`)
+
+One queue per tenant, spanning every calendar, worked by any operator holding `booking:reject`. No
+per-operator assignment exists - the same "unassigned queue" shape AGO Chat's conversation queue uses,
+and the reason `Ago.Calendar.Domain.Operator` carries no presence and no capacity (`20-01` called a
+status column with no reader "a guess about `20-04`"; this is `20-04` and it does not want one).
+
+**This product's first Dapper read model** (`adr/0004`), on its own `NpgsqlDataSource` rather than the
+write context's connection - a read model sharing a write context inherits its change tracker and any
+ambient transaction, and a queue screen has no business inside a write transaction. It reads through
+the same `ix_events_pending_confirmation`, carries no name and no phone number (a list does not need
+them, and a joined lead card would put personal data into every row of a screen an operator leaves
+open all day), and computes `is_overdue` in SQL from the caller's `@now`.
+
 ### Migration
 
 **Verified**: `Stage20CreateCalendarSchema` applies cleanly from scratch to a real Postgres
