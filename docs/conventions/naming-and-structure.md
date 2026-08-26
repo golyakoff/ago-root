@@ -9,13 +9,27 @@ All of them are siblings inside one parent folder, and all of them are public:
 
 ```
 ago/
-  ago-root/        this one — docs, ADRs, conventions, .claude skills, backlog, load/
+  ago-root/        this one — docs, ADRs, conventions, .claude skills, backlog, reviews/, load/
   ago-platform/    Ago.Platform.*    -> NuGet packages
   ago-chat/        Ago.Chat.*        -> Docker images (Api, Worker, Webhooks)
+  ago-calendar/    Ago.Calendar.*    -> Docker images (Api, Worker)  [Stage 20, adr/0027]
   ago-widget/      embeddable script -> versioned CDN bundle
   ago-console/     operator SPA
+  ago-landing/     the public marketing page
   ago-deploy/      docker-compose, Kustomize, seed
 ```
+
+`ago-business` is the one exception to "all of them are public": it holds commercial strategy and is
+private. No technical decision lives there.
+
+**`docs/reviews/<date>-<topic>.md`** is where an investigation lands when its output is *evidence for
+a decision not yet made*. Added 2026-08-26 with the platform-boundary review, because the four
+existing homes each say the wrong thing about such a document: `architecture/` describes what is,
+so it would make an open question read as settled; `adr/` records a decision, and there is not one
+yet; `backlog/` holds work, and a review is not work to do; `conventions/` holds rules. The
+precedent is `load/reports/`, which already separates "what we measured" from "what we decided".
+A review is dated, never revised after the decision it fed, and linked from whatever ADR that
+decision produces — the ADR is the live document, the review is why it says what it says.
 
 Cross-repository links in documentation are always relative (`../ago-root/docs/...`), so the tree can
 be moved or renamed without rewriting them. From `ago-root` the others are additionally reachable as
@@ -31,7 +45,6 @@ src/
   Ago.Platform.Abstractions/          technical ports: IEventPublisher, ICache, IFileStorage,
                                       IRateLimiter, IUnitOfWork, IConnectionRegistry
   Ago.Platform.Messaging.RabbitMq/
-  Ago.Platform.Messaging.Kafka/
   Ago.Platform.Persistence.Postgres/  UoW, transactions, outbox/inbox plumbing, EF conventions
   Ago.Platform.Caching.Redis/
   Ago.Platform.Storage.S3/
