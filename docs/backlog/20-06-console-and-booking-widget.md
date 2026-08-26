@@ -41,14 +41,17 @@ the ingress, unchanged from AGO Chat's own precedent.
   - Tenant setup: create/edit calendars (`BufferMinutes`), workers, services, working-hours rules.
   - Operator view: the shared pending-bookings queue (`20-04`), reject/cancel/no-show actions.
   - Manual calendar editing surface for `20-02`'s `DeleteDayOffHandler`/`EditDayBoundaryHandler`.
-- **Booking widget** (a new `ago-calendar-widget` repository or package — state which, following
-  `repositories.md`'s own "new repository only when it deploys independently" test; a widget embedded
-  on a stranger's site with its own release cadence independent of the console clears that bar the same
-  way `ago-widget` did for AGO Chat): a slot picker (worker photo/name, available times from the
-  materialized `Available` events) and a booking form (name, phone) calling `20-03`'s booking endpoint.
-  TypeScript, Shadow DOM, small bundle — the same isolation reasoning `embeddable-widget` skill and
-  `vision.md`'s own AGO Chat description already establish, reused rather than reinvented for a second
-  embeddable script.
+- **Booking UI, as a module inside `ago-widget`** — **not** a new repository and **not** a second
+  script tag. Decided 2026-08-26; the reasoning is in Open questions below and in
+  `reviews/2026-08-26-platform-boundary.md`, and it is a product-model decision rather than a
+  repository-topology one, so this item applies it rather than re-deciding it.
+  A slot picker (worker name, available times from the materialised `Available` events) and a booking
+  form (name, phone) calling `20-03`'s booking endpoint. TypeScript, Shadow DOM, small bundle — the
+  same isolation reasoning the `embeddable-widget` skill already establishes, and now literally reused
+  rather than restated, since this ships inside the script that already applies it.
+  **Watch the bundle budget**: `ago-widget` has one (45 KB gzipped, 21.0 KB used as of `5-17`), and
+  this is the first feature that could plausibly threaten it. If it does, that is a finding worth a
+  lazily-loaded module rather than a reason to reopen the decision above.
 - Per-tenant CORS and the in-app tenant-origin check, adapted from `5-01`'s exact two-layer model:
   layer 1 (`ICorsPolicyProvider`, allow an origin if any tenant's `AllowedOrigins` contains it) and
   layer 2 (once a request resolves which tenant/calendar it is for, reject on an origin mismatch against
@@ -79,7 +82,27 @@ the ingress, unchanged from AGO Chat's own precedent.
 
 ## Open questions
 
-Whether the console is a new app or a new area of `ago-console`, and whether the widget is a new
-repository or a new package inside `ago-widget` — both named above as real decisions this item makes
-and records, not genuinely blocking open questions (the repository-topology rule already answers them;
-this item just has to apply it and state the answer once written).
+Whether the console is a new app or a new area of `ago-console` — a real decision this item makes and
+records, not a blocking question (the repository-topology rule already answers it; this item applies
+it and states the answer once written).
+
+**The widget half is decided, 2026-08-26** (`reviews/2026-08-26-platform-boundary.md`, third pass).
+**There is no second widget and no second script tag.** A shop pastes one embed; booking is reached
+through it.
+
+The reason is the product model rather than repository topology, which is why it is settled here
+rather than left to this item's judgement. Booking must be possible from **any** channel — the
+widget, Telegram, MAX, SMS — and the author's own product combinations include a shop running with
+**no widget at all**, reaching AGO Chat's API through a channel adapter. A booking-only widget with
+its own embed would be building the one shape the product model rules out: a flow that exists only
+where there is a widget.
+
+Two consequences, both narrowing this item:
+
+- The booking UI is a **module inside `ago-widget`**, not a new `ago-calendar-widget`. The review
+  measured 53% of the existing widget as reusable (18% carrying no judgement at all) — transport,
+  session, storage, reconnect. And `ago-widget`'s protocol primitives are **already** duplicated
+  verbatim into `ago-console`; a third copy is the outcome to avoid, not a cost to accept.
+- Whatever the slot picker renders must be expressible as **conversation content a channel with no UI
+  can also carry** (`14-06`). A grid that only works in a browser is a grid `21-01` cannot reuse, and
+  `21-01` is the item that has to work over plain text.
