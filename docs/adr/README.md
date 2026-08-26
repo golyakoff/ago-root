@@ -49,7 +49,10 @@ naming, formatting, or anything a convention doc already covers.
 | 0045 | Alerting reaches a person by email through the node's own Postfix; Prometheus rules and Alertmanager, not Grafana | Accepted |
 | 0046 | `Ago.Platform.Hosting` carries only the module seam; telemetry ships as `Ago.Platform.Observability` | Accepted |
 | 0047 | Images go to GHCR under a commit-SHA tag, and a rollback is a first-class operation | Accepted |
-| 0048 | Visitor sessions renew at the point of use; the token drops to seven days, sliding, with no absolute cap | Accepted, server half queued |
+| 0048 | Visitor sessions renew at the point of use; the token drops to seven days, sliding, with no absolute cap | Accepted |
 | 0049 | AGO Calendar's time model, and no-overlap as a database exclusion constraint | Accepted |
 | 0050 | Backup scope per store, the author's own machine as the destination, and a key the node does not hold | Accepted |
 | 0051 | A frontend image takes no environment input from its build command; the commit determines the artifact | Accepted |
+| 0052 | *(never written - the number was reserved for `17-08` and the item turned out to need no decision of its own; kept vacant rather than reused, so a reference to `0052` anywhere is a mistake rather than a different ADR)* | n/a |
+| 0053 | Availability materialisation is day-granular and insert-only | Accepted |
+| 0054 | Runtime hardening: what each workload is constrained to, and what is deliberately not | Accepted |
