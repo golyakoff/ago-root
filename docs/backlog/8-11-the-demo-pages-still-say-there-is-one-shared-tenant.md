@@ -1,7 +1,7 @@
 # The demo pages still say there is one shared tenant, and the widget contradicts the button
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `8-09` — merged and deployed, and this is what deploying it made false.
 
 ## What is wrong
@@ -83,12 +83,30 @@ has to become conditional on. `ago-widget/src/demo/boot.ts` — where `data-publ
 
 ## Done when
 
-- [ ] On a minted tenant, no text anywhere on the page or in the widget says that anybody else can
+- [x] On a minted tenant, no text anywhere on the page or in the widget says that anybody else can
       read the conversation.
-- [ ] On the shared demo page, the notice is unchanged — the warning is still needed there, and this
+      (Three places, not one. The widget's notice, the page's top banner, **and** the safety
+      card's own privacy paragraph - the third was found by walking the built page in a browser
+      after the first two were already fixed, which is precisely what the last Done-when is for.
+      Checked by collecting `document.body.innerText` plus the shadow root's `textContent` and
+      asserting that none of seven phrases from the old copy survives. Held as a test too:
+      `leaves no text on the page claiming anybody else can read the conversation`.)
+- [x] On the shared demo page, the notice is unchanged — the warning is still needed there, and this
       item must not weaken it.
-- [ ] The safety card makes no claim about how many tenants exist.
-- [ ] Verified in a browser on both pages, in both states, rather than by reading the source.
+      (Not a word changed, on either shop. Asserted by string equality against `8-06`'s exact
+      sentence rather than by a `toContain`, so a softening edit fails rather than passing on a
+      surviving fragment - `renders 8-06's warning word for word on a public demo tenant`, plus
+      the same equality check run in the browser on both pages.)
+- [x] The safety card makes no claim about how many tenants exist.
+      (It now rests on “every tenant here is a demo tenant, no real customer was ever onboarded” -
+      which survives the next minted one. Verified in the browser with a regex for a
+      count-shaped claim rather than by re-reading the sentence I had just written.)
+- [x] Verified in a browser on both pages, in both states, rather than by reading the source.
+      (Four states: `demo-shop1` shared and minted, `demo-shop2` shared and minted, against the
+      real built bundle served locally. It earned its place immediately - the safety card's
+      privacy paragraph was still telling a minted visitor that any stranger could read their
+      conversation, and no amount of reading the diff would have shown that, because each of the
+      three blocks looked correct on its own.)
 
 ## Open questions
 
@@ -96,3 +114,59 @@ has to become conditional on. `ago-widget/src/demo/boot.ts` — where `data-publ
 panel already said it. But the widget is the surface a visitor is actually looking at while typing,
 and `8-06`'s original argument — that the warning belongs where the typing happens — applies just as
 well to the reassurance.
+
+## What shipped
+
+### The open question, answered: the widget says something
+
+`8-06` argued the warning belongs where the typing happens, because the launcher floats over every
+scroll position and a visitor can open the panel without having read the page. **That argument does
+not care which way the fact points** — the reassurance belongs there for the same reason, and the
+tenant's own lifetime was stated nowhere in the widget at all. Silence would also have left the panel
+visually identical in the two cases, so a reviewer comparing them could not tell the notice had become
+conditional rather than simply deleted.
+
+> This is your own demo tenant. Only the operator login you were given can read this conversation, and
+> the tenant deletes itself after about a day.
+
+**Precise rather than generous, and deliberately not the panel's wording.** `8-09`'s panel says
+"Nobody else can see its conversations", which over-claims: the visitor holds a `?site=` link and a
+password and can pass either on. The widget states what the deployment actually enforces. And there is
+no "do not type anything real" — on a public tenant that is proportionate; here it would re-create the
+contradiction this item exists to remove, in a softer form. The disposability says the true version of
+the same caution.
+
+### How the notice follows the tenant
+
+`data-public-demo` (boolean) became `data-demo-notice` (`"public" | "private" | "none"`). Two booleans
+would have admitted a fourth combination meaning nothing. `data-public-demo="true"` is **still honoured
+as an alias** — the bundle is a public script tag on a public URL, somebody may have copied the demo
+page's markup, and `api-design.md`'s reasoning about an embed that "cannot be forced to upgrade"
+applies to a script tag's attributes as much as to a route.
+
+An unrecognised value falls through to **silence**, never to a guess: defaulting to `"public"` would
+put a false warning on a private tenant and defaulting to `"private"` would remove a true one from a
+public page, so the only default that cannot mislead somebody is saying nothing.
+
+### How the safety card argues its point now
+
+It used to argue from a count. It now argues from what is actually true and stays true: every tenant on
+this deployment is a demo tenant — the seeded shops plus the throwaway ones the button mints — and no
+real customer has ever been onboarded, so there is no production data behind any login on this server.
+
+### Also stale, found while there
+
+- **The top banner**, on a minted `?site=` page — the same contradiction one layer up, and squarely
+  inside the first Done-when. Swapped by `demo-boot.js` from the same decision as the widget's.
+- **The safety card's privacy paragraph** — the third instance, found only in the browser.
+- **Both operator-login cards** said "this tenant" / "this dedicated demo tenant", which on a minted
+  page points at the visitor's own tenant, which those credentials cannot reach at all. Now named:
+  "Operator login for Demo Shop One/Two", and each says explicitly that it never reaches a minted
+  tenant — which turns a stale phrase into a statement of the isolation a reviewer came to check.
+- **A comment defending the bug**, at the bottom of both pages: "the page stays public even when the
+  tenant is private, and that notice is still the honest thing to show". Replaced with why that is
+  half-true and why it does not license the sentence it was defending.
+
+**`ago-landing` needed no change** — checked, both languages. `8-09` already updated it, and it
+describes the mint button correctly ("a private operator account nobody else can see into, for about a
+day") and never mirrors the tenant-count claim.
