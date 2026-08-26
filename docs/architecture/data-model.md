@@ -332,9 +332,11 @@ EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 A **separate database**, in a separate repository, reached only by `Ago.Calendar.*` hosts. Built by
 `20-01` (`Stage20CreateCalendarSchema`, `Ago.Calendar.Infrastructure.Postgres`) and extended by
 `20-02` (`Stage20AddWorkerDayIndex`). The reasoning behind the decisions that shaped it - how time is
-stored and where the no-overlap guarantee lives (`adr/0049`), and how availability is generated
-without ever overwriting what is already there (`adr/0053`) - is in those ADRs; this section records
-the shape.
+stored and where the no-overlap guarantee lives (`adr/0049`), how availability is generated without
+ever overwriting what is already there (`adr/0053`), and how a slot is claimed under contention
+(`adr/0059`) - is in those ADRs; this section records the shape. `20-03` added no schema: the booking
+claim is a statement against tables `20-01` already built, which is what materialising slots in
+advance was for.
 
 Everything above about **ids (UUID v7), `timestamptz`, keyset pagination, partial indexes for
 queue-like predicates, EF for writes / Dapper for reads, and one aggregate per transaction applies
@@ -462,6 +464,58 @@ detail of one host.
   insert, in one transaction. A claimed row is not addressable by that `DELETE`, so no edit can delete
   a booking - and a caller whose pre-read was overtaken by a customer has its replacements refused by
   the exclusion constraint rather than silently losing the booking.
+
+### The booking claim (`20-03`)
+
+Two statements, one transaction, no read that a write decision depends on. The reasoning is
+`adr/0059`; the shape is here because it is the second place in this codebase to make the same call
+`4-01` made for `operators.active_chats`, and a reader comparing them should find both on this page.
+
+```sql
+-- the claim: the verdict IS the rows-affected count
+UPDATE events
+SET status = 'PendingConfirmation', customer_id = @customerId,
+    service_id = @serviceId, confirmation_deadline = @deadline
+WHERE id = @eventId AND calendar_id = @calendarId
+  AND status = 'Available' AND starts_at > @now
+RETURNING worker_id, starts_at, ends_at, local_date;
+
+-- the lead card: found-or-created, arbitrated on ux_customers_tenant_phone
+INSERT INTO customers (id, tenant_id, phone, display_name, no_show_count, first_seen_at, last_seen_at)
+VALUES (@id, @tenantId, @phone, @displayName, 0, @now, @now)
+ON CONFLICT (tenant_id, phone) DO UPDATE
+    SET last_seen_at = GREATEST(customers.last_seen_at, EXCLUDED.last_seen_at),
+        display_name = COALESCE(customers.display_name, EXCLUDED.display_name)
+RETURNING id;
+```
+
+- **Raw SQL, a stated exception to `adr/0004`'s "EF for writes"**, with the same qualifying reason
+  `4-01` gave: a compare-and-set is what EF's load-mutate-save cannot express in one round trip, and
+  EF's own answer to the gap - optimistic concurrency - turns an ordinary lost race into an exception
+  on the most contended path in the product. Everything else in `Ago.Calendar.Infrastructure.Postgres`
+  is still EF.
+- **Every predicate is in the `WHERE` clause, not in application code.** `calendar_id` is there
+  because the endpoint is unauthenticated and the route's calendar id is the only thing binding a
+  request to a tenant; `starts_at > @now` is `Event.Claim`'s own precondition restated where it
+  cannot go stale. A row count of 0 covers all of them and is reported as one message, so a stranger
+  cannot use the error to learn which event ids exist.
+- **A row count of 0 is an ordinary outcome**, never logged at `Error`, never a 500, never an
+  exception. It surfaces as `409 booking.slot_unavailable`.
+- **Both statements share one transaction, and the reason is personal data**, not consistency: a lost
+  claim rolls the lead card back, so the endpoint never accumulates phone numbers for bookings that
+  did not happen. It also fixes a single lock order - the customer row first, always - so two
+  bookings from one number cannot deadlock.
+- **`GREATEST`/`COALESCE` are the merge rules**, not decoration: the watermark never rewinds (the same
+  rule `Customer.Touch` enforces in memory), and a name an operator curated is never overwritten by
+  whatever a public form was typed into next time.
+- **Proven under real contention**, not asserted: `Ago.Calendar.Concurrency.Tests` releases 2, 8 and
+  24 callers through one gate, each on its own connection opened before the gate, and asserts exactly
+  one booking and exactly one lead card afterwards.
+
+**Redis joins this product's dependency list here**, for one thing only: the booking endpoint's two
+rate-limit buckets (per phone, per calendar), through `IRateLimiter` reused unchanged from
+`Ago.Platform.Abstractions`. Never a source of truth - the claim reads nothing from it
+(CLAUDE.md rule 8). What is stored in it, and for how long, is a row in `personal-data.md`.
 
 ### Migration
 
