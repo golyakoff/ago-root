@@ -166,16 +166,41 @@ recorded in `adr/0007` and measured in Stage 7.
 
 ## Client protocol
 
+**A hub method's parameter count is a contract, and it may never change.** SignalR binds an
+invocation's arguments positionally and requires *exactly* one per declared parameter: an invocation
+carrying fewer is refused during parsing, before the dispatcher constructs a hub or reaches a
+handler, and the client gets the generic `Failed to invoke '<target>' due to an error on the server`
+with **nothing written server-side at all**. A C# `= null` default does not fill the gap - it is
+optional to a C# caller and mandatory to a caller on the wire. So adding a parameter to a hub method
+breaks every already-deployed client of it, silently and immediately, and adding it *last* does not
+help: appending is safe only for a caller that sends *more* arguments than before, which is never the
+one that is already in the field. A widget embedded on somebody else's site cannot be made to
+upgrade, so a new capability goes on a **new hub method** (`SendStructuredMessageAsync` beside
+`SendMessageAsync`) - the same "a second endpoint, not a flag on the existing one" shape as
+`adr/0048`.
+
+This cost real breakage twice - `5-12` (the widget sending 3 arguments to a 4-parameter method) and
+`5-19` (`14-06` growing that method to 7 while the deployed widget still sent 4, taking visitor
+messaging down on the live deployment). The paragraph you are reading is the third place the rule has
+been written down; the first two were code comments, one of them in a different repository. It is now
+also **enforced**, which the comments never were: `Ago.Chat.Architecture.Tests.HubContractTests`
+compares every hub method's arity against a checked-in `HubContractManifest` on every build, and
+`Ago.Chat.Integration.Tests.HubMethodArityTests` parses the deployed clients' exact wire messages
+through the real `JsonHubProtocol`.
+
 - Client sends `{ clientMessageId, conversationId, body, attachmentId? }`. `clientMessageId` is a
   client-generated uuid used for **echo suppression and retry deduplication** - a retried send after
   a flaky reconnect must not create a second message. The server maps it to the persisted id in the ack.
   **Shipped in `5-07`**: `SendMessageAsync(conversationId, body, attachmentId?, clientMessageId?)` on
-  both hubs - `clientMessageId` appended *last*, after `attachmentId`, not inserted between the
-  existing parameters, so every caller built before this shipped (`dev-harness.html`, `ago-widget`'s
-  `VisitorConnection`) keeps binding correctly with it simply omitted (SignalR's client binder matches
-  by argument count and position, not by name - inserting it earlier would have silently reinterpreted
-  an existing 3-argument call's `attachmentId` as a `clientMessageId`). The actual dedup mechanism
-  lives in `Conversation.AddMessage` (`Ago.Chat.Domain`): a repeated `clientMessageId` returns the
+  both hubs - `clientMessageId` appended *last*, after `attachmentId`, rather than inserted between
+  the existing parameters, since inserting it earlier would have silently reinterpreted an existing
+  3-argument call's `attachmentId` as a `clientMessageId`. **`5-07` also claimed here that appending
+  it last let every caller built before it shipped keep binding "with it simply omitted". That is
+  false** - see the rule above - and it stayed in this document through two outages that it describes
+  the cause of: `5-12` found `ago-widget` sending 3 arguments to this 4-parameter method and failing
+  every send, and `5-19` found `14-06` growing it to 7. Both hubs' callers send all four today. The
+  actual dedup mechanism lives in `Conversation.AddMessage` (`Ago.Chat.Domain`): a repeated
+  `clientMessageId` returns the
   *original* `Message` unchanged, the same no-op-on-repeat shape `AssignTo` already established -
   checked against the aggregate's own already-loaded `Messages` (free, and catches a same-batch
   duplicate a database index alone cannot), backed by a partition-widened unique index
@@ -183,8 +208,8 @@ recorded in `adr/0007` and measured in Stage 7.
   neighbouring `sequence` index) as the storage-level backstop for two processes racing the same
   retry concurrently. Proven live: two `SendMessageAsync` invocations with the same `clientMessageId`
   returned the identical `sequence` both times, and exactly one row landed in `messages`. `ago-widget`
-  itself was not updated to send one - a real, low-cost follow-up, not done here since `5-07`'s own
-  scope is the console.
+  itself was not updated to send one in `5-07`, whose scope was the console - which is precisely the
+  gap `5-12` then hit live, since a 3-argument invocation of a 4-parameter method does not bind.
   - **Found live in `5-07`**: `MessageDto` was missing a `conversationId` field entirely. The fan-out
     delivery path (`ConnectionFanoutConsumer` -> `NodeFanoutPublisher` -> `SignalRConnectionDispatcher`)
     delivers straight to a connection with no SignalR group involved, so a `"MessageReceived"` push for
