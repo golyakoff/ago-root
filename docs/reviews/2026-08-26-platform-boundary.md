@@ -517,3 +517,85 @@ Stated so it can be checked later rather than re-argued from scratch:
 **No refactoring.** One addition — structured, opaque, interactive message content — which belongs to
 AGO Chat, and which `21-01` should be reframed around before its UX question can be answered at all.
 The only deadline remains `20-06`'s embed decision.
+
+---
+
+# Third pass: the combination that has no widget
+
+The author added a fifth combination after the second pass: **AGO Inbox without AGO Chat** — a shop
+with, say, only a Telegram channel — **plus AGO Calendar**, so a customer books through Telegram with
+no chat involved. Then clarified: *under the hood it would use AGO Chat's API; there simply is no
+widget.*
+
+That clarification is what decides it, and it is worth separating from the sentence that prompted it,
+because the two say opposite things.
+
+## The conclusion survives, and this is why
+
+**Architecturally AGO Chat is still in every combination.** If the conversation, the operator, the
+messages and the channel routing are all present and only the widget is absent, then nothing has been
+removed from the architecture — one channel has been left undeployed. `14-01` already built exactly
+this: the widget is one entry point among several, and an inbound channel message lands in a
+`Conversation` with an AGO Chat `Operator`.
+
+**"AGO Inbox without AGO Chat" is a statement about packaging and the price list, not about
+structure.** The second pass' central evidence — Chat present in every combination — is unaffected.
+
+## The finding that is actually worth having
+
+The author, who is this system's architect, was momentarily unsure whether his own fifth combination
+removed AGO Chat or not. That is the strongest available evidence that **the name "AGO Chat" denotes
+two different things**:
+
+- **the conversation substrate** — conversations, operators, messages, channel identities — which is
+  present in every combination without exception;
+- **the website-widget channel**, which is optional and is one channel among several.
+
+While they share a name, "Inbox without Chat" *sounds* like an architectural claim while being a
+commercial one, and the person best placed to know the difference still had to stop and check. This
+is a naming and product-model problem, not a code problem, and the fix is in those layers — but it
+should be fixed, because the first reviewer to ask "so which of the two do you mean here?" is asking
+a question the architecture answers cleanly and the vocabulary does not.
+
+Note what this does *not* imply. It is not an argument for renaming `Ago.Chat.*`, whose contents are
+coherent, and it is not an argument for a new deployable. It is an argument for saying which of the
+two is meant, in the places customers and reviewers read.
+
+## It also settles the one item that had a deadline
+
+The first pass identified exactly one decision that gets more expensive by waiting: **which script tag
+a shop pastes**, decided by `20-06`.
+
+The fifth combination settles it. If the widget is one channel among several, and booking must be
+possible from any of them, then the booking flow **cannot** be widget-specific — so a second,
+booking-only widget with its own embed would be building the one shape the product model rules out.
+`20-06`'s own open question ("a new repository **or** package") resolves toward the package, and the
+shop pastes one tag.
+
+That decision was the only thing the freeze was protecting. It is now made on product grounds rather
+than deferred on architectural ones.
+
+## What remains genuinely open
+
+**Who owns the intent.** Even with AGO Chat's API underneath, something must turn "I'd like a haircut
+on Tuesday" into a booking. In the widget this is avoidable — AGO Calendar supplies a card, nobody
+parses anything. Over Telegram it is not: there is only text.
+
+So `21-01` is blocked on two questions in sequence, not on the one it names:
+
+1. **What carries the structure** — the second pass' answer: a message with a kind, an opaque payload
+   and actions, which AGO Chat never interprets.
+2. **Who parses the intent**, without one product taking a dependency on the other's domain. AGO Chat
+   parsing booking intent means AGO Chat knows what a booking is. AGO Calendar reading message bodies
+   means AGO Calendar consumes AGO Chat's contracts. Both are defensible and they are *different*
+   decisions, and this is the first time either product would reference the other at all.
+
+`21-01`'s three listed candidates are all answers to a third question — *what the interaction looks
+like* — which cannot be chosen before these two. The item should be re-scoped around that, and question
+2 deserves its own ADR when it is taken.
+
+## Verdict, unchanged across three passes
+
+**No refactoring.** One addition (structured, opaque, interactive message content, in
+`Ago.Chat.Domain`), one naming clarification that costs nothing in code, and `20-06` decided toward a
+single embed. The freeze can be lifted.
