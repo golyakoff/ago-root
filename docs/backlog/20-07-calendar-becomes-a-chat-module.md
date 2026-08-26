@@ -26,6 +26,26 @@ keeps naming:
   of a product-to-product dependency for which `adr/0012` sets no precedent. **This item decides it and
   records why**, with the hop measured rather than assumed.
 
+## Relation to `21-01`, which was written first
+
+`21-01` (unattended booking through a channel) is blocked on two questions. **`adr/0065` answers the
+second of them** — "who parses the intent, without one product depending on the other's domain" — by
+deciding that in v1 nobody does: a module being enabled means its entry point is present, and
+recognising "I'd like to book" is domain knowledge by another name. The first, "what carries the
+structure", was answered by `14-06`/`adr/0061`.
+
+The two items are not the same work and the split is the channel:
+
+- **This item needs no new channel.** The widget alone proves the seam, and the text rendering proves
+  the vocabulary is not widget-shaped. It can start the moment `20-06` merges.
+- **`21-01` needs a real inbound channel** (`14-02`/`14-03`/`14-05`) and stays in Stage 21. What it
+  inherits from here is a step model and a settled answer to its second blocker, so its remaining
+  scope is genuinely the channel side and the tenant toggle.
+
+`21-01` should be re-read against `adr/0065` when it is picked up; its three candidate UX directions
+were written before the closed primitive vocabulary existed, and at least one of them (free-text
+understanding) is now out of scope by decision rather than by preference.
+
 ## Scope
 
 - **The primitive set**, derived from `20-06`'s flow: a choice list, a form, a confirmation card, a

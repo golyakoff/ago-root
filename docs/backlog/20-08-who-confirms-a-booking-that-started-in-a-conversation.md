@@ -31,6 +31,13 @@ It also cannot be decided by reasoning alone: `authorization.md` still carries a
 own (`CLAUDE.md`'s own index calls it "current gap, open decision"), and this question is downstream of
 it.
 
+## Relation to `21-02`
+
+`21-02` merges the two products' operator queues into one screen. This item is narrower and comes
+first: it asks what a chat operator may *do* to a booking, not where they see it. A unified queue that
+shows a booking nobody in that screen is allowed to act on would be a worse outcome than two queues,
+so the authority question is the one to settle before the presentation question.
+
 ## The shapes worth weighing
 
 - **Calendar grants nothing.** The card is read-only for a chat operator; acting on it means opening
