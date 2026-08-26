@@ -1,8 +1,9 @@
 # AGO Calendar: booking claim and the customer lead card
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `20-02-availability-materialization-and-manual-editing.md`
+- **Decision**: `adr/0059` — the booking claim is a compare-and-set, and a lost race is not an error
 
 ## Goal
 
@@ -65,22 +66,87 @@ already created on `events`.
 
 ## Done when
 
-- [ ] `Ago.Calendar.Application.Tests` (handler-level, fakes for the store): a successful claim upserts
+- [x] `Ago.Calendar.Application.Tests` (handler-level, fakes for the store): a successful claim upserts
       the customer and transitions the event; a claim against a non-`Available` event is rejected
       without touching the customer row.
-- [ ] `Ago.Calendar.Integration.Tests`, against real Postgres, real concurrency: N concurrent booking
+      (`Ago.Calendar.Application.Tests`, 17 tests across `BookEventHandlerTests` and
+      `BookingConfirmationDisclosureTests`. The negative half asserts the stronger property the
+      Done-when implies: a rejected booking never reaches `IBookingStore` at all, so no lead card is
+      written for a booking that did not happen — checked for an unknown/foreign slot, an unpublished
+      calendar, a malformed phone, a service the worker does not perform, and an inactive worker.)
+- [x] `Ago.Calendar.Integration.Tests`, against real Postgres, real concurrency: N concurrent booking
       attempts against the *same* `Event` — exactly one succeeds, the rest observe "no longer
       available," and the event's final state is `PendingConfirmation` with exactly one `customer_id`,
       never a torn or double-claimed state — the same concurrency bar `OperatorCapacityStoreTests`
       already proved for AGO Chat's own compare-and-set claim.
-- [ ] A repeated booking attempt by the same phone number updates the existing `Customer` row (name,
+      (`Ago.Calendar.Concurrency.Tests.ConcurrentBookingTests`, at 2, 8 and 24 callers. Contention is
+      forced rather than hoped for: each caller gets its own `DbContext` on its own pooled connection,
+      **opens that connection before** parking on a shared `TaskCompletionSource` gate, and all are
+      released together — without the pre-open, the handshake staggers the arrivals across exactly
+      the interval a compare-and-set is meant to be tested across. Asserted afterwards on the rows:
+      one `PendingConfirmation` with the winner's `customer_id`, one deadline, and **exactly one lead
+      card**, because every loser's transaction rolled back whole. Two further tests guard the other
+      direction — sixteen callers on sixteen *different* slots all succeed, so the claim does not
+      serialise bookings that are not competing; and sixteen concurrent bookings from **one** phone
+      end with one lead card, which is the upsert's own race that the slot race hides.)
+- [x] A repeated booking attempt by the same phone number updates the existing `Customer` row (name,
       last-seen) rather than creating a duplicate lead card — proven with a real duplicate-phone
       booking against a running instance.
-- [ ] Rate limiting proven the same way `3-05`'s own `RateLimitingTests` proved it — a denied booking
+      (`BookingStoreTests.ARepeatedBookingFromTheSamePhone_UpdatesTheOneLeadCard`, against real
+      Postgres, plus `BookingEndpointTests` over real HTTP against the real host. Two further tests
+      pin the merge rules that make the update correct rather than merely single-rowed: a late-arriving
+      request never rewinds `last_seen_at` (`GREATEST`), and a blank or different name never overwrites
+      one an operator curated (`COALESCE`).)
+- [x] Rate limiting proven the same way `3-05`'s own `RateLimitingTests` proved it — a denied booking
       attempt returns `429`/`Retry-After`, not a bare rejection with no guidance.
+      (Proven at both levels. `Ago.Calendar.Concurrency.Tests.BookingRateLimitTests` drives the real
+      `RedisRateLimiter` against a Testcontainers Redis through the real handler — a burst allows
+      exactly capacity, concurrent attempts on one bucket never exceed it, the calendar bucket bounds
+      a flood arriving from many different numbers, and two tenants sharing one phone number do not
+      share a bucket. `Ago.Calendar.Integration.Tests.BookingEndpointTests` then makes a real HTTP
+      request to the real host and asserts `429` with a `Retry-After` header parseable as
+      delta-seconds and never zero — the header only exists once something maps an outcome onto it,
+      and that mapping is not provable from a handler's return value.)
 
 ## Open questions
 
 None — the compare-and-set mechanic, the "no cache" rule, and the "one service per booking" v1 limit
 are all fixed by the product spec and `CLAUDE.md`'s own non-negotiable rules; nothing here needs the
 author's judgment beyond ordinary implementation mechanics already covered by existing precedent.
+
+## What shipped, and what it changed
+
+Full reasoning is `adr/0059`. What is worth flagging here:
+
+- **`IBookingStore`, not `IEventClaimStore`.** The item named a port holding only the claim; it became
+  one port holding the claim *and* the lead-card upsert, because the two share a transaction and a
+  transaction has to belong to something a reader can see. The reason they share one is data
+  minimisation rather than consistency: a lost race rolls the lead card back, so an unauthenticated
+  public endpoint never accumulates phone numbers for bookings that did not happen. This is the
+  product's first multi-aggregate port, three items earlier than `ITenantRepository` predicted.
+- **`BookEventHandler` returns `BookingOutcome`, not `Result<T>`.** `Error` is `(Code, Message)` with
+  nowhere to put a retry-after, and `api-design.md` promises a real `Retry-After` header. AGO Chat
+  squeezed it into the message text and `ErrorExtensions` there carries a comment apologising for the
+  missing header; repeating that seemed worse than one non-standard return type.
+- **`200`, not `201` with a `Location`.** The endpoint creates nothing — a slot and its booking are one
+  row — so there is no new URL to point at. A deliberate deviation from `api-design.md`'s POST rule.
+- **Redis is now a dependency of AGO Calendar**, for the two rate-limit buckets and nothing else. It
+  is never a source of truth; the claim reads nothing from it.
+- **`AddRedisCaching` could not be used, and that is a platform finding, not a workaround note.** It
+  registers `CacheInvalidationPublisher`, which needs an `IEventPublisher`, so a product with no
+  broker fails service-provider validation in Development. Verified by doing it. Worked around inside
+  `Ago.Calendar.Infrastructure.Redis`; **no `ago-platform` commit was made**.
+- **`CalendarModule` now reads `ConnectionStrings:Calendar` before falling back to
+  `AGO_CALENDAR_CONNECTION_STRING`**, so a `WebApplicationFactory` can point the real host at a
+  Testcontainers Postgres without mutating process-wide state that parallel test collections share.
+  Nothing is weakened: the rule was never "read only the environment", it was "never commit a
+  credential to a settings file".
+- **A registration bug the handler tests could not have caught**: `IBookingStore` was never added to
+  `AddCalendarPostgresPersistence`. The HTTP test found it on its first run, which is the argument for
+  having one.
+
+Deliberately left for later: the confirmation sweep, operator reject, cancellation and no-show
+(`20-04`); SMS delivery of the confirmation (`20-05`); several services in one booking (v1 takes one);
+and the public availability read model, which `20-01`'s `IEventRepository` predicted would arrive
+here — it did not, because nothing in this item reads availability, and the first genuine caller is
+`20-06`'s booking widget.
