@@ -282,9 +282,11 @@ EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 ## AGO Calendar (Stage 20)
 
 A **separate database**, in a separate repository, reached only by `Ago.Calendar.*` hosts. Built by
-`20-01` (`Stage20CreateCalendarSchema`, `Ago.Calendar.Infrastructure.Postgres`). The reasoning behind
-the two decisions that shaped it - how time is stored, and where the no-overlap guarantee lives - is
-`adr/0049`; this section records the shape.
+`20-01` (`Stage20CreateCalendarSchema`, `Ago.Calendar.Infrastructure.Postgres`) and extended by
+`20-02` (`Stage20AddWorkerDayIndex`). The reasoning behind the decisions that shaped it - how time is
+stored and where the no-overlap guarantee lives (`adr/0049`), and how availability is generated
+without ever overwriting what is already there (`adr/0053`) - is in those ADRs; this section records
+the shape.
 
 Everything above about **ids (UUID v7), `timestamptz`, keyset pagination, partial indexes for
 queue-like predicates, EF for writes / Dapper for reads, and one aggregate per transaction applies
@@ -352,6 +354,16 @@ here unchanged**. What follows is only what is specific to this product.
 - `ix_events_pending_confirmation` - partial, `(tenant_id, confirmation_deadline) WHERE status =
   'PendingConfirmation'`. Serves both of `20-04`'s readers - the auto-confirm sweep and the operator
   queue - over the same small, short-lived set.
+- `ix_events_worker_day` - `(calendar_id, worker_id, local_date)`, added by `20-02`, and
+  **deliberately not partial** unlike the two above. Every question that item asks is "what is on this
+  worker's day": has this day been generated (the materialisation job's non-destructive rule), what is
+  on it before a manual edit rewrites it, and which rows a day off deletes. The rule turns on whether
+  a day holds *any* row - booked, blocked and cancelled included - so a status filter would hide
+  exactly the rows whose presence is the decision. This is also the index `local_date` was stored for
+  rather than derived: an `AT TIME ZONE` predicate is non-sargable, so no index could serve a per-day
+  query. Proven to be the index the planner reaches for by `EXPLAIN`, with the same caveat as
+  `ix_events_available` - it shows an index *can* serve the predicate, not that it is faster than a
+  scan, which nothing has measured.
 - `ix_calendars_published` - partial on `tenant_id WHERE is_published`.
 - `ux_customers_tenant_phone`, `ux_roles_tenant_name`, `ux_operators_external_subject_id` (partial on
   `IS NOT NULL`).
@@ -364,6 +376,44 @@ here unchanged**. What follows is only what is specific to this product.
   cancellation frees the time, while `Blocked` and `NoShow` are not, because both still occupy the
   worker.
 - Optimistic concurrency is `xmin` on `events`, mapped exactly as `1-04` mapped it on `conversations`.
+
+### Availability materialisation (`20-02`)
+
+`events` rows in `Available` status exist before any customer books, generated from
+`working_hours_rules` out to a rolling horizon by **`AvailabilityMaterializationJob`**
+(`Ago.Calendar.Worker`). Documented here for the same reason `PartitionMaintenanceJob` is: a
+background job that keeps rows ahead of need is part of the data model's shape, not an implementation
+detail of one host.
+
+- **Shape**: `BackgroundService` + `PeriodicTimer`, exactly `PartitionMaintenanceJob`'s form - runs
+  once immediately, then every `Interval`, catching and continuing on anything but cancellation. Walks
+  every tenant by keyset, then every published calendar of each, one DI scope per calendar so a
+  calendar that fails alone fails alone.
+- **Configuration**, all named and none measured: `Interval` (daily), `HorizonDays` (30),
+  `TenantPageSize` (100). Thirty days is a legible starting point, not a claim - the only real
+  constraint is that the horizon exceeds how far ahead customers book, and this product has no traffic
+  to know that from. `3-05`'s rate-limit buckets set the same precedent.
+- **The invariant, and it is the whole item**: *the job only ever inserts rows into business-local
+  days that have no event row at all.* It never updates, never deletes, and never regenerates a day it
+  has already generated. Everything else follows - a `PendingConfirmation`/`Booked`/`Cancelled`/
+  `NoShow` row cannot be touched because its day is skipped, and a day a tenant edited by hand cannot
+  be overwritten for the same reason. Nothing marks an edited day as edited; the absence of a
+  mechanism is the mechanism.
+- **A day off is a row, not an absence.** `DeleteDayOffHandler` deletes the day's unclaimed rows and
+  writes one `Blocked` event spanning what it replaced. Deleting them and leaving the day empty would
+  have been undone by the very next run. The blocking row is also literally true and participates in
+  `ex_events_worker_no_overlap`, so nothing can be materialised or booked across it either.
+- **Idempotent by construction**, two mechanisms deep: a `SELECT DISTINCT local_date` existence check
+  keeps the common case from generating anything, and the insert itself is a single
+  `INSERT ... unnest(...) ON CONFLICT DO NOTHING` with no conflict target - which in Postgres covers
+  the exclusion constraint as well as the primary key. Two `Worker` replicas racing the same day both
+  succeed and exactly one set of rows lands; the loser's rows are dropped rather than its transaction
+  aborted. No lease, no advisory lock, no leader election (`adr/0053`).
+- **Manual edits are day-scoped rewrites**, not row nudges: both `DeleteDayOffHandler` and
+  `EditDayBoundaryHandler` go through one `DELETE ... WHERE status IN ('Available','Blocked')` plus an
+  insert, in one transaction. A claimed row is not addressable by that `DELETE`, so no edit can delete
+  a booking - and a caller whose pre-read was overtaken by a customer has its replacements refused by
+  the exclusion constraint rather than silently losing the booking.
 
 ### Migration
 
