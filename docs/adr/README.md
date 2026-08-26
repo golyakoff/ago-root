@@ -56,3 +56,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0052 | *(never written - the number was reserved for `17-08` and the item turned out to need no decision of its own; kept vacant rather than reused, so a reference to `0052` anywhere is a mistake rather than a different ADR)* | n/a |
 | 0053 | Availability materialisation is day-granular and insert-only | Accepted |
 | 0054 | Runtime hardening: what each workload is constrained to, and what is deliberately not | Accepted |
+| 0055 | External channel identity, and the shape of the inbound channel port | Accepted |

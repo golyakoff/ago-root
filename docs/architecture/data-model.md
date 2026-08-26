@@ -50,6 +50,20 @@ denial.
   includes their own name and phone number. See `personal-data.md` for what the system actually holds
   and where; an identifier that reliably singles out a returning individual is also not the same thing
   as anonymous data.
+- `channel_identities` (**shipped in `14-01`**, AGO Inbox) - `id` (uuid v7), `site_id`, `kind`
+  (`Max|Sms|Telegram|WhatsApp`, stored as the CLR member name), `external_address` (the raw identifier
+  the channel uses for one correspondent - a phone number, a chat id), `visitor_id`, `first_seen_at`,
+  `last_seen_at`. The answer to "which external chat-id or phone number corresponds to which visitor".
+  Its own aggregate rather than columns on `visitors`, because one person can hold several at once (the
+  same human on MAX and on SMS) and because the link is worth keeping after it is unlinked -
+  `Ago.Chat.Domain.ChannelIdentity`'s own remarks and `adr/0055`.
+  **The identity rule this table encodes** (`adr/0055`, and the thing to check any future change
+  against): a widget visitor and an external-channel sender are **two `visitors` rows**, and nothing
+  merges them by inference. Several `channel_identities` rows *may* point at one `visitor_id` - that is
+  an ordinary many-to-one, and a future verified link is one `UPDATE` with no migration - but no code
+  today ever writes that edge, and `ChannelIdentity` deliberately ships with no re-link method.
+  Personal data: `external_address` is a phone number for `Sms`, so this table holds a direct identifier
+  in a way `visitors` next to it does not - see `personal-data.md`.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
   shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
@@ -152,6 +166,16 @@ denial.
   actually skipping each other's locked rows, not just asserted from the SQL text.
 - `outbox` partial index on `(id) WHERE published_at IS NULL` - the dispatcher must never scan
   already-published rows.
+- `channel_identities` unique `(site_id, kind, external_address)` (`ux_channel_identities_site_kind_address`,
+  `14-01`) - both the lookup `IChannelIdentityRepository.FindAsync` serves and the storage-level backstop
+  that stops two processes racing the same first inbound message from creating two visitors for one
+  person. Same "the index is the backstop, not the primary mechanism" division `adr/0019` draws for
+  `messages`: the primary mechanism is the application's resolve-then-create. All three columns are in
+  the key deliberately - dropping the site would let one tenant resolve a number another tenant is
+  talking to, dropping the channel would merge a Telegram id and an SMS number that happen to read
+  alike. EF's default foreign-key index on `visitor_id` is kept (unlike `4-01`'s replacement of the one
+  on `conversations.site_id`): "which channels is this visitor reachable on" is the natural inverse
+  query, and this table is small next to `messages`.
 
 ## Partitioning
 
@@ -271,6 +295,15 @@ verified from-scratch the same way: `active_chats` lands as a genuine EF-visible
 `Stage12AddSiteCreatedAt` (`12-02`) is additive and reversible, verified the same from-scratch way
 (`PlatformOverviewFixture` migrates a fresh Postgres and then reads the column back through the real
 query): one nullable `timestamptz`, no default, no backfill, no table rewrite.
+
+`Stage14AddChannelIdentities` (`14-01`) is additive and reversible - a new table with two foreign keys
+and no change to any existing column, so `Down` is a single `DROP TABLE` that genuinely restores the
+prior schema. Nothing to backfill: no existing row has ever been reached through a channel. Verified
+from scratch against a real Postgres the same way as the entries above (`ChannelIdentityPersistenceTests`,
+via `PostgresFixture`'s own migration run), including that the unique index actually rejects a duplicate
+`(site_id, kind, external_address)` at the storage level - proven with a raw insert that bypasses the
+repository, and shown to be load-bearing by removing `unique: true` from the migration and watching that
+one test go red.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 
