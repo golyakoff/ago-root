@@ -46,6 +46,20 @@ Formatting is settled by `.editorconfig` and is not a review topic. What follows
   nobody has chosen is logging whatever its default logs. When a request carries a secret anywhere but
   a header (a WebSocket handshake has no other option), every logger on its path is in scope for this
   rule, including ones configured in YAML (`architecture/edge.md`).
+- **And it is not only about the loggers you wrote.** `16-05` swept 1.19 M log lines off a running
+  cluster and found every hand-written `Log*()` call in `Ago.Chat.*` clean — and **over 99% of the
+  volume coming from framework categories nobody had configured**: ASP.NET Core's request logging on
+  two of the three hosts, and EF Core's full SQL statement text on all three. Neither carried personal
+  data, because parameters are logged as `?` while nothing calls `EnableSensitiveDataLogging` — but
+  "we do not log bodies" was a statement about *our* code, and the log file is not. Set the level for
+  a framework category deliberately, the way `appsettings.json` now does, and treat "`Default:
+  Information` and see what happens" as a decision rather than an absence of one.
+- **The same goes for span attributes, which are easier to leak into than log statements.**
+  Instrumentation adds attributes nobody wrote: `db.query.text` carries the whole SQL statement,
+  `url.full` carries the whole outbound URL. Both are safe today only because every value in them is
+  a parameter or is redacted by a default. `Ago.Chat.Integration.Tests.TelemetryLeakGuardTests` is the
+  test that fails if either stops being true — a guard rather than a convention, for exactly the
+  reason the previous bullet exists.
 
 ## Comments
 

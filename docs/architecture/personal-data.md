@@ -6,6 +6,12 @@ export cannot be built correctly against a system nobody has inventoried — and
 code, the migrations and the manifests on 2026-08-25 by `16-01`**, which corrected two rows that were
 wrong and added six stores the first pass did not list.
 
+**Extended 2026-08-26 by `16-05`, which closed the rows this file marked unverified.** Logs, traces
+and metrics were audited against real traffic on a running cluster rather than read off the code, and
+all three now have a stated retention enforced by something that runs (`adr/0057`). The audit's own
+summary, its two near-misses and what it could not reach are in `backlog/16-05`; what a leak of any of
+it would require is in `runbooks/personal-data-incident.md`.
+
 **Extended 2026-08-25 by `20-01` to cover a second product.** AGO Calendar has its own database
 (`adr/0027`) and its own personal data, and it is a different *kind*: AGO Chat's identifying data is
 mostly incidental — a visitor happening to type their phone number into a support message — while a
@@ -89,10 +95,10 @@ not who is legally answerable for them — that second question is `16-04`'s and
 | `webhook_deliveries.response_snippet` | Up to 2000 characters of **the tenant's own server's response body**, whatever it happens to contain | AGO | Forever | Nothing automatic | `WebhookDelivery.MaxResponseSnippetLength`, `HttpWebhookDeliveryClient.cs:176-183` |
 | The visitor's own browser | `localStorage`: the signed visitor token (7-day `exp`), the visitor id, the current conversation id, a last-seen sequence per conversation. **No message bodies** | The visitor's device | The token expires after 7 days — but it is renewed at the point of use (`17-07`+`17-08`, `adr/0048`), so a returning visitor's `exp` slides forward indefinitely and the shorter number buys no deletion here; **the `localStorage` entries themselves never expire at all** — the widget has no clear path and no "forget me" control | The visitor clearing site data. Nothing in the product | `ago-widget/src/storage.ts`, `JwtTokenService.VisitorTokenLifetime`, `adr/0034`, `adr/0048` |
 | The operator's own browser | `sessionStorage`: the OIDC tokens for scope `openid profile email`, so the ID token carries email and name | The operator's device | Cleared when the tab closes — `oidc-client-ts` with `WebStorageStateStore(sessionStorage)`, chosen deliberately over `localStorage` | Closing the tab; signing out | `ago-console/src/auth/userManager.ts:15-26` |
-| Traces (Jaeger) | Span attributes — ids, connection ids, topic names. Whether any span carries content or a token is **unaudited** (`16-05`) | AGO | Until the pod restarts. `jaegertracing/all-in-one` with no PVC and no storage backend configured = in-memory only | Pod restart, which on this cluster is frequent | `k8s/base/jaeger.yaml:20-24` (its own comment: "In-memory storage only") |
-| Metrics (Prometheus) | Aggregates, on a PVC. Labels are site/consumer/topic-shaped, not person-shaped, as far as `7-02`'s instruments go | AGO | Until the PVC is reclaimed; no retention flag set | Nothing automatic | `k8s/base/prometheus.yaml` |
-| Application logs | Structured, and scanned for this item: every log statement in `Ago.Chat.*` interpolates ids, counts, statuses and object keys — **no message body, no email, no IP** was found | AGO, via the container runtime | Whatever the node's log rotation does — **not defined by anything in this project** | Nothing this project owns | grep over every `Log*(` call in `ago-chat/src` |
-| Edge access logs | Client IP per request, by NGINX's own default logging | AGO | **Undefined.** No retention policy exists | Nothing | `edge.md`; `17-02` is the item that owns this surface |
+| Traces (Jaeger) | **Audited 2026-08-26 (`16-05`) against real traffic, not read off the code.** 28 distinct span-attribute keys across the three services. Ids, routes, connection ids, topic names, outbox ids — plus two nobody in this project wrote: `db.query.text`, the **full SQL statement text** on every database span (parameterised, so no values), and `url.full` on every outbound HTTP call, whose host and path are **tenant-configured** because the only outbound call is a webhook. **No message body, no email, no token, no client IP.** The inbound query string is `Redacted` by the ASP.NET Core instrumentation (`17-02`) and the outbound one by the .NET runtime's own URI redaction (`16-05`, guarded by a test); `db.npgsql.data_source` carries the connection string with the **password stripped by Npgsql** | AGO | **Bounded by count, not by time: 10000 traces**, evicted oldest-first by Jaeger's own in-memory ring (`adr/0057`). At the current probe-dominated trace rate that is on the order of an hour. Still in-memory only, so also destroyed by a pod restart | The ring evicting it; a pod restart | Jaeger's own query API, read after driving real traffic through the local cluster; `k8s/base/jaeger.yaml` |
+| Metrics (Prometheus) | **Audited 2026-08-26 (`16-05`)**: 47 label names, **none person-shaped** — no client address (`network_peer_address`/`server_address` come from *outbound* HttpClient instrumentation and hold the cluster's own addresses), no email, no id belonging to a person. One label grows without bound: `node`, whose value is the API pod's `HOSTNAME`, plus the `deliver-to-connections.<node>` topic label derived from it — a cost and stability problem, not a privacy one | AGO | **14 days, or 768MB, whichever binds first** (`adr/0057`), enforced by Prometheus's own TSDB retention | TSDB retention | Prometheus's own label API on the local cluster; `k8s/base/prometheus.yaml` |
+| Application logs | **Audited 2026-08-26 (`16-05`) by reading 1.19 M captured lines off the running local cluster, not by grepping the source.** Every hand-written `Log*()` call in `Ago.Chat.*` interpolates ids, counts, statuses and object keys — but that grep was never the whole story: >99% of the volume is **framework** categories nobody had configured (ASP.NET Core request logging, EF Core's full SQL statement text). Searched for and **not found**: any email-shaped string, any JWT-shaped string, any client IP (the only addresses present are the pods' own). SignalR's hub-failure log prints the method *signature*, not its argument values | AGO, via the container runtime | **14 days** for rotated files (16-day ceiling — `adr/0057` explains why a policy should quote that one), enforced by `CronJob/log-retention` in `ago-deploy`; the file a live container is still writing to is bounded by size (kubelet), not by age — `adr/0057` states that limit plainly | The CronJob; kubelet's rotation | `kubectl logs` from all three hosts on the local cluster; `adr/0057` |
+| Edge access logs | Client IP per request. No query string since `17-02`; nginx's **error** log still carries one and cannot be configured not to | AGO | **14 days** (16-day ceiling), the same mechanism as application logs — these lines are container stdout like any other (`adr/0057`) | `CronJob/log-retention`, demonstrated deleting a rotated file from the Gateway's own log directory | `edge.md`; `17-02`; `ago-deploy/k8s/base/log-retention.yaml` |
 | `customers` (**AGO Calendar**'s own Postgres, `20-01`) | **A phone number — the customer's only mandatory field — plus an optional name, free-text operator notes, and a no-show count.** The most directly identifying store either product has: unlike `visitors`, this row is *meant* to name a person, and unlike `messages.body` the identifier is structured and exact | AGO, on its own node | **Forever.** No pruning exists, and none is designed | Row deletion; `ON DELETE CASCADE` from `tenants`. Nothing automatic | `Stage20CreateCalendarSchema.cs`; `Ago.Calendar.Domain/Customer.cs` |
 | `events` (**AGO Calendar**) | Not content, but a **behavioural record about a named person**: which worker they saw, for what service, when, and whether they turned up. `customer_id` is retained on cancelled and no-show rows deliberately, because the lead card exists to keep exactly that history | AGO | Forever | Row deletion; cascades from `tenants` | `Stage20CreateCalendarSchema.cs`; `Ago.Calendar.Domain/Event.cs` |
 | `operators` (**AGO Calendar**) | `id`, `tenant_id`, `display_name`, `external_subject_id?`. **A display name, unlike AGO Chat's `operators`, which holds none** — worth noticing rather than discovering later: the two products' operator tables are not the same shape, and this one names a person | AGO | Forever | Row deletion | `Stage20CreateCalendarSchema.cs`; `Ago.Calendar.Domain/Operator.cs` |
@@ -122,11 +128,22 @@ change as this file. **Preserve this**: a "show the original filename" feature w
 
 Worth its own heading because the table's "How long" column has one dominant value.
 
-**Nothing in this system is ever deleted automatically, anywhere, except by a TTL in Redis and by the
-attachment orphan sweep.** No message pruning, no partition drop, no outbox trim, no inbox trim, no
-webhook-delivery trim, no queue purge, no log or trace retention policy this project owns. Every
+**Nothing in this system is ever deleted automatically, anywhere, except by a TTL in Redis, by the
+attachment orphan sweep, and — since `16-05`/`adr/0057` — by the telemetry retention below.** No
+message pruning, no partition drop, no outbox trim, no inbox trim, no webhook-delivery trim, no queue
+purge. Every
 "Removal path" in the table above that is not a TTL is *a thing a human or a future item would have to
 run*. `15-04` and `adr/0031` are where that changes; `16-02` is where per-person erasure arrives.
+
+**The telemetry exception, added 2026-08-26 by `16-05` (`adr/0057`).** Container logs — including the
+edge access log, and therefore client IPs — are kept **14 days**, enforced by a daily `CronJob` in
+`ago-deploy` that deletes rotated container-log files, plus a kubelet size bound on the file a live
+container is still writing to. Prometheus keeps **14 days or 768MB**, whichever binds first, enforced
+by its own TSDB retention. Jaeger keeps **10000 traces**, evicted oldest-first by its own in-memory
+ring — a count rather than a duration, because that store offers no TTL. These are the first three
+"How long" values in this file that are enforced by something that runs rather than by a hope, and
+they are the only ones outside Redis. Note what that does *not* say: none of it touches the database,
+the object store, the broker or the backups.
 
 **AGO Calendar is the same, and `16-02` now has two databases to erase from, not one.** `20-01` built
 its schema with no retention job and no pruning, exactly like AGO Chat's, which is consistent rather
@@ -248,12 +265,26 @@ Written down rather than guessed, because a map is most dangerous where it is co
   held 3 rows. Whether the ordinary session cache is also written there in this version and
   configuration was not separately checked — same method, ten more minutes, and it changes nothing
   about the backup's scope since the whole database is copied either way.
-- **What trace spans actually carry.** `16-05` is the audit and it needs running instrumentation to
-  look at, not a reading of the code. The table's Traces row says only what the manifest proves.
-- **What the node's own log rotation does** with container stdout and with NGINX's access log. Nothing
-  in `ago-deploy` configures it, so the answer is whatever the distribution's default is — unverified.
-- **Whether Prometheus label cardinality includes anything person-shaped** under load; `7-02`'s
-  instruments look site- and consumer-scoped, but that was read, not measured.
+- ~~**What trace spans actually carry.**~~ **Established 2026-08-26 by `16-05`**, off a running
+  cluster's Jaeger rather than from the code — see the Traces row. Nothing person-shaped; two
+  attributes the project never wrote (`db.query.text`, `url.full`) that a future change could turn
+  into a leak, which is why there is now a test.
+- ~~**Whether Prometheus label cardinality includes anything person-shaped.**~~ **Established
+  2026-08-26 by `16-05`** by enumerating all 47 label names and the values of every candidate. No.
+  One label (`node`) does grow without bound, which is a cost problem and is recorded as such.
+- ~~**What the node's own log rotation does**~~ — **established, and the answer was "nothing".** On
+  the local Docker Desktop node, measured 2026-08-26: no rotation at all, a single 87.9 MB container
+  log file after 2.5 days. `adr/0057` replaces the default with a chosen 14 days plus a size bound.
+  **One residual remains, and it is a residual of the fix rather than of the audit**: the *live*
+  container log file is bounded by size (kubelet) and not by age, so a very quiet container can hold
+  lines older than 14 days until it grows enough to be rotated.
+- **The demo node's kubelet log-rotation settings have not been verified against the live machine.**
+  `16-05` was scoped away from the live cluster deliberately, so the `containerLogMaxSize` /
+  `containerLogMaxFiles` values in `runbooks/public-deploy.md` are a documented node step that has not
+  yet been applied or read back there. Until it is, the demo node is on kubelet's defaults.
+- **nginx's error log still carries the query string**, and therefore a hub bearer token on a
+  *failing* connect (`17-02` finding 3, unchanged by this item). It is now at least bounded by the
+  same 14-day window as everything else, which is a smaller statement than "fixed".
 
 ## Keeping this true
 

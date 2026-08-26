@@ -149,8 +149,16 @@ Two limits of that fix, both real:
   disk. Turning the error level up past `error` would hide those lines along with every upstream
   failure worth seeing. The only real close is moving the token out of the query string, which
   `5-14` and `17-02` both scope out; `17-02` records this as its one open question.
-- **Retention is a separate question and still open.** These lines carry client IPs whatever the
-  format, and nothing here says how long they are kept — `16-05` owns that.
+- ~~**Retention is a separate question and still open.**~~ **Answered 2026-08-26 by `16-05`
+  (`adr/0057`): 14 days.** These lines carry client IPs whatever the format, and until that item
+  nothing bounded how long they lived — measured rather than assumed, the local node was keeping them
+  forever in a single unrotated file. The mechanism is not special to the edge: nginx writes to
+  `/dev/stdout` like every other container here, so the access log is bounded by the same daily
+  `CronJob/log-retention` in `ago-deploy` that bounds every pod's stdout, plus a kubelet size limit on
+  the file a live container is still writing to. Demonstrated deleting a rotated file from this
+  Gateway's own log directory before it was written down. The 14 days is a choice with reasoning, not
+  an inherited default — `adr/0057` has it, together with the residual: a very quiet container's
+  *current* log file is bounded by size and not by age.
 
 The trace side of the same request is clean and needs no equivalent rule: the .NET ASP.NET Core
 instrumentation redacts query-parameter values by default, so the span carries

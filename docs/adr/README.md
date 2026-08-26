@@ -57,3 +57,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0053 | Availability materialisation is day-granular and insert-only | Accepted |
 | 0054 | Runtime hardening: what each workload is constrained to, and what is deliberately not | Accepted |
 | 0055 | External channel identity, and the shape of the inbound channel port | Accepted |
+| 0057 | How long logs, traces and metrics are kept, and what actually enforces it | Accepted |
