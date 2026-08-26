@@ -100,6 +100,25 @@ That last step is not ceremony. Three rows have outlived their items so far, and
 accident. `16-01` merged with all five Done-when ticked, kept `Status: ready`, and sat in the Now
 queue for a day as work offered to the next session to pick up and re-do.
 
+### One open PR at a time may touch those two files
+
+"One writer" is not enough, and 2026-08-26 proved it four times. The writer was always the same
+session — me — and the conflicts came from **two of my own PRs being open at once**, each cut from a
+`main` that the other was about to change. `#196`, `#202` and two branches before them were rebuilt
+for no other reason.
+
+So the rule is stronger than one writer: **while a PR that edits `docs/roadmap.md` or
+`docs/adr/README.md` is open, do not open a second one.** Land the first, then cut the second from
+the `main` that now contains it.
+
+When that would stall real work — a defect worth filing immediately, a worker finishing while a
+sweep is in flight — write the item file and **leave the queue row and the index row out**, then add
+them in the change that lands next. Nothing goes stale in the meantime: a row goes stale when its
+item *merges*, and nothing is merging while a sweep is waiting.
+
+The failure this prevents costs a rebuild every time, and rebuilding is close-the-PR-and-recreate
+once the branch is pushed — never a rebase. It is cheaper to wait.
+
 ## 6. Fix what this change made false, even outside the lane
 
 A worker is scoped to a lane and reports out-of-lane damage rather than fixing it. That report is
