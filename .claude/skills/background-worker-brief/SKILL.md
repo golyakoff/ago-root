@@ -88,9 +88,28 @@ into the parent repository. The agent then refuses to resume: `work-tree-elsewhe
 directory is held open so it cannot even be removed by hand.
 
 Found on 2026-08-26, immediately after the cleanup rule above was written, by trying to hand `8-08`
-to the worker that had done `16-05` and being refused. Filter by branch and skip that directory
-explicitly; matching merged PR branch names is not enough, because `prune` does not work by branch
-name at all.
+to the worker that had done `16-05` and being refused. `prune` does not work by branch name at all,
+so a branch filter cannot protect it.
+
+**Remove only the worktrees this task created, by name. Never sweep by a computed property.**
+
+This is the part that matters, and it was learned twice in one hour by getting it wrong twice. The
+tempting shape is a filter — "every worktree whose branch matches a merged PR and has no uncommitted
+changes" — and it is wrong because it decides what to delete from *evidence of doneness* rather than
+from *ownership*. Everything that looks finished and belongs to somebody else passes it.
+
+Both failures on 2026-08-26 were the same filter:
+
+- Agent isolation worktrees, above.
+- **The author's own parallel session's worktree**, whose branch had merged and which was clean, so
+  the filter took it. A named exclusion list had protected it on an earlier run of the same procedure
+  and was not carried into the next one — which is the argument against exclusion lists too. An
+  allow-list cannot be forgotten the same way: a directory that is not named is not deleted, and no
+  new category of thing needs to be anticipated to stay safe.
+
+So: when a task's PRs merge, remove the worktrees whose paths the brief named for that task, and
+nothing else. If a directory is left behind because nobody wrote it down, that costs disk. The other
+failure mode costs somebody their working session.
 
 ### Where reuse stops paying
 
