@@ -76,12 +76,11 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 18 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
 | 19 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
 | 20 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
-| 21 | `11-07` finish the login theme | Error pages, and the anti-drift mechanism for the tokens that the first pass owed |
-| 22 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
-| 23 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
-| 24 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
-| 25 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
-| 26 | `18-05` shortcuts and notifications | Extends `11-06`'s attention model; both defaults off, because a permission prompt on first load teaches people to click Block |
+| 21 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
+| 22 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 23 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 24 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 25 | `18-05` shortcuts and notifications | Extends `11-06`'s attention model; both defaults off, because a permission prompt on first load teaches people to click Block |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
 | — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |

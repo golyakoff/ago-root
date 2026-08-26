@@ -115,6 +115,46 @@ already exists. It used to appear to work only because the store was being destr
   `postgres-data` PVC in the cluster) drops both databases, and the next boot is a first boot again.
   Never on the demo deployment.
 
+### Changing the login theme (`11-07`)
+
+The login, registration, password-reset, verification, info and error pages wear an AGO theme:
+`deploy/k8s/base/keycloak-theme/` (a `theme.properties` and one stylesheet), mounted into the compose
+Keycloak by `docker-compose.yml` and into the cluster's as the `keycloak-login-theme` ConfigMap. It
+*extends* the stock theme and overrides no FreeMarker template, so a Keycloak upgrade has one less
+thing of ours to break.
+
+- **`start-dev` does not cache themes.** In the compose loop the stylesheet is a bind mount, so edit
+  `ago.css`, reload the page, and the change is there — no restart, no rebuild. Enjoy it while it
+  lasts: `15-01`'s deferred `start --optimized` work turns theme caching on, and from then on an
+  edited file inside a running container is not enough.
+- **Under Kubernetes the edit-to-visible path is different and does not depend on that.** The theme is
+  a `configMapGenerator` output, so its name carries a content hash (`keycloak-login-theme-<hash>`);
+  changing `ago.css` changes the name, which changes the Deployment's pod spec, which rolls the pod.
+  `kubectl apply -k k8s/base` is the whole procedure, and it works the same in either Keycloak mode.
+  What does *not* work in either mode is editing the file inside the pod.
+- **The token values in that stylesheet are generated, not typed.** They come from `ago-console`'s
+  `src/design/tokens.css` (`11-05`, `adr/0030`). Never hand-edit the block between `GEN-BEGIN` and
+  `GEN-END`:
+
+  ```bash
+  cd C:/git/ago/ago-deploy
+  k8s/check-theme-tokens.sh           # fails, with a diff, if the two have drifted
+  k8s/check-theme-tokens.sh --write   # regenerate from tokens.css, then read the diff before committing
+  ```
+
+  It expects `ago-console` beside `ago-deploy`; set `AGO_CONSOLE` if it is somewhere else.
+  `redeploy.sh` runs the check right after pulling the checkouts, and fails the deploy on drift.
+- **`loginTheme` is a realm setting**, so `--import-realm`'s skip-if-exists rule applies to it exactly
+  as to everything else above: a fresh cluster picks it up, an existing realm does not.
+  `k8s/apply-realm-settings.sh` is what moves it onto a realm that already exists, and it now prints
+  `loginTheme` in the settings it reads back.
+- **Two failure modes worth recognising.** If the theme directory is missing entirely, Keycloak logs
+  `Failed to find LOGIN theme ago, using built-in themes` and serves its *own default* theme — which
+  is `keycloak.v2`, not the `keycloak` theme ours extends, so the page changes markup family as well
+  as colour. If `theme.properties` is mounted but `ago.css` is not, there is **no log line at all**:
+  the page loads the parent's styling, links `ago.css`, and that request 404s in silence. A login page
+  that looks stock with a clean log is that second case.
+
 ### Getting a working operator session locally
 
 **Shipped in `5-05`** (`adr/0022`): the API now validates a real Keycloak-issued token for
