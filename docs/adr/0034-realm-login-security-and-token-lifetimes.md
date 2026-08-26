@@ -119,7 +119,7 @@ the credential actually presented on every request cheap to steal and useless qu
   links. Five minutes is a usability trap the moment mail takes a minute to arrive — and mail will,
   once `10-05` gives this realm an SMTP server at all.
 
-### The visitor token: 30 days, and why it is not 7 yet
+### The visitor token: 30 days, and why it was not 7 yet — superseded, it is 7 now
 
 > **Superseded in part by `adr/0048` (2026-08-25).** `17-07` built the renewal path this section says
 > does not exist, so the premise underneath the number is gone and the decision is now **7 days,
@@ -127,17 +127,18 @@ the credential actually presented on every request cheap to steal and useless qu
 > be lowered on its own — that reasoning is why `0048` exists and it is still the honest account of
 > the state this project was in.
 >
-> **What has and has not shipped, so nothing here reads as truer than it is.** `ago-widget` renews
-> (`VisitorSessionManager`, `tokenExpiry.ts`) and is lifetime-agnostic: it derives its renewal window
-> from the token itself, so it is correct against both numbers. The `Ago.Chat.Api` half — the
-> `POST /api/v1/visitor-sessions/renew` endpoint `0048` specifies, and
-> `JwtTokenService.VisitorTokenLifetime` moving to seven days — is **queued, not applied**, behind an
-> open PR in that repository. Until it lands, the constant is still 30 days and the widget's renewal
-> attempts fail the way an unreachable API fails, which `0048` covers deliberately: the visitor keeps
-> their existing valid token and nothing regresses. `authorization.md`'s two paragraphs on this move
-> with that change, not before it.
+> **Both halves have shipped (2026-08-26), so nothing below describes what is running.** `ago-widget`
+> renews (`VisitorSessionManager`, `tokenExpiry.ts`, `17-07`) and is lifetime-agnostic: it derives its
+> renewal window from the token itself, so it was correct against both numbers and needed no change
+> when the second half landed. The `Ago.Chat.Api` half is `17-08`:
+> `POST /api/v1/visitor-sessions/renew` exists on the Visitor scheme, and
+> `JwtTokenService.VisitorTokenLifetime` is `TimeSpan.FromDays(7)`. `authorization.md` states the
+> shipped shape; this section is history.
 
-**The lifetime stays 30 days**, and now has a stated reason.
+**The lifetime stayed 30 days** at this decision, and gained a stated reason. (Tense deliberate: the
+number moved to 7 in `adr/0048`/`17-08`. Everything from here to the end of this section is the
+reasoning as it stood, kept because it is why the number could not simply be lowered — not because it
+describes what runs.)
 
 The number is a product promise before it is a security parameter: the widget's
 `getOrCreateVisitorSession` reuses a stored token rather than minting a new identity per page view, so
@@ -151,10 +152,14 @@ what an attacker can do, because of the second constraint in Context — the min
 so an attacker positioned to read the token can mint their own. What the lifetime genuinely bounds is
 one visitor's own transcript remaining reachable from a shared or lost device.
 
-**7 days is the target, and it is blocked on renewal existing, not on this decision.** `17-07`
-scopes silent renewal in `ago-widget` plus its endpoint in `Ago.Chat.Api`; the lifetime drops with it,
-in the same change, so the two never disagree. `17-03` inherits whatever this number is as its
-key-rotation drain window, which is the other reason to shorten it eventually.
+**7 days was the target, and it was blocked on renewal existing, not on this decision** — which is
+exactly how it played out. `17-07` shipped silent renewal in `ago-widget` and `17-08` shipped
+`POST /api/v1/visitor-sessions/renew` plus the constant in `Ago.Chat.Api`; `adr/0048` is where that
+decision is recorded. It took two changes rather than the one this paragraph predicted, deliberately:
+the widget half was built to be correct against the endpoint's absence (a `404` is a transient
+failure, so a visitor keeps the valid token they already hold), which let each half be reviewed on
+its own. `17-03` inherits this number as its key-rotation drain window, and that window is therefore
+**7 days**.
 
 ### Visitor session revocation: no deny-list
 

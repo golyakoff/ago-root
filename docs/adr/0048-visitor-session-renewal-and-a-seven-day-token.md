@@ -3,6 +3,9 @@
 - **Status**: Accepted
 - **Date**: 2026-08-25
 - **Stage**: 17
+- **Implemented**: both halves, 2026-08-26 — `17-07` (`ago-widget`: `VisitorSessionManager`,
+  `tokenExpiry.ts`) and `17-08` (`ago-chat`: `POST /api/v1/visitor-sessions/renew`,
+  `JwtTokenService.VisitorTokenLifetime = TimeSpan.FromDays(7)`). Nothing below is a plan.
 
 ## Context
 
@@ -166,6 +169,24 @@ that matters: renewal preserves the `VisitorId`, and re-minting through the publ
 - **Origin checked** against the site's `AllowedOrigins`, the same second layer the mint applies
   (`5-01`).
 
+### Two things `17-08` had to decide that this section did not name
+
+Recorded here rather than left as implementation detail, because both are answers a reader would
+otherwise have to reconstruct from the handler.
+
+**A public key that resolves to no site at all is `404`, not `403`.** The bullets above only say what
+happens when the resolved `SiteId` disagrees with the token's claim; an unknown key is a third case.
+It gets the mint's own answer, and the reason is the client contract this ADR set up: `ago-widget`
+reads `401`/`403` as "this identity is finished" and ends the session, and everything else as
+transient. A site whose public key was rotated, or a page still serving a stale `siteKey`, is a
+misconfiguration — answering `403` would end the session of every visitor on it, while `404` leaves
+them on the valid token they still hold, which is the same graceful degradation the endpoint's own
+absence produces.
+
+**The site-claim check runs before the origin check.** Either order returns `403`, so this is a
+disclosure choice rather than a correctness one: a caller probing with a public key that is not
+theirs learns only "not your site", never anything about that site's allowed origins.
+
 ## Consequences
 
 - **The lifetime and the product promise are no longer the same number.** "How long a returning
@@ -187,11 +208,14 @@ that matters: renewal preserves the `VisitorId`, and re-minting through the publ
 - **`adr/0034`'s visitor-token section is superseded in part**, not wholesale: its reasoning about
   *why* 30 days could not simply be lowered remains correct and is the reason this ADR exists. Only
   the number and the "no renewal path" premise change.
-- **`ago-widget` no longer works against an `Ago.Chat.Api` that lacks the renewal endpoint** in one
-  narrow case: a visitor whose token is inside the renewal window gets a `404`, which is a transient
-  failure by this design, so they carry on with their existing valid token and the renewal is retried
-  and fails harmlessly until the token expires. That is deliberately the same behaviour as an
-  unreachable API — the widget degrades to exactly the pre-`17-07` behaviour rather than breaking.
+- **`ago-widget` degrades, rather than breaking, against an `Ago.Chat.Api` that lacks the renewal
+  endpoint** in one narrow case: a visitor whose token is inside the renewal window gets a `404`,
+  which is a transient failure by this design, so they carry on with their existing valid token and
+  the renewal is retried and fails harmlessly until the token expires. That is deliberately the same
+  behaviour as an unreachable API — the widget falls back to exactly the pre-`17-07` behaviour. This
+  was the *live* state between `17-07` and `17-08` and is now only a rollback property: `17-08`
+  shipped the endpoint, so a widget bundle and an API that disagree about its existence can only
+  happen during a deploy in which one of the two has been rolled back.
 
 ## Alternatives considered
 

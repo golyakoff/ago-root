@@ -30,7 +30,7 @@ JWKS is the signature source there, no local key involved at all.
 
 | Actor | Identification today | Authorization today |
 |---|---|---|
-| **Visitor** | Signed token (localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`); 30-day lifetime, no renewal and no revocation - a decision, not an accident, since `17-06`/`adr/0034` | None beyond the token's `site_id` claim |
+| **Visitor** | Signed token (localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`); **7-day lifetime, renewed at the point of use** (`POST /api/v1/visitor-sessions/renew`), still no revocation - each a decision, not an accident: `17-06`/`adr/0034` for revocation, `17-07`+`17-08`/`adr/0048` for the lifetime and the renewal path | None beyond the token's `site_id` claim |
 | **Operator** | `/hubs/operator` expects a JWT (`realtime.md`) - **issued by Keycloak** (`5-05`, `adr/0022`), validated directly against its JWKS; `OperatorId`/`site_id` are resolved from the token's `sub` via `OperatorIdentityClaimsTransformation`, not read from the token directly | `adr/0016`'s RBAC, resolved per request from `OperatorId`/`site_id` regardless of how they were resolved |
 | **Webhook/API integrations** | Outbound only today: deliveries to a tenant's endpoint are HMAC-signed (`adr/0013`) so *they* can verify *us*. There is no inbound integration API yet, so "how does a third party authenticate to AGO Chat" is entirely unplanned | N/A - does not exist |
 | **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants exactly one thing as of `12-02`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview. No write or action surface for this actor exists |
@@ -254,12 +254,13 @@ idle / 12-hour maximum SSO session — short credential, long session, which is 
 sits in all day needs. Keycloak has no separate refresh-token lifetime for standard sessions; the SSO
 session *is* it.
 
-**The visitor token's lifetime is a decision now**: 30 days, unchanged in value and changed in status.
-It is a product promise (how long a returning visitor still sees their own conversation) more than a
-security parameter, because `POST /api/v1/visitor-sessions` is public and unauthenticated by design —
-anyone who can read a token off a page can mint a fresh one. It drops to 7 days together with
-`17-07`'s silent renewal, not before, because the widget has no renewal path today and a shorter
-lifetime would only break returning visitors sooner.
+**The visitor token's lifetime became a decision here, and the decision has since changed.** `17-06`
+left it at 30 days and said why the number could not simply be lowered: it was a product promise (how
+long a returning visitor still sees their own conversation) more than a security parameter, because
+`POST /api/v1/visitor-sessions` is public and unauthenticated by design — anyone who can read a token
+off a page can mint a fresh one — and the widget had no renewal path, so a shorter lifetime would only
+have broken returning visitors sooner. **It is 7 days now** (`17-07`+`17-08`, `adr/0048`); the section
+below is what changed and why that reasoning no longer blocks it.
 
 **Visitor sessions have no revocation, by decision.** Not a deny-list, not a shorter-lived token with
 server-side state. There is no caller: nothing in this system can currently decide that one visitor
@@ -289,6 +290,51 @@ password guessing and do nothing about account creation. What bounds it today is
 account cannot finish email verification while the realm has no SMTP server (`10-05`), so it can never
 reach `10-02`'s bootstrap endpoint and never becomes a tenant. The trigger is the day that stops being
 true.
+
+## The visitor token renews, and lasts seven days: shipped in `17-07` and `17-08`
+
+**Shipped in `17-07`** (the widget half) **and `17-08`** (the `Ago.Chat.Api` half), `adr/0048`. Read
+the ADR for the reasoning; only the facts are here.
+
+**`JwtTokenService.VisitorTokenLifetime` is `TimeSpan.FromDays(7)`**, sliding, with **no absolute
+cap**. Every renewal issues a full fresh seven days, so a visitor who keeps returning never expires
+and one who stays away for a week does — visibly, with a system note in the panel, rather than
+silently. `adr/0048` records the trigger that would add a cap: the first time a visitor can
+re-identify themselves without holding the original token. **`17-03`'s key-rotation drain window is
+derived from this number and is therefore seven days, not thirty.**
+
+The renewal path is **`POST /api/v1/visitor-sessions/renew`**, and it is the first
+credential-issuing endpoint in this system that is itself authenticated:
+
+- **Visitor scheme.** `sub` and `site_id` come from the validated principal, **never from the body** —
+  taking either from the body would turn this into the public mint with someone else's identity
+  attached. The scheme is the whole authorization story; there is no policy on top, because the
+  Visitor scheme issues exactly one kind of token (unlike `5-03`'s shared attachment route, which
+  needs `AuthorizationPolicies.EitherTokenKind`'s `kind` requirement precisely because it accepts
+  two).
+- **A second endpoint, not a flag on the mint.** A `renew: true` body field would have made one route
+  public-unauthenticated and authenticated at once, with a different rate-limit key and a different
+  success status on each path.
+- **The body carries the site's public key**, resolved through the same cached
+  `GetSiteConfigByPublicKeyHandler` the mint uses, and **a resolved `SiteId` that does not equal the
+  token's claim is `403`.** That check is the tenant-isolation half of this endpoint and it belongs
+  with the ownership comparisons the section below is about: the scheme proves *which visitor*, and
+  only this comparison proves *which site's key they presented*. Origin is checked afterwards, the
+  same `5-01` layer 2 the mint applies. An unknown public key is `404`, deliberately matching the
+  mint rather than `403` — `ago-widget` reads `401`/`403` as "this identity is finished" and
+  everything else as transient, so a `403` there would end the session of every visitor on a site
+  whose key had merely been rotated.
+- **Rate-limited per visitor** (`visitor-session-renew:visitor:{visitorId}`), not per site as the
+  mint is — the mint has no visitor identity to key on, which is the point of the call, while renewal
+  does. `429` carries `Retry-After`. Both halves are tested: that the bucket limits, and that it is
+  keyed per visitor, so one abusive token-holder cannot exhaust a bucket shared with an entire site
+  (`VisitorSessionRenewalTests`).
+
+**This is not a revocation mechanism and does not reopen that decision** — the section above still
+holds. What a shorter lifetime buys is a smaller window, not an eviction: the minting endpoint is
+still public, so an attacker who read a token off a page can mint their own at any time. What it
+genuinely bounds is one visitor's own transcript staying reachable from a shared or lost device, and
+how long a token outlives the key that signed it.
 
 ## Tenant isolation: classified, guarded, and one hole closed - `17-01`
 
@@ -339,3 +385,7 @@ have tripped it. Ownership comparisons are covered by tests, one per branch, not
 - [x] Every token lifetime and the realm's own login-security policy are values somebody chose -
       `adr/0034` (`17-06`), including the two answers that are "no" (per-visitor-token revocation, and
       a registration CAPTCHA), each with the trigger that would reopen it.
+- [x] The one lifetime `adr/0034` could not set to the number it wanted is set to it - `adr/0048`,
+      seven days plus a renewal path (`17-07` the widget, `17-08` the endpoint), so "how long one
+      token stays useful" and "how long a returning visitor keeps their history" stopped being the
+      same number.

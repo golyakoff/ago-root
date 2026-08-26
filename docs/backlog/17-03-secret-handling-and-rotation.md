@@ -26,7 +26,8 @@ public repository, and here it did not.
 a single symmetric key (`AUTH_JWT_SIGNING_KEY`) shared by every site, and there is no revocation
 mechanism of any kind. Three consequences follow, none of them recorded anywhere:
 
-- A leaked visitor token stays valid for up to thirty days and cannot be individually revoked.
+- A leaked visitor token stays valid for up to seven days (thirty until `17-08`) and cannot be
+  individually revoked.
 - The only way to invalidate it is to rotate the signing key — which invalidates **every** visitor
   token, for **every** site, at once. Every visitor in the system loses their session and their
   conversation continuity simultaneously.
@@ -58,7 +59,7 @@ list.
 
 `docs/architecture/repositories.md`'s "No secrets, ever" section — the rule this system already keeps.
 `ago-deploy/k8s/overlays/demo/.env.example` and its header comment. `ago-chat/src/Ago.Chat.Api/Auth/
-JwtTokenService.cs` — the thirty-day visitor token and the single symmetric key. `adr/0022` — operator
+JwtTokenService.cs` — the seven-day visitor token and the single symmetric key. `adr/0022` — operator
 authentication moved to Keycloak, so operator tokens are not this file's problem; visitor tokens are
 the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at all.
 
@@ -72,12 +73,14 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
 - **Make the signing key rotatable without a mass logout.** The mechanism is well-trodden: accept more
   than one key for validation while issuing with only the newest, so an old key can be retired after
   the longest token lifetime has passed. ~~Decide whether the thirty-day lifetime is itself right
-  while looking at this~~ — **answered 2026-08-25 by `17-06`/`adr/0034`: it stays thirty**, and now
-  for a stated reason. It is a product promise (how long a returning visitor still sees their own
-  conversation) more than a security parameter, because the minting endpoint is public and
-  unauthenticated — anyone who can read a token off a page can mint their own. So this item's drain
-  window is thirty days, and it becomes seven when `17-07` gives the widget a renewal path; build the
-  multi-key acceptance so the retirement delay is configuration rather than a constant.
+  while looking at this~~ — **answered twice, and the second answer is the live one. `17-06`/`adr/0034`
+  (2026-08-25) kept it at thirty**, because it was a product promise (how long a returning visitor
+  still sees their own conversation) more than a security parameter — the minting endpoint is public
+  and unauthenticated, so anyone who can read a token off a page can mint their own — and lowering it
+  without a renewal path would only have broken returning visitors sooner. **`17-07`+`17-08`/`adr/0048`
+  (2026-08-26) built that renewal path and set it to seven.** So **this item's drain window is seven
+  days, not thirty**; build the multi-key acceptance so the retirement delay is configuration rather
+  than a constant, which is what makes that number safe to change again.
 - **A leak procedure**: what to do when a secret is known to be exposed, per secret, given the above.
   One page in the runbook, not a policy document.
 - Note the packages PAT's expiry somewhere a human will see it before CI breaks. **The date is now
@@ -110,6 +113,8 @@ the only ones AGO signs itself. `adr/0018` — why the packages PAT exists at al
 ## Open questions
 
 None for the work itself. ~~The thirty-day visitor-token lifetime is a real question and it belongs to
-`17-06`~~ — **settled 2026-08-25**: `adr/0034` kept it at thirty and named `17-07` as what lets it
-drop to seven. This item still makes rotation possible at whatever lifetime that number is, which is
-now a value with reasoning attached rather than an open question.
+`17-06`~~ — **settled 2026-08-25 and then moved 2026-08-26**: `adr/0034` kept it at thirty and named
+`17-07` as what would let it drop to seven; `17-07`+`17-08`/`adr/0048` did exactly that, so **it is
+seven days now**. This item still makes rotation possible at whatever that lifetime is — and the fact
+that the number moved once already is the argument for building the retirement delay as configuration
+rather than reading a constant.
