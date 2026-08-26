@@ -1,7 +1,7 @@
 # AGO Calendar becomes a chat module, behind the contract rather than beside it
 
 - **Stage**: 20 (and 14 — the contract is Chat's, the first implementation is Calendar's)
-- **Status**: blocked on `20-06`
+- **Status**: ready — `20-06` merged
 - **Depends on**: `20-06` — the console and booking widget. Deliberately built *outside* this seam, so
   that the seam is designed against a flow that exists.
 - **Decides**: two of the questions `adr/0065` explicitly left open.
@@ -58,6 +58,13 @@ understanding) is now out of scope by decision rather than by preference.
 - **The third guard from `adr/0065`**: a check for string literals of known module keys inside
   `Ago.Chat.*`. The IL scan cannot see it, and it is the cheapest way to shortcut the whole design.
 - **The registry**: one row saying site X has module K enabled, and the entry point rendered from it.
+- **Reconcile `adr/0065`'s second guard with what `adr/0064` shipped.** The guard says the base widget
+  bundle must have *zero inputs from module directories*; `20-06` deliberately ships
+  `ago-widget/src/booking/` **inside** the base bundle, at a measured cost of 2.7 KB gzipped. That is
+  not a contradiction today — the directory is widget-owned code that names AGO Calendar in exactly one
+  file — but the guard as written would flag it. Either restate the guard as *no inputs from a
+  directory owned by another product*, or move booking out. **Decide it here rather than letting a
+  future test failure decide it**, and say which in the ADR.
 
 ## Out of scope
 

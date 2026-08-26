@@ -86,6 +86,38 @@ A real bug found live while building this, unrelated to CORS itself but blocking
 constrains `where T : class` project-wide (`Ago.Platform.Abstractions`, `0.9.0`), and this layer's own
 positive/negative cache wraps its `bool` in a small reference-type result instead.
 
+**Shipped again in `20-06`, for AGO Calendar, with three deliberate differences.** The same two
+layers (`TenantOriginCorsPolicyProvider`, `EmbedScopeResolver`/`OriginPolicy`), adapted from "site" to
+"tenant". What changed, and why each change was a decision rather than a drift:
+
+- **The public key travels in a path segment, not a body.** `5-01` could not do this - the
+  visitor-session endpoint's public key arrives in JSON - and the finding above is exactly why
+  `20-06` did. Every public read is `GET /api/v1/embed/{publicKey}/…`, which is a URL a preflight can
+  see. The policy still asks only the coarse question anyway: the one route that *cannot* name a
+  tenant in its URL is `20-03`'s booking `POST`, which names a calendar, and a policy that were
+  precise on three routes and coarse on the fourth would invite the belief that the precise ones are
+  a boundary.
+- **No cache on layer 1.** AGO Chat caches because it has an `ICache` wired; AGO Calendar
+  deliberately does not (`Ago.Calendar.Infrastructure.Redis` registers only the rate limiter, and
+  says why). The read is one `EXISTS` against a GIN index, browsers cache preflights for
+  `Access-Control-Max-Age`, and adding a cache would import `5-01`/`10-04`'s stale-negative problem
+  for an unmeasured saving. It also makes `20-06`'s allowed-origins editor - the one `5-01` deferred -
+  take effect immediately, which is asserted by a test that approves an origin and reads the surface
+  with no wait.
+- **A *missing* `Origin` is not a rejection here, and in AGO Chat it is.** AGO Chat's visitor-session
+  endpoint has exactly one legitimate caller, a browser. AGO Calendar's booking surface is
+  deliberately reachable without one - `21-01` reaches it from a channel adapter with no browser in
+  the path, and that is the product model the whole `20-06` embed decision rests on. `Origin` is
+  forgeable by any non-browser caller anyway, so requiring it would ban the product's own second
+  channel to gain nothing. What layer 2 stops is the attack a browser can actually mount: a page at
+  an origin approved for tenant A using it against tenant B, where the browser attaches the real
+  `Origin` and the page cannot remove it.
+
+Observed live during `20-06`, and worth quoting because it is the clearest statement of why layer 1
+alone is not a boundary: a request carrying tenant B's own approved origin against tenant A's public
+key returned `404` **together with** `Access-Control-Allow-Origin: <tenant B's origin>`. The browser
+was told it could read the response; the response was a refusal.
+
 **Addendum (`10-04`)**: proven end-to-end for a site created through `10-02`'s real self-registration
 path, not only pre-seeded fixtures - register, then an immediate widget handshake from that exact
 origin, passes both CORS layers with no wait. The negative-cache timing question this mechanism's

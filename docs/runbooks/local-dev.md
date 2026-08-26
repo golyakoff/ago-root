@@ -579,6 +579,100 @@ bare-named queue shows message counts growing with no consumers, purge it:
 box - the data is disposable). See `docs/backlog/5-11-fix-competing-consumer-queue-collision.md`'s
 "Operational note" for why this happens and why it will matter again on a real deployed cluster.
 
+## Running AGO Calendar locally (`20-06`)
+
+**AGO Calendar is not in `docker-compose.yml` and not in the Kubernetes overlay.** `ago-deploy`
+carries no manifests for it at all, so this is a command-line loop and not a cluster one. Every
+command below was run; the seed values are invented and belong to nobody.
+
+Its own throwaway Postgres and Redis, so that nothing collides with AGO Chat's:
+
+```bash
+cd C:/git/ago
+docker run -d --name ago-calendar-pg -e POSTGRES_USER=ago -e POSTGRES_PASSWORD=devpassword \
+  -e POSTGRES_DB=ago_calendar -p 55432:5432 postgres:17-alpine
+docker run -d --name ago-calendar-redis -p 56379:6379 redis:7-alpine
+```
+
+Schema, then the API. `Operator:Authority` is **required and has no fallback** — a host that started
+without it would be a host with no authentication, which is exactly the trust model `adr/0022`
+deleted. Any syntactically valid URL works while you are only exercising the *public* surface,
+because `AddJwtBearer` fetches JWKS lazily, on the first token it is asked to validate.
+
+```bash
+cd C:/git/ago/ago-calendar/src/Ago.Calendar.Infrastructure.Postgres
+AGO_CALENDAR_CONNECTION_STRING="Host=localhost;Port=55432;Database=ago_calendar;Username=ago;Password=devpassword" \
+  dotnet ef database update
+
+cd C:/git/ago/ago-calendar/src/Ago.Calendar.Api
+ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5011 \
+ConnectionStrings__Calendar="Host=localhost;Port=55432;Database=ago_calendar;Username=ago;Password=devpassword" \
+Redis__ConnectionString="localhost:56379" \
+Operator__Authority="http://127.0.0.1:8081/realms/ago-chat" Operator__RequireHttpsMetadata=false \
+Operator__ConsoleOrigins__0="http://localhost:5174" \
+  dotnet run
+```
+
+`Operator:ConsoleOrigins` is the console's own origin, and it is **configuration rather than tenant
+data** on purpose: a tenant's `allowed_origins` unlocks the public booking surface, and this unlocks
+the authenticated one. Keeping the two lists apart is what stops a tenant granting itself the
+console's policy by editing its own origins.
+
+A tenant, its seeded role and its first operator, in one transaction. **This route is mapped only
+outside Production** (`DevProvisioningEndpoints`) — it is a provisioning step, not a signup:
+
+```bash
+cd C:/git/ago
+curl -X POST http://localhost:5011/dev/tenants -H "Content-Type: application/json" -d '{
+  "name": "Sam & Co, barbers",
+  "publicKey": "demo-barbershop",
+  "operatorDisplayName": "Sam",
+  "externalSubjectId": "kc-demo-operator",
+  "allowedOrigins": ["http://localhost:8097"]
+}'
+```
+
+`externalSubjectId` must be the `sub` of a user the realm already has — this product never calls
+Keycloak's admin API, exactly as `adr/0022`'s consequences describe. Everything after this point is
+done from the console (`ago-calendar-console`, `npm run dev`), which is where a calendar, a service, a
+worker and their working hours are created, and where the tenant's own embed snippet is displayed.
+
+The materialiser turns those working-hours rules into bookable slots. Run it once and stop it:
+
+```bash
+cd C:/git/ago/ago-calendar/src/Ago.Calendar.Worker
+ConnectionStrings__Calendar="Host=localhost;Port=55432;Database=ago_calendar;Username=ago;Password=devpassword" \
+Redis__ConnectionString="localhost:56379" AvailabilityMaterializationJob__HorizonDays=14 \
+  dotnet run
+```
+
+### Seeing the booking widget on a stranger's page
+
+`ago-widget/demo/booking.html` is a plain page with one script tag carrying both products' keys.
+Serve it from an origin that is **not** either API's, because that is the only way the two CORS
+layers are exercised at all:
+
+```bash
+cd C:/git/ago/ago-widget
+AGO_API_BASE_URL=http://localhost:5009 npm run build
+python -m http.server 8097 --bind 127.0.0.1
+# then open http://localhost:8097/demo/booking.html
+```
+
+`http://localhost:8097` has to be in that tenant's allowed origins — set above, and editable from the
+console afterwards. With `Ago.Chat.Api` not running the chat half of the same tag fails and the
+booking half still works, which is worth seeing once: booking needs no conversation.
+
+**Two things to check when it does not work**, both of which look identical in the browser:
+
+- **A missing origin.** The page's own JavaScript is told nothing about a response it was not allowed
+  to read, so the widget can only say "Booking is not available right now." Confirm from the server
+  side with `curl -D - -H "Origin: http://localhost:8097" http://localhost:5011/api/v1/embed/demo-barbershop`
+  — an approved origin gets `200` and an `Access-Control-Allow-Origin` echoing it back.
+- **An origin approved for a *different* tenant.** This is the interesting one, and it is what `5-01`'s
+  two-layer model exists for: the response carries `Access-Control-Allow-Origin` *and* a `404`. Layer 1
+  said "some tenant approved you"; layer 2 said "not this one".
+
 ## Configuration
 
 `appsettings.Development.json` for defaults, `appsettings.Local.json` for anything machine-specific.

@@ -1,7 +1,7 @@
 # AGO Calendar: tenant/operator console and the embeddable booking widget
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `20-04-confirmation-sweep-and-operator-queue.md` (the pending-queue read and
   reject/cancel/no-show actions this console surfaces), `20-05-sms-confirmation-delivery.md` is not a
   hard dependency but should land first in practice so the console's own booking-confirmation view has
@@ -69,22 +69,76 @@ the ingress, unchanged from AGO Chat's own precedent.
 
 ## Done when
 
-- [ ] A tenant can create a calendar, a worker, a service, and a working-hours rule from the console,
+- [x] A tenant can create a calendar, a worker, a service, and a working-hours rule from the console,
       end to end against a running `ago-calendar` backend.
-- [ ] An operator can see the shared pending-bookings queue and successfully reject a booking from the
+      `ConsoleEndpointTests.ATenant_CanCreateACalendarAWorkerAServiceAndAWorkingHoursRule` — over real
+      HTTP against the real host on a real Postgres, reading the result back through the console's own
+      configuration screen rather than through the database. The console's own half of it is
+      `ConfigurationPage.test.tsx`, which asserts the request each form builds.
+      **Not verified through a browser against a signed-in Keycloak session** — see the note below.
+- [x] An operator can see the shared pending-bookings queue and successfully reject a booking from the
       console, verified against real data (two calendars, confirming the queue is not scoped to one).
-- [ ] A plain HTML page with one script tag, pointed at a seeded demo tenant, can complete a real
+      `ConsoleEndpointTests.AnOperator_SeesThePendingQueueAcrossEveryCalendarAndCanRejectFromIt`, with
+      two calendars exactly as this clause asks, plus
+      `AnOperator_CannotRejectAnotherTenantsBooking`. Same browser caveat.
+- [x] A plain HTML page with one script tag, pointed at a seeded demo tenant, can complete a real
       booking through the widget against the local cluster — the same "stranger's page, one script tag"
       bar `vision.md`'s own AGO Chat "done when" already holds itself to.
-- [ ] `Ago.Calendar.Integration.Tests` (layer 1 CORS) and an equivalent to `5-01`'s own `OriginAuthorizationTests`
+      **Done, and one word of it is not true: "cluster".** The booking was completed against
+      `Ago.Calendar.Api` run from the command line over a real Postgres and a real Redis, not against
+      the Kubernetes overlay — `ago-deploy` carries no AGO Calendar manifests at all, and adding them
+      is not this item's change. What was proven, and how: the *built* `dist/ago-chat.js`, loaded by
+      `demo/booking.html`'s single script tag from `http://localhost:8097`, walked the whole flow
+      (service → worker → time → phone → name) and produced a row in `events` at
+      `PendingConfirmation` with a lead card beside it. The chat half of the same tag failed
+      throughout, because `Ago.Chat.Api` was not running — which incidentally demonstrates that
+      booking needs no conversation and that the failure is contained rather than fatal.
+      The last step was driven through jsdom rather than a real browser, because the shared browser
+      pane was at its tab cap with other sessions' tabs and closing one was not this session's to do.
+      Both CORS layers *were* observed at the HTTP level with a real browser's headers — see below.
+- [x] `Ago.Calendar.Integration.Tests` (layer 1 CORS) and an equivalent to `5-01`'s own `OriginAuthorizationTests`
       (layer 2, cross-tenant rejection) both pass, proving the widget cannot be tricked into booking
       against a tenant its origin was never approved for.
+      `TenantOriginCorsPolicyProviderTests` (layer 1, exercising `GetPolicyAsync` directly — the same
+      call `5-01` made, and for the same reason) and `OriginAuthorizationTests` (layer 2, over real
+      HTTP against the real host, on both the reads and `20-03`'s booking write).
+      Also observed live, which is the version worth quoting: a request carrying **tenant B's own
+      approved origin** against tenant A's public key came back
+      `HTTP/1.1 404` *with* `Access-Control-Allow-Origin: http://localhost:8098` — layer 1 handing the
+      page permission to read a response that layer 2 had already refused. `5-01`'s finding that layer
+      1 is not a tenant boundary, reproduced at runtime rather than asserted.
+
+## What was not verified, stated where it cannot be missed
+
+- **Nobody has signed into this console with Keycloak.** Doing so needs an `ago-calendar-console`
+  client in the realm, which lives in `ago-deploy`'s realm import — a repository this item did not
+  open. What *is* proven is everything on this side of that redirect: the claims transformation
+  resolving a `sub` against `ago-calendar`'s own `operators` table, the `calendar-operator` policy
+  refusing a subject it cannot resolve, and every handler's permission check, all against real rows
+  (`ConsoleEndpointTests`, which stands in for exactly one thing — proof that Keycloak signed a
+  token — and leaves the rest running for real).
+- **Nothing was deployed**, and `ago-deploy` has no AGO Calendar manifests. The runbook section this
+  item adds to `local-dev.md` is the command-line loop, and says so.
+- **A real browser never rendered the booking panel.** jsdom did, against the real API, using the
+  real built bundle.
+
+## Follow-up this item creates
+
+- A Keycloak client and a realm-import entry for `ago-calendar-console`, plus `ago-deploy` manifests
+  for `Ago.Calendar.Api`/`Worker` and the console bundle. Until those exist, `20-06`'s console cannot
+  be signed into by a human and `.env.production` cannot honestly be written (`adr/0051`).
+- The OIDC duplication between the two consoles, recorded in `adr/0064`'s Consequences with the
+  condition under which a shared package becomes the right answer.
 
 ## Open questions
 
-Whether the console is a new app or a new area of `ago-console` — a real decision this item makes and
-records, not a blocking question (the repository-topology rule already answers it; this item applies
-it and states the answer once written).
+~~Whether the console is a new app or a new area of `ago-console`~~ — **decided: a new repository,
+`ago-calendar-console`** (`adr/0064`). `repositories.md`'s own test answers it: the bundle versions
+and deploys independently of `ago-console`, which is AGO Chat's. The argument that settled the
+*widget* half deliberately does not transfer, and noticing why is the useful part — the review's
+measured duplication was the realtime protocol primitives, and AGO Calendar has no realtime client at
+all. The duplication this decision *does* cost is the OIDC plumbing, and the ADR names it rather than
+leaving it to be found.
 
 **The widget half is decided, 2026-08-26** (`reviews/2026-08-26-platform-boundary.md`, third pass).
 **There is no second widget and no second script tag.** A shop pastes one embed; booking is reached

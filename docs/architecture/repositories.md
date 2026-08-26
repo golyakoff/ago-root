@@ -29,6 +29,8 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | `ago-console` | operator console SPA | static bundle | the public API contract |
 | `ago-deploy` | compose, Kustomize, seed | manifests | image tags, chart values |
 | `ago-landing` | the public marketing page at the apex domain | a static page, served from the demo overlay | nothing |
+| `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and its own hosts** (Api, Worker) | Docker images (none published yet — nothing deploys them) | `Ago.Platform.*` packages |
+| `ago-calendar-console` | AGO Calendar's operator console SPA | static bundle | AGO Calendar's public API contract |
 | `ago-root` | docs, ADRs, conventions, skills, backlog, `load/` scenarios and reports | the rules everything else obeys | nothing |
 
 ## Why the platform is a package, not a folder
@@ -174,3 +176,22 @@ be forced to update its script tag, so its release cadence is genuinely detached
 not qualify — it ships with the platform. Splitting `ago-platform` into per-adapter repositories is
 available and currently rejected: it would multiply the version matrix with no independent consumer
 to justify it.
+
+**Worked twice in one item, in opposite directions** (`20-06`, `adr/0064`), which is the clearest
+illustration this rule has:
+
+- **AGO Calendar's console qualified** and became `ago-calendar-console`. It tracks
+  `Ago.Calendar.Api`'s contract; `ago-console` tracks `Ago.Chat.Api`'s. One shared bundle would mean
+  a calendar change rebuilding and redeploying AGO Chat's console.
+- **AGO Calendar's booking UI did not**, and became a module inside `ago-widget`. Not because the
+  topology test said so — it would have said the same thing there — but because a *product* rule
+  overrode it: a shop pastes one script tag, and booking must work on channels where there is no
+  widget at all. When a product constraint and a topology rule disagree, the product constraint is
+  the one with a customer's website attached to it.
+
+The counterpart to that pair is worth stating too: **the reuse argument that decides one of these
+questions rarely decides the other.** The measured duplication that made the widget decision obvious
+(the realtime protocol primitives, identical across `ago-widget` and `ago-console`) is simply absent
+from AGO Calendar's console, which has no realtime client. What the console decision does cost is a
+copied OIDC setup, recorded in `adr/0064` with the condition under which a shared package becomes the
+right answer.
