@@ -64,3 +64,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0061 | A message can carry structure AGO Chat does not understand | Accepted |
 | 0062 | *(never written - reserved for `5-19`, which turned out to need no decision of its own: `adr/0048` already carried the precedent. Kept vacant rather than reused)* | n/a |
 | 0063 | A principal's kind is answered per surface, by asking the positive question | Accepted |
+| 0065 | AGO Chat carries a module's steps without understanding them | Accepted |

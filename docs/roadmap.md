@@ -80,6 +80,8 @@ Three items sit parked below the table rather than in it, because they cannot be
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
 | — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |
+| — | `20-07` Calendar becomes a chat module | **Blocked on `20-06`**: `adr/0065` fixed the shape of the seam and deliberately left the primitive set and the transport to be decided against a real booking flow rather than an imagined one |
+| — | `20-08` who confirms a chat-originated booking | **Blocked on `20-07`**, and a named tension with `adr/0027`: a chat operator acting on a booking card is an identity Calendar has no `operators` row for |
 
 ### Soon — folded into the queue above, 2026-08-25
 
