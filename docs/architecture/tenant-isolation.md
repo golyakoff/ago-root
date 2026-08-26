@@ -14,15 +14,24 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **37**, across 31 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **21** |
-| Deliberately not RBAC-gated, each with a stated reason | **16** |
-| HTTP routes and hub methods that carry tenant data | **21** |
-| Routes taking a **client-supplied** `siteId` | **6** — two route groups, both permission-gated |
+| Use-case entry points in `Ago.Chat.Application` | **42**, across 36 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **22** |
+| Deliberately not RBAC-gated, each with a stated reason | **20** |
+| HTTP routes and hub methods that carry tenant data | **23** |
+| Routes taking a **client-supplied** `siteId` | **8** — three route groups, all permission-gated |
 | Read-model queries | **5**, in three read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
 
-The 21/16 split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
+**Re-derived in `14-04`**, from the scan itself rather than by adding a delta: the first three rows
+had drifted (they read 37/21/16 across 31 handler classes, a count from before `12-04`/`12-05`/`14-06`
+added entry points of their own). `14-04`'s own contribution is three of them — `GetOfflineAutoReply`
+and `UpdateOfflineAutoReply`, both `site:configure`-gated, and `SendOfflineAutoReply`, a
+`Ago.Chat.Worker` consumer exempt for the same reason `RecordUnreadMessageHandler` is — plus the
+`GET`/`PUT /api/v1/sites/{siteId}/offline-auto-reply` pair, the third route group to take a
+client-supplied `siteId`. The route and read-query rows below the first three are still hand-counted;
+only this item's own two routes were added to them.
+
+The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
 `TenantScopeExemptions` with a reason. The counts above are what that scan reports.
 
@@ -37,8 +46,9 @@ compares against.
    impossible by construction, not by check. Most operator routes work this way.
 2. **A signed visitor token.** `AuthEndpoints` mints `(visitorId, siteId)` together and signs them,
    so the pairing is not forgeable either. Same property as (1), different issuer.
-3. **The client, in a route segment.** Exactly two route groups —
-   `/api/v1/sites/{siteId}/widget-config` and `/api/v1/sites/{siteId}/webhooks/...`. This is
+3. **The client, in a route segment.** Exactly three route groups —
+   `/api/v1/sites/{siteId}/widget-config`, `/api/v1/sites/{siteId}/webhooks/...` and, since `14-04`,
+   `/api/v1/sites/{siteId}/offline-auto-reply`. This is
    deliberate and documented in the code: an operator's own site claim is not necessarily the site
    being configured. **On these routes the permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
@@ -122,20 +132,29 @@ leak and, in most cases, no principal yet to check anything for.
   site allow this origin", which is layer 1 of `5-01`'s CORS design. Never the per-site origin check.
 - `GetSiteConfigByPublicKeyHandler` — the widget handshake, keyed by a public key that
   `api-design.md` states is not a secret.
-- `GetSiteConfigByIdHandler` — takes a `SiteId` but is never reachable with a caller-supplied one:
-  its only callers are `HubOriginValidator` on both hubs, passing the connection's own validated
-  claim, and no route maps it.
+- `GetSiteConfigByIdHandler` — takes a `SiteId` but is never reachable with a caller-supplied one.
+  Its callers are `HubOriginValidator` on both hubs, passing the connection's own validated claim, and
+  since `14-04` `SendOfflineAutoReplyHandler`, passing the site id off an envelope this system
+  published. No route maps it.
 - `RegisterSiteHandler` — creates the tenant, so there is no site to be scoped to. Gated instead by
   `10-01`'s `RequireKeycloakIdentity` plus one-registration-per-subject, enforced by a unique index
   inside the registration transaction.
 
-**Consumer and worker side (4).** No external caller reaches these. The input is an integration event
+**Consumer and worker side (6).** No external caller reaches these. The input is an integration event
 this system itself published, so the site is a fact already established by the write that raised it.
 
-`DispatchWebhooksForEventHandler`, `RecordUnreadMessageHandler`,
+`DispatchWebhooksForEventHandler`, `RecordUnreadMessageHandler`, `SendOfflineAutoReplyHandler`,
 `ResolveConversationAssignmentTargetsHandler`, `ResolveMessageDeliveryTargetsHandler`,
 `ResolveOperatorIdentityHandler` — the last of which is what *produces* the `OperatorId`/`SiteId`
 claims every gated handler then trusts, and so cannot itself depend on them.
+
+`SendOfflineAutoReplyHandler` (`14-04`, `adr/0066`) is the newest and the only one that *writes a
+message*, so it is worth one extra sentence. Its `SiteId` comes off a `MessageAccepted` envelope this
+system itself published; it uses that id for exactly two things, both self-consistent — reading that
+same site's cached configuration, and asking whether that same site has an operator online — and it
+then writes into the conversation that envelope named. There is no principal to check a permission
+for: nobody asked for the reply, a broker delivery did, and the message it writes is authored by the
+system itself, which `adr/0016` has no representation for (exactly as it has none for a visitor).
 
 **The one cross-tenant read (1).** `ListSitesForOwnerHandler`, `12-02`'s platform-owner overview. It
 carries no `SiteId` **because** it is cross-tenant. The whole access-control story is `12-01`'s
@@ -173,6 +192,7 @@ is exactly what makes it interesting. See *The guard* below.
 | `GET /api/v1/attachments/{id}` | `EitherTokenKind` | operator claim, or the visitor token |
 | `DELETE /api/v1/attachments/{id}` | `RequireOperatorIdentity` | operator claim |
 | `GET`/`PUT /api/v1/sites/{siteId}/widget-config` | `RequireOperatorIdentity` | **client-supplied** |
+| `GET`/`PUT /api/v1/sites/{siteId}/offline-auto-reply` | `RequireOperatorIdentity` | **client-supplied** |
 | `POST`/`GET /api/v1/sites/{siteId}/webhooks` | `RequireOperatorIdentity` | **client-supplied** |
 | `DELETE /api/v1/sites/{siteId}/webhooks/{id}` | `RequireOperatorIdentity` | **client-supplied** |
 | `GET /api/v1/sites/{siteId}/webhooks/{id}/deliveries` | `RequireOperatorIdentity` | **client-supplied** |

@@ -217,6 +217,12 @@ through the real `JsonHubProtocol`.
     widget (a visitor only ever has one conversation) but genuinely ambiguous for an operator handling
     several at once, who would have no way to tell which open thread a push belonged to. Added as an
     additive field (a DTO's wire shape has no positional constraint the way a hub method's arguments do).
+  - **`14-04`**: `MessageDto.authorKind` has a third value, `"System"` - a message AGO Chat authored on
+    the tenant's behalf (today the offline auto-reply, `adr/0066`). Additive at the wire level and at
+    the storage level alike (`messages.author_kind` is `text` holding the enum member name), so an
+    older client receives one and falls through to its own unrecognised-kind path. Both clients treat
+    it as incoming, which is where a message nobody on their side wrote belongs; the widget labels it
+    rather than passing it off as a person.
 - Server assigns `sequence`; clients order by it and never by arrival time or client clock.
 - **Shipped in `3-03`**: on reconnect the client sends its last known `sequence` per open
   conversation and receives exactly the delta - `VisitorHub.JoinAsync`/`OperatorHub`'s

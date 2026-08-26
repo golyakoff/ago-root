@@ -1,7 +1,8 @@
 # AGO Inbox: offline auto-reply (scripted, v1)
 
 - **Stage**: 14
-- **Status**: ready — scoped to the scripted keyword variant only; the LLM-backed variant is named
+- **Status**: done (`adr/0066`)
+- **Was**: ready — scoped to the scripted keyword variant only; the LLM-backed variant is named
   below as a real, deliberately deferred option, not this item's job
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md` — channel-agnostic by design,
   so it does not additionally depend on `14-02`/`14-03` shipping first, only on the concept those items
@@ -58,15 +59,51 @@ caching.md` — the toggle's own value belongs in `Site`'s existing config, read
 
 ## Done when
 
-- [ ] `Ago.Chat.Application.Tests`: a message arriving with no operator online and the flag enabled
+- [x] `Ago.Chat.Application.Tests`: a message arriving with no operator online and the flag enabled
       triggers the scripted reply; the same message with the flag disabled does not.
-- [ ] Verified live against at least one real channel (the widget, or whichever of `14-02`/`14-03`
-      already shipped by the time this item is picked up) — an offline visitor gets a real automatic
-      reply, not just a passing unit test.
-- [ ] Console toggle proven end to end: enabling/disabling from the console changes live behaviour
-      without a redeploy, matching `11-*`'s own "live config, no rebuild" bar for widget customisation.
-- [ ] `docs/vision.md`'s corrected out-of-scope note and this stage's own roadmap entry both read
-      consistently with what actually shipped.
+      `SendOfflineAutoReplyHandlerTests`, plus the two conditions the item did not name and
+      `adr/0066` had to decide - an *online* operator suppresses the reply even when every one of them
+      is busy, and a conversation somebody has already picked up is never replied to.
+- [x] Verified live against at least one real channel - the widget's own protocol, end to end through
+      real Postgres, RabbitMQ and Redis (`OfflineAutoReplyDeliveryEndToEndTests`): a visitor's message
+      goes through `SendVisitorMessageHandler`, the outbox, `OutboxDispatcher`,
+      `OfflineAutoReplyConsumer`, the reply's own outbox row, `ConnectionFanoutConsumer` and
+      `NodeDeliveryConsumer`, and arrives at the visitor's own connection as the exact
+      `MessageReceived` frame the widget parses. **Not** verified in a browser against a deployed
+      cluster - see "Not verified" below.
+- [x] Console toggle proven end to end: `OfflineAutoReplyEndToEndTests.EnablingTheToggle_...` writes
+      through the console's own handler and then waits for the *cached* per-site read to reflect it,
+      over the real outbox -> RabbitMQ -> cache-invalidation chain. That test also caught the reason
+      it would not otherwise have worked: `SiteCacheInvalidationConsumer` had only ever evicted one of
+      this row's two cache keys (`caching.md`).
+- [x] `docs/vision.md`'s corrected out-of-scope note now says exactly what shipped and what did not.
+      The roadmap entry is deliberately left to the managing session - `docs/roadmap.md` collides on
+      every concurrent item.
+
+## What was decided here that the item did not name
+
+- **"No operator is available" is three conditions, and this fires on two of them** - nobody online,
+  and nothing assigned. An online-but-full operator is a queue wait, not an absence (`adr/0066`).
+- **The loop guard is structural, not a runtime check**: the reply is authored
+  `MessageAuthorKind.System` by the only method that can create one, and the consumer acts on
+  `Visitor` alone. Proven by removing it and watching a reply trigger a reply against a real broker.
+- **Idempotency is `adr/0017`'s inbox ledger** - the reply, its outbox row and the dedup row commit in
+  one `SaveChangesAsync`, so a redelivered trigger persists nothing at all.
+- **The rule shape** is a required fallback plus an ordered, first-match-wins keyword list; substring,
+  ordinal, case-insensitive; no regex, no decision tree.
+- **A real bug the work surfaced**: a validating value object behind a cached DTO must be a record
+  *class*, not a `readonly record struct` - `System.Text.Json` will not use a struct's parameterised
+  constructor, so every rule came back with null fields on a cache *hit* (never on a miss).
+  `SiteConfigCacheRoundTripTests` is the guard that now exists for the whole cached shape.
+
+## Not verified
+
+- **A browser against a deployed cluster.** Nothing here was deployed (that is the managing session's
+  call), so "an offline visitor sees a labelled bubble in a real page" rests on the delivery test above
+  plus `ago-widget`'s own DOM test, not on someone watching it happen.
+- **Cost under load.** Every visitor message now costs one extra consumer hop on every site, including
+  the majority with the feature off. The skip path does one cached config read and no database work at
+  all, but no number is attached to that - Stage 7's load test is where it would get one.
 
 ## Open questions
 

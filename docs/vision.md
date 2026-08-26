@@ -116,6 +116,15 @@ tenant-toggleable, off-by-default offline auto-reply (Stage 14) - both became re
 rather than staying deliberately out of scope, and this list is corrected rather than left to
 contradict the roadmap it sits next to.
 
+**The auto-reply half of that correction shipped in `14-04`**, and shipped narrower than the sentence
+above might suggest, so the boundary is worth stating exactly. What exists is the **scripted** variant:
+a per-site toggle (off by default), a default reply, and up to twenty keyword rules, fired only when
+nobody at that site is online and nothing has picked the conversation up (`adr/0066`). The
+**LLM-backed** variant is not built and is not out of scope either - it is named future work, blocked
+on a real, cited per-message provider cost rather than on appetite, because `CLAUDE.md` forbids
+inventing one. So "bots/LLM auto-replies" is now three things, not two: one shipped, one deliberately
+deferred with a stated trigger, and nothing here that is permanently excluded.
+
 File attachments **are** in scope (`architecture/file-storage.md`): they are the one "feature" here
 that forces a genuinely different scaling shape from everything else in the system.
 

@@ -44,6 +44,17 @@ denial.
   agree are two columns that can disagree, and this is the one the expiry sweeper reads. `null` for every
   ordinary tenant and for the seeded `8-05` demo sites, which are not created on demand and must never
   expire (`adr/0058`).
+  **`offline_auto_reply_enabled boolean NOT NULL DEFAULT false`, `offline_auto_reply_fallback text
+  NOT NULL DEFAULT ''` and `offline_auto_reply_rules text NULL` added in `14-04`**
+  (`Stage14AddSiteOfflineAutoReply`, additive/reversible, `adr/0066`). Off with nothing to say is what
+  every pre-existing row reads back as, from the column defaults - no backfill, and no behaviour change
+  for a tenant who never opens the screen. The rules column holds a JSON array of `{keyword, reply}`
+  in **`text`, not `jsonb`**, for the same reason `messages.actions` does (`14-06`): nothing queries
+  *into* it - the only reader is the matcher, which needs the whole ordered list anyway - so everything
+  `jsonb` buys is capability this value will never use. Not a `site_auto_reply_rules` child table
+  either: a list capped at twenty entries, read and written as a unit, would buy a join on a
+  per-message path and a second aggregate boundary inside `Site`. Order in the array is **behaviour,
+  not presentation** - the matcher is first-rule-wins.
 - `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, and nothing else.
   **Corrected in `16-01`**: this bullet listed a `token_hash` column that was never built. There is no
   such column in `Stage1CreateChatSchema`, in the EF model snapshot, or in `Visitor.cs`, and the string
