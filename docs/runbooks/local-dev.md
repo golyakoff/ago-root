@@ -19,12 +19,25 @@ reachable from here (`workspace.md`).
 cp deploy/docker/.env.example deploy/docker/.env   # once; edit if you want different local creds
 docker compose -f deploy/docker/docker-compose.yml up -d
 export $(grep -v '^#' deploy/docker/.env | xargs) && AGO_CHAT_CONNECTION_STRING="Host=localhost;Port=5432;Database=$POSTGRES_DB;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD" \
-  dotnet ef database update -p ../ago-chat/src/Ago.Chat.Infrastructure.Postgres
+  dotnet run --project ../ago-chat/src/Ago.Chat.Migrator
 bash deploy/seed/create-demo-tenant.sh   # after .env is sourced, per 1-05
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project ../ago-chat/src/Ago.Chat.Api
 dotnet run --project ../ago-chat/src/Ago.Chat.Worker
 dotnet run --project ../ago-chat/src/Ago.Chat.Webhooks
 ```
+
+**`8-08`: the migration line changed**, from `dotnet ef database update` to running
+`Ago.Chat.Migrator` — the same deployable the cluster runs (`adr/0056`), so the local loop and the
+deploy apply migrations by one mechanism rather than by two that can disagree. It needs no
+`dotnet-ef` tool: `dotnet ef` is a design-time tool, and applying a migration is not a design-time
+operation. `dotnet run --project ../ago-chat/src/Ago.Chat.Migrator -- --verify` reports whether the
+schema is current and changes nothing.
+
+**Forgetting it is no longer quiet.** All three hosts refuse to start against a schema older than the
+migrations they were compiled with, and say which ones are missing. The old failure mode — the app
+starting happily and then failing every query that touched a new column — is gone; you get a process
+that exits with the fix in its message instead. `SchemaGuard:Enabled=false` turns the check off and
+exists for the one case where you are deliberately mid-migration; nothing in any manifest sets it.
 
 **`15-01`: an existing `deploy/docker/.env` needs one new key**, `KEYCLOAK_DB_PASSWORD` — copy it from
 the updated `.env.example`. Keycloak no longer keeps its users in an embedded H2 file inside the

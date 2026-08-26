@@ -417,6 +417,14 @@ AGO_CHAT_CONNECTION_STRING="Host=localhost;Port=15432;Database=ago_chat;Username
 All fourteen migrations (`Stage1CreateChatSchema` through `Stage7AddOutboxTraceContext`) applied
 cleanly in one run.
 
+> **Superseded by `8-08` (`adr/0056`).** The block above is the record of what was run on 2026-08-24
+> and is kept as that record; it is no longer the procedure. Migrations are applied by
+> `Ago.Chat.Migrator`, a Job in the manifest set, built from the same commit as the hosts — see
+> `redeploy.md`, which is the document to follow for any deploy after the first. This step is also the
+> one that was skipped on 2026-08-25 precisely because it is marked "done"; since `8-08` the hosts
+> refuse to start against a schema they are ahead of, so skipping it produces a visibly failed deploy
+> instead of an invisible one.
+
 ## 10. Seed the demo tenant **(session) — done 2026-08-24**
 
 `1-05`'s script targets `docker-compose`'s network by name and will not reach this cluster's Postgres

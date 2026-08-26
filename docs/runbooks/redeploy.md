@@ -96,6 +96,15 @@ Kubernetes records a revision, which is exactly what gives `rollback.sh` somethi
   running is unaffected by columns it does not know about. New code meeting an old schema is the
   failure above. A destructive migration would need a different order and its own thinking; there has
   not been one, and if there is, this note is the place to say so.
+- **`8-08`: the migration step is a Job now, not `dotnet ef database update`.** `Ago.Chat.Migrator`
+  is built from the same commit as the hosts and applied as a Kubernetes Job (`adr/0056`), so the
+  thing that migrates and the things that serve can no longer disagree about which migrations exist,
+  and the node needs no .NET SDK. `backoffLimit: 0`: a failed migration stops the deploy rather than
+  retrying, and the script prints the Job's logs and exits non-zero.
+- **`8-08`: skipping it is no longer silent, which is why this document exists.** The three hosts
+  refuse to start against a schema older than the migrations they were compiled with. The incident
+  this runbook was written after — every page returning 200 while every `Site` query failed — cannot
+  recur in that shape: the pods do not come up, and their logs name the missing migration.
 - **The API restarts before the console**, because `12-03`'s owner view calls `12-02`'s endpoint, and
   a console newer than its API shows a screen wired to something that does not exist yet.
 - **The smoke test runs last and is part of the deploy**, not a thing to remember afterwards.
@@ -116,13 +125,16 @@ of consequence, and pretending otherwise is how a harmless check becomes somebod
 
 ## What to do when a step fails
 
-- **Migration step fails to connect**: the port-forward it starts needs a moment, and a previous run
-  may have left one behind — `pkill -f "port-forward svc/postgres"` and run again. The connection
-  string is built from the live Secret, whose name is hash-suffixed by kustomize, so it is looked up
-  by label rather than hardcoded.
-- **`dotnet restore` fails**: `/tmp/nuget.migrations.config` is a host-only file (`public-deploy.md`
-  step 9 explains why neither committed nuget config works here) and `/tmp` does not survive a reboot.
-  Recreate it from that step.
+- **The migration Job fails**: the script stops there on purpose and prints its logs. Read them —
+  `Ago.Chat.Migrator` reports the provider's own error, not a summary. Re-running the script re-runs
+  the Job (it deletes the previous one first, because a Job's pod template is immutable). The two
+  entries that used to live here — a port-forward left behind, and a missing
+  `/tmp/nuget.migrations.config` — are gone with the step that needed them: `8-08` removed both the
+  port-forward and the SDK restore from the node.
+- **Pods do not become ready and their logs mention `SchemaOutOfDateException`**: the migration did
+  not run, or ran against a different database. This is `8-08`'s guard doing its job. Fix the
+  migration step; the pods recover on their own once the schema catches up, and they wait 60s before
+  giving up so a Job that finishes late does not need a manual restart.
 - **A rollout does not become ready**: `./rollback.sh` — it undoes one revision on all three hosts,
   waits, prints what is running, and smokes. See "Rolling back, and what it does not roll back" below
   for the part that matters.

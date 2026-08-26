@@ -95,18 +95,31 @@ missing theme fails and which of them is silent.
 
 ## Migrations and seeding
 
-**Verified against this cluster's own Postgres, `3-06`** - the commands below were run for real, not
-assumed to match the `docker-compose` path `1-04`/`1-05` verified:
+**The `dotnet ef database update` form these commands replaced was verified against this cluster's
+own Postgres (`3-06`). The commands below are `8-08`'s replacement and have NOT been run against this
+cluster** - that item verified the migrator against a real Postgres in `Ago.Chat.Integration.Tests`
+and verified that both overlays render, and stopped there. Treat the two lines below as the intended
+form, and correct them here the first time somebody actually runs them.
 
 ```
-kubectl port-forward svc/postgres 15432:5432 -n ago-chat
-# from ago-chat, on a machine with the .NET SDK and the dotnet-ef tool installed -
-# Microsoft.EntityFrameworkCore.Design is PrivateAssets=all (Ago.Chat.Infrastructure.Postgres.csproj),
-# specifically so it never flows into ago-chat-api's own image, so migrating from inside the
-# cluster is not an option:
-AGO_CHAT_CONNECTION_STRING="Host=localhost;Port=15432;Database=ago_chat;Username=ago;Password=ago-local-dev" \
-  dotnet ef database update -p src/Ago.Chat.Infrastructure.Postgres -s src/Ago.Chat.Infrastructure.Postgres
+# `8-08`: nothing to run by hand any more. The migrator is a Job in the manifest set, so the
+# `kubectl apply -k` above already ran it, and it is idempotent - `__EFMigrationsHistory` makes a
+# second run a no-op. Read what it did, or re-run it after rebuilding the images:
+kubectl logs job/ago-chat-migrator -n ago-chat
+kubectl delete job ago-chat-migrator -n ago-chat && kubectl apply -k k8s/overlays/local
 ```
+
+**This section used to say that migrating from inside the cluster "is not an option"**, because
+`Microsoft.EntityFrameworkCore.Design` is `PrivateAssets=all` and therefore never reaches a host
+image. The premise was right and the conclusion was wrong: `dotnet ef` needs the design package, and
+*applying* a migration does not - `Database.Migrate()` lives in
+`Microsoft.EntityFrameworkCore.Relational`, which every host already carries. `8-08` is what noticed.
+`Ago.Chat.Migrator` runs inside the cluster from the same image build as the hosts, and the .NET SDK
+is no longer needed on the machine driving a deploy at all.
+
+**If the hosts will not start after this**, read their logs before anything else: since `8-08` they
+refuse to serve against a schema older than the migrations they were compiled with, and the message
+names the missing ones. That is the migrator Job not having run, not a broken host.
 
 `ago-deploy/seed/create-demo-tenant.sh` targets the `docker-compose` network by name and will not
 reach this cluster's Postgres as written - seed the same fixed-id rows with `kubectl exec -n ago-chat
