@@ -66,3 +66,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0063 | A principal's kind is answered per surface, by asking the positive question | Accepted |
 | 0064 | AGO Calendar's console is its own repository; its booking UI is not | Accepted |
 | 0065 | AGO Chat carries a module's steps without understanding them | Accepted |
+| 0067 | One key issues, several validate, and retirement is a configured delay | Accepted |

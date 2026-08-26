@@ -314,6 +314,16 @@ a per-token deny-list would additionally make an authentication decision depend 
 `adr/0009` forbids as a source of truth. The trigger that would change this is the first "end this
 session" surface, visitor- or operator-facing.
 
+**The visitor signing key is rotatable without a mass logout since `17-03`/`adr/0067`, and that
+changes the sentence above.** `Ago.Chat.Api` accepts a *set* of signing keys while issuing with
+exactly one; a key is retired by giving it a date, stays in the validation set for a configured drain
+window (defaulting to the token's own seven-day lifetime), and leaves it on its own after that with no
+restart. So an ordinary rotation is now invisible to every visitor, and "rotating the key invalidates
+every token" is no longer automatic — it is what the operator gets by choosing a retirement date
+already in the past, which is exactly what the leak procedure in `runbooks/secret-rotation.md` tells
+them to do for a key known to be compromised, and nothing else. Global revocation therefore still
+exists; it stopped being the unavoidable side effect of maintenance and became a deliberate lever.
+
 **The two schemes genuinely cannot be substituted for one another, and this is now tested rather than
 inferred** (`TokenSchemeSeparationTests`): a real visitor token gets `401` on an operator route — not
 `403`, meaning it never authenticated at all — and a real Keycloak operator token gets `401` on a

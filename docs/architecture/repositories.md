@@ -144,6 +144,11 @@ Consequences that must be respected from the first commit:
 - **No secrets, ever** - not in code, not in manifests, not in a fixture, not in a commit that gets
   "fixed later". Git history is public and permanent. Local values live in gitignored
   `appsettings.Local.json` and `.env`; the repositories carry `.example` files only.
+  **`architecture/secrets.md` is the inventory of every secret this system holds** (`17-03`,
+  2026-08-27) - what it protects, where its value lives, and what changing it costs; it names secrets
+  and never contains one. `runbooks/secret-rotation.md` is how each one is changed and what to do when
+  one leaks. That sweep found the rule kept everywhere but one place, and the exception is written up
+  in the inventory's own "Open finding" section rather than quietly left out of it.
 - **No personal or employer data**: no real customer names, no internal hostnames, no third-party
   endpoints, no anything from anyone's job.
 - **No real endpoints.** The deployment's own node address is not written here either (removed
