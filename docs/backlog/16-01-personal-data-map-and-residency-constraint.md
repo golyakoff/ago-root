@@ -3,7 +3,10 @@
 - **Stage**: 16 — but **pulled ahead of its stage** (`roadmap.md`'s "Order" section): two open vendor
   questions that are live right now, `10-05`'s email provider and `15-02`'s backup destination, cannot
   be answered correctly without the constraint this item records
-- **Status**: ready
+- **Status**: **done 2026-08-25** (`e5770a0`) — all five Done-when met. The line said `ready` for a
+  day after the work had merged, and the queue row outlived it too: both were caught by a sweep on
+  2026-08-26 that compared every queue row against its item's own Done-when list. That is the failure
+  this project keeps repeating, and it is why the check is now mechanical rather than remembered.
 - **Depends on**: nothing
 
 ## Goal
