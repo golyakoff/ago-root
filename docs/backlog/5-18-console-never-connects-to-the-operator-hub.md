@@ -1,7 +1,7 @@
 # The operator console never connects to the operator hub, so nobody can answer
 
 - **Stage**: 5
-- **Status**: ready — and this is the most severe open defect on the live deployment
+- **Status**: **fixed, not deployed** (2026-08-26). Cause found and corrected, a check that fails on it added and seen to fail. The end-to-end demonstration needs a deploy.
 - **Depends on**: nothing.
 
 ## What is broken
@@ -84,17 +84,80 @@ which is the mechanism that turns this from an indicator bug into a product outa
 - Anything about the assignment engine, which is behaving correctly given no operators are present.
 - The demo-credential flow, which works.
 
+## The cause
+
+`OperatorHub.OnConnectedAsync` validated the operator's connection `Origin` against **the tenant's own
+`AllowedOrigins`** — the list of pages allowed to embed that tenant's *widget*. An operator does not
+connect from a tenant's page; they connect from the console. Any tenant whose list did not happen to
+contain the console origin therefore had every operator connection aborted by `Context.Abort()`
+immediately after a successful SignalR handshake.
+
+That abort is a **clean close**, which is why every signal was silent: nothing logged (SignalR only
+logs failures, and this was a success followed by a close), nothing fell back to another transport
+(the transport worked perfectly), and nothing registered in Redis (`OnConnectedAsync` aborted before
+`connectionRegistration`).
+
+**The hand-rolled WebSocket did not actually differ.** It reached `OPEN` and the observation stopped
+there. The server's close arrives one frame later: an instrumented capture of the console's own socket
+shows `open` → `{}` (handshake ack) → `{"type":7}` (SignalR close) → `close code=1000 clean=true`.
+
+## When it broke
+
+**The wrong check is as old as `5-01`** (`d2f268a`, per-site CORS from the database) — latent, because
+it only refuses a tenant whose origins lack the console. The seeded `8-05` tenants *do* list it, which
+was verified rather than assumed: a visitor-session POST from `https://console.reserve-me.ru` answers
+`201` for `demo_site` and `demo_site2`. So every operator anybody had ever signed in as worked, and
+`5-07`, `5-16` and `11-06` were all built and observed against a working connection.
+
+**The outage is hours old.** It began when `8-09` turned `DemoTenant__Enabled` on (`4a9869d`,
+2026-08-26): from that moment the README's front door hands a stranger a *minted* tenant, whose
+`AllowedOrigins` is exactly `["https://demo-shop1.reserve-me.ru"]`. The same visitor-session probe
+answers `403 origin-not-allowed` for a freshly minted key and `201` for a seeded one — the two halves
+of the same experiment.
+
+This corrects one thing this item ruled out: **it *is* the minted tenant.** The worker log line about
+seeded operators having no connections is the disconnect sweep listing operators nobody was signed in
+as, not evidence that they could not connect.
+
 ## Done when
 
 - [ ] An operator signing into the console on the live deployment holds a connection, verified in
       Redis rather than in the UI.
+      *Needs the deploy. The mechanism is fixed and covered by tests, and the smoke check below fails
+      against the current deployment and is expected to pass after.*
 - [ ] A visitor message on that tenant is assigned to that operator and can be answered, end to end,
-      in a browser.
-- [ ] A check exists that fails if no operator can hold a connection, and it has been seen to fail.
-- [ ] The report says when this broke, or says plainly that it could not be established.
+      in a browser. *Same reason.*
+- [x] A check exists that fails if no operator can hold a connection, and it has been seen to fail.
+      *`smoke.sh` gained an "Operator hub" section: mint a tenant (`8-07`), sign in through Keycloak,
+      negotiate, hold a **Server-Sent Events** stream open, complete the handshake, and fail if the
+      stream carries SignalR's close frame. Run against the live deployment it prints
+      `FAIL the operator hub accepted the handshake and then closed the connection`.*
+- [x] The report says when this broke, or says plainly that it could not be established. *Above.*
+
+## Why SSE, and why not negotiate
+
+Negotiate succeeded throughout the outage, so any check that stops there is blind to this by
+construction — which is exactly what the existing visitor check is, and why 12/12 stayed green.
+
+Server-Sent Events is the one transport that carries a real hub connection (`OnConnectedAsync` runs
+for it) while staying pure HTTP, so `curl` alone can tell the two apart. Measured against the live
+deployment before the check was written: an allowed origin holds the stream open until the client
+times out; a refused one flushes `data: {}` then `data: {"type":7}` within about a second.
+
+Two earlier attempts were **discarded for being false passes**, which is worth recording because both
+looked right: a long-polling probe returned an empty body whether the connection was healthy, refused,
+or never established at all; and a follow-up POST answered `200` in every case. A check that cannot
+tell "alive" from "never started" is worse than none.
+
+**The check uses a minted tenant deliberately.** Built on the seeded credential it would have stayed
+green through the entire outage.
 
 ## Open questions
 
-**Whether the indicator is honest.** It says "Offline", which was correct here — but a UI that
-reports the connection state it *believes* it has is a different thing from one that reports what the
-server thinks. If those can disagree, the fix should say which one an operator is looking at.
+**Whether the indicator is honest** — answered: **yes, and that was not the problem.** The badge
+reports the client's own view of its connection, which is the only thing a browser can know, and here
+the client and the server agreed completely: the server closed the connection and the client said so.
+The failure was not dishonesty, it was **silence** — `OperatorConnectionProvider` caught the rejection
+from `start()` and discarded it, so the single most useful fact in the whole incident (what the
+connection failed with) existed for one instruction and was then thrown away. That `catch` now logs.
+The "Offline" copy also stopped telling operators to reload, which reproduced the fault exactly.
