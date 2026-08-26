@@ -33,6 +33,14 @@ deploy apply migrations by one mechanism rather than by two that can disagree. I
 operation. `dotnet run --project ../ago-chat/src/Ago.Chat.Migrator -- --verify` reports whether the
 schema is current and changes nothing.
 
+**`8-10`: you can run that line immediately after `docker compose up -d`.** `up -d` returns once the
+containers are created, not once Postgres is accepting connections, so the two lines above are a race
+— and the migrator now waits (up to 90s) instead of losing it. It says so while it waits, and it is
+not credulous about it: a wrong password in `.env` is reported at once rather than as a
+ninety-second timeout, because only *transient* connection failures are waited through (`adr/0056`).
+This is the same in-process wait the deployed Job uses; an init container could not have reached this
+loop at all, which is half the reason it is in the process.
+
 **Forgetting it is no longer quiet.** All three hosts refuse to start against a schema older than the
 migrations they were compiled with, and say which ones are missing. The old failure mode — the app
 starting happily and then failing every query that touched a new column — is gone; you get a process
