@@ -74,9 +74,23 @@ with three, three cold starts per wave is most of the wave.
 worker keeps its context; it does not keep its working directory. Two tasks sharing a worktree is
 the problem that rule was written for and reusing a worker does not change it.
 
-**The operator cleans up.** After a task's PRs merge, the managing session removes that task's
-worktrees (`git worktree remove`, and the branch once it is merged). The worker does not do this —
-it is not what a worker is good at, and a half-cleaned worktree is worse than an abandoned one.
+**The operator cleans up — but not everything.** After a task's PRs merge, the managing session
+removes that task's worktrees (`git worktree remove`, and the branch once it is merged). The worker
+does not do this — it is not what a worker is good at, and a half-cleaned worktree is worse than an
+abandoned one.
+
+**Never touch `.claude/worktrees/`, and do not run `git worktree prune` in a repository with a worker
+you may want back.** Those directories are the agent runtime's own isolation worktrees, not task
+worktrees, and **they are what makes a worker resumable**. A worker that does all its real work in
+per-repository worktrees it created itself leaves its isolation worktree unchanged — which can get it
+auto-cleaned — and `prune` then drops the registration, leaving a directory git resolves *upwards*
+into the parent repository. The agent then refuses to resume: `work-tree-elsewhere`, and the
+directory is held open so it cannot even be removed by hand.
+
+Found on 2026-08-26, immediately after the cleanup rule above was written, by trying to hand `8-08`
+to the worker that had done `16-05` and being refused. Filter by branch and skip that directory
+explicitly; matching merged PR branch names is not enough, because `prune` does not work by branch
+name at all.
 
 ### Where reuse stops paying
 
