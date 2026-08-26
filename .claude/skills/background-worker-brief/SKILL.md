@@ -27,6 +27,34 @@ pays the full cold-start cost to reach a state the managing session was already 
 If unsure, ask what fraction of the work is *typing and running* versus *reading and choosing*. Only
 the first kind amortises.
 
+## 0.5. Check what already exists before briefing anything
+
+A queue row means the *item* is unfinished. It does not mean **nothing has shipped**, and the two are
+easy to conflate at the moment of delegating, because the queue row is the only thing being read.
+
+Before writing the brief, in each repository the item touches:
+
+```
+git log --oneline --all --grep="<item>" -20
+```
+
+and read any Done-when box already ticked in the item file. Two minutes here, against a worker that
+otherwise spends its opening moves discovering the situation.
+
+`11-07` on 2026-08-26 is the case. Its theme had been built, merged (`fbda4cd`) and deployed the day
+before; what remained was the anti-drift mechanism that first pass had named as a debt in its own
+commit message, plus six unverified pages. The brief was written as though from nothing, and the
+worker had to establish the real starting point itself.
+
+**`tools/queue-audit.sh` does not catch this and is not meant to.** It flags rows whose Done-when
+list has nothing left open. A part-finished item still has open boxes, so it is correctly *not*
+flagged — the row belongs in the queue. Partial completion is a separate question, and the only
+thing that answers it is looking.
+
+When work already exists, say so in the brief: what shipped, what its author recorded as owed, and
+what specifically remains. A brief that describes remaining work is far shorter than one that
+describes the whole item, which is the second reason to check.
+
 ## 1. Standing rules — put every one of these in every brief
 
 These do not vary by item. Restating them from memory is how they drift; copy them.
