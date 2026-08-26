@@ -94,6 +94,41 @@ supposed to prevent.
 | `AttachmentConfirmed` | `conversation_id` | Thumbnailer (image content types only) |
 | `CacheInvalidated` | key namespace | All nodes (fan-out to every replica, not competing consumers) |
 
+### AGO Calendar's own topics
+
+A separate product with a separate broker vhost and a separate database (`adr/0027`); listed on this
+page because the delivery semantics, the outbox rule and the versioning rule are the platform's and
+are identical. Nothing here is consumed by AGO Chat and nothing there is consumed here.
+
+| Event | Key | Consumers |
+|---|---|---|
+| `BookingConfirmed` (`20-04`) | `event_id` | `20-05`'s SMS delivery. None wired yet |
+
+`BookingConfirmed` is a past-tense fact: the operator veto window closed with nobody acting (or an
+operator confirmed early), and the visit is on. Staged to the outbox in the **same transaction** as
+the `PendingConfirmation -> Booked` transition (`CLAUDE.md` rule 4), by
+`Ago.Calendar.Infrastructure.Postgres.ExpiredBookingConfirmer`.
+
+- **Payload**: `EventId`, `TenantId`, `CalendarId`, `CustomerId`, `StartsAt`, `EndsAt`, `LocalDate`,
+  `OccurredAt`, `CorrelationId`.
+- **Ids for anything with a life of its own, values for what is immutably true of this booking.**
+  `CustomerId` resolves to whatever the lead card says when a consumer reads it - including "no longer
+  there", which is the correct answer after an erasure. `StartsAt`/`EndsAt`/`LocalDate` are values
+  because they cannot change: there is no reschedule in v1, so the slot a booking took is fixed, and
+  making a consumer re-read them would be a round trip for data that cannot have moved.
+- **No phone number, no name, and that is a rule.** An integration event crosses a broker to consumers
+  this product does not control, and it lands in an `outbox` table nothing prunes. `20-05` looks the
+  phone up from `CustomerId` at send time. Same reasoning `api-design.md` already gives for a webhook
+  payload carrying no message body: what leaves the write path is what an erasure request can no
+  longer reach. Held by a test that asserts the serialised payload contains no phone-shaped string.
+- **`CalendarId` is present for one specific reason**: the calendar owns the IANA zone (`adr/0049`),
+  and a consumer rendering "Tuesday at 14:00" for a human cannot do it from an instant alone.
+- **Keyed per booking, not per tenant.** The only ordering that matters is between events about one
+  booking; a tenant-wide key would serialise a busy shop's confirmations behind each other for a
+  guarantee nobody needs.
+- **`MessageId` is the `EventId` itself**, so a consumer deduplicating on message id is deduplicating
+  on "this booking was confirmed" - which is the idempotency key it actually wants (rule 5).
+
 Note the last row is the one exception to competing-consumer semantics: every node must receive it.
 In RabbitMQ that is a per-node exclusive queue on a fanout exchange; in Kafka, a unique consumer
 group per node. The adapter hides this; the subscription declares intent as `Broadcast` vs `Competing`.
