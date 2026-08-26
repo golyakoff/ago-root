@@ -1,8 +1,9 @@
 # AGO Calendar: availability materialization and manual editing
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `20-01-domain-model-and-persistence.md`
+- **Decision**: `adr/0053` — availability materialisation is day-granular and insert-only
 
 ## Goal
 
@@ -66,22 +67,40 @@ or two `Worker` replicas racing to materialize the same day. `docs/architecture/
 
 ## Done when
 
-- [ ] `Ago.Calendar.Integration.Tests`: running the materialization job twice against the same
+- [x] `Ago.Calendar.Integration.Tests`: running the materialization job twice against the same
       `WorkingHoursRule` produces exactly the same set of `Available` events the second time (no
       duplicates), against a real Postgres.
-- [ ] A test proves the non-destructive rule directly: claim one event (`Event.Claim`, from `20-01`'s
+      (`RunningTwice_ProducesExactlyTheSameSlots_AndWritesNothingTheSecondTime` — asserts the stronger
+      form: the second run's own reported insert count is zero, and two reads of the table match row
+      for row on id, both instants and status.)
+- [x] A test proves the non-destructive rule directly: claim one event (`Event.Claim`, from `20-01`'s
       own domain method, called without going through the full `20-03` handler since that item does
       not exist yet at this point in the sequence — state explicitly how this test constructs that
       precondition), run materialization again, and assert the claimed event's status is untouched and
       no duplicate `Available` row was created for its slot.
-- [ ] `DeleteDayOffHandler`/`EditDayBoundaryHandler` each have a positive test (the edit sticks) and a
+      (`AClaimedSlot_SurvivesARepeatedRun_AndIsNotDuplicated`. The precondition is a load-mutate-save:
+      the test loads a generated row, calls `Event.Claim` on it and saves through `IEventRepository`,
+      which puts a genuinely non-`Available` row on disk exactly as `20-03`'s handler will. It then
+      materialises **twice more** and asserts the row is still `PendingConfirmation` with its customer,
+      and that exactly one row of any status exists for that instant.)
+- [x] `DeleteDayOffHandler`/`EditDayBoundaryHandler` each have a positive test (the edit sticks) and a
       negative test (rejected when the day already has a non-`Available` event), and a further test
       proving a subsequent materialization run does not resurrect a deleted day-off's events.
-- [ ] `Ago.Calendar.Concurrency.Tests` (or wherever this repository's own concurrency-test project ends
+      (`ManualDayEditingTests`, ten tests. The negative tests use a `PendingConfirmation` row —
+      `Blocked` is the one non-`Available` status `EditDayBoundaryHandler` deliberately *may* replace,
+      since a blocked row has no customer attached by construction and that is v1's only way to undo a
+      day off; `EditDayBoundary_UndoesADayOff` pins it. `ADayOff_IsNotResurrectedByTheNextMaterializationRun`
+      and `AnEditedDayBoundary_IsNotRewrittenByTheNextMaterializationRun` cover the survival half.)
+- [x] `Ago.Calendar.Concurrency.Tests` (or wherever this repository's own concurrency-test project ends
       up living, matching `Ago.Chat.Concurrency.Tests`' precedent): two concurrent materialization job
       runs (simulating two `Worker` replicas racing the same day) do not produce duplicate `Available`
       rows — proven under real concurrency, not sequential awaits, the same bar `WaitingConversationClaimQuery`
       was held to.
+      (`Ago.Calendar.Concurrency.Tests`, three tests: two replicas, four replicas, and — because the
+      first two could in principle pass without ever racing, if one finished before the other read —
+      a third that hands two writers the *identical* generated batch with different ids, releases them
+      through a shared gate, and asserts both statements complete without an exception, that between
+      them exactly one set of rows landed, and that one of them inserted zero.)
 
 ## Open questions
 
@@ -89,3 +108,27 @@ None — the "materialize in advance, never overwrite a claimed or manually-edit
 by the product spec; the rolling-horizon day count is deliberately left as an unmeasured configuration
 value rather than a genuine open question, per `CLAUDE.md`'s own instruction against inventing a number
 this item has no basis to claim as correct.
+
+## What shipped, and what it changed
+
+Full reasoning is `adr/0053`. Three things are worth flagging here because they were not obvious from
+the item text:
+
+- **`IEventRepository.GetMaterializedHorizonAsync` was removed**, not merely left unused. `20-01` wrote
+  it as this item's "where do I resume from", and building the item showed that an instant-valued
+  horizon can only describe a prefix, while manual editing punches holes in the middle of a window. It
+  is replaced by `ListMaterializedLocalDatesAsync`, whose test is strictly stronger — and which counts
+  cancelled rows, inverting `adr/0049`'s consequence about them for a reason that inverts with the
+  granularity.
+- **`Ago.Calendar.Infrastructure.Time` is a new project**, holding the single wall-clock-to-instant
+  adapter. Its own assembly exists so that `TimeZoneIsolationTests` can assert `System.TimeZoneInfo` is
+  referenced by exactly one product assembly — verified by adding a violation, watching it turn red,
+  and removing it again.
+- **`CalendarModule` now registers something.** `20-01` shipped persistence with no host wiring at all;
+  running a job needs it, so the module reads `AGO_CALENDAR_CONNECTION_STRING` (environment, never a
+  settings file — this repository is public) and registers both adapters and all three handlers.
+
+Deliberately left for later: the availability *read* model (`20-03`, the first item with a caller for
+it); re-offering a cancelled slot (`20-04` owns the decision, and `Event` still has no transition back
+to `Available`); declaring a day off past the materialisation horizon; and any RBAC on the two edit
+handlers, since no `IPermissionChecker` port exists in this repository yet.
