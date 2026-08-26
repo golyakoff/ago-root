@@ -133,6 +133,41 @@ NGINX Gateway Fabric's own data-plane `LoadBalancer` Service needs. Everything d
 plane is a real (if lightweight) Kubernetes distribution, so nothing about those install steps needs
 adjusting for it.
 
+### 3a. Bound how large a container's live log file grows **— NOT YET APPLIED to the node**
+
+`16-05`/`adr/0057` decided a 14-day retention for container logs, and the daily
+`CronJob/log-retention` in `ago-deploy` enforces the *age* half of it. The other half is the file a
+running container is still writing to, which no in-cluster job may safely touch — that one is bounded
+by size, by kubelet, and kubelet's parameters are node configuration rather than anything a manifest
+can set. Without this step the node is on kubelet's defaults (10 MiB per file, 5 files), which is a
+bound nobody chose.
+
+```bash
+ssh -i ~/.ssh/ago-vps-ed25519 ago@<node-ip>
+sudo tee /etc/rancher/k3s/config.yaml >/dev/null <<'EOF'
+kubelet-arg:
+  # `16-05` / adr/0057. 16Mi x 3 = 48 MiB per container worst case; the whole node held 229 MB of
+  # container log before the Ago.Chat.* hosts stopped logging every SQL statement, so this is a
+  # ceiling rather than a squeeze. The point is that both numbers are chosen: rotation is what moves
+  # a file into CronJob/log-retention's reach, and a file that never rotates never gets there.
+  - container-log-max-size=16Mi
+  - container-log-max-files=3
+EOF
+sudo systemctl restart k3s
+```
+
+Then confirm kubelet actually took them, rather than trusting the file:
+
+```bash
+sudo cat /var/lib/kubelet/config.yaml | grep -i containerLogMax   # or:
+sudo k3s kubectl get --raw "/api/v1/nodes/$(hostname)/proxy/configz" | tr ',' '\n' | grep -i containerLogMax
+```
+
+**Status: written here, not yet run.** `16-05` was deliberately scoped away from the live node
+(another item's unmerged branch was already applied there), so these values have never been applied or
+read back on the demo machine. `personal-data.md` records that as an open residual — do not describe
+the demo node as having a chosen log-rotation bound until this section has actually been executed.
+
 Copy the kubeconfig somewhere a session can reach it, or export `KUBECONFIG` to
 `/etc/rancher/k3s/k3s.yaml` for the rest of this runbook's `kubectl` commands (k3s bundles its own
 `kubectl` as `k3s kubectl`; a plain `kubectl` binary works identically once `KUBECONFIG` points here).

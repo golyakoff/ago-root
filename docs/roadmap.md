@@ -72,14 +72,13 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 14 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
 | 15 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
 | 16 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 17 | `16-05` personal data outside the database | Logs, traces, edge access-log retention, and the incident path |
-| 18 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
-| 19 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
-| 20 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
-| 21 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
-| 22 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
-| 23 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
-| 24 | `18-05` shortcuts and notifications | Extends `11-06`'s attention model; both defaults off, because a permission prompt on first load teaches people to click Block |
+| 17 | `17-03` secret inventory and rotation | Handling is already sound; rotation does not exist, and the visitor signing key is the expensive one |
+| 18 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
+| 19 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
+| 20 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 21 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 22 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 23 | `18-05` shortcuts and notifications | Extends `11-06`'s attention model; both defaults off, because a permission prompt on first load teaches people to click Block |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
 | — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |
