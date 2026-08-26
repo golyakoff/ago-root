@@ -87,7 +87,7 @@ supposed to prevent.
 
 | Event | Key | Consumers |
 |---|---|---|
-| `MessageAccepted` | `conversation_id` | Fan-out to connections, unread counters |
+| `MessageAccepted` | `conversation_id` | Fan-out to connections, unread counters, `14-04`'s offline auto-reply |
 | `ConversationAssigned` | `conversation_id` | Fan-out, cache invalidation, metrics |
 | `ConversationClosed` (wire contract `ConversationEnded` - `6-02`'s own "contract gets a different bare name than its domain event" convention) | `conversation_id` | Fan-out, cache invalidation, metrics, `6-05`'s webhook dispatch |
 | `OperatorStatusChanged` | `operator_id` | Assignment engine, cache invalidation |
@@ -135,7 +135,8 @@ group per node. The adapter hides this; the subscription declares intent as `Bro
 
 **`Competing` requires a consumer-identity name, shipped in `5-11`**: `Competing` mode is only correct
 when every logical consumer *type* subscribed to a topic is distinguishable from every other one -
-`MessageAccepted` above has two (`ConnectionFanoutConsumer` and `UnreadCounterConsumer`), and until
+`MessageAccepted` above has three since `14-04` (`ConnectionFanoutConsumer`, `UnreadCounterConsumer` and
+`OfflineAutoReplyConsumer`, names `connection-fanout`/`unread-counter`/`offline-auto-reply`), and until
 `5-11`, `Ago.Platform.Messaging.RabbitMq/RabbitMqEventConsumer.cs` named a `Competing` queue after the
 bare topic with no consumer-identity component, so both silently shared one queue and RabbitMQ
 round-robined each message to one or the other, never both - real-time message delivery had been
@@ -171,6 +172,18 @@ At-least-once, everywhere, in both directions. Therefore:
 - Poison messages: N attempts with exponential backoff, then dead-letter with the full envelope and
   the last exception. A DLQ with no alert and no runbook entry is a silent data-loss channel, so
   Stage 7 gives it both.
+- **A consumer that decides to do nothing is not a failure**, and `14-04` is the first one where the
+  distinction is load-bearing enough to write down. `OfflineAutoReplyConsumer` acks immediately on
+  every "correctly decided not to reply" outcome (the flag is off, somebody is online, this is not a
+  visitor message) and throws only on a genuine fault. Retrying a message a consumer correctly
+  declined declines it again, more slowly, and eventually dead-letters a message the rest of the
+  system handled fine.
+- **A consumer that produces a message of its own must not be able to feed itself.** `14-04`'s
+  auto-reply is an ordinary message on the same topic that triggered it, and what stops the recursion
+  is structural rather than a runtime check: the reply is authored `MessageAuthorKind.System` by the
+  only method that can create one, and the consumer acts on `Visitor` alone (`adr/0066`). A future
+  consumer that writes into a topic it also reads should copy the shape - or say plainly why the loop
+  is bounded some other way.
 
 ## Outbox dispatcher
 

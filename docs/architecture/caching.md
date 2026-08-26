@@ -53,7 +53,7 @@ own small slice once a real caller needs it, following the same pattern this one
 
 | Data | TTL | Invalidation | Why it is cacheable |
 |---|---|---|---|
-| Site config (`public_key`, allowed origins, widget settings) | 5 min + jitter | Event `SiteSettingsChanged` | Read on every widget handshake, changed rarely. This is the hot one. **Shipped in `3-04`**: `GetSiteConfigByPublicKeyHandler` (`Ago.Chat.Application`), the widget handshake's site lookup (`POST /api/v1/visitor-sessions`). **Invalidation shipped for real in `11-01`**: `SiteSettingsChanged` had existed and been consumer-wired (`SiteCacheInvalidationConsumer`) since `3-04` with no producer; `UpdateWidgetConfigHandler` is the first real caller, proven end to end against real Postgres/RabbitMQ/Redis (`WidgetConfigCacheInvalidationEndToEndTests`) — a config write's outbox row reaches `SiteCacheInvalidationConsumer`, which broadcasts `CacheInvalidated` for this row's own key, evicted on every node well before the TTL above would otherwise expire it. |
+| Site config (`public_key`, allowed origins, widget settings) | 5 min + jitter | Event `SiteSettingsChanged` | Read on every widget handshake, changed rarely. This is the hot one. **Shipped in `3-04`**: `GetSiteConfigByPublicKeyHandler` (`Ago.Chat.Application`), the widget handshake's site lookup (`POST /api/v1/visitor-sessions`). **Invalidation shipped for real in `11-01`**: `SiteSettingsChanged` had existed and been consumer-wired (`SiteCacheInvalidationConsumer`) since `3-04` with no producer; `UpdateWidgetConfigHandler` is the first real caller, proven end to end against real Postgres/RabbitMQ/Redis (`WidgetConfigCacheInvalidationEndToEndTests`) — a config write's outbox row reaches `SiteCacheInvalidationConsumer`, which broadcasts `CacheInvalidated` for this row's own key, evicted on every node well before the TTL above would otherwise expire it. **Corrected in `14-04`**: that was true of *one* of this row's two keys. `SiteCacheKeys` has mapped this one row under both `ForPublicKey` (the widget handshake) and `ForSiteId` (anything holding a JWT's `site_id` claim) since `5-01`, and `SiteCacheInvalidationConsumer` only ever published an invalidation for the first - so the id-keyed copy survived a settings write for its full five minutes. Invisible until `14-04`, because nothing until then read the id-keyed entry for a value an operator had just changed and expected to take effect. It publishes both now, and `OfflineAutoReplyEndToEndTests` is the regression test. **`14-04` also adds a field to this row's cached DTO**: a site's offline auto-reply script (`OfflineAutoReplySettings`), populated identically by both loaders - the same additive-field, one-cached-shape rule `11-01` set, not a second cached object. It is read once per inbound visitor message by `Ago.Chat.Worker`'s `OfflineAutoReplyConsumer`, which makes this row hotter than it was; the flag is checked before any database work, so a site with the feature off costs exactly this read and nothing else. It is deliberately **not** put on the wire by the handshake - `VisitorSessionResponse` is built field by field, and a tenant's scripted answers are not on that list (`adr/0066`). |
 | Operator profile + capacity | 1 min | Event on change | Read on every assignment decision |
 | Conversation metadata (participants, state) | 30 s | Event `ConversationAssigned` / `ConversationClosed` | Read on every inbound message |
 | Recent message page (last N of a conversation) | 15 s | Write-through on new message | Reconnect storms re-request the same page |
@@ -63,6 +63,14 @@ own small slice once a real caller needs it, following the same pattern this one
 reads `active_chats` from the database inside its transaction, never from Redis, because the whole
 point of that path is an atomic check-and-increment (`concurrency.md`). Caching a value you then
 compare-and-set is how portfolio projects quietly grow race conditions.
+
+`14-04` is the case that shows where the line falls when one use case reads both kinds. The offline
+auto-reply reads three things: whether the feature is on and what it should say (**cached** - it decides
+*what to say*, and a stale copy costs at most one visitor one stale sentence), whether the conversation
+is still `Waiting`, and whether any operator is `Online` (**never cached** - those two decide *whether to
+write a message at all*, so they come from Postgres in the same unit of work as the write they
+authorise). Same handler, both rules, and stating which read is which is the part that stops the next
+one from guessing.
 
 ## Patterns we implement
 

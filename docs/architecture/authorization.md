@@ -222,6 +222,23 @@ widget appearance specifically, the same `resource:action` naming judgment `adr/
 elsewhere. Both callers are still `IPermissionChecker`-checked the ordinary way; nothing about this
 widens who holds the permission - only the "Admin" role, seeded the same way as before.
 
+## And a third: shipped in `14-04`
+
+`Permission.SiteConfigure` gains its third pair of callers - `GetOfflineAutoReplyHandler`/
+`UpdateOfflineAutoReplyHandler` (`Ago.Chat.Application`), gating read/write access to a site's offline
+auto-reply script (`adr/0066`). Same mechanism, no new permission, and the backlog item said so
+explicitly: a single boolean does not earn a permission of its own, and "configure this site" already
+covers the site-wide conversation view and the widget's appearance without stretching. Nothing about
+this widens who holds it - still the seeded `"Admin"` role and nothing else.
+
+Worth noting for the tenant-isolation accounting (`tenant-isolation.md`): `14-04` adds a *third*
+handler that takes a `SiteId` and checks no permission - `SendOfflineAutoReplyHandler` - and it is an
+`Ago.Chat.Worker` consumer, in the same category as `RecordUnreadMessageHandler`. Its `SiteId` comes
+off a `MessageAccepted` envelope this system itself published, so it is a fact the triggering write
+already established rather than a claim to verify, and there is no principal to check a permission for:
+nobody asked for the reply, a broker delivery did. It is listed in `TenantScopeExemptions` with that
+reasoning, which is what keeps the arch test honest in both directions.
+
 ## The platform owner: shipped in `12-01`
 
 **Shipped in `12-01`** (`adr/0032`) - a fourth actor, and the first one that is not scoped to a site
