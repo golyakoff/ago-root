@@ -1,7 +1,7 @@
 # A migration is applied by its own deployable, before anything else starts
 
 - **Stage**: 8 — deployment. Filed 2026-08-26 (author's proposal, argued in session).
-- **Status**: ready
+- **Status**: done (2026-08-26). Decisions recorded in `adr/0056`'s own Open-questions section.
 - **Depends on**: nothing. `adr/0056` is the specification; read it rather than this summary, the way
   `17-08` read `adr/0048`.
 
@@ -54,18 +54,39 @@ repeated anyway.
 
 ## Done when
 
-- [ ] `Ago.Chat.Migrator` applies pending migrations against a real Postgres and exits zero, and
+- [x] `Ago.Chat.Migrator` applies pending migrations against a real Postgres and exits zero, and
       exits non-zero on a migration that cannot be applied — both proven by a test, not by running it
-      once.
-- [ ] Running it twice in a row is a no-op the second time, proven rather than assumed from
-      `__EFMigrationsHistory`.
-- [ ] A host cannot start against a schema older than it expects — **demonstrated**, by starting one
+      once. *`SchemaMigratorTests`, against a Testcontainers Postgres. The failure case is a real one:
+      a `sites` table of somebody else's shape already present, so the first migration's `CREATE TABLE`
+      fails on a genuine Postgres error. An unreachable database is covered too, because the exit code
+      is the entire interface between this process and the deploy and an unhandled exception would not
+      produce it.*
+- [x] Running it twice in a row is a no-op the second time, proven rather than assumed from
+      `__EFMigrationsHistory`. *`RunningItTwice_AppliesNothingTheSecondTime` reads the second run's own
+      report.*
+- [x] A host cannot start against a schema older than it expects — **demonstrated**, by starting one
       against a deliberately out-of-date database and showing it refuses rather than serving 200s.
-      This is the criterion the item exists for; the others are how it is built.
-- [ ] The image is published under a commit SHA like the other three, and `redeploy.md`'s migration
-      step is replaced by whatever now performs it.
-- [ ] An architecture test keeps `Database.Migrate()` out of the three serving hosts, so this cannot
-      be quietly reintroduced at startup later.
+      *`SchemaGuardRefusalTests` launches the published `Ago.Chat.Api.dll` as a real process against a
+      Postgres migrated to one short of current: it exits non-zero, names the migration it is missing,
+      and nothing ever answers on its port. A positive control runs the same binary against a current
+      schema, and a third test has the migrator arrive late and shows the host waits rather than dying.
+      The out-of-date database is built by migrating **forward and stopping**, never by running a
+      `Down()` — `adr/0056` is explicit that this project does not execute those.*
+- [x] The image is published under a commit SHA like the other three, and `redeploy.md`'s migration
+      step is replaced by whatever now performs it. *CI's `publish-images` job and
+      `k8s/build-images.sh` both build all four from one loop; `redeploy.sh` step 5 is now a Job, and
+      `redeploy.md`, `local-dev.md`, `k8s-local.md` and `public-deploy.md` all say so.*
+- [x] An architecture test keeps `Database.Migrate()` out of the three serving hosts, so this cannot
+      be quietly reintroduced at startup later. *`SchemaMigrationTests` — five rules, not one: no host
+      calls `Migrate`/`MigrateAsync`, no host references `SchemaMigrationApplier`, the capability still
+      exists somewhere (so deleting it does not make the ban vacuously pass), the migrator references
+      nothing above `Infrastructure.Postgres`, and every serving host actually runs the guard.*
+
+**Not done, and not claimed:** none of this has run against a real cluster. `adr/0056`'s Job, the
+overlays and `redeploy.sh` are verified by rendering and by `bash -n`, and the migrator and the guard
+are verified against a real Postgres in `Ago.Chat.Integration.Tests`. The first real run belongs on the
+local Docker Desktop cluster, and `k8s-local.md` now says plainly which of its commands have been
+executed and which have not.
 
 ## Open questions
 
