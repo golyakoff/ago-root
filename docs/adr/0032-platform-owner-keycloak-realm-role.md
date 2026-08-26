@@ -70,9 +70,19 @@ through `PermissionChecker`'s per-site permission resolution. The platform owner
 apart by convention — they are *structurally incapable of being confused*, because
 `PlatformOwnerAuthorizationHandler` reads exactly one input (a claim Keycloak signs) and that input is
 not writable by anything in this system. No `INSERT` into `roles` or `operator_roles`, however broad,
-can reach it. Conversely, the owner identity has no `operators` row, so `RequireOperatorIdentity`
-rejects the very token `RequirePlatformOwner` accepts — the separation runs in both directions, and both
-directions have a test.
+can reach it. Conversely, an identity holding *only* this role has no `operators` row, so
+`RequireOperatorIdentity` rejects the very token `RequirePlatformOwner` accepts — the separation runs
+in both directions, and both directions have a test.
+
+> **Clarified by `12-05`** (`adr/0063`'s amendment), because "the platform owner has no `operators`
+> row" is easy to over-read. **The *role* carries no tenant — that is this ADR's decision and it is
+> unchanged.** The role is a realm role, grants nothing site-scoped, and no row this codebase writes
+> can produce or satisfy it. What `12-05` established is that the *person* holding it may separately
+> register a tenant like any other customer, in which case the same `sub` also has an `operators` row
+> and their token resolves an `operator_id`/`site_id` as anybody's does. Both policies then accept
+> that token, which is correct: the axes are orthogonal, not ranked. What must never happen is either
+> axis being *derived* from the other — the `platform-owner` role still confers no site permission,
+> and no operator seat, however privileged, can confer the role.
 
 **Fail-closed by construction.** The handler calls `context.Fail()` explicitly on every non-matching
 path rather than merely declining to succeed. An explicit failure is sticky for the whole policy
@@ -110,6 +120,12 @@ it is entirely a Keycloak admin-console decision, outside this ADR's scope.
   matching `operators` row. That is harmless (one extra database read on owner requests, a surface that
   currently has no endpoints at all) and is asserted by test rather than assumed: the owner test
   identity deliberately has no `operators` row.
+  **`12-05` adds the other half of that:** if the same person *does* register a tenant, the
+  transformation starts resolving and every request they make carries a `site_id`, including
+  `GET /api/v1/owner/sites`. That read consults no claim and must not start to — a narrowed
+  cross-tenant read fails silently, as a shorter list of tenants. `tenant-isolation.md`'s
+  "one cross-tenant read" entry is where that rule lives, and
+  `Ago.Chat.Integration.Tests.PlatformOwnerAsTenantTests` is what enforces it.
 - The local/demo realm-import file grants the role to nobody, so a freshly imported realm has *no*
   platform owner until someone assigns it by hand. Manual verification of `12-03`'s console view will
   need that assignment first. Failing closed on a fresh import is the correct default and is not a defect.

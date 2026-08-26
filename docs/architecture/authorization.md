@@ -133,18 +133,33 @@ whoever touches that route should know the console is reading its status code as
 `GET /api/v1/operators/me` answers `403` for that identity exactly as it does for a fresh registrant —
 and the console sent the owner to `10-02`'s registration form, whose button would have committed a
 `Site`, its roles and an `Operator` row for the owner's `sub` in one transaction, with no un-register
-path in the product. Two changes closed it, and only one of them is a gate:
+path in the product. What closed it, and what did not last:
 
-- **Server-side, `POST /api/v1/sites` now refuses a platform-owner identity at the policy layer** —
-  `AuthorizationPolicies.NotThePlatformOwner`, a second policy on the same route alongside
-  `RequireKeycloakIdentity`, reading the same `PlatformOwnerRealmRole.IsHeldBy` that
-  `RequirePlatformOwner`'s own handler reads. Same layer `17-06` used for the attachment route's
-  version of this, and the same reasoning: recognising the owner is a property of the validated token,
-  not of this system's data (`adr/0032`).
 - **Client-side, `ago-console`'s callback asks a second question** — `12-03`'s existing
   `GET /api/v1/owner/sites?limit=1` probe — and routes an accepted caller to `/owner`. Precedence is
   operator first, owner second, registrant last, because the two identities are orthogonal and one
   account can hold both.
+- `12-04` also added a **server-side refusal** on `POST /api/v1/sites`
+  (`AuthorizationPolicies.NotThePlatformOwner`). **`12-05` withdrew it a day later**
+  (`adr/0063`'s amendment): being the platform owner and running a tenant are orthogonal, so refusing
+  there made the axes exclusive at exactly one endpoint — the thing that ADR argues against. The
+  defect was the *unasked-for form*, and the routing bullet above is what closed it. The endpoint's
+  gate is `RequireKeycloakIdentity` alone again, and one identity may hold the `platform-owner` realm
+  role **and** an `operators` row of its own.
+
+**One person may therefore be both, and both surfaces must keep working for them.** The consequence
+worth stating here, because it is invisible until it goes wrong: once the owner has a tenant,
+`OperatorIdentityClaimsTransformation` resolves for that identity, so **every** request it makes
+carries an `operator_id` and a `site_id` — `GET /api/v1/owner/sites` included. That endpoint consults
+neither (`ListSitesForOwnerHandler` re-checks nothing; `PlatformOverviewReadStore`'s SQL has no
+tenant predicate), and a version of it that did would fail *silently*: the owner would see a shorter
+list of tenants, which is indistinguishable from a platform with fewer tenants. Anything added to
+that read path has to keep it cross-tenant on purpose
+(`PlatformOwnerAsTenantTests` is what holds the line).
+
+**`adr/0032` is unchanged by any of this.** The platform-owner *role* still carries no tenant — it is
+a Keycloak realm role and no row this codebase writes can grant it. The *person* holding it may
+separately hold an ordinary operator seat, which is a different statement.
 
 `adr/0063` records why the underlying ambiguity is answered per surface rather than by one central
 "what kind of principal is this token", and states the rule that replaces the guessing: **a surface

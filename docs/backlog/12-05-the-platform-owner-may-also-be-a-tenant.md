@@ -1,7 +1,7 @@
 # The platform owner may also be a tenant, and the console shows both
 
 - **Stage**: 12
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `12-04` — merged and deployed. This relaxes one thing that item did, and keeps the
   rest.
 
@@ -57,6 +57,11 @@ returns every tenant — including ones it has no `operators` row in.
 - **Decide what `/onboarding` says to an owner now.** `12-04` made it explain that the form does not
   apply. It does apply now — but it should still not be where an owner *lands*. Probably: land on
   `/owner`, and if they navigate to the form deliberately, let them use it.
+  **Decided, as suggested.** `CallbackPage` is untouched, so `/owner` is still where an owner lands.
+  `/onboarding` now renders the same form everybody else gets, with `12-04`'s owner block kept above
+  it and rewritten: it names the account, says that registering additionally makes it an operator of
+  a new site of its own, that this cannot be undone, and links to `/owner` for a reader who arrived
+  by a stale bookmark. An explanation beside a usable form, rather than a refusal in place of one.
 
 ## Out of scope
 
@@ -68,20 +73,48 @@ returns every tenant — including ones it has no `operators` row in.
 
 ## Done when
 
-- [ ] The platform owner can register a site through the ordinary flow, and afterwards holds both an
+- [x] The platform owner can register a site through the ordinary flow, and afterwards holds both an
       `operators` row and the `platform-owner` role.
-- [ ] Signing in as that identity lands on the operator queue, with the owner view one click away —
-      both entries visible, verified in a browser.
-- [ ] The owner view returns **every** tenant for an identity that holds both, proven by a test that
+      *`PlatformOwnerAsTenantTests.ThePlatformOwner_MayRegisterASite_ThroughTheOrdinaryEndpoint` — a
+      real Keycloak user granted the realm role over the admin API, `201` from the real
+      `POST /api/v1/sites` mapping, the `operators` row read back out of Postgres, and
+      `RequirePlatformOwner` still accepting the same identity afterwards.*
+- [x] Signing in as that identity lands on the operator queue, with the owner view one click away —
+      both entries visible.
+      *`permissionGating.test.tsx`, "offers the tenant's own sections and the platform-owner one
+      together, to an identity holding both": the whole navigation list asserted, not a containment
+      check, so one entry suppressing the other fails. The routing half (operator first) is
+      `CallbackPage`'s unchanged precedence, already covered by `CallbackPage.test.tsx`.*
+      **Not verified in a browser** — doing so needs a signed-in owner on a running deployment and a
+      real site registration on it, which this item was told not to perform.
+- [x] The owner view returns **every** tenant for an identity that holds both, proven by a test that
       fails if the read is narrowed by the token's `site_id`.
-- [ ] `adr/0063` records the reversal and why the endpoint is safe without the refusal.
-- [ ] `12-04`'s other four outcomes still hold — the three original routing states, and the banner.
+      *`PlatformOwnerAsTenantTests.AnIdentityHoldingBoth_StillSeesEveryTenant_NotOnlyItsOwn`. The
+      identity's own `site_id` is read back through a probe route first, so the test cannot pass for
+      the uninteresting reason that nothing resolved; the assertion is that a tenant it has **no**
+      `operators` row in is on some page of the result. Confirmed to turn red against a deliberately
+      narrowed read before being relied on.*
+- [x] `adr/0063` records the reversal and why the endpoint is safe without the refusal.
+      *Amendment at the top of the file, plus the one reversed *Consequences* bullet struck through
+      in place rather than deleted.*
+- [x] `12-04`'s other four outcomes still hold — the three original routing states, and the banner.
+      *No change to `CallbackPage`'s logic, `resolveOperatorState`, `useOwnerEligibility` or
+      `demoNoticeAudience`; `CallbackPage.test.tsx` and `demoNotice.test.tsx` unchanged and green.*
 
 ## Open questions
 
-**Whether anything should warn on the way in.** The refusal was blunt but it was also a stop sign. If
-it goes, the only thing standing between a platform owner and a tenant they did not want is a form
-they had to fill in. That is probably enough — but if the form is reached by a bookmark rather than
-by intent, a sentence saying "this will make you an operator of a new tenant, which cannot be undone"
-costs nothing and is true for *every* caller, not just this one. Decide whether that belongs to this
-item or to `10-03`.
+**Whether anything should warn on the way in.** ~~The refusal was blunt but it was also a stop
+sign.~~ **Answered: it belongs to `10-03`, and was deliberately not done here.**
+
+The sentence the question describes — "this will make you an operator of a new tenant, which cannot
+be undone" — is, in the question's own words, *true for every caller, not just this one*. That makes
+it a property of `10-03`'s registration form and of the fact that this product has no un-register
+path, not a property of the platform owner. Adding it under this item would file a general
+irreversibility warning in the changelog of the one identity it is least needed for: the platform
+owner is the one caller who already gets a paragraph naming the consequence (`OnboardingPage`'s
+owner block, kept from `12-04` and rewritten by this item), and the one caller who could undo it by
+hand if they had to, since they operate the deployment.
+
+What this item did instead: the owner-specific explanation stays and now says what registering will
+do rather than that the server will refuse it. The general warning — and the larger question behind
+it, whether "delete my site" should exist at all — is left to `10-03`.

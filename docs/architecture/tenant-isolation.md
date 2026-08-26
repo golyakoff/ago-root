@@ -144,6 +144,14 @@ role (`adr/0032`), and `Ago.Chat.Application` has no port that sees claims — r
 handler would be a second, weaker copy of the same rule, free to drift from the first. Read-only; no
 owner write surface exists anywhere.
 
+Since `12-05` this is the **one place in the codebase where a caller's own `site_id` must be
+ignored**, and the reason is worth stating where the rule lives. The platform owner may now hold an
+`operators` row of their own, so their token resolves an `operator_id`/`site_id` like anybody's, and
+every request they make — this one included — arrives carrying one. Scoping this read to it would not
+error; it would return a **shorter list of tenants**, which reads exactly like a platform with fewer
+tenants. `Ago.Chat.Integration.Tests.PlatformOwnerAsTenantTests` asserts the whole result contains a
+tenant the caller has no `operators` row in, which is the only shape of the claim that can fail.
+
 This entry is the reason the guard is shaped the way it is. A rule that only inspected
 `SiteId`-carrying inputs would never have looked at this handler at all — the absence of a `SiteId`
 is exactly what makes it interesting. See *The guard* below.
@@ -154,7 +162,7 @@ is exactly what makes it interesting. See *The guard* below.
 |---|---|---|
 | `POST /api/v1/visitor-sessions` | anonymous | n/a — resolved from the public key, and this is what *issues* the pairing |
 | `POST /api/v1/visitor-sessions/renew` | Visitor scheme | visitor claim — **and** the request's own public key must resolve to the *same* site, else `403` (`17-08`, `adr/0048`). The only route where the two `siteId` sources are compared rather than one being trusted |
-| `POST /api/v1/sites` | `RequireKeycloakIdentity` **+ `NotThePlatformOwner`** (`12-04`, `adr/0063`) | n/a — creates the tenant |
+| `POST /api/v1/sites` | `RequireKeycloakIdentity` — `12-04` added a `NotThePlatformOwner` policy here and `12-05` withdrew it (`adr/0063`'s amendment); the platform owner may register a tenant of their own | n/a — creates the tenant |
 | `GET /api/v1/conversations/queue` | `RequireOperatorIdentity` | operator claim |
 | `GET /api/v1/conversations/all` | `RequireOperatorIdentity` | operator claim |
 | `POST /api/v1/conversations/{id}/close` | `RequireOperatorIdentity` | operator claim |

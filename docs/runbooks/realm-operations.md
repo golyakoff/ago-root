@@ -92,11 +92,18 @@ incomplete profile, in a message that names nothing missing.
 required action to change it at first login, and `ago-console` has no screen for that flow — you land
 on a wall rather than on a page.
 
-**The operator screens will be empty, and that is correct.** This identity belongs to no tenant: no
-`OperatorId`, no `site_id`, `OperatorIdentityClaimsTransformation` resolves nothing for it and is not
-consulted. `adr/0032` grants exactly one thing, `/owner` and the read-only API behind it. If the
-operator views look broken for this account, they are not — you are logged in as somebody who is not
-an operator.
+**The operator screens will be empty, and that is correct.** Granting the role alone gives the
+identity no tenant: no `OperatorId`, no `site_id`, `OperatorIdentityClaimsTransformation` resolves
+nothing for it and is not consulted. `adr/0032` grants exactly one thing, `/owner` and the read-only
+API behind it. If the operator views look broken for this account, they are not — you are logged in
+as somebody who is not an operator.
+
+**If you want this account to have a tenant too, register one the ordinary way** (`12-05`). Sign in,
+go to `/onboarding`, fill in a site display name and an embed origin. Nothing does this for you and
+nothing refuses it any more; afterwards the same login shows both the operator queue and "Platform
+sites", because the two are separate axes (`adr/0063`). Note that it cannot be undone — this product
+has no un-register path — so do it because you want to run a tenant on your own deployment, not to
+make an empty screen look less empty.
 
 ### If the `/owner` link is missing from the navigation
 
