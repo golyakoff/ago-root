@@ -153,6 +153,7 @@ is exactly what makes it interesting. See *The guard* below.
 | Surface | Auth | `siteId` source |
 |---|---|---|
 | `POST /api/v1/visitor-sessions` | anonymous | n/a — resolved from the public key, and this is what *issues* the pairing |
+| `POST /api/v1/visitor-sessions/renew` | Visitor scheme | visitor claim — **and** the request's own public key must resolve to the *same* site, else `403` (`17-08`, `adr/0048`). The only route where the two `siteId` sources are compared rather than one being trusted |
 | `POST /api/v1/sites` | `RequireKeycloakIdentity` | n/a — creates the tenant |
 | `GET /api/v1/conversations/queue` | `RequireOperatorIdentity` | operator claim |
 | `GET /api/v1/conversations/all` | `RequireOperatorIdentity` | operator claim |
