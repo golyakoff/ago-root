@@ -1,7 +1,8 @@
 # A message can carry structure the conversation does not understand
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done
+- **Decision**: `adr/0061` — a message can carry structure AGO Chat does not understand
 - **Depends on**: nothing. `14-01` (channel identity) is merged and this sits beside it rather than on
   top of it.
 - **Blocks**: `21-01`, which cannot choose between its three candidate directions until this exists;
@@ -84,15 +85,50 @@ has to say what may go in it.
 
 ## Done when
 
-- [ ] A message with a kind, a payload and actions round-trips: persisted, sequenced, delivered over
+- [x] A message with a kind, a payload and actions round-trips: persisted, sequenced, delivered over
       the hub, and echoed with its `clientMessageId` like any other message.
-- [ ] An architecture test asserts **no type, field, constant or branch in `Ago.Chat.*` names a
+      (`StructuredMessageContentPersistenceTests`, six tests against real Postgres: through the EF
+      aggregate, through the Dapper read model, and onto the wire DTO. Both read paths are asserted
+      because they are genuinely different code and `5-11`'s own finding was a field that arrived
+      correctly through one and as `undefined` through the other. The delivery half is the same
+      `MessageDtoMapper` all three delivery sites now share — that duplication was removed on the way
+      past, since a fourth field would have been a fourth chance for the fan-out copy and the local
+      echo of one message to disagree.)
+- [x] An architecture test asserts **no type, field, constant or branch in `Ago.Chat.*` names a
       booking, a slot or a service** — the opacity property, enforced rather than intended.
-- [ ] The size limit is enforced and proven by a test that fails without it.
-- [ ] One worked example shows the same payload rendered two ways: as a UI element, and as text plus a
+      (`MessageOpacityTests` + `MessageOpacityRule` + `MessageOpacityExemptions`, the same
+      rule/exemptions/violating-fixture shape `17-01` used for tenant scoping. It reads compiled IL
+      — type, field, property, method, parameter, enum-member names and `ldstr` literals — across
+      **all nine** `Ago.Chat.*` assemblies, hosts included, matching whole words rather than
+      substrings. Proven able to fail by a permanently violating fixture in the build, and by
+      mutation: adding `Message.BookingReference` turns it red naming the field, its backing field
+      and its getter.
+      **Two findings about the reviewer's own word list, from running it:** `worker` had to be
+      dropped — seven hits, none a boundary crossing, because in .NET it means a background thread
+      and a deployable; and `slot`/`service` are enforced only in `Domain`/`Contracts`, where DI
+      vocabulary cannot appear and where a violation would actually land. One argued exemption
+      exists, for `6-10`'s capacity-slot metric description.)
+- [x] The size limit is enforced and proven by a test that fails without it.
+      (16 KB payload, 10 actions, 80/256 per label/value — a ceiling, unmeasured, and stated as
+      such. Enforced in the domain and, for the payload, again as a Postgres CHECK, because this
+      is an opaque field on the one write path that accepts unauthenticated input. The duplication
+      of the number is deliberate and has its own test writing a payload at exactly the limit, so
+      the two statements of it cannot drift apart unnoticed.)
+- [x] One worked example shows the same payload rendered two ways: as a UI element, and as text plus a
       numbered choice a person could answer over SMS.
-- [ ] `personal-data.md` says what may travel in a payload, and `data-model.md` records the storage
+      (`StructuredContentRenderingTests`. The text renderer is eleven lines and reads no field of
+      the payload — proven by rendering a *different* payload through it and asserting the output
+      is byte-identical. A reply of "2" resolves back to the producer's own opaque value by index.
+      The example is deliberately **not** a booking: writing one would have put another product's
+      vocabulary into `Ago.Chat.Domain.Tests`, which is the exact thing the opacity rule forbids —
+      a boundary crossing performed by the test that exists to prove the boundary holds.)
+- [x] `personal-data.md` says what may travel in a payload, and `data-model.md` records the storage
       decision with its reasoning.
+      (Both done. The personal-data row is honest about the thing that makes an opaque field worse
+      than a body: a body can at least be swept for a substring, a payload has no schema anyone
+      here knows, so erasure deletes the row or nothing. The producer rule — "put nothing in a
+      payload you would not put in `messages.body`" — is a rule rather than a control, and the
+      file says so, because enforcing it would mean AGO Chat validating a schema it must not own.)
 
 ## Open questions
 
@@ -102,3 +138,30 @@ backends). `21-01` needs more: something must decide that an inbound text is *ab
 the decision the boundary review flagged as **the first time either product would reference the other
 at all**, and it deserves its own ADR when it is taken — not this item's to answer, and this item must
 not quietly answer it by making the payload less opaque.
+
+## What shipped, and what it changed
+
+Full reasoning is `adr/0061`. What is worth flagging here:
+
+- **The body stayed mandatory, and that is the rendering contract.** A structured message still
+  carries prose. `body` is the fallback any channel can print, `content` is an enrichment a rich
+  client may use instead, and `actions` are the choices with labels so a text renderer can number
+  them. The one alternative that would have quietly broken the design was allowing a structured
+  message with no body: well-formed, valid, deliverable, and unreadable on SMS.
+- **Actions are first-class, not fields inside the payload** — forced by the channel with no UI rather
+  than chosen. A text renderer must *enumerate* the choices, and it cannot enumerate anything inside a
+  document whose schema it is forbidden to know. So AGO Chat owns the actions' schema and reads it,
+  and owns no schema for the payload and never reads it.
+- **The kind is a string, not an enum.** An enum is a closed set AGO Chat would own, and its first new
+  member would be the moment AGO Chat learned another product's vocabulary.
+- **`text`, not `jsonb`.** Nothing queries into the payload by design and permanently, so everything
+  `jsonb` buys is a capability whose use would be an architecture violation — paid for on every insert
+  into the largest partitioned table in the system.
+- **The return direction needed no new concept.** An action's reply is an ordinary message carrying
+  the producer's own structured content. A dedicated action endpoint would have had to know which
+  product to route to, which is `21-01`'s question wearing different clothes.
+- **`21-01`'s second question is untouched.** Who parses intent remains unanswered and unanswerable
+  from here; nothing in this item made the payload less opaque in order to reach it.
+
+Deliberately left: any booking content (`20-06`, `21-01`); intent parsing (`21-01`, and its own ADR);
+attachments (`AttachmentId` is unchanged and is not generalised); rich text.
