@@ -38,8 +38,14 @@ are worth stating, because both differ from the webhook dispatcher directly abov
 
 The mechanism is proven against a stub provider that hangs, throws and refuses
 (`ResilientInboundChannelAdapterTests`), including that the breaker opens for one channel and leaves
-another untouched. **It has never been run against a real provider** — `14-02` is the first item that
-can, and the thresholds are starting points modelled on the dispatcher's, not measured numbers.
+another untouched. `14-02` is the first item to run it against a real HTTP boundary rather than a stub
+(`Ago.Chat.FakeMax`, a real separate process, mirroring `Ago.Chat.FakeCrm`'s own technique) — the
+breaker opens on real connection-refused errors when the process is stopped, and a different channel's
+pipeline is provably unaffected (`MaxChannelAdapterResilienceTests`). The terminal/transient split for
+MAX specifically (400/401/403/404 terminal, everything else transient) is a reasoned default, not yet
+confirmed against real provider error responses — `14-02`'s own note on this, pending a live-verified
+message exchange. The thresholds otherwise remain starting points modelled on the dispatcher's, not
+measured numbers.
 
 ## The webhook dispatcher: why it is a separate deployable
 

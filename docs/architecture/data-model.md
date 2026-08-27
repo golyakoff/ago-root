@@ -83,6 +83,16 @@ denial.
   today ever writes that edge, and `ChannelIdentity` deliberately ships with no re-link method.
   Personal data: `external_address` is a phone number for `Sms`, so this table holds a direct identifier
   in a way `visitors` next to it does not - see `personal-data.md`.
+- `channel_credentials` (**shipped in `14-02`**, AGO Inbox) - `id` (uuid v7), `site_id`, `kind`
+  (`Max|Sms|Telegram|WhatsApp`, `ChannelIdentity`'s own vocabulary reused), `token_ciphertext` (the
+  shop's own bot token, AES-256-GCM, reversible - it must be reproduced for every outbound call),
+  `webhook_secret_hash` (the value AGO generated and handed the provider at registration, SHA-256,
+  one-way - never reproduced, only ever verified against what a webhook delivery echoes back),
+  `active`, `created_at`. `ChannelCredential` (`Ago.Chat.Domain`), keyed by `(site_id, kind)` -
+  channel-neutral, not `MaxBotCredential`, so `14-03`'s SMS aggregator key inherits this shape rather
+  than re-deriving it (`adr/0069`). Encrypted under a dedicated `Channels:CredentialEncryptionKey`,
+  distinct from `Webhooks:SecretEncryptionKey` - see `secrets.md`. Personal data: none - a bot token
+  and a generated secret belong to the shop, not to any individual.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
   shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
@@ -204,6 +214,13 @@ denial.
   alike. EF's default foreign-key index on `visitor_id` is kept (unlike `4-01`'s replacement of the one
   on `conversations.site_id`): "which channels is this visitor reachable on" is the natural inverse
   query, and this table is small next to `messages`.
+- `channel_credentials` unique `(site_id, kind)` **filtered to `active`**
+  (`ux_channel_credentials_site_kind_active`, `14-02`) - a plain unique index on the pair would mean a
+  revoked credential permanently blocks registering its replacement, defeating revoke-and-recreate, the
+  shape `webhook_endpoints` already established for its own endpoints. The Application-layer check
+  (`RegisterChannelCredentialHandler` refuses a second active credential before calling
+  `ChannelCredential.Register`) is the primary mechanism; this index is the storage-level backstop, the
+  same division `adr/0019` draws for `messages` (`adr/0069`).
 
 ## Partitioning
 
