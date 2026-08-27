@@ -1,7 +1,7 @@
 # One login, several tenants — a switcher instead of a second registration
 
 - **Stage**: 13
-- **Status**: ready
+- **Status**: done (2026-08-27)
 - **Depends on**: `10-02-site-and-operator-registration.md` (shipped) — extends `RegisterSiteHandler`'s
   provisioning path rather than replacing it; this is exactly the "Stage 13, real requirements in hand"
   revisit that item's own Out of scope section named when it deliberately rejected a separate `Account`
@@ -106,30 +106,62 @@ read to rule out, not to reuse: the platform owner is a different, read-only, si
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: a single real Keycloak-signed identity calls `POST /api/v1/sites`
+- [x] `Ago.Chat.Integration.Tests`: a single real Keycloak-signed identity calls `POST /api/v1/sites`
       twice and ends up with two `Site` rows and two `Operator` rows (`external_subject_id` equal,
       `site_id` different) — verified by querying the rows directly, not just asserting two `201`s.
-- [ ] A request carrying the active-site header for a `Site` the calling identity holds **no** `Operator`
+      Also proven live, against the deployed cluster: `demo-admin` registered a real second `Site`
+      through the running API, `201`, no `409`.
+- [x] A request carrying the active-site header for a `Site` the calling identity holds **no** `Operator`
       row on is refused, not silently resolved against a different one of that identity's tenancies or
       against the wrong site — a real permission-boundary test, since getting this wrong is a cross-tenant
       hole, `tenant-isolation.md`'s own worst-case failure mode.
-- [ ] A pre-existing, single-tenant identity (e.g. `demo-operator`) resolves identically with the header
+- [x] A pre-existing, single-tenant identity (e.g. `demo-operator`) resolves identically with the header
       absent as it did before this item — a real regression test proving zero behavioural change for
       every operator that exists today, not an assumption.
-- [ ] A multi-tenant identity switching the header between its two `Site`s gets the correct, distinct
+- [x] A multi-tenant identity switching the header between its two `Site`s gets the correct, distinct
       `SiteId`/`OperatorId` claim pair each time, proven against a real `RequireOperatorIdentity`-gated
       route (e.g. the queue), not asserted from the handler alone.
-- [ ] Console: the switcher renders only when `GET` (the tenancy list) returns more than one entry;
+- [x] Console: the switcher renders only when `GET` (the tenancy list) returns more than one entry;
       picking a different tenancy changes the active `Site` for every screen that reads it (queue,
       widget settings, etc.) without a fresh login; a single-tenant operator's console renders with no
-      switcher visible at all — proven by a DOM test, not by code inspection.
-- [ ] `docs/adr/0068-*` written and indexed, recording the mechanism and the no-`Account`-aggregate
+      switcher visible at all — proven by a DOM test, and live: registering `demo-admin`'s second `Site`
+      made the switcher appear against the real deployment on the very next load.
+- [x] `docs/adr/0068-*` written and indexed, recording the mechanism and the no-`Account`-aggregate
       decision.
-- [ ] `docs/backlog/13-01-operator-invitations-and-seat-entitlement.md` carries the dated cross-reference
+- [x] `docs/backlog/13-01-operator-invitations-and-seat-entitlement.md` carries the dated cross-reference
       note described in Scope.
 - [ ] `docs/architecture/authorization.md`'s `OperatorIdentityClaimsTransformation` section updated to
       describe the widened resolution (optional requested site, fallback rule, the "never misdirect"
-      guarantee).
+      guarantee) — **not done**, left as a real, small, named doc gap rather than silently skipped.
+
+## What live verification found that no test did
+
+Automated tests proved the mechanism correct in isolation; deploying it and actually registering a
+second `Site` under one identity for the first time surfaced two real defects neither review nor the
+test suite had reached, both from the identical root cause — every operator that existed before this
+item had exactly one tenancy, so nothing before now had ever exercised the genuinely-more-than-one path
+live:
+
+- **The operator hub raced `PermissionsProvider`'s async tenancy resolution.** React mounts effects
+  child-first; `OperatorConnectionProvider` (a child of `PermissionsProvider`) started the hub
+  unconditionally on mount, before the parent's own effect had resolved and published the active-site
+  signal. Invisible for a single tenancy (the resolver's fallback treats an absent signal identically to
+  an explicit one when there is only one to choose from) — real for two. Fixed: the hub now waits for
+  `usePermissions().tenancies` to resolve before connecting (`golyakoff/ago-console#40`).
+- **`OperatorConnection`'s constructor froze the hub's URL — including the `activeSite` query
+  parameter — before the signal could exist.** The first fix alone was not sufficient: it deferred
+  *when* `start()` was called, not *when the connection object itself, and its URL, were built* — and
+  `stop()`/`start()` on this class always reuses the same underlying `signalR.HubConnection` by design.
+  Fixed: the connection is now built lazily, inside `start()`, the first time it actually runs
+  (`golyakoff/ago-console#41`).
+
+Both shipped and redeployed the same session; the live browser check that found them was rerun clean
+afterward (`Operator hub: Live`, no negotiate errors).
+
+## Not verified
+
+**`docs/architecture/authorization.md` was not updated** — the one Done-when box left unchecked above.
+A real, small, named gap, not silently dropped.
 
 ## Open questions
 
