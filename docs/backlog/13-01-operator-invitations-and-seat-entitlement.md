@@ -111,6 +111,13 @@ different case, applied correctly to this one instead.
     `409` here too — this codebase's operator model has no concept of one identity holding rows on more
     than one site, and this item does not introduce one. State this plainly as a carried-over constraint,
     not a new decision.
+
+    **Note added 2026-08-27, false as of `13-07-one-login-several-tenants.md`**: that item removes this
+    exact constraint from `RegisterSiteHandler` so one identity can administer more than one `Site`. If
+    `13-07` has landed by the time this item is built, this redemption handler must relax the same check
+    the same way — reject only when the invite's own `site_id` already has an `Operator` row for this
+    `sub` (a redundant redemption on that one site), not whenever the `sub` resolves to an `Operator` row
+    *anywhere*. Read `13-07`'s own Scope and `adr/0068` before writing this handler.
 - **HTTP**: `POST /api/v1/sites/{siteId}/operator-invites` (gated by `RequireOperatorIdentity` +
   `Permission.SiteManageOperators`, `201` with the raw code in the body, shown once, matching `adr/0024`'s
   "shown exactly once" precedent for a different bearer secret in this same codebase) and
