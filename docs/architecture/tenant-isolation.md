@@ -156,6 +156,13 @@ then writes into the conversation that envelope named. There is no principal to 
 for: nobody asked for the reply, a broker delivery did, and the message it writes is authored by the
 system itself, which `adr/0016` has no representation for (exactly as it has none for a visitor).
 
+**An operator's own presence (2).** `SetOperatorPresenceHandler.GoOnlineAsync`/`GoOfflineAsync`
+(`4-06`), called only from `OperatorHub.OnConnectedAsync`/`OnDisconnectedAsync`. No `SiteId` at all,
+deliberately: the only input is the caller's own `OperatorId`, resolved from the connection's own
+validated JWT before either method runs. There is no site-scoped resource being acted on to check
+ownership of — only "record this connection's own presence" — so a `SiteId` parameter would be an
+unused, unverifiable claim rather than a real check.
+
 **The one cross-tenant read (1).** `ListSitesForOwnerHandler`, `12-02`'s platform-owner overview. It
 carries no `SiteId` **because** it is cross-tenant. The whole access-control story is `12-01`'s
 `RequirePlatformOwner` policy on `GET /api/v1/owner/sites`: the authorizing fact is a Keycloak realm
