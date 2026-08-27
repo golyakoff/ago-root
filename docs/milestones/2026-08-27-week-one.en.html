@@ -190,7 +190,8 @@
   table.repos tbody td { padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 14.5px; }
   table.repos tbody tr:last-child td { border-bottom: none; }
   table.repos tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
-  .repo-name { font-family: var(--font-mono); font-weight: 600; font-size: 14px; color: var(--ink); }
+  .repo-name { font-family: var(--font-mono); font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: none; }
+  a.repo-name:hover { text-decoration: underline; text-decoration-color: var(--accent); }
   .repo-desc { color: var(--ink-soft); font-size: 13.5px; margin-top: 3px; max-width: 36ch; }
   td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
   td.num .unit { color: var(--ink-faint); font-weight: 400; font-size: 11px; margin-left: 2px; text-transform: uppercase; }
@@ -325,9 +326,9 @@
       </div>
     </div>
     <p class="sec-intro">
-      <span class="repo-name" style="font-size:14px">ago-root</span> holds no code — only the rules,
+      <a class="repo-name" style="font-size:14px" href="https://github.com/golyakoff/ago-root" target="_blank" rel="noopener">ago-root</a> holds no code — only the rules,
       the decisions and the plan. Every product depends on
-      <span class="repo-name" style="font-size:14px">ago-platform</span>; the platform depends on nothing
+      <a class="repo-name" style="font-size:14px" href="https://github.com/golyakoff/ago-platform" target="_blank" rel="noopener">ago-platform</a>; the platform depends on nothing
       product-shaped. Line counts are source only — no <span class="mono">node_modules</span>, no
       generated migrations, no lockfiles.
     </p>
@@ -346,63 +347,63 @@
           </thead>
           <tbody>
             <tr>
-              <td><span class="repo-name">ago-root</span><div class="repo-desc">Rules, ADRs, roadmap and backlog. No code ships from here.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-root" target="_blank" rel="noopener">ago-root</a><div class="repo-desc">Rules, ADRs, roadmap and backlog. No code ships from here.</div></td>
               <td class="num">215</td>
               <td class="num">40&nbsp;574<span class="unit">md</span></td>
               <td class="num dash">—</td>
               <td><span class="pill docs"><span class="dot2"></span>docs</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-platform</span><div class="repo-desc">Reusable substrate: hosting, realtime, messaging, persistence, caching, storage, resilience, observability.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-platform" target="_blank" rel="noopener">ago-platform</a><div class="repo-desc">Reusable substrate: hosting, realtime, messaging, persistence, caching, storage, resilience, observability.</div></td>
               <td class="num">32</td>
               <td class="num">7&nbsp;101</td>
               <td class="num">88</td>
               <td><span class="pill live"><span class="dot2"></span>published</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-chat</span><div class="repo-desc">Product 1 — the embeddable customer-support chat. Api / Worker / Webhooks, three hosts, one solution.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-chat" target="_blank" rel="noopener">ago-chat</a><div class="repo-desc">Product 1 — the embeddable customer-support chat. Api / Worker / Webhooks, three hosts, one solution.</div></td>
               <td class="num">87</td>
               <td class="num">50&nbsp;602</td>
               <td class="num">837</td>
               <td><span class="pill live"><span class="dot2"></span>live</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-widget</span><div class="repo-desc">The script a shop embeds. Shadow DOM, no build step for the tenant.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-widget" target="_blank" rel="noopener">ago-widget</a><div class="repo-desc">The script a shop embeds. Shadow DOM, no build step for the tenant.</div></td>
               <td class="num">24</td>
               <td class="num">8&nbsp;240</td>
               <td class="num">194</td>
               <td><span class="pill live"><span class="dot2"></span>28.1&nbsp;KB gz</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-console</span><div class="repo-desc">The operator console — React SPA, the assignment queue, settings, billing-to-be.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-console" target="_blank" rel="noopener">ago-console</a><div class="repo-desc">The operator console — React SPA, the assignment queue, settings, billing-to-be.</div></td>
               <td class="num">36</td>
               <td class="num">12&nbsp;955</td>
               <td class="num">271</td>
               <td><span class="pill live"><span class="dot2"></span>live</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-deploy</span><div class="repo-desc">Kubernetes manifests, redeploy/rollback/smoke scripts. Nothing that decides behaviour.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-deploy" target="_blank" rel="noopener">ago-deploy</a><div class="repo-desc">Kubernetes manifests, redeploy/rollback/smoke scripts. Nothing that decides behaviour.</div></td>
               <td class="num">53</td>
               <td class="num">6&nbsp;825</td>
               <td class="num dash">—</td>
               <td><span class="pill live"><span class="dot2"></span>k3s / 1 node</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-landing</span><div class="repo-desc">The one-page pitch for the platform itself.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-landing" target="_blank" rel="noopener">ago-landing</a><div class="repo-desc">The one-page pitch for the platform itself.</div></td>
               <td class="num">4</td>
               <td class="num">992</td>
               <td class="num dash">—</td>
               <td><span class="pill live"><span class="dot2"></span>live</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-calendar</span><div class="repo-desc">Product 2 — booking. Own database, own hosts, no reference back into chat (<span class="mono">adr/0027</span>).</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-calendar" target="_blank" rel="noopener">ago-calendar</a><div class="repo-desc">Product 2 — booking. Own database, own hosts, no reference back into chat (<span class="mono">adr/0027</span>).</div></td>
               <td class="num">7</td>
               <td class="num">16&nbsp;676</td>
               <td class="num">282</td>
               <td><span class="pill built"><span class="dot2"></span>built, not deployed</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-calendar-console</span><div class="repo-desc">The calendar's own operator console — separate repository by design (<span class="mono">adr/0064</span>).</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-calendar-console" target="_blank" rel="noopener">ago-calendar-console</a><div class="repo-desc">The calendar's own operator console — separate repository by design (<span class="mono">adr/0064</span>).</div></td>
               <td class="num">1</td>
               <td class="num">2&nbsp;011</td>
               <td class="num">18</td>
@@ -744,15 +745,15 @@
         <div class="horizon-head"><h3>Next</h3><span class="horizon-when mono">queue head</span></div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">14</span><span class="rmi-title">AGO Inbox channels</span></div>
-          <p class="rmi-desc">MAX is registered and submitted for platform review; SMS waits on a vendor decision; Telegram needs a reliability spike from a Russian-hosted node before an adapter is worth writing.</p>
+          <p class="rmi-desc">Soon customers will be able to reach an operator not just through the on-site chat but on MAX too — that's already submitted for approval. SMS and Telegram are next in line: SMS is waiting on picking a provider, and Telegram needs a real-world check first, on how reliably it actually works from Russia.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">18</span><span class="rmi-title">Operator productivity</span></div>
-          <p class="rmi-desc">Search, conversation transfer, canned responses, notes &amp; tags — two of five items in this stage shipped this week alone.</p>
+          <p class="rmi-desc">Making the operator's day-to-day easier: searching old conversations, handing a chat to a colleague, canned replies, personal notes and tags on conversations. Two of the five are already shipped — this week alone.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">13</span><span class="rmi-title">Billing</span></div>
-          <p class="rmi-desc">Seat invitations first, then ЮKassa checkout confirmed by webhook through the outbox — never by trusting a redirect.</p>
+          <p class="rmi-desc">First, invite teammates onto paid seats. Then take payment through ЮKassa — money only counts as received once the bank actually confirms it, never just because the browser bounced back to the site.</p>
         </div>
       </div>
 
@@ -760,15 +761,15 @@
         <div class="horizon-head"><h3>Then</h3><span class="horizon-when mono">unblocks soon</span></div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">21</span><span class="rmi-title">Calendar becomes a chat module</span></div>
-          <p class="rmi-desc">The contract is designed (<span class="mono">adr/0065</span>) — a closed vocabulary of steps AGO Chat carries without understanding. Deciding the primitive set and the transport is next, against the real booking flow.</p>
+          <p class="rmi-desc">So a visitor can book an appointment right inside the chat window, instead of being sent to another site. How chat and calendar will talk to each other is already worked out — what's left is fitting the actual booking steps to a real scenario.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">16</span><span class="rmi-title">Personal data</span></div>
-          <p class="rmi-desc">Account &amp; conversation erasure, tenant data export, the widget's own processing notice — the mechanism, not just the promise.</p>
+          <p class="rmi-desc">A visitor's right to ask for their data to be deleted or handed back to them — not just a line in a privacy policy, but a button that actually works. Plus honest, in-widget notice about how their data is used.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">15</span><span class="rmi-title">Retention &amp; capacity</span></div>
-          <p class="rmi-desc">Bounded pruning of everything that grows without limit, then reading the real disk-growth slope that's been accumulating since deploy.</p>
+          <p class="rmi-desc">Automatic cleanup of old data so the server's disk doesn't fill up over time — plus an honest measurement of how fast it's actually filling, using real numbers going back to launch.</p>
         </div>
       </div>
 
@@ -776,15 +777,15 @@
         <div class="horizon-head"><h3>Later</h3><span class="horizon-when mono">named, not started</span></div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">18</span><span class="rmi-title">Search &amp; transfer</span></div>
-          <p class="rmi-desc">Full-text search over a doubly-partitioned table; a contended conversation transfer that has to respect the same lock order as assignment.</p>
+          <p class="rmi-desc">The other two pieces of that same stage: finding any past conversation by its text, and handing a conversation off to another operator reliably, even if two of them reach for it at once.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">20</span><span class="rmi-title">Calendar goes live</span></div>
-          <p class="rmi-desc">The booking engine and both consoles are built and tested — what's missing is the k8s manifests to put them on the same node as chat.</p>
+          <p class="rmi-desc">The second product — appointment booking — is already built and tested end to end. What's left is the technical part: launching it on the same server chat already runs on.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">7</span><span class="rmi-title">A real load number</span></div>
-          <p class="rmi-desc">Deliberately paused: needs one decision first — load-test the live demo, or spin up a throwaway box for it.</p>
+          <p class="rmi-desc">Deliberately on hold for now: needs one decision first — run the load test against the live demo, or spin up a separate throwaway machine for it.</p>
         </div>
       </div>
     </div>

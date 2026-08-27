@@ -190,7 +190,8 @@
   table.repos tbody td { padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 14.5px; }
   table.repos tbody tr:last-child td { border-bottom: none; }
   table.repos tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
-  .repo-name { font-family: var(--font-mono); font-weight: 600; font-size: 14px; color: var(--ink); }
+  .repo-name { font-family: var(--font-mono); font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: none; }
+  a.repo-name:hover { text-decoration: underline; text-decoration-color: var(--accent); }
   .repo-desc { color: var(--ink-soft); font-size: 13.5px; margin-top: 3px; max-width: 36ch; }
   td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
   td.num .unit { color: var(--ink-faint); font-weight: 400; font-size: 11px; margin-left: 2px; text-transform: uppercase; }
@@ -324,9 +325,9 @@
       </div>
     </div>
     <p class="sec-intro">
-      <span class="repo-name" style="font-size:14px">ago-root</span> не содержит кода — только правила,
+      <a class="repo-name" style="font-size:14px" href="https://github.com/golyakoff/ago-root" target="_blank" rel="noopener">ago-root</a> не содержит кода — только правила,
       решения и план. Каждый продукт зависит от
-      <span class="repo-name" style="font-size:14px">ago-platform</span>; платформа не зависит ни от чего
+      <a class="repo-name" style="font-size:14px" href="https://github.com/golyakoff/ago-platform" target="_blank" rel="noopener">ago-platform</a>; платформа не зависит ни от чего
       продуктового. Строки кода — только исходники, без <span class="mono">node_modules</span>,
       сгенерированных миграций и лок-файлов.
     </p>
@@ -345,63 +346,63 @@
           </thead>
           <tbody>
             <tr>
-              <td><span class="repo-name">ago-root</span><div class="repo-desc">Правила, ADR, roadmap и бэклог. Код отсюда не выходит.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-root" target="_blank" rel="noopener">ago-root</a><div class="repo-desc">Правила, ADR, roadmap и бэклог. Код отсюда не выходит.</div></td>
               <td class="num">215</td>
               <td class="num">40&nbsp;574<span class="unit">md</span></td>
               <td class="num dash">—</td>
               <td><span class="pill docs"><span class="dot2"></span>документация</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-platform</span><div class="repo-desc">Переиспользуемая подложка: хостинг, реалтайм, обмен сообщениями, персистентность, кеш, хранилище, отказоустойчивость, наблюдаемость.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-platform" target="_blank" rel="noopener">ago-platform</a><div class="repo-desc">Переиспользуемая подложка: хостинг, реалтайм, обмен сообщениями, персистентность, кеш, хранилище, отказоустойчивость, наблюдаемость.</div></td>
               <td class="num">32</td>
               <td class="num">7&nbsp;101</td>
               <td class="num">88</td>
               <td><span class="pill live"><span class="dot2"></span>опубликован</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-chat</span><div class="repo-desc">Продукт 1 — встраиваемый чат поддержки. Api / Worker / Webhooks, три хоста, одно решение.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-chat" target="_blank" rel="noopener">ago-chat</a><div class="repo-desc">Продукт 1 — встраиваемый чат поддержки. Api / Worker / Webhooks, три хоста, одно решение.</div></td>
               <td class="num">87</td>
               <td class="num">50&nbsp;602</td>
               <td class="num">837</td>
               <td><span class="pill live"><span class="dot2"></span>в проде</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-widget</span><div class="repo-desc">Скрипт, который магазин встраивает у себя. Shadow DOM, без сборки на стороне арендатора.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-widget" target="_blank" rel="noopener">ago-widget</a><div class="repo-desc">Скрипт, который магазин встраивает у себя. Shadow DOM, без сборки на стороне арендатора.</div></td>
               <td class="num">24</td>
               <td class="num">8&nbsp;240</td>
               <td class="num">194</td>
               <td><span class="pill live"><span class="dot2"></span>28,1&nbsp;КБ gz</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-console</span><div class="repo-desc">Консоль оператора — React SPA, очередь назначений, настройки, будущий биллинг.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-console" target="_blank" rel="noopener">ago-console</a><div class="repo-desc">Консоль оператора — React SPA, очередь назначений, настройки, будущий биллинг.</div></td>
               <td class="num">36</td>
               <td class="num">12&nbsp;955</td>
               <td class="num">271</td>
               <td><span class="pill live"><span class="dot2"></span>в проде</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-deploy</span><div class="repo-desc">Манифесты Kubernetes, скрипты redeploy/rollback/smoke. Ничего, что решает поведение системы.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-deploy" target="_blank" rel="noopener">ago-deploy</a><div class="repo-desc">Манифесты Kubernetes, скрипты redeploy/rollback/smoke. Ничего, что решает поведение системы.</div></td>
               <td class="num">53</td>
               <td class="num">6&nbsp;825</td>
               <td class="num dash">—</td>
               <td><span class="pill live"><span class="dot2"></span>k3s / 1 узел</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-landing</span><div class="repo-desc">Одностраничная витрина самой платформы.</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-landing" target="_blank" rel="noopener">ago-landing</a><div class="repo-desc">Одностраничная витрина самой платформы.</div></td>
               <td class="num">4</td>
               <td class="num">992</td>
               <td class="num dash">—</td>
               <td><span class="pill live"><span class="dot2"></span>в проде</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-calendar</span><div class="repo-desc">Продукт 2 — запись на приём. Своя база, свои хосты, без обратной ссылки в чат (<span class="mono">adr/0027</span>).</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-calendar" target="_blank" rel="noopener">ago-calendar</a><div class="repo-desc">Продукт 2 — запись на приём. Своя база, свои хосты, без обратной ссылки в чат (<span class="mono">adr/0027</span>).</div></td>
               <td class="num">7</td>
               <td class="num">16&nbsp;676</td>
               <td class="num">282</td>
               <td><span class="pill built"><span class="dot2"></span>собран, не задеплоен</span></td>
             </tr>
             <tr>
-              <td><span class="repo-name">ago-calendar-console</span><div class="repo-desc">Консоль оператора календаря — отдельный репозиторий по решению (<span class="mono">adr/0064</span>).</div></td>
+              <td><a class="repo-name" href="https://github.com/golyakoff/ago-calendar-console" target="_blank" rel="noopener">ago-calendar-console</a><div class="repo-desc">Консоль оператора календаря — отдельный репозиторий по решению (<span class="mono">adr/0064</span>).</div></td>
               <td class="num">1</td>
               <td class="num">2&nbsp;011</td>
               <td class="num">18</td>
@@ -743,15 +744,15 @@
         <div class="horizon-head"><h3>Дальше</h3><span class="horizon-when mono">голова очереди</span></div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">14</span><span class="rmi-title">Каналы AGO Inbox</span></div>
-          <p class="rmi-desc">MAX зарегистрирован и отправлен на модерацию; SMS ждёт решения по вендору; Telegram нуждается в замере надёжности с российского узла, прежде чем писать адаптер.</p>
+          <p class="rmi-desc">Скоро отвечать клиентам можно будет не только в чате на сайте, но и в MAX — заявка уже подана на модерацию. SMS и Telegram на очереди: для SMS ждём решения, через кого слать, а для Telegram сначала проверяем на практике, насколько надёжно он работает из России.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">18</span><span class="rmi-title">Продуктивность оператора</span></div>
-          <p class="rmi-desc">Поиск, передача диалога, шаблонные ответы, заметки и теги — два из пяти пунктов этой стадии сданы уже на этой неделе.</p>
+          <p class="rmi-desc">Чтобы оператору было проще работать: поиск по старым диалогам, передача разговора коллеге, готовые быстрые ответы, личные заметки и метки на диалогах. Два из пяти пунктов уже готовы — прямо на этой неделе.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">13</span><span class="rmi-title">Биллинг</span></div>
-          <p class="rmi-desc">Сначала приглашения на места, затем оплата через ЮKassa, подтверждённая вебхуком через outbox — никогда доверием к редиректу.</p>
+          <p class="rmi-desc">Сначала — приглашать коллег в команду по купленным местам. Потом — принимать оплату через ЮKassa: деньги засчитываются только после настоящего подтверждения от банка, а не просто потому что браузер вернулся на сайт после оплаты.</p>
         </div>
       </div>
 
@@ -759,15 +760,15 @@
         <div class="horizon-head"><h3>Потом</h3><span class="horizon-when mono">скоро разблокируется</span></div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">21</span><span class="rmi-title">Календарь становится модулем чата</span></div>
-          <p class="rmi-desc">Контракт спроектирован (<span class="mono">adr/0065</span>) — закрытый словарь шагов, которые AGO Chat переносит, не понимая. Дальше — набор примитивов и транспорт, решаемые против реального сценария записи.</p>
+          <p class="rmi-desc">Чтобы посетитель мог записаться на приём прямо в окне чата, а не переходить на другой сайт. Схема того, как чат и календарь будут говорить друг с другом, уже продумана — осталось собрать сами шаги записи под реальный сценарий.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">16</span><span class="rmi-title">Персональные данные</span></div>
-          <p class="rmi-desc">Удаление аккаунта и диалога, экспорт данных арендатора, собственное уведомление виджета об обработке — механизм, а не только обещание.</p>
+          <p class="rmi-desc">Право посетителя попросить удалить свои данные или выгрузить их себе — не просто пункт в политике конфиденциальности, а реально работающая кнопка. Плюс честное уведомление в самом виджете о том, как используются данные.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">15</span><span class="rmi-title">Хранение и ёмкость</span></div>
-          <p class="rmi-desc">Ограниченная чистка всего, что растёт без предела, а затем — чтение реального наклона роста диска, который копится с момента деплоя.</p>
+          <p class="rmi-desc">Автоматическая уборка старых данных, чтобы диск сервера не переполнился со временем — и честный замер, насколько быстро он на самом деле заполняется, по цифрам с момента запуска.</p>
         </div>
       </div>
 
@@ -775,15 +776,15 @@
         <div class="horizon-head"><h3>Позже</h3><span class="horizon-when mono">названо, не начато</span></div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">18</span><span class="rmi-title">Поиск и передача</span></div>
-          <p class="rmi-desc">Полнотекстовый поиск по дважды партиционированной таблице; конфликтная передача диалога, обязанная уважать тот же порядок блокировок, что и назначение.</p>
+          <p class="rmi-desc">Остальные две возможности из той же стадии: находить любой прошлый разговор по тексту, и надёжно передавать диалог другому оператору, даже если оба потянутся к нему одновременно.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">20</span><span class="rmi-title">Календарь выходит в прод</span></div>
-          <p class="rmi-desc">Движок бронирования и обе консоли построены и протестированы — не хватает только манифестов k8s, чтобы поставить их на тот же узел, что и чат.</p>
+          <p class="rmi-desc">Второй продукт — бронирование записи — уже построен и протестирован от начала до конца. Осталось техническое: выпустить его на тот же сервер, где уже работает чат.</p>
         </div>
         <div class="rmi">
           <div class="rmi-top"><span class="rmi-stage">7</span><span class="rmi-title">Настоящая цифра по нагрузке</span></div>
-          <p class="rmi-desc">Осознанно поставлено на паузу: сперва нужно одно решение — грузить живое демо или поднимать отдельную одноразовую машину.</p>
+          <p class="rmi-desc">Пока сознательно отложено: нужно сначала решить, тестировать нагрузку на живом демо-стенде или поднимать для этого отдельную одноразовую машину.</p>
         </div>
       </div>
     </div>
