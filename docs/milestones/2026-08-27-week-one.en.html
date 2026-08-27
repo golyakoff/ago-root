@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGO Platform — Week One</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper: #eef2f0;
+    --paper-raised: #ffffff;
+    --paper-sunken: #e2e8e5;
+    --ink: #14201d;
+    --ink-soft: #46564f;
+    --ink-faint: #6f8079;
+    --line: #cdd8d3;
+    --line-soft: #dde5e1;
+    --accent: #0f7d6e;
+    --accent-strong: #0a6153;
+    --accent-soft: #d9ece8;
+    --accent-2: #a9711f;
+    --accent-2-soft: #f1e2c9;
+    --good: #2f8f5b;
+    --good-soft: #dcf0e3;
+    --warn: #b8781f;
+    --warn-soft: #f3e6cf;
+    --crit: #b1483a;
+    --crit-soft: #f5e0dc;
+    --muted-soft: #e4e9e6;
+    --shadow: 0 1px 2px rgba(20,32,29,.06), 0 8px 24px -12px rgba(20,32,29,.18);
+    --radius: 10px;
+    --font-display: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #101917;
+      --paper-raised: #16211e;
+      --paper-sunken: #0c1412;
+      --ink: #e7efec;
+      --ink-soft: #a9bcb4;
+      --ink-faint: #78897f;
+      --line: #253530;
+      --line-soft: #1d2b26;
+      --accent: #34c7b1;
+      --accent-strong: #56d8c4;
+      --accent-soft: #163832;
+      --accent-2: #e0ab5c;
+      --accent-2-soft: #3a2c15;
+      --good: #4fbf85;
+      --good-soft: #16342380;
+      --warn: #dba24f;
+      --warn-soft: #3a2c1580;
+      --crit: #e08672;
+      --crit-soft: #3a201980;
+      --muted-soft: #1a2622;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #101917;
+    --paper-raised: #16211e;
+    --paper-sunken: #0c1412;
+    --ink: #e7efec;
+    --ink-soft: #a9bcb4;
+    --ink-faint: #78897f;
+    --line: #253530;
+    --line-soft: #1d2b26;
+    --accent: #34c7b1;
+    --accent-strong: #56d8c4;
+    --accent-soft: #163832;
+    --accent-2: #e0ab5c;
+    --accent-2-soft: #3a2c15;
+    --good: #4fbf85;
+    --good-soft: #16342380;
+    --warn: #dba24f;
+    --warn-soft: #3a2c1580;
+    --crit: #e08672;
+    --crit-soft: #3a201980;
+    --muted-soft: #1a2622;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent-soft); color: var(--accent-strong); }
+
+  a { color: var(--accent-strong); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; color: var(--ink); text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- top nav ---------- */
+  .topnav {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px) saturate(1.1);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .topnav-inner {
+    max-width: 1180px; margin: 0 auto; padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 52px; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-weight: 600; font-size: 14px; color: var(--ink); white-space: nowrap; }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); flex: none; }
+  .navlinks { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .navlinks::-webkit-scrollbar { display: none; }
+  .navlinks a {
+    font-size: 13px; color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+    padding: 7px 11px; border-radius: 7px; transition: background .15s, color .15s;
+  }
+  .navlinks a:hover { background: var(--muted-soft); color: var(--ink); }
+  .langlink {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent-strong);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; text-decoration: none;
+    white-space: nowrap; flex: none; transition: background .15s;
+  }
+  .langlink:hover { background: var(--accent-soft); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 56px 0 40px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12.5px; font-weight: 500;
+    color: var(--accent-strong); background: var(--accent-soft);
+    padding: 5px 11px; border-radius: 999px; letter-spacing: .03em;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 4.6vw, 50px); line-height: 1.08; letter-spacing: -.015em;
+    margin: 18px 0 14px;
+  }
+  .hero .lede { max-width: 64ch; font-size: 17.5px; color: var(--ink-soft); }
+  .hero .lede strong { color: var(--ink); font-weight: 600; }
+
+  .statstrip {
+    margin-top: 34px; display: grid; grid-template-columns: repeat(5, 1fr);
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+    background: var(--paper-raised); box-shadow: var(--shadow);
+  }
+  .stat { padding: 18px 16px; border-left: 1px solid var(--line); }
+  .stat:first-child { border-left: none; }
+  .stat .n { font-family: var(--font-mono); font-size: clamp(20px, 2.4vw, 28px); font-weight: 600; color: var(--ink); letter-spacing: -.02em; }
+  .stat .l { font-size: 12.5px; color: var(--ink-faint); margin-top: 3px; }
+  @media (max-width: 760px) {
+    .statstrip { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(3), .stat:nth-child(5) { border-left: none; }
+    .stat { border-top: 1px solid var(--line); }
+    .stat:nth-child(1), .stat:nth-child(2) { border-top: none; }
+  }
+
+  /* ---------- sections ---------- */
+  section { padding: 54px 0; border-top: 1px solid var(--line-soft); }
+  section:first-of-type { border-top: none; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 26px; flex-wrap: wrap; }
+  .sec-head .tag { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); letter-spacing: .04em; }
+  h2.sec-title { font-size: clamp(22px, 2.8vw, 28px); letter-spacing: -.01em; }
+  .sec-intro { max-width: 68ch; color: var(--ink-soft); font-size: 15.5px; margin-top: 8px; }
+
+  /* ---------- repo table ---------- */
+  .tablecard { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-raised); box-shadow: var(--shadow); overflow: hidden; }
+  .tablescroll { overflow-x: auto; }
+  table.repos { width: 100%; border-collapse: collapse; min-width: 760px; }
+  table.repos thead th {
+    text-align: left; font-family: var(--font-mono); font-weight: 500; font-size: 11.5px;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint);
+    padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--paper-sunken);
+  }
+  table.repos th.num, table.repos td.num { text-align: right; }
+  table.repos tbody td { padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; font-size: 14.5px; }
+  table.repos tbody tr:last-child td { border-bottom: none; }
+  table.repos tbody tr:hover { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
+  .repo-name { font-family: var(--font-mono); font-weight: 600; font-size: 14px; color: var(--ink); }
+  .repo-desc { color: var(--ink-soft); font-size: 13.5px; margin-top: 3px; max-width: 36ch; }
+  td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+  td.num .unit { color: var(--ink-faint); font-weight: 400; font-size: 11px; margin-left: 2px; text-transform: uppercase; }
+  .dash { color: var(--ink-faint); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .pill.live { background: var(--good-soft); color: var(--good); }
+  .pill.built { background: var(--warn-soft); color: var(--warn); }
+  .pill.docs { background: var(--muted-soft); color: var(--ink-faint); }
+  .pill .dot2 { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  .totalsrow { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 18px; font-size: 13px; color: var(--ink-faint); }
+  .totalsrow b { font-family: var(--font-mono); color: var(--ink); font-weight: 600; }
+
+  /* ---------- architecture ---------- */
+  .archi-card {
+    background: #fbfaf6; border: 1px solid #d8d4c4; border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 22px 18px 16px; overflow-x: auto;
+  }
+  .archi-card svg { display: block; margin: 0 auto; min-width: 920px; }
+  .archi-legend {
+    display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; padding-top: 14px;
+    border-top: 1px dashed #d8d4c4; font-size: 12.5px; color: #4a4636; font-family: var(--font-mono);
+  }
+  .archi-legend .item { display: flex; align-items: center; gap: 7px; }
+  .archi-legend .sw { width: 13px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.25); flex: none; }
+  .archi-legend .ln { width: 22px; height: 0; border-top: 2px solid #4a4636; }
+  .archi-legend .ln.dashed { border-top-style: dashed; }
+  .archi-caption { margin-top: 14px; font-size: 13.5px; color: var(--ink-soft); max-width: 76ch; }
+
+  .archifile-note {
+    margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); font-size: 13px; color: var(--ink-soft);
+  }
+  .archifile-note b { color: var(--accent-strong); }
+
+  /* ---------- demo timeline ---------- */
+  .timeline { position: relative; padding-left: 2px; }
+  .tl-item { display: grid; grid-template-columns: 44px 1fr; gap: 18px; position: relative; padding-bottom: 26px; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-item::before {
+    content: ""; position: absolute; left: 21px; top: 40px; bottom: -4px; width: 1px; background: var(--line);
+  }
+  .tl-item:last-child::before { display: none; }
+  .tl-num {
+    width: 42px; height: 42px; border-radius: 50%; background: var(--paper-raised); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 600;
+    font-size: 15px; color: var(--accent-strong); box-shadow: var(--shadow); flex: none; z-index: 1;
+  }
+  .tl-body { background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 18px; box-shadow: var(--shadow); }
+  .tl-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .tl-title { font-weight: 600; font-size: 15.5px; }
+  .tl-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tl-tag {
+    font-family: var(--font-mono); font-size: 10.5px; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent-strong); font-weight: 500; white-space: nowrap;
+  }
+  .tl-tag.fresh { background: var(--accent-2-soft); color: var(--accent-2); }
+  .tl-desc { color: var(--ink-soft); font-size: 14px; margin-top: 6px; }
+  .tl-url { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
+
+  /* ---------- roadmap ---------- */
+  .horizons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 860px) { .horizons { grid-template-columns: 1fr; } }
+  .horizon { background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+  .horizon-head { display: flex; align-items: center; justify-content: space-between; }
+  .horizon-head h3 { font-size: 15px; }
+  .horizon-when { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
+  .rmi { border-top: 1px solid var(--line-soft); padding-top: 11px; }
+  .rmi:first-of-type { border-top: none; padding-top: 0; }
+  .rmi-top { display: flex; align-items: baseline; gap: 8px; }
+  .rmi-stage { font-family: var(--font-mono); font-size: 11px; color: var(--accent-strong); background: var(--accent-soft); padding: 1px 7px; border-radius: 5px; font-weight: 600; flex: none; }
+  .rmi-title { font-weight: 600; font-size: 13.5px; }
+  .rmi-desc { color: var(--ink-soft); font-size: 12.5px; margin-top: 4px; line-height: 1.5; }
+
+  /* ---------- footer ---------- */
+  footer { padding: 34px 0 60px; }
+  .foot-inner { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--ink-faint); border-top: 1px solid var(--line-soft); padding-top: 20px; }
+  .foot-links { display: flex; gap: 14px; flex-wrap: wrap; }
+  .foot-links a { color: var(--ink-faint); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 0 18px; }
+    .topnav-inner { padding: 0 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-inner">
+    <div class="brand"><span class="dot"></span>AGO / week-one</div>
+    <nav class="navlinks">
+      <a href="#numbers">Numbers</a>
+      <a href="#repos">Repositories</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#demo">Demo</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+    <a href="2026-08-27-week-one.ru.html" class="langlink" lang="ru" hreflang="ru">RU</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">2026-08-20 → 2026-08-27 · seven days</span>
+    <h1>AGO Platform — Week One</h1>
+    <p class="lede">
+      A support-chat platform, its second product, and the substrate under both — from an empty
+      folder to <strong>422 merged pull requests</strong> across nine repositories, with a live public
+      demo and fifty-six architecture decisions written down along the way.
+    </p>
+
+    <div class="statstrip" id="numbers">
+      <div class="stat"><div class="n mono">422</div><div class="l">merged PRs</div></div>
+      <div class="stat"><div class="n mono">≈106k</div><div class="l">lines of code</div></div>
+      <div class="stat"><div class="n mono">1&nbsp;640</div><div class="l">automated tests</div></div>
+      <div class="stat"><div class="n mono">56</div><div class="l">ADRs accepted</div></div>
+      <div class="stat"><div class="n mono">104&thinsp;/&thinsp;143</div><div class="l">backlog items shipped</div></div>
+    </div>
+  </header>
+
+  <section id="repos">
+    <div class="sec-head">
+      <div>
+        <span class="tag">01 — by repository</span>
+        <h2 class="sec-title">Nine repositories, one dependency rule</h2>
+      </div>
+    </div>
+    <p class="sec-intro">
+      <span class="repo-name" style="font-size:14px">ago-root</span> holds no code — only the rules,
+      the decisions and the plan. Every product depends on
+      <span class="repo-name" style="font-size:14px">ago-platform</span>; the platform depends on nothing
+      product-shaped. Line counts are source only — no <span class="mono">node_modules</span>, no
+      generated migrations, no lockfiles.
+    </p>
+
+    <div class="tablecard">
+      <div class="tablescroll">
+        <table class="repos">
+          <thead>
+            <tr>
+              <th>Repository</th>
+              <th class="num">Merged PRs</th>
+              <th class="num">Lines</th>
+              <th class="num">Tests</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="repo-name">ago-root</span><div class="repo-desc">Rules, ADRs, roadmap and backlog. No code ships from here.</div></td>
+              <td class="num">209</td>
+              <td class="num">37&nbsp;494<span class="unit">md</span></td>
+              <td class="num dash">—</td>
+              <td><span class="pill docs"><span class="dot2"></span>docs</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-platform</span><div class="repo-desc">Reusable substrate: hosting, realtime, messaging, persistence, caching, storage, resilience, observability.</div></td>
+              <td class="num">31</td>
+              <td class="num">7&nbsp;197</td>
+              <td class="num">88</td>
+              <td><span class="pill live"><span class="dot2"></span>published</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-chat</span><div class="repo-desc">Product 1 — the embeddable customer-support chat. Api / Worker / Webhooks, three hosts, one solution.</div></td>
+              <td class="num">81</td>
+              <td class="num">51&nbsp;562</td>
+              <td class="num">813</td>
+              <td><span class="pill live"><span class="dot2"></span>live</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-widget</span><div class="repo-desc">The script a shop embeds. Shadow DOM, no build step for the tenant.</div></td>
+              <td class="num">18</td>
+              <td class="num">7&nbsp;608</td>
+              <td class="num">181</td>
+              <td><span class="pill live"><span class="dot2"></span>25.2&nbsp;KB gz</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-console</span><div class="repo-desc">The operator console — React SPA, the assignment queue, settings, billing-to-be.</div></td>
+              <td class="num">24</td>
+              <td class="num">12&nbsp;166</td>
+              <td class="num">258</td>
+              <td><span class="pill live"><span class="dot2"></span>live</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-deploy</span><div class="repo-desc">Kubernetes manifests, redeploy/rollback/smoke scripts. Nothing that decides behaviour.</div></td>
+              <td class="num">50</td>
+              <td class="num">6&nbsp;738</td>
+              <td class="num dash">—</td>
+              <td><span class="pill live"><span class="dot2"></span>k3s / 1 node</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-landing</span><div class="repo-desc">The one-page pitch for the platform itself.</div></td>
+              <td class="num">3</td>
+              <td class="num">992</td>
+              <td class="num dash">—</td>
+              <td><span class="pill live"><span class="dot2"></span>live</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-calendar</span><div class="repo-desc">Product 2 — booking. Own database, own hosts, no reference back into chat (<span class="mono">adr/0027</span>).</div></td>
+              <td class="num">6</td>
+              <td class="num">18&nbsp;063</td>
+              <td class="num">282</td>
+              <td><span class="pill built"><span class="dot2"></span>built, not deployed</span></td>
+            </tr>
+            <tr>
+              <td><span class="repo-name">ago-calendar-console</span><div class="repo-desc">The calendar's own operator console — separate repository by design (<span class="mono">adr/0064</span>).</div></td>
+              <td class="num">0<span class="unit">new</span></td>
+              <td class="num">2&nbsp;083</td>
+              <td class="num">18</td>
+              <td><span class="pill built"><span class="dot2"></span>day 7</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="totalsrow">
+      <span><b>422</b> merged PRs total</span>
+      <span><b>≈106,400</b> lines of application code (+<b>37,494</b> lines of docs in ago-root)</span>
+      <span><b>1,640</b> tests, all green</span>
+      <span><b>22</b> planned stages, <b>17</b> queued next</span>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <div class="sec-head">
+      <div>
+        <span class="tag">02 — system view</span>
+        <h2 class="sec-title">Two products, one substrate, one dependency direction</h2>
+      </div>
+    </div>
+    <p class="sec-intro">
+      Layered in the ArchiMate style — business actors on top, application components in the middle,
+      shared technology underneath. Colour is the layer; solid arrows are real traffic today, dashed
+      arrows are contracts designed but not yet built.
+    </p>
+
+    <div class="archi-card">
+      <svg viewBox="0 0 1180 780" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ArchiMate-style layered architecture diagram of the AGO Platform">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#4a4636"/>
+          </marker>
+          <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#8a8468"/>
+          </marker>
+        </defs>
+
+        <!-- layer labels, in clear gutters between blocks -->
+        <text x="28" y="16" font-family="IBM Plex Mono" font-size="11" letter-spacing="1.5" fill="#8a8468">BUSINESS</text>
+        <text x="28" y="172" font-family="IBM Plex Mono" font-size="11" letter-spacing="1.5" fill="#8a8468">APPLICATION</text>
+        <text x="28" y="546" font-family="IBM Plex Mono" font-size="11" letter-spacing="1.5" fill="#8a8468">TECHNOLOGY</text>
+
+        <!-- ===== BUSINESS LAYER (y 28-76) ===== -->
+        <g font-family="IBM Plex Sans">
+          <g transform="translate(94,28)">
+            <rect x="-58" y="0" width="116" height="48" rx="8" fill="#f6e6a8" stroke="#b89a4a" stroke-width="1.2"/>
+            <circle cx="-40" cy="24" r="7" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <path d="M-46,38 q6,-11 12,0" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <text x="-22" y="21" font-size="13" font-weight="600" fill="#332a0f">Visitor</text>
+            <text x="-22" y="35" font-size="10.5" fill="#6b5a24">shop's customer</text>
+          </g>
+          <g transform="translate(316,28)">
+            <rect x="-58" y="0" width="116" height="48" rx="8" fill="#f6e6a8" stroke="#b89a4a" stroke-width="1.2"/>
+            <circle cx="-40" cy="24" r="7" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <path d="M-46,38 q6,-11 12,0" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <text x="-22" y="21" font-size="13" font-weight="600" fill="#332a0f">Operator</text>
+            <text x="-22" y="35" font-size="10.5" fill="#6b5a24">answers &amp; books</text>
+          </g>
+          <g transform="translate(538,28)">
+            <rect x="-58" y="0" width="116" height="48" rx="8" fill="#f6e6a8" stroke="#b89a4a" stroke-width="1.2"/>
+            <circle cx="-40" cy="24" r="7" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <path d="M-46,38 q6,-11 12,0" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <text x="-22" y="18" font-size="13" font-weight="600" fill="#332a0f">Tenant</text>
+            <text x="-22" y="32" font-size="10.5" fill="#6b5a24">owns a site,</text>
+            <text x="-22" y="43" font-size="10.5" fill="#6b5a24">configures it</text>
+          </g>
+          <g transform="translate(800,28)">
+            <rect x="-64" y="0" width="128" height="48" rx="8" fill="#f6e6a8" stroke="#b89a4a" stroke-width="1.2"/>
+            <circle cx="-46" cy="24" r="7" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <path d="M-52,38 q6,-11 12,0" fill="none" stroke="#7a6420" stroke-width="1.6"/>
+            <text x="-28" y="18" font-size="12.5" font-weight="600" fill="#332a0f">Platform owner</text>
+            <text x="-28" y="32" font-size="10.5" fill="#6b5a24">runs every tenant,</text>
+            <text x="-28" y="43" font-size="10.5" fill="#6b5a24">may be one too</text>
+          </g>
+        </g>
+
+        <!-- actor -> edge lines (y 76-118) -->
+        <line x1="94" y1="76" x2="94" y2="118" stroke="#8a8468" stroke-width="1.4" marker-end="url(#arrowSoft)"/>
+        <line x1="316" y1="76" x2="316" y2="118" stroke="#8a8468" stroke-width="1.4" marker-end="url(#arrowSoft)"/>
+        <line x1="538" y1="76" x2="538" y2="118" stroke="#8a8468" stroke-width="1.4" marker-end="url(#arrowSoft)"/>
+        <line x1="800" y1="76" x2="800" y2="118" stroke="#8a8468" stroke-width="1.4" marker-end="url(#arrowSoft)"/>
+
+        <!-- ===== EDGE (y 118-148) ===== -->
+        <rect x="28" y="118" width="1124" height="30" rx="6" fill="#eef2f0" stroke="#c7cfc9" stroke-width="1"/>
+        <text x="590" y="137" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#3f4b45">NGINX Gateway Fabric — TLS, least_conn, no sticky sessions</text>
+
+        <!-- edge -> app entry points (y 148-222) -->
+        <line x1="94" y1="148" x2="94" y2="222" stroke="#4a4636" stroke-width="1.4" marker-end="url(#arrow)"/>
+        <line x1="290" y1="148" x2="290" y2="222" stroke="#4a4636" stroke-width="1.4" marker-end="url(#arrow)"/>
+        <line x1="790" y1="148" x2="790" y2="222" stroke="#4a4636" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+        <!-- ===== APPLICATION LAYER (y 184-350) ===== -->
+        <rect x="28" y="184" width="608" height="166" rx="10" fill="none" stroke="#7a93bb" stroke-width="1.4" stroke-dasharray="2 3"/>
+        <text x="44" y="204" font-family="IBM Plex Mono" font-size="12" font-weight="600" fill="#274468">AGO CHAT</text>
+
+        <rect x="666" y="184" width="486" height="166" rx="10" fill="none" stroke="#6ea87a" stroke-width="1.4" stroke-dasharray="2 3"/>
+        <text x="682" y="204" font-family="IBM Plex Mono" font-size="12" font-weight="600" fill="#245234">AGO CALENDAR</text>
+
+        <!-- row 1: entry points (y 222-270) -->
+        <g transform="translate(52,222)">
+          <rect width="148" height="48" rx="7" fill="#b9d2ec" stroke="#6f8fbd" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#3a5a8a"/><rect x="128" y="6" width="14" height="6" fill="#3a5a8a"/>
+          <text x="74" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1c2e47">Widget</text>
+          <text x="74" y="39" text-anchor="middle" font-size="9.5" fill="#3a5170">embeds on any shop</text>
+        </g>
+        <g transform="translate(216,222)">
+          <rect width="148" height="48" rx="7" fill="#b9d2ec" stroke="#6f8fbd" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#3a5a8a"/><rect x="128" y="6" width="14" height="6" fill="#3a5a8a"/>
+          <text x="74" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1c2e47">Console</text>
+          <text x="74" y="39" text-anchor="middle" font-size="9.5" fill="#3a5170">operator SPA</text>
+        </g>
+        <g transform="translate(380,222)">
+          <rect width="232" height="48" rx="7" fill="#b9d2ec" fill-opacity="0.45" stroke="#6f8fbd" stroke-width="1.2" stroke-dasharray="3 3"/>
+          <text x="116" y="23" text-anchor="middle" font-size="11.5" font-weight="600" fill="#2b436a">MAX · SMS · Telegram</text>
+          <text x="116" y="37" text-anchor="middle" font-size="9.5" fill="#4a628a">AGO Inbox — planned, Stage 14</text>
+        </g>
+        <g transform="translate(690,222)">
+          <rect width="200" height="48" rx="7" fill="#bfe0c4" stroke="#6ea87a" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#2f6a3f"/><rect x="180" y="6" width="14" height="6" fill="#2f6a3f"/>
+          <text x="100" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#173d21">Calendar Console</text>
+          <text x="100" y="39" text-anchor="middle" font-size="9.5" fill="#2c5a38">own repository (adr/0064)</text>
+        </g>
+
+        <!-- row 2: hosts (y 294-342) -->
+        <g transform="translate(52,294)">
+          <rect width="148" height="48" rx="7" fill="#b9d2ec" stroke="#6f8fbd" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#3a5a8a"/><rect x="128" y="6" width="14" height="6" fill="#3a5a8a"/>
+          <text x="74" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1c2e47">Chat.Api</text>
+          <text x="74" y="39" text-anchor="middle" font-size="9.5" fill="#3a5170">hubs + REST</text>
+        </g>
+        <g transform="translate(216,294)">
+          <rect width="148" height="48" rx="7" fill="#b9d2ec" stroke="#6f8fbd" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#3a5a8a"/><rect x="128" y="6" width="14" height="6" fill="#3a5a8a"/>
+          <text x="74" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1c2e47">Chat.Worker</text>
+          <text x="74" y="39" text-anchor="middle" font-size="9.5" fill="#3a5170">assignment, outbox</text>
+        </g>
+        <g transform="translate(380,294)">
+          <rect width="148" height="48" rx="7" fill="#b9d2ec" stroke="#6f8fbd" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#3a5a8a"/><rect x="128" y="6" width="14" height="6" fill="#3a5a8a"/>
+          <text x="74" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1c2e47">Chat.Webhooks</text>
+          <text x="74" y="39" text-anchor="middle" font-size="9.5" fill="#3a5170">3rd-party bulkhead</text>
+        </g>
+        <g transform="translate(690,294)">
+          <rect width="200" height="48" rx="7" fill="#bfe0c4" stroke="#6ea87a" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#2f6a3f"/><rect x="180" y="6" width="14" height="6" fill="#2f6a3f"/>
+          <text x="100" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#173d21">Calendar.Api</text>
+          <text x="100" y="39" text-anchor="middle" font-size="9.5" fill="#2c5a38">per-tenant CORS</text>
+        </g>
+        <g transform="translate(910,294)">
+          <rect width="200" height="48" rx="7" fill="#bfe0c4" stroke="#6ea87a" stroke-width="1.2"/>
+          <rect x="6" y="6" width="14" height="6" fill="#2f6a3f"/><rect x="180" y="6" width="14" height="6" fill="#2f6a3f"/>
+          <text x="100" y="26" text-anchor="middle" font-size="12.5" font-weight="600" fill="#173d21">Calendar.Worker</text>
+          <text x="100" y="39" text-anchor="middle" font-size="9.5" fill="#2c5a38">confirmation sweep</text>
+        </g>
+
+        <!-- row1 -> row2 links, clean verticals through shared centres -->
+        <line x1="126" y1="270" x2="126" y2="294" stroke="#4a4636" stroke-width="1.3" marker-end="url(#arrow)"/>
+        <line x1="290" y1="270" x2="290" y2="294" stroke="#4a4636" stroke-width="1.3" marker-end="url(#arrow)"/>
+        <line x1="790" y1="270" x2="790" y2="294" stroke="#4a4636" stroke-width="1.3" marker-end="url(#arrow)"/>
+
+        <!-- links within row 2, short horizontals in the gaps between blocks -->
+        <line x1="200" y1="318" x2="216" y2="318" stroke="#4a4636" stroke-width="1.3" marker-end="url(#arrow)"/>
+        <line x1="364" y1="318" x2="380" y2="318" stroke="#4a4636" stroke-width="1.3" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+        <line x1="890" y1="318" x2="910" y2="318" stroke="#4a4636" stroke-width="1.3" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+
+        <!-- module-contract seam, in the narrow gutter between groups (528-690), touches no block -->
+        <line x1="528" y1="318" x2="548" y2="318" stroke="#8a8468" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <rect x="548" y="303" width="120" height="30" rx="7" fill="#eef2f0" stroke="#8a8468" stroke-width="1.1" stroke-dasharray="3 3"/>
+        <text x="608" y="322" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#4a4636">module contract</text>
+        <line x1="668" y1="318" x2="690" y2="318" stroke="#8a8468" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arrowSoft)"/>
+        <text x="608" y="292" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8a8468">adr/0065 — planned, Stage 21</text>
+
+        <!-- ===== INTEGRATION BUS (y 560-576) ===== -->
+        <line x1="126" y1="342" x2="126" y2="560" stroke="#4a4636" stroke-width="1.1" marker-end="url(#arrow)" opacity=".55"/>
+        <line x1="290" y1="342" x2="290" y2="560" stroke="#4a4636" stroke-width="1.1" marker-end="url(#arrow)" opacity=".55"/>
+        <line x1="790" y1="342" x2="790" y2="560" stroke="#5f9c6e" stroke-width="1.1" marker-end="url(#arrow)" opacity=".55"/>
+        <line x1="1010" y1="342" x2="1010" y2="560" stroke="#5f9c6e" stroke-width="1.1" marker-end="url(#arrow)" opacity=".55"/>
+
+        <rect x="28" y="560" width="1124" height="16" rx="5" fill="#eef2f0" stroke="#c7cfc9" stroke-width="1"/>
+        <text x="590" y="572" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#3f4b45">Ago.Platform.Abstractions — one port per external resource</text>
+
+        <!-- ===== TECHNOLOGY LAYER (y 606-746) ===== -->
+        <rect x="28" y="606" width="1124" height="140" rx="10" fill="none" stroke="#c7cfc9" stroke-width="1.2"/>
+
+        <g font-family="IBM Plex Sans">
+          <g transform="translate(40,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11.5" font-weight="600" fill="#173d21">PostgreSQL</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">source of truth</text>
+          </g>
+          <g transform="translate(199,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11.5" font-weight="600" fill="#173d21">RabbitMQ</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">outbox → broker</text>
+          </g>
+          <g transform="translate(358,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11.5" font-weight="600" fill="#173d21">Redis</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">cache · presence</text>
+          </g>
+          <g transform="translate(517,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11.5" font-weight="600" fill="#173d21">S3 / MinIO</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">attachments</text>
+          </g>
+          <g transform="translate(676,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11.5" font-weight="600" fill="#173d21">Keycloak</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">OIDC identity</text>
+          </g>
+          <g transform="translate(835,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11" font-weight="600" fill="#173d21">Prometheus / Jaeger</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">OpenTelemetry</text>
+          </g>
+          <g transform="translate(994,626)">
+            <rect width="145" height="56" rx="7" fill="#cfeed4" stroke="#5f9c6e" stroke-width="1.2"/>
+            <path d="M8,10 h129 M8,19 h129" stroke="#2f6a3f" stroke-width="1" opacity=".5"/>
+            <text x="72.5" y="33" text-anchor="middle" font-size="11.5" font-weight="600" fill="#173d21">k3s (1 node)</text>
+            <text x="72.5" y="46" text-anchor="middle" font-size="9" fill="#2c5a38">Kustomize overlays</text>
+          </g>
+        </g>
+        <text x="40" y="730" font-size="10.5" fill="#3f4b45" font-family="IBM Plex Mono">each product: its own database and its own cache — never shared (adr/0027)</text>
+      </svg>
+
+      <div class="archi-legend">
+        <span class="item"><span class="sw" style="background:#f6e6a8"></span>Business</span>
+        <span class="item"><span class="sw" style="background:#b9d2ec"></span>Application</span>
+        <span class="item"><span class="sw" style="background:#bfe0c4"></span>Technology</span>
+        <span class="item"><span class="ln"></span>real traffic today</span>
+        <span class="item"><span class="ln dashed"></span>designed, not yet built</span>
+      </div>
+    </div>
+    <p class="archi-caption">
+      No two application hosts call each other synchronously — the broker is the only path between
+      them, which is what makes each independently restartable. AGO Calendar consumes
+      <span class="mono">Ago.Platform.*</span> exactly the way AGO Chat does, and never references it
+      back: the dependency only runs downward.
+    </p>
+    <div class="archifile-note">
+      <b>As a separate file:</b> the same model — actors, components, technologies and the relations
+      between them — is included alongside this report in Archi format
+      (<span class="mono">.archimate</span>), open it in
+      <a href="https://www.archimatetool.com/" target="_blank" rel="noopener">Archi</a> for the fully
+      editable version.
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="sec-head">
+      <div>
+        <span class="tag">03 — five minutes, live</span>
+        <h2 class="sec-title">What to actually click</h2>
+      </div>
+    </div>
+    <p class="sec-intro">
+      Two browser tabs, no setup. Everything below runs against the real public deployment — one
+      Postgres, one RabbitMQ, one Redis, on a single k3s node.
+    </p>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-num">1</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Open two tabs</span><span class="tl-tags"><span class="tl-tag">setup</span></span></div>
+          <p class="tl-desc">Tab A: the widget on a real shop page. Tab B: the operator console, signed in.</p>
+          <p class="tl-url">demo-shop1.reserve-me.ru&nbsp; ·&nbsp; console.reserve-me.ru</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">2</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Message as the visitor</span><span class="tl-tags"><span class="tl-tag">realtime</span><span class="tl-tag">concurrency</span></span></div>
+          <p class="tl-desc">Type in the widget. It lands in the operator's queue with no refresh — the SignalR fan-out and the compare-and-set assignment engine, both live.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">3</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Reply as the operator</span><span class="tl-tags"><span class="tl-tag">realtime</span></span></div>
+          <p class="tl-desc">Answer from the console. It appears in the widget instantly, on the visitor's own connection.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">4</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Drop a file into the widget</span><span class="tl-tags"><span class="tl-tag">storage</span></span></div>
+          <p class="tl-desc">Uploads straight to S3-compatible storage through a presigned URL — the bytes never pass through the API — and a thumbnail appears in the console.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">5</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Close the conversation</span><span class="tl-tags"><span class="tl-tag fresh">shipped this week</span></span></div>
+          <p class="tl-desc">A control that did not exist eight hours ago — the capacity it releases is what lets the operator take the next visitor.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">6</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Flip on the offline auto-reply, then go quiet</span><span class="tl-tags"><span class="tl-tag fresh">shipped this week</span></span></div>
+          <p class="tl-desc">Toggle it in the console's site settings. Sign the operator out and message again as a new visitor — a scripted reply arrives labelled <em>Automatic reply</em>, never mistaken for a person.</p>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-num">7</div>
+        <div class="tl-body">
+          <div class="tl-top"><span class="tl-title">Bonus — the second product, run locally</span><span class="tl-tags"><span class="tl-tag" style="background:var(--warn-soft);color:var(--warn)">not on the public cluster yet</span></span></div>
+          <p class="tl-desc">The same widget, a second entry point: a full booking — service, time, phone, name — completing end to end against a local AGO Calendar. Proven; not deployed. Honestly labelled as such rather than staged.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <div class="sec-head">
+      <div>
+        <span class="tag">04 — what's next</span>
+        <h2 class="sec-title">Three horizons</h2>
+      </div>
+    </div>
+    <p class="sec-intro">
+      17 items sit ready and ordered in the queue. This is the shape of what's coming, grouped by how
+      soon it's reachable rather than by stage number.
+    </p>
+
+    <div class="horizons">
+      <div class="horizon">
+        <div class="horizon-head"><h3>Next</h3><span class="horizon-when mono">queue head</span></div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">14</span><span class="rmi-title">AGO Inbox channels</span></div>
+          <p class="rmi-desc">MAX is registered and submitted for platform review; SMS waits on a vendor decision; Telegram needs a reliability spike from a Russian-hosted node before an adapter is worth writing.</p>
+        </div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">18</span><span class="rmi-title">Operator productivity</span></div>
+          <p class="rmi-desc">Search, conversation transfer, canned responses, notes &amp; tags — two of five items in this stage shipped this week alone.</p>
+        </div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">13</span><span class="rmi-title">Billing</span></div>
+          <p class="rmi-desc">Seat invitations first, then ЮKassa checkout confirmed by webhook through the outbox — never by trusting a redirect.</p>
+        </div>
+      </div>
+
+      <div class="horizon">
+        <div class="horizon-head"><h3>Then</h3><span class="horizon-when mono">unblocks soon</span></div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">21</span><span class="rmi-title">Calendar becomes a chat module</span></div>
+          <p class="rmi-desc">The contract is designed (<span class="mono">adr/0065</span>) — a closed vocabulary of steps AGO Chat carries without understanding. Deciding the primitive set and the transport is next, against the real booking flow.</p>
+        </div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">16</span><span class="rmi-title">Personal data</span></div>
+          <p class="rmi-desc">Account &amp; conversation erasure, tenant data export, the widget's own processing notice — the mechanism, not just the promise.</p>
+        </div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">15</span><span class="rmi-title">Retention &amp; capacity</span></div>
+          <p class="rmi-desc">Bounded pruning of everything that grows without limit, then reading the real disk-growth slope that's been accumulating since deploy.</p>
+        </div>
+      </div>
+
+      <div class="horizon">
+        <div class="horizon-head"><h3>Later</h3><span class="horizon-when mono">named, not started</span></div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">18</span><span class="rmi-title">Search &amp; transfer</span></div>
+          <p class="rmi-desc">Full-text search over a doubly-partitioned table; a contended conversation transfer that has to respect the same lock order as assignment.</p>
+        </div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">20</span><span class="rmi-title">Calendar goes live</span></div>
+          <p class="rmi-desc">The booking engine and both consoles are built and tested — what's missing is the k8s manifests to put them on the same node as chat.</p>
+        </div>
+        <div class="rmi">
+          <div class="rmi-top"><span class="rmi-stage">7</span><span class="rmi-title">A real load number</span></div>
+          <p class="rmi-desc">Deliberately paused: needs one decision first — load-test the live demo, or spin up a throwaway box for it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot-inner">
+      <span>Generated 2026-08-27, day 7 of the AGO Platform project.</span>
+      <div class="foot-links">
+        <a href="https://github.com/golyakoff/ago-root">ago-root</a>
+        <a href="https://reserve-me.ru">reserve-me.ru</a>
+        <a href="https://demo-shop1.reserve-me.ru">demo</a>
+        <a href="https://console.reserve-me.ru">console</a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>

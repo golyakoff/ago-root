@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="AGO Platform" id="id-model-ago" version="5.0.0">
+  <folder name="Strategy" id="id-folder-strategy" type="strategy"/>
+  <folder name="Business" id="id-folder-business" type="business">
+    <element xsi:type="archimate:BusinessActor" name="Visitor" id="id-visitor">
+      <documentation>Shop's customer, talks through the widget or a channel.</documentation>
+    </element>
+    <element xsi:type="archimate:BusinessActor" name="Operator" id="id-operator">
+      <documentation>Answers conversations and books appointments from the console.</documentation>
+    </element>
+    <element xsi:type="archimate:BusinessActor" name="Tenant" id="id-tenant">
+      <documentation>Owns a site, configures it (widget appearance, offline auto-reply, calendar).</documentation>
+    </element>
+    <element xsi:type="archimate:BusinessActor" name="Platform owner" id="id-platform-owner">
+      <documentation>Runs every tenant on the platform; may also be a tenant of their own.</documentation>
+    </element>
+    <element xsi:type="archimate:BusinessService" name="Get support via chat" id="id-svc-chat"/>
+    <element xsi:type="archimate:BusinessService" name="Book an appointment" id="id-svc-booking"/>
+  </folder>
+  <folder name="Application" id="id-folder-app" type="application">
+    <element xsi:type="archimate:ApplicationComponent" name="Widget" id="id-widget">
+      <documentation>ago-widget - the embeddable script. Shadow DOM, no build step for the tenant.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Console" id="id-console">
+      <documentation>ago-console - the operator SPA (React).</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Chat.Api" id="id-chat-api">
+      <documentation>ago-chat: SignalR hubs + REST, holds connections, signs upload URLs.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Chat.Worker" id="id-chat-worker">
+      <documentation>ago-chat: outbox dispatcher, assignment engine, background consumers.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Chat.Webhooks" id="id-chat-webhooks">
+      <documentation>ago-chat: bulkhead for outbound third-party calls (adr/0013).</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="AGO Inbox channel adapters" id="id-inbox">
+      <documentation>Planned, Stage 14: MAX, SMS, Telegram - extends Chat, not a third product.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Calendar Console" id="id-cal-console">
+      <documentation>ago-calendar-console - own repository (adr/0064).</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Calendar.Api" id="id-cal-api">
+      <documentation>ago-calendar: tenant embed surface, per-tenant CORS.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationComponent" name="Calendar.Worker" id="id-cal-worker">
+      <documentation>ago-calendar: confirmation sweep, pending-booking queue.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationCollaboration" name="Module contract (adr/0065)" id="id-module-contract">
+      <documentation>Planned, Stage 21: moduleKey / task / step - AGO Chat carries Calendar's steps without understanding them.</documentation>
+    </element>
+    <element xsi:type="archimate:ApplicationService" name="Ago.Platform.Abstractions" id="id-platform-abstractions">
+      <documentation>ago-platform: one port per external resource - Postgres, RabbitMQ, Redis, S3, Keycloak.</documentation>
+    </element>
+  </folder>
+  <folder name="Technology" id="id-folder-tech" type="technology">
+    <element xsi:type="archimate:Node" name="PostgreSQL" id="id-postgres">
+      <documentation>Source of truth. Each product: its own database, never shared (adr/0027).</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="RabbitMQ" id="id-rabbitmq">
+      <documentation>Outbox to broker. No two hosts call each other synchronously.</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="Redis" id="id-redis">
+      <documentation>Cache, presence, connection registry, rate limits. Never a source of truth.</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="S3 / MinIO" id="id-s3">
+      <documentation>Attachments. Bytes never pass through the API - presigned URLs.</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="Keycloak" id="id-keycloak">
+      <documentation>OIDC identity for both operators and visitors.</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="Prometheus / Jaeger" id="id-observability">
+      <documentation>OpenTelemetry - metrics, traces, dashboards.</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="k3s (1 node)" id="id-k3s">
+      <documentation>ago-deploy - Kustomize overlays, one Kubernetes node.</documentation>
+    </element>
+    <element xsi:type="archimate:Node" name="NGINX Gateway Fabric" id="id-gateway">
+      <documentation>Public edge - TLS, least_conn, no sticky sessions.</documentation>
+    </element>
+  </folder>
+  <folder name="Motivation" id="id-folder-motivation" type="motivation"/>
+  <folder name="Implementation &amp; Migration" id="id-folder-impl" type="implementation_migration"/>
+  <folder name="Other" id="id-folder-other" type="other"/>
+  <folder name="Relations" id="id-folder-rel" type="relations">
+    <element xsi:type="archimate:TriggeringRelationship" id="id-r1" source="id-visitor" target="id-gateway"/>
+    <element xsi:type="archimate:TriggeringRelationship" id="id-r2" source="id-operator" target="id-gateway"/>
+    <element xsi:type="archimate:TriggeringRelationship" id="id-r3" source="id-tenant" target="id-gateway"/>
+    <element xsi:type="archimate:TriggeringRelationship" id="id-r4" source="id-platform-owner" target="id-gateway"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r5" source="id-gateway" target="id-widget"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r6" source="id-gateway" target="id-console"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r7" source="id-gateway" target="id-cal-console"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r8" source="id-widget" target="id-chat-api"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r9" source="id-console" target="id-chat-worker"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r10" source="id-cal-console" target="id-cal-api"/>
+    <element xsi:type="archimate:FlowRelationship" id="id-r11" source="id-chat-api" target="id-chat-worker"/>
+    <element xsi:type="archimate:FlowRelationship" id="id-r12" source="id-chat-worker" target="id-chat-webhooks"/>
+    <element xsi:type="archimate:FlowRelationship" id="id-r13" source="id-cal-api" target="id-cal-worker"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r14" source="id-chat-api" target="id-platform-abstractions"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r15" source="id-chat-worker" target="id-platform-abstractions"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r16" source="id-cal-api" target="id-platform-abstractions"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r17" source="id-cal-worker" target="id-platform-abstractions"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r18" source="id-platform-abstractions" target="id-postgres"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r19" source="id-platform-abstractions" target="id-rabbitmq"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r20" source="id-platform-abstractions" target="id-redis"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r21" source="id-platform-abstractions" target="id-s3"/>
+    <element xsi:type="archimate:ServingRelationship" id="id-r22" source="id-platform-abstractions" target="id-keycloak"/>
+    <element xsi:type="archimate:AssociationRelationship" id="id-r23" source="id-chat-webhooks" target="id-module-contract">
+      <documentation>Planned - Stage 21</documentation>
+    </element>
+    <element xsi:type="archimate:AssociationRelationship" id="id-r24" source="id-module-contract" target="id-cal-api">
+      <documentation>Planned - Stage 21</documentation>
+    </element>
+    <element xsi:type="archimate:AssociationRelationship" id="id-r25" source="id-inbox" target="id-chat-api">
+      <documentation>Planned - Stage 14</documentation>
+    </element>
+    <element xsi:type="archimate:RealizationRelationship" id="id-r26" source="id-widget" target="id-svc-chat"/>
+    <element xsi:type="archimate:RealizationRelationship" id="id-r27" source="id-cal-console" target="id-svc-booking"/>
+  </folder>
+  <folder name="Views" id="id-folder-views" type="diagrams">
+    <element xsi:type="archimate:ArchimateDiagramModel" name="AGO Platform — Overview" id="id-view-1">
+      <child xsi:type="archimate:DiagramObject" id="id-do-visitor" fillColor="#F6E6A8" archimateElement="id-visitor">
+        <bounds x="72" y="16" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c1" source="id-do-visitor" target="id-do-gateway" archimateRelationship="id-r1"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-operator" fillColor="#F6E6A8" archimateElement="id-operator">
+        <bounds x="360" y="16" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c2" source="id-do-operator" target="id-do-gateway" archimateRelationship="id-r2"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-tenant" fillColor="#F6E6A8" archimateElement="id-tenant">
+        <bounds x="648" y="16" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c3" source="id-do-tenant" target="id-do-gateway" archimateRelationship="id-r3"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-platform-owner" fillColor="#F6E6A8" archimateElement="id-platform-owner">
+        <bounds x="926" y="16" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c4" source="id-do-platform-owner" target="id-do-gateway" archimateRelationship="id-r4"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-gateway" targetConnections="id-c3 id-c4 id-c1 id-c2" fillColor="#CFEED4" archimateElement="id-gateway">
+        <bounds x="21" y="108" width="1063" height="30"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c5" source="id-do-gateway" target="id-do-widget" archimateRelationship="id-r5"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c6" source="id-do-gateway" target="id-do-console" archimateRelationship="id-r6"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c7" source="id-do-gateway" target="id-do-cal-console" archimateRelationship="id-r7"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-widget" targetConnections="id-c5" fillColor="#B9D2EC" archimateElement="id-widget">
+        <bounds x="168" y="194" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c8" source="id-do-widget" target="id-do-chat-api" archimateRelationship="id-r8"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-console" targetConnections="id-c6" fillColor="#B9D2EC" archimateElement="id-console">
+        <bounds x="313" y="194" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c9" source="id-do-console" target="id-do-chat-worker" archimateRelationship="id-r9"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-inbox" fillColor="#B9D2EC" archimateElement="id-inbox">
+        <bounds x="21" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c25" source="id-do-inbox" target="id-do-chat-api" archimateRelationship="id-r25"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-cal-console" targetConnections="id-c7" fillColor="#BFE0C4" archimateElement="id-cal-console">
+        <bounds x="819" y="194" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c10" source="id-do-cal-console" target="id-do-cal-api" archimateRelationship="id-r10"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-chat-api" targetConnections="id-c8 id-c25" fillColor="#B9D2EC" archimateElement="id-chat-api">
+        <bounds x="168" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c11" source="id-do-chat-api" target="id-do-chat-worker" archimateRelationship="id-r11"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c14" source="id-do-chat-api" target="id-do-platform-abstractions" archimateRelationship="id-r14"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-chat-worker" targetConnections="id-c9 id-c11" fillColor="#B9D2EC" archimateElement="id-chat-worker">
+        <bounds x="313" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c12" source="id-do-chat-worker" target="id-do-chat-webhooks" archimateRelationship="id-r12"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c15" source="id-do-chat-worker" target="id-do-platform-abstractions" archimateRelationship="id-r15"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-chat-webhooks" targetConnections="id-c12" fillColor="#B9D2EC" archimateElement="id-chat-webhooks">
+        <bounds x="458" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c23" source="id-do-chat-webhooks" target="id-do-module-contract" archimateRelationship="id-r23"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-cal-api" targetConnections="id-c10 id-c24" fillColor="#BFE0C4" archimateElement="id-cal-api">
+        <bounds x="816" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c13" source="id-do-cal-api" target="id-do-cal-worker" archimateRelationship="id-r13"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c16" source="id-do-cal-api" target="id-do-platform-abstractions" archimateRelationship="id-r16"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-cal-worker" targetConnections="id-c13" fillColor="#BFE0C4" archimateElement="id-cal-worker">
+        <bounds x="972" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c17" source="id-do-cal-worker" target="id-do-platform-abstractions" archimateRelationship="id-r17"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-module-contract" targetConnections="id-c23" fillColor="#EEF2F0" archimateElement="id-module-contract">
+        <bounds x="637" y="278" width="116" height="59"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c24" source="id-do-module-contract" target="id-do-cal-api" archimateRelationship="id-r24"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-platform-abstractions" targetConnections="id-c14 id-c15 id-c16 id-c17" fillColor="#EEF2F0" archimateElement="id-platform-abstractions">
+        <bounds x="21" y="384" width="1063" height="37"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c18" source="id-do-platform-abstractions" target="id-do-postgres" archimateRelationship="id-r18"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c19" source="id-do-platform-abstractions" target="id-do-rabbitmq" archimateRelationship="id-r19"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c20" source="id-do-platform-abstractions" target="id-do-redis" archimateRelationship="id-r20"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c21" source="id-do-platform-abstractions" target="id-do-s3" archimateRelationship="id-r21"/>
+        <sourceConnection xsi:type="archimate:Connection" id="id-c22" source="id-do-platform-abstractions" target="id-do-keycloak" archimateRelationship="id-r22"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-postgres" targetConnections="id-c18" fillColor="#CFEED4" archimateElement="id-postgres">
+        <bounds x="22" y="456" width="116" height="59"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-rabbitmq" targetConnections="id-c19" fillColor="#CFEED4" archimateElement="id-rabbitmq">
+        <bounds x="172" y="456" width="116" height="59"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-redis" targetConnections="id-c20" fillColor="#CFEED4" archimateElement="id-redis">
+        <bounds x="327" y="456" width="116" height="59"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-s3" targetConnections="id-c21" fillColor="#CFEED4" archimateElement="id-s3">
+        <bounds x="481" y="456" width="116" height="59"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-keycloak" targetConnections="id-c22" fillColor="#CFEED4" archimateElement="id-keycloak">
+        <bounds x="637" y="456" width="116" height="59"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-observability" fillColor="#CFEED4" archimateElement="id-observability">
+        <bounds x="828" y="456" width="116" height="59"/>
+      </child>
+      <child xsi:type="archimate:DiagramObject" id="id-do-k3s" fillColor="#CFEED4" archimateElement="id-k3s">
+        <bounds x="968" y="456" width="116" height="59"/>
+      </child>
+    </element>
+  </folder>
+</archimate:model>
