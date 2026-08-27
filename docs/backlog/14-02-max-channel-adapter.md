@@ -1,7 +1,8 @@
 # AGO Inbox: MAX channel adapter
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: built and merged 2026-08-27 (`adr/0069`) — two Done-when items still open, both needing a
+  real MAX bot conversation: message-in reaching an operator, and an operator's reply reaching MAX back
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md`
 
 ## Goal
@@ -149,13 +150,16 @@ different failure profile and is not automatically its home. Decide, and say why
 - [ ] A real operator reply from the console is delivered back to the same MAX conversation — verified
       live, both directions proven, matching this repository's own "verified means actually run"
       standard (`k8s-local.md`'s own phrase, applied here).
-- [ ] `Ago.Chat.Integration.Tests` (or a MAX-specific fixture matching `AttachmentFixture`/`MinioFixture`'s
+- [x] `Ago.Chat.Integration.Tests` (or a MAX-specific fixture matching `AttachmentFixture`/`MinioFixture`'s
       own precedent for a real-external-dependency test harness): MAX's outbound API stopped/unreachable
       degrades gracefully (the circuit breaker opens, the rest of the system's message pipeline is
-      unaffected) — proven with a real container-failure-style test, not asserted.
-- [ ] `docs/architecture/resilience.md` gains MAX's Bot API as a named row (or note) in the boundary
+      unaffected) — proven with a real container-failure-style test, not asserted. Shipped as
+      `Ago.Chat.FakeMax`/`.Tests` (a real separate process, `Ago.Chat.FakeCrm`'s own technique) and
+      `MaxChannelAdapterResilienceTests`, which stops that process mid-test.
+- [x] `docs/architecture/resilience.md` gains MAX's Bot API as a named row (or note) in the boundary
       table, and `docs/architecture/data-model.md`/`messaging.md` get whatever schema/event notes this
-      adapter's real implementation surfaces.
+      adapter's real implementation surfaces. (No new integration event: outbound delivery goes through
+      the existing `ChannelMessageDeliveryConsumer`/outbox path, nothing for `messaging.md` to add.)
 
 ## Open questions
 
