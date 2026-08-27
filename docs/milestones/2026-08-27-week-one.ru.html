@@ -303,16 +303,16 @@
     <h1>AGO Platform — первая неделя</h1>
     <p class="lede">
       Платформа для чата поддержки, второй продукт на ней и общая подложка под обоими — от пустой
-      папки до <strong>422 влитых pull request</strong> в девяти репозиториях, с живым публичным демо
-      и пятьюдесятью шестью письменными архитектурными решениями по пути.
+      папки до <strong>459 влитых pull request</strong> в девяти репозиториях, с живым публичным демо
+      и пятьюдесятью семью письменными архитектурными решениями по пути.
     </p>
 
     <div class="statstrip" id="numbers">
-      <div class="stat"><div class="n mono">422</div><div class="l">PR влито</div></div>
-      <div class="stat"><div class="n mono">≈106k</div><div class="l">строк кода</div></div>
-      <div class="stat"><div class="n mono">1&nbsp;640</div><div class="l">автотестов</div></div>
-      <div class="stat"><div class="n mono">56</div><div class="l">ADR принято</div></div>
-      <div class="stat"><div class="n mono">104&thinsp;/&thinsp;143</div><div class="l">пунктов бэклога сдано</div></div>
+      <div class="stat"><div class="n mono">459</div><div class="l">PR влито</div></div>
+      <div class="stat"><div class="n mono">≈105k</div><div class="l">строк кода</div></div>
+      <div class="stat"><div class="n mono">1&nbsp;690</div><div class="l">автотестов</div></div>
+      <div class="stat"><div class="n mono">57</div><div class="l">ADR принято</div></div>
+      <div class="stat"><div class="n mono">114&thinsp;/&thinsp;147</div><div class="l">пунктов бэклога сдано</div></div>
     </div>
   </header>
 
@@ -346,64 +346,64 @@
           <tbody>
             <tr>
               <td><span class="repo-name">ago-root</span><div class="repo-desc">Правила, ADR, roadmap и бэклог. Код отсюда не выходит.</div></td>
-              <td class="num">209</td>
-              <td class="num">37&nbsp;494<span class="unit">md</span></td>
+              <td class="num">215</td>
+              <td class="num">40&nbsp;574<span class="unit">md</span></td>
               <td class="num dash">—</td>
               <td><span class="pill docs"><span class="dot2"></span>документация</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-platform</span><div class="repo-desc">Переиспользуемая подложка: хостинг, реалтайм, обмен сообщениями, персистентность, кеш, хранилище, отказоустойчивость, наблюдаемость.</div></td>
-              <td class="num">31</td>
-              <td class="num">7&nbsp;197</td>
+              <td class="num">32</td>
+              <td class="num">7&nbsp;101</td>
               <td class="num">88</td>
               <td><span class="pill live"><span class="dot2"></span>опубликован</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-chat</span><div class="repo-desc">Продукт 1 — встраиваемый чат поддержки. Api / Worker / Webhooks, три хоста, одно решение.</div></td>
-              <td class="num">81</td>
-              <td class="num">51&nbsp;562</td>
-              <td class="num">813</td>
+              <td class="num">87</td>
+              <td class="num">50&nbsp;602</td>
+              <td class="num">837</td>
               <td><span class="pill live"><span class="dot2"></span>в проде</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-widget</span><div class="repo-desc">Скрипт, который магазин встраивает у себя. Shadow DOM, без сборки на стороне арендатора.</div></td>
-              <td class="num">18</td>
-              <td class="num">7&nbsp;608</td>
-              <td class="num">181</td>
-              <td><span class="pill live"><span class="dot2"></span>25,2&nbsp;КБ gz</span></td>
+              <td class="num">24</td>
+              <td class="num">8&nbsp;240</td>
+              <td class="num">194</td>
+              <td><span class="pill live"><span class="dot2"></span>28,1&nbsp;КБ gz</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-console</span><div class="repo-desc">Консоль оператора — React SPA, очередь назначений, настройки, будущий биллинг.</div></td>
-              <td class="num">24</td>
-              <td class="num">12&nbsp;166</td>
-              <td class="num">258</td>
+              <td class="num">36</td>
+              <td class="num">12&nbsp;955</td>
+              <td class="num">271</td>
               <td><span class="pill live"><span class="dot2"></span>в проде</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-deploy</span><div class="repo-desc">Манифесты Kubernetes, скрипты redeploy/rollback/smoke. Ничего, что решает поведение системы.</div></td>
-              <td class="num">50</td>
-              <td class="num">6&nbsp;738</td>
+              <td class="num">53</td>
+              <td class="num">6&nbsp;825</td>
               <td class="num dash">—</td>
               <td><span class="pill live"><span class="dot2"></span>k3s / 1 узел</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-landing</span><div class="repo-desc">Одностраничная витрина самой платформы.</div></td>
-              <td class="num">3</td>
+              <td class="num">4</td>
               <td class="num">992</td>
               <td class="num dash">—</td>
               <td><span class="pill live"><span class="dot2"></span>в проде</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-calendar</span><div class="repo-desc">Продукт 2 — запись на приём. Своя база, свои хосты, без обратной ссылки в чат (<span class="mono">adr/0027</span>).</div></td>
-              <td class="num">6</td>
-              <td class="num">18&nbsp;063</td>
+              <td class="num">7</td>
+              <td class="num">16&nbsp;676</td>
               <td class="num">282</td>
               <td><span class="pill built"><span class="dot2"></span>собран, не задеплоен</span></td>
             </tr>
             <tr>
               <td><span class="repo-name">ago-calendar-console</span><div class="repo-desc">Консоль оператора календаря — отдельный репозиторий по решению (<span class="mono">adr/0064</span>).</div></td>
-              <td class="num">0<span class="unit">нов.</span></td>
-              <td class="num">2&nbsp;083</td>
+              <td class="num">1</td>
+              <td class="num">2&nbsp;011</td>
               <td class="num">18</td>
               <td><span class="pill built"><span class="dot2"></span>7-й день</span></td>
             </tr>
@@ -412,9 +412,9 @@
       </div>
     </div>
     <div class="totalsrow">
-      <span><b>422</b> PR влито всего</span>
-      <span><b>≈106&nbsp;400</b> строк кода продуктов (+<b>37&nbsp;494</b> строк документации в ago-root)</span>
-      <span><b>1&nbsp;640</b> тестов, все зелёные</span>
+      <span><b>459</b> PR влито всего</span>
+      <span><b>≈105&nbsp;400</b> строк кода продуктов (+<b>40&nbsp;574</b> строк документации в ago-root)</span>
+      <span><b>1&nbsp;690</b> тестов, все зелёные</span>
       <span><b>22</b> запланированных стадии, <b>17</b> в очереди</span>
     </div>
   </section>
