@@ -462,6 +462,28 @@ exemption fails as loudly as a missing one. Its own limit is stated plainly beca
 it detects a *missing* check, never a check made against the wrong site. `17-01`'s finding would not
 have tripped it. Ownership comparisons are covered by tests, one per branch, not by a rule.
 
+## A new way to read someone else's conversation: shipped in `18-07`
+
+Every ownership comparison described above answers "is this operator a party to *this*
+conversation." `18-07`'s returning-visitor-history panel introduces the first exception:
+`GetVisitorHistoryHandler.HandleHistoricalConversationAsOperatorAsync` lets an operator read a past,
+`Closed` conversation's message history by proving they are assigned to a *different*, live
+conversation with the *same visitor* — comparing `Conversation.VisitorId` on both rows, not an
+assignment on the historical one, which the requesting operator may never have held.
+
+This is deliberate, not a gap the guard above missed: the historical conversation's own
+`Conversation.OperatorId` is frozen at whichever operator last held it (`Close` never clears it), so
+reusing `GetConversationHistoryHandler`'s ordinary `conversation.OperatorId == RequestedBy` check
+would mean only the operator who originally handled that exact past conversation could ever revisit
+it — defeating the feature's own purpose. The two-check shape survives unchanged
+(`GetVisitorHistoryHandler.HandleAsOperatorAsync`'s own remarks): `IPermissionChecker` still answers
+"may this operator read conversations at all for this site" first, and this new comparison is what
+"may this operator read *this* one" means for a historical row specifically.
+
+**Consequence for `personal-data.md`**: a message becomes visible to an operator who was never a
+party to the conversation containing it, for the first time in this codebase — see that document's
+own note on `18-07` for what this changes about `messages.body`'s exposure.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

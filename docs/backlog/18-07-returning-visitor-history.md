@@ -1,7 +1,7 @@
 # Returning-visitor history
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (2026-08-28/29, `ago-chat#112`, `ago-console#53`) — see Outcome below
 - **Depends on**: `18-06-auto-close-inactive-conversations.md` — not architecturally (the data already
   exists without it), but closing conversations automatically is what makes a returning visitor with
   *multiple* past conversations a routine case instead of a rare one; build this after so there is
@@ -69,14 +69,46 @@ existing two.
 
 ## Done when
 
-- [ ] An operator on a conversation with a channel-identified visitor sees a list of that visitor's
-      prior conversations, most recent first.
-- [ ] Opening one shows its real message history, through the existing history read path.
-- [ ] A widget-only visitor's conversation shows no such panel — proven with a test, not left implicit.
-- [ ] The permission scoping (assigned-to-this-conversation, not site-wide) is proven with a test that
-      shows a different operator at the same site cannot pull it for a conversation they are not on.
-- [ ] `docs/architecture/personal-data.md` reflects this new read path if it changes what that document
-      already has to say.
+- [x] An operator on a conversation with a channel-identified visitor sees a list of that visitor's
+      prior conversations, most recent first — `VisitorHistoryPanel`, `GetVisitorHistoryAsync` (keyset,
+      id descending).
+- [x] Opening one shows its real message history, through the existing history read path —
+      `HandleHistoricalConversationAsOperatorAsync` reuses `Thread` (`11-06`), the same component
+      `ConversationPage` renders the live conversation with.
+- [x] A widget-only visitor's conversation shows no such panel — proven with a test, not left implicit.
+      Backend: `HandleAsOperatorAsync_ForAWidgetVisitorWithNoChannelIdentity_ReturnsHasChannelIdentityFalse_AndAnEmptyList_WithoutQueryingHistory`.
+      Console: `VisitorHistoryPanel.test.tsx` proves the gate reads `hasChannelIdentity`, not list
+      length — explicitly checked with `hasChannelIdentity: false` alongside a *non-empty* list, to
+      show which field the condition actually inspects, not just that an empty result renders nothing.
+- [x] The permission scoping (assigned-to-this-conversation, not site-wide) is proven with a test that
+      shows a different operator at the same site cannot pull it for a conversation they are not on —
+      `HandleAsOperatorAsync_WhenTheOperatorIsNotAssignedToTheConversation_ReturnsForbidden_EvenThoughTheyHoldConversationReadAtTheSameSite`,
+      plus `HandleHistoricalConversationAsOperatorAsync`'s own two Forbidden tests for the historical-row
+      comparison specifically (different visitor; caller not assigned to their own standing conversation).
+- [x] `docs/architecture/personal-data.md` reflects this new read path — it does change what that
+      document has to say: this is the first case in the codebase where a message becomes visible to an
+      operator who was never a party to the conversation containing it. Added in this change (not the
+      original PRs — found during the queue sweep; the handler's own doc comment claimed the update
+      would ship "in this same change" and it had not). `docs/architecture/authorization.md` also gains
+      a section, since the new comparison is an authorization rule before it is a privacy fact.
+
+## Outcome
+
+Shipped in `ago-chat#112` and `ago-console#53` (merged 2026-08-28/29). Both branches needed rebasing
+onto `main` after `16-02` (erasure) merged concurrently and touched the same files on both sides
+(`ConversationsEndpoints.cs`/`IConversationReadStore.cs`/`ConversationReadStore.cs`/
+`ConversationConfiguration.cs`/`FakeConversationReadStore.cs`/`MarkConversationReadEndpointTests.cs` in
+`ago-chat`; `conversationsApi.ts` in `ago-console`) — all conflicts were additive (both changes adding
+unrelated methods/routes/tests to the same file) and resolved by keeping both blocks. `ago-chat`'s
+branch needed a second rebase after `13-02` (YooKassa) also merged concurrently, cleanly this time (no
+conflicts). Full suites green on both sides: `ago-chat` 1056/1056 across all 6 real test assemblies,
+`ago-console` 358/358 across 42 test files, typecheck and lint clean.
+
+`docs/architecture/personal-data.md` and `docs/architecture/authorization.md` were not updated in
+either merged PR despite `GetVisitorHistoryHandler`'s own doc comment stating the personal-data.md
+update would ship "in this same change" — caught during this queue sweep by checking that specific
+claim against the actual diff, not assumed true because the code comment said so. Both documents are
+updated in this same change instead.
 
 ## Open questions
 
