@@ -145,6 +145,19 @@ denial.
   exactly one succeeds, the rest are rejected on capacity, and the invite each rejected attempt held
   stays redeemable afterward once a seat opens up (a capacity rejection rolls its transaction back
   before ever marking the invite consumed).
+
+- `billing_subscriptions` (**shipped in `13-02`**) - `id`, `site_id`, `yookassa_payment_id` (unique),
+  `requested_seats`, `tier`, `status` (`pending|succeeded|failed`), `payment_method_id?`, `created_at`.
+  One row per checkout attempt, holding the in-flight state between checkout-session creation and
+  webhook confirmation - `sites.tier`/`seat_limit` never change until the second moment actually
+  happens (`Site.ActivateSubscription`, this item's own first real writer of those two columns). Named
+  for what it becomes, not only what it starts as: `13-03`'s recurring-charge job is scoped to extend
+  this same row via `payment_method_id`, not create a new one per cycle.
+- `billing_webhook_events` (**shipped in `13-02`**) - `id`, `yookassa_payment_id`, `event_type`,
+  `received_at`; unique on `(yookassa_payment_id, event_type)`. The idempotency ledger for ЮKassa's
+  inbound webhook, adapted from `6-05`'s `(endpoint_id, message_id)` shape to this item's one-sender
+  case - see `adr/0071`.
+
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
   (`waiting|assigned|closed`), `last_sequence`, `visitor_unread_count`, `operator_unread_count`,
   `operator_last_read_sequence`, timestamps. Optimistic concurrency uses Postgres's built-in `xmin`
@@ -374,6 +387,13 @@ obvious:
   per-site message aggregate is a join (`conversations` filtered by `site_id` via
   `ix_conversations_site_all`, then each conversation's messages on the
   `(conversation_id, sequence, created_at)` unique index).
+
+  **Changing, per `adr/0031`'s addendum (decided 2026-08-29, built by `18-01`)**: `messages` gains a
+  plain denormalized `site_id` column and a composite index carrying it, so `18-01`'s tenant-scoped
+  search predicate does not need the join above. The partition key is unaffected — the addendum's own
+  reasoning is why: `site_id` was considered as a third partition dimension and rejected (partition
+  count would multiply by tenant count, and it would not deliver real horizontal scale-out on a
+  single Postgres instance regardless), so this is an ordinary column plus index, not a repartitioning.
 - **A per-site message count must be time-bounded, not all-time.** Because `messages` is partitioned by
   `created_at` (above), a predicate on that column is what lets Postgres prune to the partitions the
   window covers; an all-time `COUNT(*)` or `MAX(created_at)` reads every partition that has ever existed

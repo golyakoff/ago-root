@@ -96,6 +96,58 @@ growth per tenant, which nobody has done. `15-04`'s operational default holds un
 - **`13-05` is partly unblocked**: the shape of the retention answer is decided here, and the number
   it still needs is now a measurement rather than an open product question.
 
+## Addendum (2026-08-29) — `site_id` stays out of the partition key
+
+**Question raised**: with `18-01` (conversation search) approaching, and an operator searching within
+their own site expected to be the dominant read pattern, should `messages` partition by `site_id`
+instead of — or in addition to — the two levels this ADR already commits to, both to prune search to
+one tenant's rows and to let new sites scale horizontally?
+
+**Decision: no.** The partition key stays exactly as decided above — `LIST (retention_class)` then
+monthly `RANGE (created_at)`. `site_id` becomes a plain denormalized column on `messages` instead (see
+`13-06`/`18-01`'s own scope), with a composite index carrying the tenant-scoped search predicate.
+Nothing here is a promise about future sharding — see the last bullet.
+
+**Reasoning**:
+
+- **Plain Postgres declarative partitioning does not distribute across machines.** Every partition of
+  `messages`, regardless of key, lives on the same instance, the same disk, behind the same primary.
+  Choosing `site_id` as a partition dimension does not itself deliver horizontal scale-out for new
+  sites — that requires an actual sharding layer (Citus, FDW-backed foreign-table partitions, or an
+  application-level router picking a database per tenant), which is a separate, materially larger
+  decision this ADR does not make and nothing in the codebase currently needs.
+- **A third partition dimension multiplies partition count by tenant count.** `LIST (site_id)` on top
+  of the two levels already decided means one partition subtree per site — at AGO Chat's expected
+  profile (many small shops), this risks the partition-count regime Postgres's own planner and catalog
+  degrade under, a risk this ADR's own Decision 1 deliberately avoided by keeping the class count small
+  (three tiers, not thousands of tenants). A bounded `HASH (site_id)` avoids the unbounded growth but
+  still does not deliver per-tenant physical placement, and still does not cross machine boundaries.
+- **It would cost retention's own economics for the tenants it helps least.** `DROP PARTITION` is cheap
+  specifically because a partition boundary needs no scan. Nesting `site_id` under `retention_class`
+  (or vice versa) means the age-based drop this ADR is built around now touches one partition per site
+  per period instead of one per period — for a platform of many small tenants, that is many more, much
+  smaller `DROP PARTITION` calls doing the same total work, for a return (search speed) an index
+  already provides without moving a single row.
+- **The actual win — pruning to one operator's site for the dominant search query — is what an index
+  gives, not a partition.** A composite index `(site_id, ...)` alongside `18-01`'s full-text index lets
+  the planner narrow to one tenant's rows the same way partition pruning would, at the cost of one new
+  column and one new index rather than a physical rewrite of a two-level scheme already in production
+  use by `16-02`'s erasure jobs and every existing read store.
+- **This does not foreclose sharding later.** A denormalized `site_id` column is the natural
+  distribution key almost any future sharding strategy would want regardless of how it is chosen — so
+  this decision is a prerequisite for that future, not an obstacle to it. What would make sharding
+  harder is accumulating more tables and cross-tenant queries that assume single-instance semantics
+  without `site_id` reachable directly; adding the column now works against that, not toward it.
+  `CLAUDE.md`'s prohibition on inventing numbers without measurement is the reason the sharding
+  question itself is deferred rather than answered here — there is no real traffic yet to size it
+  against, and a distributed-Postgres decision made speculatively, pre-launch, is exactly the kind of
+  premature generalisation `clean-architecture.md` warns a platform layer against.
+
+**Consequence**: `data-model.md`'s "`messages` carries no `site_id`" fact (in its cross-tenant-read
+section) is still true today — the column does not exist until `18-01` builds it — but the same section
+now carries a forward note recording that this is *changing*, per this addendum, the same convention
+already used there for `adr/0031`'s own partitioning change.
+
 ## Alternatives considered
 
 - **A uniform window for every tier.** The cheapest possible answer — a plain `DROP PARTITION` with no

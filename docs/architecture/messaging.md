@@ -184,6 +184,13 @@ At-least-once, everywhere, in both directions. Therefore:
   only method that can create one, and the consumer acts on `Visitor` alone (`adr/0066`). A future
   consumer that writes into a topic it also reads should copy the shape - or say plainly why the loop
   is bounded some other way.
+- **`13-02`: the first inbound, HTTP-triggered idempotency ledger, not a broker consumer.** ЮKassa
+  calls `Ago.Chat.Api` directly over HTTP - there's no RabbitMQ hop and no `EventEnvelope.MessageId`
+  for an inbound third-party webhook, so the platform's generic `(message_id, consumer)` inbox doesn't
+  fit. `billing_webhook_events`'s own `(yookassa_payment_id, event_type)` unique index plays the
+  identical role inside one plain database transaction (`BillingWebhookApplier`) - insert-and-catch-
+  unique-violation is "detected, skipped, acked" realized without a broker, because there is no broker
+  in this path to realize it with. See `adr/0071`.
 
 ## Outbox dispatcher
 

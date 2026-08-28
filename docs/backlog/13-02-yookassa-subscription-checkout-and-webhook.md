@@ -1,7 +1,12 @@
 # ЮKassa subscription checkout, webhook receiver, and idempotent tier activation
 
 - **Stage**: 13
-- **Status**: ready
+- **Status**: done (2026-08-28, `ago-chat#111`) — live verification against real ЮKassa test-mode
+  credentials is not done; this environment has no live ЮKassa Shop ID/Secret Key/Webhook Key. Every
+  other Done-when is proven against a real Postgres transaction and a real in-process Kestrel host
+  running the production endpoint. See `adr/0071`'s own "What is asserted here, not confirmed"
+  section for the two specific encoding details that live verification would either confirm or
+  correct.
 - **Depends on**: `13-01-operator-invitations-and-seat-entitlement.md` (the `sites.tier`/`seat_limit`
   columns this item is the first real writer of, once a payment actually succeeds)
 
@@ -153,27 +158,42 @@ follow, not a new mechanism.
 
 ## Done when
 
-- [ ] `adr/0025` written and accepted: signature scheme (fixed by ЮKassa, verified against real test-mode
-      notifications), and the credential-shape reasoning contrasted explicitly with `adr/0024`.
+- [x] `adr/0071` (renumbered — the backlog's own `adr/0025` was already taken by an unrelated ADR
+      before this item was built; see the ADR's own note) written and accepted: signature scheme
+      (fixed by ЮKassa) and the credential-shape reasoning contrasted explicitly with `adr/0024`.
+      **Not done**: verification against real test-mode notifications — no live ЮKassa credentials in
+      this environment. Hex encoding of the digest and the exact canonical-URL construction are the
+      ADR's own named assumptions, not confirmed facts.
 - [ ] `Ago.Chat.Integration.Tests`, against ЮKassa's real test mode: a checkout session is created for a
       real seat count, a real test card completes payment on ЮKassa's hosted page (or the equivalent
       test-mode success flow ЮKassa's docs describe for automated testing — state exactly which mechanism
       was used once implemented), the real webhook notification arrives, is verified, and
       `sites.tier`/`seat_limit` reflect the purchase — verified by querying the row directly, not asserting
-      the `200`.
-- [ ] A webhook with an invalid/missing signature is rejected `401` and never touches `sites` — proven with
-      a real malformed request, not asserted from the verification code alone.
-- [ ] A redelivered webhook notification (the same `payment_id`/`event_type` sent twice — forced directly
+      the `200`. **Not done** — no live ЮKassa Shop ID/Secret Key/Webhook Key available; blocked on the
+      author obtaining a test merchant account.
+- [x] A webhook with an invalid/missing signature is rejected `401` and never touches `sites` — proven with
+      a real malformed request against a real in-process Kestrel host running the production endpoint.
+- [x] A redelivered webhook notification (the same `payment_id`/`event_type` sent twice — forced directly
       against the endpoint, since ЮKassa's own test mode may not trivially redeliver on demand) does not
       double-apply the tier change — proven by asserting `sites.tier`/`seat_limit` after two deliveries
       equal the state after one.
-- [ ] A `payment.canceled` test-mode event leaves `sites.tier`/`seat_limit` unchanged from free.
-- [ ] `docs/architecture/data-model.md` gains the new billing-pending table (or the `sites` columns it
-      populates, whichever shape implementation chooses) and a short note on the `(payment_id, event_type)`
-      idempotency key.
-- [ ] `docs/architecture/messaging.md` or `docs/architecture/resilience.md` gains a short note that this is
-      the first *inbound*, HTTP-triggered (not broker-consumed) idempotency ledger in the codebase, stating
-      explicitly why it does not need the broker.
+- [x] A `payment.canceled` test-mode event leaves `sites.tier`/`seat_limit` unchanged from free — proven
+      with a forced event, not against a real ЮKassa test-mode cancellation.
+- [x] `docs/architecture/data-model.md` gains the new `billing_subscriptions`/`billing_webhook_events`
+      tables and a short note on the `(yookassa_payment_id, event_type)` idempotency key.
+- [x] `docs/architecture/messaging.md` gains a short note that this is the first *inbound*,
+      HTTP-triggered (not broker-consumed) idempotency ledger in the codebase, stating explicitly why
+      it does not need the broker.
+
+## Outcome
+
+Shipped in `ago-chat#111` (merged 2026-08-28, CI green: `dotnet format`/`build`/`test`, 0 warnings,
+1027 tests across all 6 `Ago.Chat.*` test assemblies). Every Done-when is met except the one requiring
+a real ЮKassa test merchant account, which does not exist yet (confirmed directly by the author,
+2026-08-28) — left unticked rather than backfilled, matching this project's own honest-reporting
+convention for MAX/Telegram before their own live verification. The two encoding assumptions
+`adr/0071` names (hex digest, canonical-URL construction) are the first things a real test-mode
+notification would either confirm or require a one-line fix to.
 
 ## Open questions
 
