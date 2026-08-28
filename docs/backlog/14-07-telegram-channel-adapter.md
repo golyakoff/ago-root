@@ -1,7 +1,9 @@
 # AGO Inbox: Telegram channel adapter
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done (2026-08-28) — code merged `ago-chat#106`, deploy merged `ago-deploy#84`/`#85`/`#86`,
+  both live-verification Done-when items closed against a real bot (`@ago_chat_demo_bot`); the log-leak
+  fix (`ago-chat#107`) is open, not yet merged, tracked separately below
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md` (the port this implements),
   `14-05-telegram-whatsapp-spike.md` (the prerequisite this item was blocked on — now answered for
   Telegram, `adr/0070`)
@@ -94,19 +96,31 @@ what it is and that it is the author's personal endpoint, matching this ADR's ow
 
 ## Done when
 
-- [ ] A real message sent from a real Telegram account reaches an operator in the console, through the
-      same queue a widget/MAX conversation already uses — verified live, through the relay, not against
-      a fake adapter.
-- [ ] A real operator reply from the console is delivered back to the same Telegram conversation —
-      verified live, both directions proven.
-- [ ] The relay dependency is visible in whatever this repository already uses for boundary
-      documentation (`docs/architecture/resilience.md`'s boundary table gains Telegram's own row, noting
-      the relay explicitly — not folded silently into "same as MAX").
-- [ ] `ago-deploy` carries the relay (sidecar or Service, per the decision above), with its credential in
-      `infra-credentials`, never committed.
-- [ ] A test proves the outbound client actually uses the configured proxy (not just that the proxy
-      config is set) — matching this item's own "demonstrated, not asserted" standard for the one
-      genuinely new piece of wiring here.
+- [x] A real message sent from a real Telegram account reaches an operator in the console, through the
+      same queue a widget/MAX conversation already uses — verified live 2026-08-28, through the relay,
+      not against a fake adapter (`@ago_chat_demo_bot`).
+- [x] A real operator reply from the console is delivered back to the same Telegram conversation —
+      verified live 2026-08-28, both directions proven.
+- [x] The relay dependency is visible in whatever this repository already uses for boundary
+      documentation — `docs/architecture/resilience.md`'s boundary table now carries Telegram's own row,
+      naming the relay explicitly, not folded into "same as MAX".
+- [x] `ago-deploy` carries the relay (`ago-deploy#84`/`#86`, merged) — a **native sidecar** in
+      `ago-chat-worker`'s pod, not a separate Service (the decision this item asked for, made and
+      recorded there). Its credential is a **dedicated `telegram-relay-credentials` Secret**, not
+      `infra-credentials` as this line originally assumed — six of the eight Deployments reading
+      `infra-credentials` do so via blanket `envFrom`, which would have put a personal VLESS UUID in
+      Postgres's and MinIO's own environment for no reason; a second Secret confines it to the one
+      sidecar that mounts it. A real bug was found and fixed live in the same pass: the sidecar's
+      `tcpSocket` readinessProbe could never pass (kubelet probes a container over the Pod IP, never its
+      own loopback, and the relay is deliberately loopback-only) — fixed by removing the probe
+      (`ago-deploy#86`).
+- [x] A test proves the outbound client actually uses the configured proxy (not just that the proxy
+      config is set) — `TelegramProxyTraversalTests`, against a real local SOCKS5 listener.
+
+A second gap found live in the same verification pass, fixed separately: the bot token travelled in
+full, in plain text, through `Ago.Chat.Worker`'s own logs (`HttpClientFactory`'s default logging redacts
+header values but not the request URI, and Telegram's own auth lives in the URL path) — fixed in
+`ago-chat#107`, proven with a real captured-log test rather than asserted.
 
 ## Open questions
 
