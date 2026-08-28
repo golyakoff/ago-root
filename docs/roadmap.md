@@ -56,27 +56,24 @@ Three items sit parked below the table rather than in it, because they cannot be
 
 | # | Item | Why here |
 |---|---|---|
-| 1 | `11-11` console i18n - foundation and shell | Found live 2026-08-27, testing `4-06` with a real multi-tenant identity: the widget speaks a tenant's language (`11-10`) and the console answering for that same tenant does not. Author's own call, pulled ahead of the queue below rather than filed and left. Foundation for `11-12`/`11-13` |
-| 2 | `11-12` console i18n - operator workspace | The highest-traffic screen, right after the shell that carries it |
-| 3 | `11-13` console i18n - site-configuration screens | Lower traffic than the workspace, still real for a `site:configure` operator |
-| 4 | `18-06` auto-close inactive conversations | Found live 2026-08-28, closing out `14-02`'s own live pass: an operator's queue held conversations open since 2026-08-24, nobody had ever closed them, still counted against capacity days later. Pulled ahead of Stage 18's other items for the same reason `11-11` was — a real operator-facing gap found while testing, not filed and left |
-| 5 | `18-07` returning-visitor history | Directly after `18-06` on purpose — closing conversations automatically only pays off if an operator can still see a returning channel visitor's past ones, or `18-06` quietly throws away the one thing point 2 of that same discussion asked to keep |
-| 6 | `13-01` operator invitations and seat entitlement | Also carries seat assignment and operator removal, which `decisions/0006` made a prerequisite of everything else in billing. Read `13-07` first (shipped 2026-08-27) — it changes this item's own redemption check |
-| 7 | `13-02` ЮKassa checkout and webhook | The first successful payment; state confirmed by webhook through the outbox, never by trusting a redirect |
-| 8 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
-| 9 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
-| 10 | `15-04` retention and pruning jobs | Bounded pruning of everything that grows without limit, and the mechanism `13-06` builds on |
-| 11 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
-| 12 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
-| 13 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
-| 14 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
-| 15 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 16 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
-| 17 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
-| 18 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
-| 19 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
-| 20 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
-| 21 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
+| 1 | `18-06` auto-close inactive conversations | Found live 2026-08-28, closing out `14-02`'s own live pass: an operator's queue held conversations open since 2026-08-24, nobody had ever closed them, still counted against capacity days later. Pulled ahead of Stage 18's other items for the same reason `11-11` was — a real operator-facing gap found while testing, not filed and left |
+| 2 | `18-07` returning-visitor history | Directly after `18-06` on purpose — closing conversations automatically only pays off if an operator can still see a returning channel visitor's past ones, or `18-06` quietly throws away the one thing point 2 of that same discussion asked to keep |
+| 3 | `13-01` operator invitations and seat entitlement | Also carries seat assignment and operator removal, which `decisions/0006` made a prerequisite of everything else in billing. Read `13-07` first (shipped 2026-08-27) — it changes this item's own redemption check |
+| 4 | `13-02` ЮKassa checkout and webhook | The first successful payment; state confirmed by webhook through the outbox, never by trusting a redirect |
+| 5 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
+| 6 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
+| 7 | `15-04` retention and pruning jobs | Bounded pruning of everything that grows without limit, and the mechanism `13-06` builds on |
+| 8 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
+| 9 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
+| 10 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working |
+| 11 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
+| 12 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
+| 13 | `10-03` console signup UI | Real only once `10-05` lands, which is in progress elsewhere |
+| 14 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
+| 15 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 16 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 17 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 18 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |

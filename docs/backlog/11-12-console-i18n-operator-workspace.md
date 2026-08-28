@@ -1,7 +1,9 @@
 # The operator workspace speaks the tenant's chosen language
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done — merged `ago-console#46` (2026-08-27). Found already shipped 2026-08-28 while
+  briefing a background worker to build it; reconciled here rather than re-implementing (see 11-11's
+  own Status line for the same gap and why it happened)
 - **Depends on**: `11-11-console-i18n-foundation-and-shell.md` (the string-table mechanism and locale
   resolution this item reuses without rebuilding).
 
@@ -29,10 +31,15 @@ highest-traffic surface in the product and the reason the family is split rather
 
 ## Done when
 
-- [ ] A console session against a `ru` site renders the queue, an open conversation, and the composer
-      in Russian - DOM-tested, not asserted from config alone.
-- [ ] The English-default regression case, matching `11-11`'s own bar.
-- [ ] This item's own body lists every string it found and translated.
+- [x] A console session against a `ru` site renders the queue, an open conversation, and the composer
+      in Russian - DOM-tested (`src/i18n/workspaceLocale.test.tsx`), not asserted from config alone.
+- [x] The English-default regression case, matching `11-11`'s own bar.
+- [ ] This item's own body lists every string it found and translated — **not carried through**. The
+      merged PR (`ago-console#46`) states the full list ("~140 new string fields") was meant to land in
+      this exact file as part of the same change, and it never did — the docs-side half of that PR was
+      never opened. The list exists in `ago-console#46`'s own diff (`src/i18n/en.ts`/`ru.ts`), not here.
+      Left unchecked and named rather than backfilled from memory or fabricated — a real, still-open gap
+      this reconciliation found, not one it closes.
 
 ## Open questions
 

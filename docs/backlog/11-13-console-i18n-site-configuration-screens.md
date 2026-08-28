@@ -1,7 +1,9 @@
 # The site-configuration screens speak the tenant's chosen language
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done — merged `ago-console#51` (2026-08-28). Found already shipped the same day while
+  briefing a background worker to build it; reconciled here rather than re-implementing (see 11-11's
+  own Status line for the same gap and why it happened)
 - **Depends on**: `11-11-console-i18n-foundation-and-shell.md` (the string-table mechanism and locale
   resolution this item reuses without rebuilding).
 
@@ -28,9 +30,14 @@ exactly the half-finished feature `11-10`'s own scope discipline was written to 
 
 ## Done when
 
-- [ ] All three screens render in Russian for a `ru` site's `site:configure` operator - DOM-tested.
-- [ ] The English-default regression case.
-- [ ] This item's own body lists every string it found and translated.
+- [x] All three screens render in Russian for a `ru` site's `site:configure` operator - DOM-tested
+      (`siteConfigLocale.test.tsx`).
+- [x] The English-default regression case.
+- [ ] This item's own body lists every string it found and translated — **not carried through**, the
+      same gap `11-12`'s own reconciliation names: the merged PR (`ago-console#51`) states the full list
+      ("68 new string fields") was meant to land in this exact file, and the docs-side half of that PR
+      was never opened. The list exists in `ago-console#51`'s own diff (`src/i18n/en.ts`/`ru.ts`), not
+      here. Left unchecked and named, not backfilled.
 
 ## Open questions
 
