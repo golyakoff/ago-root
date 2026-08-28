@@ -70,3 +70,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0067 | One key issues, several validate, and retirement is a configured delay | Accepted |
 | 0068 | One identity may hold several tenancies, resolved per request, never baked into the token | Accepted |
 | 0069 | Channel credentials are a shared shape, with two different secrets held two different ways | Accepted |
+| 0070 | Telegram outbound calls routed through a VLESS relay | Accepted |

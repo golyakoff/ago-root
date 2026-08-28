@@ -1,8 +1,9 @@
 # AGO Inbox: Telegram and WhatsApp — legal review and reliability spike
 
 - **Stage**: 14
-- **Status**: blocked — two real, unanswered prerequisites (below); no adapter code is built until at
-  least one is resolved
+- **Status**: Telegram half done 2026-08-28 (`adr/0070`: reachability spike found a ~53%
+  direct-connection failure rate, fixed by routing through a relay — real adapter work now scoped as
+  `14-07`). WhatsApp's legal review remains unstarted and this item stays open for that half alone
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md` (the port either channel would
   implement, once actually started)
 
@@ -50,20 +51,26 @@ advice).
 
 ## Out of scope
 
-- Any adapter code for either channel — genuinely blocked on this item's own findings, not scoped here
-  even provisionally.
+- Any adapter code for either channel — this item is the review/spike, not the adapter. Telegram's own
+  adapter, unblocked by this item's finding, is `14-07`.
+- WhatsApp's adapter remains genuinely blocked on this item's own still-open legal-review half.
 - MAX and SMS — already unblocked, `14-02`/`14-03`, unaffected by this item's own findings either way.
 
 ## Done when
 
-- [ ] A real, dated measurement of Telegram Bot API reachability/latency from a Russian-hosted VPS
+- [x] A real, dated measurement of Telegram Bot API reachability/latency from a Russian-hosted VPS
       exists, with the actual numbers and method recorded — matching `load/reports/`'s own "real
       numbers, misses included" discipline, applied here to a reachability question instead of a
-      throughput one.
+      throughput one. Done 2026-08-28: 15 requests over a 6-minute window, 7/15 (47%) succeeded at
+      ~132ms average, 8/15 (53%) hit a full 10s connection timeout with no TCP handshake ever
+      completing; a 5/5-successful control against an unrelated HTTPS endpoint in the same window rules
+      out general VPS network flakiness. Full method and numbers in `adr/0070`.
 - [ ] A written WhatsApp legal-review finding exists, stated as the author's own reading of public
       terms, not as legal advice, with an explicit compliant-or-not-yet conclusion.
-- [ ] Both findings feed a clear go/defer/drop decision for each channel, recorded plainly (this file's
-      own status update, or a new ADR if the finding is substantial enough to warrant one).
+- [x] Telegram's go/defer/drop decision is recorded — `adr/0070`: **build**, routed through a relay.
+      Re-measured through it the same day: 15/15 (100%) succeeded, ~210ms average. Real adapter work is
+      `docs/backlog/14-07-telegram-channel-adapter.md`, not this item. WhatsApp's own decision still
+      waits on its legal-review box above.
 
 ## Open questions
 
