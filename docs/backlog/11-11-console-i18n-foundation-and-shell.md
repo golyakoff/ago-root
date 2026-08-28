@@ -1,7 +1,9 @@
 # The console's own chrome speaks the tenant's chosen language
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done — merged `ago-chat#95`/`ago-console#44` (2026-08-27). Found already shipped
+  2026-08-28 while briefing a background worker to build it — the roadmap/backlog docs were never
+  reconciled after the original merge, corrected here rather than re-implementing
 - **Depends on**: `11-10-widget-locale-from-console.md` (shipped) — `Site.WidgetLocale` already
   exists and is already the tenant-level setting this item reads; no new backend field. `13-07-one-
   login-several-tenants.md` (shipped) — the reason this item cannot pick one locale for an identity
@@ -73,20 +75,29 @@ items translate what sits inside that shell, screen by screen - named below, not
 
 ## Done when
 
-- [ ] A console session against a site with `WidgetLocale = ru` renders the shell (header, nav,
-      identity, switcher, demo notice) in Russian - proven by a DOM test reading rendered text, the
-      same bar `11-10`'s `locale.test.ts` set for the widget, not by asserting the config value alone.
-- [ ] A console session against a site with no `WidgetLocale` set renders identically to before this
-      item - a real regression test, not an assumption.
-- [ ] Switching tenants via `TenancySwitcher` lands on the newly active site's own language after the
-      reload it already performs.
-- [ ] `/onboarding`, `/owner`, `/signup`, `/callback` render in English regardless of any signed-in
-      identity's own tenancies.
-- [ ] This item's own body lists every string it found and translated, `11-10`-style, so the
-      enumeration can be checked rather than trusted.
-- [ ] Verified live against at least one real browser if the managing session can arrange a deploy; if
-      not, say so plainly, the same honesty `11-10` used for the half of its own verification it could
-      not reach.
+- [x] A console session against a site with `WidgetLocale = ru` renders the shell (header, nav,
+      identity, switcher, demo notice) in Russian - proven by `src/i18n/consoleLocale.test.tsx`, a DOM
+      test reading rendered text.
+- [x] A console session against a site with no `WidgetLocale` set renders identically to before this
+      item - the same test file's regression case.
+- [x] Switching tenants via `TenancySwitcher` lands on the newly active site's own language after the
+      reload it already performs - falls out of `TenancySwitcher`'s existing full-page-reload design
+      (`StringsProvider` re-resolves on every mount), confirmed by code inspection rather than a
+      dedicated test.
+- [x] `/onboarding`, `/owner`, `/signup`, `/callback` render in English regardless of any signed-in
+      identity's own tenancies - `StringsContext`'s default (`createContext(en)`, not nullable) plus
+      `OwnerSitesPage` passing `en` explicitly, proven in the same test file.
+- [x] Every string this item found and translated (17 keys, `src/i18n/en.ts`/`ru.ts` at merge):
+      `skipToContent`, `operatorConsoleTagline`, `navSectionsAriaLabel`, `navConversations`,
+      `navAllConversations`, `navWidgetAppearance`, `navOfflineAutoReply`, `navPlatformSites`,
+      `signOut`, `siteIdTooltip`, `siteIdPrefix`, `tenancySwitcherLabel`, `activeSiteAriaLabel`,
+      `unnamedSite`, `publicDemoNoticeSharedLogin`, `publicDemoNoticePlatformOwner` (two variants,
+      one key each) - matches this item's own Scope list exactly.
+- [ ] Verified live against a real browser - **not done**. `ago-console#44`'s own PR body states this
+      plainly ("pending merge + deploy of both this PR and ago-chat#95") and it was never followed up
+      after merge. Both are deployed live today (confirmed via the demo's own smoke tests since), but no
+      one has specifically opened the console against a Russian-locale site and looked. Left open rather
+      than claimed.
 
 ## Open questions
 
