@@ -2,10 +2,12 @@
 
 - **Stage**: 13
 - **Status**: ready — the four policy questions were answered 2026-08-25 (`ago-business`'s
-  `decisions/0006`); what was missing was policy, and it is no longer missing
-- **Depends on**: `13-02-yookassa-subscription-checkout-and-webhook.md` (the stored `payment_method_id`
-  and the checkout/webhook mechanism this item's recurring-charge job and cancellation/downgrade
-  endpoints both build on)
+  `decisions/0006`), and this file's own Scope/Done-when were fleshed out 2026-08-28 (they had stayed
+  "not yet defined" for three days after the policy landed — the actual blocker by then was that nobody
+  had gone back to convert decided policy into a checkable Scope, not that anything was still undecided)
+- **Depends on**: `13-02-yookassa-subscription-checkout-and-webhook.md` (the stored `payment_method_id`,
+  the `BillingSubscription`/`billing_webhook_events` shape, and the checkout/webhook mechanism this
+  item's recurring-charge job and cancellation/mid-cycle endpoints all extend rather than duplicate)
 
 ## Goal
 
@@ -67,17 +69,85 @@ stage was planned against
   scope that does not exist yet); let the downgrade proceed and simply block *new* invites until the count
   is back under the new limit (no existing operator is forcibly removed); something else. Not decided.
 
-## Scope, once unblocked
+## Scope
 
-Cannot be sized precisely until the questions above are answered, because the answers change the shape of
-what gets built (a scheduled job with retries vs. a single immediate write; a new "grace period" status vs.
-two states; a proration calculator vs. none). Once answered, this item is expected to include at minimum:
-a `Ago.Chat.Worker` recurring-charge job reusing `Ago.Platform.Resilience` against ЮKassa's charge API for
-a stored `payment_method_id`; whatever new `sites`/subscription-row status the chosen failure policy needs;
-a cancellation endpoint; and — only if the mid-cycle proration question resolves toward "immediate,
-prorated" — a proration calculator and a second checkout-session code path. An ADR is expected regardless
-of which answers are chosen, matching this project's own "a decision worth arguing about becomes an ADR"
-rule (`CLAUDE.md`) — a subscription-lifecycle policy is exactly that kind of decision.
+### Recurring charge and failure handling
+
+- A `Ago.Chat.Worker` job (`PeriodicTimer`/`BackgroundService`, `2-06`'s established shape), one tick per
+  subscription whose `current_period_end` has passed, charging ЮKassa's charge-on-file API against the
+  stored `payment_method_id` (`BillingSubscription`, `13-02`), wrapped in `Ago.Platform.Resilience`
+  exactly as `13-02`'s own outbound calls are — no new retry machinery.
+- `BillingSubscription` gains `past_due` (extending `13-02`'s `pending|succeeded|failed`) and a
+  `current_period_end` column (`13-02` did not need one — a first payment has no prior period to
+  measure from; a recurring one does). `sites.tier`/`seat_limit` are **not** touched on entry into
+  `past_due` — `decisions/0006`'s "full access retained" means the site's own entitlements stay exactly
+  as they are; only the subscription row's own status changes.
+- Retry schedule inside the `past_due` window: **daily retries for 7 days** — this item's own stated
+  default for `decisions/0006`'s "roughly a week," not a measurement (`CLAUDE.md`). On the 7th day with
+  no success, the same write path `13-02`'s webhook applier already uses for a tier change downgrades
+  the site to `tier='free'`/`seat_limit=1` — reused, not reinvented.
+- A successful recharge inside the window clears `past_due` back to `succeeded` and advances
+  `current_period_end` by one billing period (append-only history: this item does not decide whether
+  each cycle gets its own `BillingSubscription` row or the existing row is updated in place — implementer's
+  call, state which once built).
+
+### Cancellation
+
+- `POST /api/v1/sites/{siteId}/billing/subscriptions/{id}/cancel` (`RequireOperatorIdentity` +
+  `Permission.SiteConfigure`, the same permission `13-02`'s checkout endpoint already uses for a
+  billing/tier decision) sets a flag the recurring-charge job checks before attempting any charge — a
+  cancelled subscription is skipped at its next `current_period_end` rather than charged and refunded.
+  `sites.tier`/`seat_limit` stay exactly as paid until that `current_period_end` passes, at which point
+  the same free-tier write path used for a lapsed `past_due` applies. No refund, matching `decisions/0006`
+  exactly.
+
+### Mid-cycle seat-count change
+
+- **Upgrade**: a new endpoint (or `13-02`'s checkout-session endpoint gains a second code path for "change
+  an existing subscription" — implementer's call, state which) computes the prorated difference for the
+  remainder of the current period (`(new_price - old_price) × remaining_days / period_length_days`,
+  rounded per whatever rule ЮKassa's own charge API expects — state it), charges it immediately against
+  the stored `payment_method_id`, and updates `sites.tier`/`seat_limit` immediately on success — the
+  identical "verified webhook success, not the redirect alone" discipline `13-02` already established, not
+  a shortcut for being a second charge on an existing customer.
+- **Downgrade**: recorded against the subscription row (a `pending_seat_count`/`pending_tier` column, or
+  equivalent — implementer's call) and applied by the recurring-charge job at the next
+  `current_period_end`, with no proration and no immediate write to `sites.tier`/`seat_limit`. If the
+  live operator count exceeds the new, lower `seat_limit` at the moment the downgrade actually applies,
+  the site enters the over-seats condition below — the downgrade itself is never blocked by operator
+  count, per `decisions/0006`'s own rejection of that alternative.
+
+### Seat assignment and operator removal — the piece `13-01` named but did not build
+
+`decisions/0006`'s over-seats behaviour ("nothing is deleted... only the owner and as many operators as
+are paid for can sign in, and the owner decides which") needs a real mechanism, and nothing in this
+codebase has one yet. Two distinct capabilities, both required, neither optional:
+
+- **Seat assignment**: `Operator` gains a `HoldsSeat` flag (default `true` at creation, since every
+  operator created today is created within `13-01`'s own seat-limit check and therefore already fits).
+  A console surface lets the site's `Permission.SiteManageOperators` holder toggle which operators, up
+  to the current `seat_limit`, hold a seat. `OperatorIdentityClaimsTransformation` (`adr/0022`) gains one
+  more condition: a real `operators` row whose `HoldsSeat` is `false` resolves to no `OperatorId` claim —
+  the exact same shape as no row at all, so `RequireOperatorIdentity` already refuses it without any new
+  policy code. State this explicitly wherever it lands, since it is a real behavioural change to an
+  already-shipped resolution path, not a new one.
+- **Operator removal**: a genuine "this person is gone" action (`POST
+  /api/v1/sites/{siteId}/operators/{operatorId}/remove`, same `Permission.SiteManageOperators` gate
+  `13-01`'s invite generation already uses), setting `Operator.RemovedAt`. A removed operator: is
+  permanently excluded from `seat_limit`'s live count (**`13-01`'s own
+  `OperatorInviteRedemptionRepository`'s `COUNT(*) FROM operators WHERE site_id = @siteId` needs
+  `AND removed_at IS NULL` added — a real, necessary change to already-shipped code, named here so it is
+  not rediscovered as a surprise**), is blocked from sign-in the same way a seat-less operator is, and has
+  their currently-`Assigned` conversations released back to `Waiting` (reuse
+  `OperatorConversationReleaser`'s existing release logic, or a narrowly-scoped variant of it — this is
+  not `16-02`'s erasure job: nothing about the operator's own history, past messages, or account data is
+  touched, matching `decisions/0006`'s "all its data stay intact").
+- **Over-seats condition**: `count(operators where HoldsSeat AND RemovedAt IS NULL) > seat_limit` — a
+  **derived condition, computed at read time, not a stored flag** (this item's own "Consequences" section
+  already named this as the implementation choice, not a policy one; a stored flag would need its own
+  invalidation path for no benefit, the same reasoning `13-01`'s row-lock-vs-shadow-counter note gives for
+  a different, low-frequency check). Surfaced to the console so the owner sees "N of M seats assigned"
+  and can act.
 
 ## Out of scope
 
@@ -85,13 +155,54 @@ rule (`CLAUDE.md`) — a subscription-lifecycle policy is exactly that kind of d
   named, both separately blocked, neither is this item's question to resolve.
 - Refunds — a related but distinct policy question this item does not fold in; real, separate scope if
   ever wanted.
+- Email notification of a `past_due` charge, a cancellation, or a removal — this codebase has no
+  email-sending path for anything operator-facing yet (`10-05` only covers Keycloak's own registration/
+  reset flows); a real, separate item if ever wanted, not built speculatively here.
+- Any UI polish beyond the minimum surface the Done-when items below require — `13-04`/`11-05`'s job,
+  matching `10-03`'s own precedent for deferring visual design to the pass built for it.
+- A second `BillingSubscription` row per renewal cycle versus updating one row in place — implementer's
+  call, not a policy question worth blocking on.
 
 ## Done when
 
-Not yet defined — this item's own Scope cannot be written precisely until the questions above are
-answered; writing checkable Done-when statements against unstated policy would itself be inventing the
-policy by the back door. Once the author answers, whoever picks this item back up writes a Scope and
-Done-when section with the same rigor `13-01`/`13-02` used, and updates this item's Status.
+- [ ] A subscription whose recurring charge fails enters `past_due` with `sites.tier`/`seat_limit`
+      unchanged — proven live against a fake ЮKassa host returning a decline, not asserted from the
+      handler's logic alone.
+- [ ] A `past_due` subscription that succeeds on a later retry (within the 7-day window) clears back to
+      `succeeded` and the site's entitlements were never interrupted.
+- [ ] A `past_due` subscription with no successful retry after 7 days downgrades the site to
+      `tier='free'`/`seat_limit=1` — proven by advancing the clock past the window in a test, not by
+      asserting the job's own retry-count logic.
+- [ ] Cancelling a subscription lets the paid tier run until `current_period_end`, then downgrades — a
+      cancelled-and-not-yet-expired subscription is confirmed to skip the recurring charge entirely (no
+      charge attempt, successful or otherwise, reaches the fake ЮKassa host after cancellation).
+- [ ] A mid-cycle upgrade charges the prorated difference immediately and updates
+      `sites.tier`/`seat_limit` on the same verified-webhook discipline `13-02` established — proven with
+      a real prorated amount computed against a real `current_period_end`, not a fixed test fixture.
+- [ ] A mid-cycle downgrade makes no immediate charge and no immediate write, and is confirmed applied
+      only once `current_period_end` passes.
+- [ ] A downgrade that would drop `seat_limit` below the live operator count is not blocked — proven by
+      completing one, and by then confirming the site enters the over-seats condition rather than the
+      downgrade being refused.
+- [ ] An operator whose `HoldsSeat` is toggled off cannot sign in (a token that previously resolved to a
+      real `OperatorId` claim resolves to none) — proven with a real token against the real
+      `OperatorIdentityClaimsTransformation` path, not asserted from the flag alone.
+- [ ] Removing an operator: excludes them from `13-01`'s own seat-count check (a site at its `seat_limit`
+      can redeem a new invite immediately after removing one existing operator, in the same test) — the
+      exact regression `13-01`'s `COUNT(*)` query needs guarding against once this item lands — blocks
+      their sign-in permanently, and releases their `Assigned` conversations back to `Waiting`, each
+      proven with a real second call/token, not asserted from the handler's logic alone.
+- [ ] The over-seats condition (`assigned-seat count > seat_limit`) is computed correctly under a
+      realistic concurrent scenario (a downgrade landing at the same moment as an operator toggling
+      another operator's seat) — proven, not asserted from the query looking right.
+- [ ] `adr/0072` (or the next free number at time of writing — confirmed against `docs/adr/README.md`
+      before use, since `13-02`'s own worker found the number this item's earlier draft assumed,
+      `adr/0025`, was already taken) records the four `decisions/0006` policies and the seat-assignment/
+      operator-removal mechanism, matching `13-01`/`13-02`'s own rigor.
+- [ ] `docs/architecture/data-model.md` gains `BillingSubscription`'s new `past_due`/`current_period_end`
+      shape, `Operator.HoldsSeat`/`RemovedAt`, and a note on the over-seats derived-condition choice.
+- [ ] `docs/architecture/authorization.md` notes the sign-in-blocking behaviour added to
+      `OperatorIdentityClaimsTransformation`.
 
 ## The policy, decided 2026-08-25
 
@@ -130,11 +241,12 @@ unavoidable, so the only real question was whether it destroys anything. This on
 
 ## Consequences for other items
 
-- **`13-01` gains seat assignment and operator removal.** Choosing who holds a seat needs a surface,
-  and removing an operator does not exist anywhere today. It is needed regardless of billing — people
-  leave — so this is a dependency being named rather than scope being invented.
-- **Two new subscription states** beyond `13-02`'s: `past_due`, and over-seats. Whether over-seats is a
-  state on the subscription or a derived condition is an implementation choice, not a policy one.
+- **Seat assignment and operator removal, folded into this item's own Scope above (2026-08-28)** —
+  originally named here as a dependency on `13-01`, but `13-01` shipped without them (its own Out of
+  scope named exactly this gap) and nothing else in the roadmap owns it, so this item builds them rather
+  than waiting on a third item nobody has scoped.
+- **Two new subscription states** beyond `13-02`'s: `past_due`, and the over-seats condition (a derived
+  read, not a stored state — see Scope).
 - **No credit or refund machinery is built.** That is a direct saving and a direct consequence of the
   mid-cycle decision.
 - A Free account after non-payment keeps its history: retention class is stamped at write time
