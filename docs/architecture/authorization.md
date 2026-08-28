@@ -211,6 +211,23 @@ orphaned thumbnail behind in MinIO on every delete - `DeleteAttachmentHandler`'s
 detail. Same "tolerate already-gone" reasoning `5-04`'s orphan sweeper uses for the storage side,
 extended to the row itself: a retried delete is idempotent, not an error.
 
+**`Permission.SiteManageOperators` gained its first real write-path caller in `13-01`.** This section
+previously noted the permission existed with no handler beyond the admin console's read-only view -
+`CreateOperatorInviteHandler` (`Ago.Chat.Application`) is that caller now, gating generation of a
+single-use operator invite the same way every other permission check in this codebase already is
+(`IPermissionChecker`, no new mechanism). Redemption itself (`RedeemOperatorInviteHandler`) is gated by
+`RequireKeycloakIdentity`, not `RequireOperatorIdentity` - the redeeming caller has no `OperatorId`
+claim yet by definition, the same reasoning `10-02`'s bootstrap endpoint already established. It carries
+no `SiteId` either: the site a redemption acts on is never a caller-supplied value, only the fact
+`invite.SiteId` already established when the invite was generated under the permission check above -
+listed in `Ago.Chat.Architecture.Tests`' `TenantScopeExemptions` with that reasoning, the same category
+as `RegisterSiteHandler`.
+
+`13-07`/`adr/0068` also changed the shape of one carried-over constraint: `13-01`'s redemption handler
+rejects a `sub` only when it already resolves to an `Operator` row on *that invite's own* site - never
+"resolves to an operator row anywhere", the older, single-tenant rule that predated `13-07`'s composite
+`(external_subject_id, site_id)` uniqueness.
+
 ## `site:configure` gates a second, distinct thing: shipped in `11-01`
 
 `Permission.SiteConfigure` was granted for exactly one caller until now (`GetAllConversationsForSiteHandler`'s
