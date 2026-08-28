@@ -62,15 +62,14 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 4 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
 | 5 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` (shipped `ago-chat#96`, 2026-08-27) because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
 | 6 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
-| 7 | `16-02` erasure: account and conversation | `8-07` above gives it a continuous consumer, which is how erasure stays known-working. **In progress** |
-| 8 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other |
-| 9 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 10 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 11 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
-| 12 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
-| 13 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
-| 14 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
-| 15 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
+| 7 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other. Directly after `16-02` (shipped `ago-chat#110`/`ago-console#52`, 2026-08-28), same personal-data area |
+| 8 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
+| 9 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
+| 10 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type |
+| 11 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 12 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 13 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 14 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |

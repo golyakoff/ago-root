@@ -1,7 +1,7 @@
 # Erasure: deleting an account, and deleting a conversation on request
 
 - **Stage**: 16
-- **Status**: ready
+- **Status**: done — merged `ago-chat#110`/`ago-console#52` (2026-08-28)
 - **Depends on**: `16-01-personal-data-map-and-residency-constraint.md` (the map is what makes a
   deletion complete rather than plausible), `15-01-keycloak-persistent-user-store.md` (deleting a
   Keycloak user is meaningless while the user store is ephemeral), and `15-02-backup-and-verified-
@@ -74,14 +74,20 @@ shape already established there, to be reused here rather than reinvented.
 
 ## Done when
 
-- [ ] A tenant can delete their account from the console, and every store in `personal-data.md`'s
-      table is emptied of their data.
-- [ ] A tenant can delete one conversation, with the same completeness.
-- [ ] Both run as resumable Worker jobs, in the existing job shape, not in a request handler.
-- [ ] An integration test asserts emptiness across Postgres, MinIO and Keycloak after a deletion.
-- [ ] Caches are invalidated rather than left to expire.
-- [ ] The backup window is stated once and matches `15-02`.
-- [ ] The console does not report completion before the job has completed.
+- [x] A tenant can delete their account from the console (`AccountDeletionPage`, `site:erase`), and
+      every store in `personal-data.md`'s table is emptied of their data.
+- [x] A tenant can delete one conversation (`EraseConversationButton`, `conversation:erase`), with the
+      same completeness.
+- [x] Both run as resumable Worker jobs (`SiteErasureJob`, `ConversationErasureJob`), in the existing
+      job shape, not in a request handler.
+- [x] An integration test asserts emptiness across Postgres, MinIO and Keycloak after a deletion — real
+      containers, not mocks.
+- [x] Caches are invalidated (site config, both keys) rather than left to expire, after the delete
+      commits.
+- [x] The backup window is stated once (`ConversationErasureJob`'s own remarks: 30 days, `15-02`/`adr/0050`)
+      and matches `15-02`.
+- [x] The console does not report completion before the job has completed — `usePollUntilErased`
+      polls a real completion signal rather than trusting the `202`.
 
 ## Open questions
 
