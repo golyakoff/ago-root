@@ -135,6 +135,25 @@ cost of freeing the slot only after the dispatcher and broker hop; `adr/0033` we
 added exactly one more way into that same residual - a release that loses a Postgres deadlock five
 times running - and no new kind of residual; see the lock-order section below.
 
+**Shipped in `18-06`**: a third releaser, alongside `CloseConversationHandler` and
+`OperatorConversationReleaser` above - `AutoCloseInactiveConversationsJob` (`Ago.Chat.Worker`,
+`PeriodicTimer`/`BackgroundService`, the same shape as `ConversationAssignmentJob` and `4-04`'s
+disconnect sweep) closes an `Assigned` conversation nobody has touched inside its per-channel-kind
+inactivity window, through `AutoCloseConversationHandler` - a second, system-triggered caller of
+`Conversation.Close()` that shares `CloseConversationHandler`'s own release-strictly-after-save
+ordering rather than re-deriving it. Its own candidate scan
+(`AutoCloseInactiveConversationsQuery`) is a plain, unlocked `SELECT`, deliberately not a claim: unlike
+`WaitingConversationClaimQuery`'s `FOR UPDATE SKIP LOCKED`, there is nothing to race for here, because
+the actual state transition is gated downstream by the same `xmin` optimistic-concurrency check every
+other write to this aggregate already relies on. A conversation the scan named that a message, an
+operator's own close, or `4-04`'s disconnect release moved on from by the time the job reaches it is
+simply not `Assigned` any more when `AutoCloseConversationHandler` re-reads it - refused by its own
+explicit state guard (not by `Conversation.Close()`, which only refuses an already-`Closed` row; see
+that handler's own remarks on why the guard has to be explicit here, unlike `CloseConversationHandler`,
+which gets the same protection for free from its `OperatorId` comparison) - and left for the next
+cycle to re-evaluate against fresh data, the identical "lost the race, not an error" shape this
+section already gives a capacity claim that loses.
+
 In-process, each Worker's assignment loop is single-threaded per shard, so intra-process contention
 is designed away rather than locked away.
 
