@@ -1,7 +1,7 @@
 # Auto-close inactive conversations
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done — merged `ago-chat#108`/`ago-root#234` (2026-08-28), live in production
 - **Depends on**: nothing — `Conversation.Close()`, `CloseConversationHandler` and the capacity-release
   path all already exist (`6-02`, `6-09`)
 
@@ -81,16 +81,16 @@ here.
 
 ## Done when
 
-- [ ] A Worker job closes `Assigned` conversations past their inactivity window, through the same
-      domain path a manual close uses (outbox event fires, capacity releases).
-- [ ] The window differs by channel kind, proven with a test that sets a short widget window and a
-      longer channel window and shows only the one past its own threshold closes.
-- [ ] A conversation auto-closed for a known channel identity, followed by a new inbound message from
-      the same identity, opens a **new** conversation still linked to the same `visitor_id` (exercises
-      `GetActiveForVisitorAsync`'s existing reuse-or-new logic against the newly-closed state) — proven
-      with a real end-to-end test, not asserted from reading the query.
-- [ ] `docs/architecture/data-model.md` or `concurrency.md` gains a note naming this job alongside the
-      others already documented there.
+- [x] A Worker job closes `Assigned` conversations past their inactivity window, through the same
+      domain path a manual close uses (outbox event fires, capacity releases) —
+      `AutoCloseInactiveConversationsJob`/`AutoCloseConversationHandler`.
+- [x] The window differs by channel kind (widget 1h default, channel 24h default, both configurable) —
+      proven by test.
+- [x] A conversation auto-closed for a known channel identity, followed by a new inbound message from
+      the same identity, opens a **new** conversation still linked to the same `visitor_id` — proven
+      end-to-end.
+- [x] `docs/architecture/concurrency.md` names this job as a third capacity releaser alongside
+      `CloseConversationHandler`/`OperatorConversationReleaser` (`ago-root#234`).
 
 ## Open questions
 

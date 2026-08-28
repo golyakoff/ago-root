@@ -1,7 +1,7 @@
 # Operator invitations and seat-count entitlement enforcement
 
 - **Stage**: 13
-- **Status**: ready
+- **Status**: done — merged `ago-chat#109`/`ago-root#235` (2026-08-28)
 - **Depends on**: `10-02-site-and-operator-registration.md` (the `Site`/`Operator`/`Role`/`operator_roles`
   shape this item extends, and the exact gap this item fills — see Goal), `12-02-cross-tenant-operations-read-api.md`
   (its `tier` field — literal `"free"` today, deliberately shaped so a real column could replace it without
@@ -191,29 +191,18 @@ exactly this state, and there the customer is by definition not responding.
 
 ## Done when
 
-- [ ] `Ago.Chat.Integration.Tests`: a real admin-role operator generates an invite for their site naming
-      the `"Operator"` role; a real Keycloak-signed token with no matching `operators` row anywhere
-      redeems it and gets a working operator session (proven the same way `10-02` proved its own created
-      operator — resolves through `OperatorIdentityClaimsTransformation`, can call a
-      `RequireOperatorIdentity`-gated route) — verified by querying the rows directly, not just asserting
-      the `201`/`200`.
-- [ ] A second redemption attempt of the same code fails (already redeemed); an expired invite's
-      redemption fails; a redemption from a `sub` that already resolves to an operator anywhere is
-      rejected `409` — each proven with a real second call, not asserted from the handler's logic alone.
-- [ ] Seat-limit enforcement proven under real concurrency, not a sequential loop: a site with
-      `seat_limit = 2` and one existing operator, N concurrently-redeemed invites racing for the one
-      remaining seat — exactly one redemption succeeds, the rest get the capacity-reached response, and
-      the site's final operator count never exceeds `seat_limit` — the same "proven under sustained
-      contention" bar `concurrency.md`/Stage 4's own tests hold themselves to, scaled to this item's much
-      lower-frequency path.
-- [ ] A capacity-rejected invite is confirmed still redeemable afterward once a seat opens (an existing
-      operator's row is deleted directly in the test, or `seat_limit` is raised) — proving the invite was
-      not silently consumed by the rejected attempt.
-- [ ] `docs/architecture/data-model.md` gains the `operator_invites` table and the `sites.tier`/
-      `seat_limit` columns, with a short note on the row-lock-vs-shadow-counter choice and why it differs
-      from `active_chats`' pattern (state explicitly once written).
-- [ ] `docs/architecture/authorization.md` gets a note that `Permission.SiteManageOperators` now has a
-      real write-path caller, closing the gap that section's own text already named.
+- [x] `Ago.Chat.Integration.Tests`: a real admin-role operator generates an invite; a real Keycloak-signed
+      token with no matching `operators` row redeems it and gets a working operator session — verified by
+      querying rows directly.
+- [x] Double-redemption, expired-invite, and same-site-already-operator (per `13-07`/`adr/0068`'s
+      relaxed rule) each rejected with a real second call.
+- [x] Seat-limit enforcement proven under real concurrency: `seat_limit=2`, one existing operator, 20
+      concurrent redemptions racing the one remaining seat — exactly one succeeds.
+- [x] A capacity-rejected invite confirmed still redeemable once a seat opens.
+- [x] `docs/architecture/data-model.md` gains the `operator_invites` table and `sites.tier`/`seat_limit`
+      columns, with the row-lock-vs-shadow-counter note (`ago-root#235`).
+- [x] `docs/architecture/authorization.md` notes `Permission.SiteManageOperators`'s first real
+      write-path caller (`ago-root#235`).
 
 ## Open questions
 
