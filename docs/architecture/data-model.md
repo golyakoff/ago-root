@@ -112,6 +112,39 @@ denial.
   change against: **`active_chats` equals the number of conversations currently `Assigned` to that
   operator whose `holds_capacity_claim` is true** - see the `conversations` bullet below and
   `adr/0033`.
+
+- `operator_invites` (**shipped in `13-01`**) - `id` (uuid v7), `site_id`, `role_id` (FK to that site's
+  own `roles` row - `"Operator"` or `"Admin"`, `adr/0016`'s tenant-local role scoping), `code_hash`
+  (SHA-256 of a `RandomNumberGenerator`-generated plaintext code shown to the inviting operator exactly
+  once, at generation - the same entropy/generation reasoning `adr/0024`'s `IWebhookSecretGenerator`
+  established for a different bearer value, hashed rather than encrypted because redemption only ever
+  needs to *compare*, never reproduce, the inverse of `adr/0024`'s own webhook-secret case),
+  `created_by_operator_id`, `created_at`, `expires_at` (seven days, a hardcoded default per this
+  codebase's own "sane default, no per-site override yet" precedent - `caching.md`'s rate-limit
+  buckets), `redeemed_at?`, `redeemed_by_operator_id?`, plus the same Postgres `xmin` optimistic-
+  concurrency column `conversations`/`messages` already use - two concurrent redemption attempts
+  against the identical code can both pass the pre-transaction "not yet redeemed" read, and `xmin` is
+  what stops the second `SaveChangesAsync` from silently overwriting the first's already-committed row.
+  `ux_operator_invites_code_hash` (unique) is how redemption looks a code up.
+
+  `sites` gained two columns in the same wave: `tier` (`text`, default `'free'`) and `seat_limit`
+  (`integer`, default `1`) - nothing in `13-01`'s own scope changes either away from its default; that
+  is `13-02`'s job once a real payment exists to drive it.
+
+  **The seat-limit check is a `SELECT ... FOR UPDATE` row lock on `sites`, not a denormalized counter
+  like `active_chats` above it - a deliberate contrast, not an oversight.** `active_chats` uses an
+  atomic `UPDATE ... WHERE ... < capacity` because operator *assignment* is a high-frequency, contended
+  path where a per-row lock would itself become the bottleneck (`concurrency.md`'s own "Operator
+  assignment - the contended path"). Operator *invitation* is the opposite: rare, low-contention, at
+  most a handful of calls ever per site. `OperatorInviteRedemptionRepository` locks the `sites` row
+  directly, then counts real `operators` rows inside that lock, rather than adding a second denormalized
+  counter that would need its own symmetric decrement path - one that does not exist anywhere in this
+  codebase yet (no operator-removal flow has been built; `13-01`'s Out of scope names this explicitly).
+  Proven under real concurrency (`OperatorInviteSeatLimitConcurrencyTests`): a site with `seat_limit = 2`
+  and one existing operator, twenty concurrently-redeemed invites racing for the one remaining seat -
+  exactly one succeeds, the rest are rejected on capacity, and the invite each rejected attempt held
+  stays redeemable afterward once a seat opens up (a capacity rejection rolls its transaction back
+  before ever marking the invite consumed).
 - `conversations` - `id`, `site_id`, `visitor_id`, `operator_id?`, `state`
   (`waiting|assigned|closed`), `last_sequence`, `visitor_unread_count`, `operator_unread_count`,
   `operator_last_read_sequence`, timestamps. Optimistic concurrency uses Postgres's built-in `xmin`
