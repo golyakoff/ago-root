@@ -1,8 +1,12 @@
 # AGO Inbox: MAX channel adapter
 
 - **Stage**: 14
-- **Status**: built and merged 2026-08-27 (`adr/0069`) — two Done-when items still open, both needing a
-  real MAX bot conversation: message-in reaching an operator, and an operator's reply reaching MAX back
+- **Status**: done (2026-08-28) — built and merged 2026-08-27 (`adr/0069`); the two remaining Done-when
+  items closed 2026-08-28, verified live against a real MAX account and a real bot token: a message sent
+  from MAX reached the operator's queue and a console reply reached the same MAX conversation back. Two
+  real bugs surfaced by that run and fixed along the way — outbound replies were addressing MAX's
+  `sender.user_id` instead of `recipient.chat_id` (`ago-chat#103`), and `Ago.Chat.Worker` was never
+  draining the message pipeline it had started enqueuing onto (`ago-chat#101`)
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md`
 
 ## Goal
@@ -144,10 +148,10 @@ different failure profile and is not automatically its home. Decide, and say why
 
 ## Done when
 
-- [ ] A real message sent from a real MAX account reaches an operator in the console, through the same
+- [x] A real message sent from a real MAX account reaches an operator in the console, through the same
       queue a widget conversation already uses (`14-01`'s own mapping into `SendVisitorMessage`) —
       verified live against a real MAX bot, not a fake adapter.
-- [ ] A real operator reply from the console is delivered back to the same MAX conversation — verified
+- [x] A real operator reply from the console is delivered back to the same MAX conversation — verified
       live, both directions proven, matching this repository's own "verified means actually run"
       standard (`k8s-local.md`'s own phrase, applied here).
 - [x] `Ago.Chat.Integration.Tests` (or a MAX-specific fixture matching `AttachmentFixture`/`MinioFixture`'s
