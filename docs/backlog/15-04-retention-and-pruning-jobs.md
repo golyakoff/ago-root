@@ -1,9 +1,12 @@
 # Data retention: the pruning mechanism, not the tier policy
 
 - **Stage**: 15
-- **Status**: ready — deliberately scoped to the *mechanism* (operational pruning of rows nothing reads
-  any more); the product-facing question of how long a free-tier tenant's chat history is kept stays
-  with `13-05-usage-cap-entitlements.md`, which is blocked on exactly that business decision
+- **Status**: done — merged `ago-chat#96` (2026-08-27), live in production (confirmed 2026-08-28: an
+  ancestor of the currently-deployed commit). Found already shipped while auditing the Now queue for
+  the same doc-drift `11-11`/`11-12`/`11-13` had — reconciled here rather than re-implementing.
+  Deliberately scoped to the *mechanism* (operational pruning of rows nothing reads any more); the
+  product-facing question of how long a free-tier tenant's chat history is kept stays with
+  `13-05-usage-cap-entitlements.md`, which is blocked on exactly that business decision
 - **Depends on**: nothing — every table involved already exists
 
 ## Goal
@@ -67,13 +70,22 @@ invent a second one.
 
 ## Done when
 
-- [ ] Every unbounded table named above has a bounded-batch prune or a partition drop, running on a
-      schedule, in the existing Worker job shape.
-- [ ] Every window is configuration, not a constant, and its current value is documented as an
-      operational default that `13-05` may override.
-- [ ] Each job's work is visible as a metric, and `15-03` has a rule for "this stopped running".
-- [ ] Tested against data actually past the horizon, including at least one real partition drop.
-- [ ] `2-01`'s and `2-06`'s out-of-scope notes are updated to point here.
+- [x] Every unbounded table named above has a bounded-batch prune or a partition drop, running on a
+      schedule, in the existing Worker job shape — `OutboxPruneJob` (24h), `WebhookDeliveryPruneJob`
+      (30d), `InboxPruneJob` (24h), `MessagePartitionPruneJob` (3-month horizon, gated behind a new
+      `IMessageArchiveGate` port — `AlwaysConfirmedMessageArchiveGate` stands in until `13-06` supplies
+      a real implementation).
+- [x] Every window is configuration, not a constant, and its current value is documented as an
+      operational default that `13-05` may override — each justified against a real existing constraint
+      (`15-03`'s 24h alert cadence, `6-03`'s support argument, `adr/0031`'s per-class-and-month grid),
+      not invented.
+- [x] Each job's work is visible as a metric, and `15-03` has a rule for "this stopped running" — a
+      shared prune-cycle heartbeat metric, emitted even at zero rows removed.
+- [x] Tested against data actually past the horizon, including at least one real partition drop —
+      real-Postgres integration tests per job; `ago-chat#96`'s own fails-before spot-check confirmed a
+      mutated retention-window calculation fails exactly the test that should catch it.
+- [x] `2-01`'s and `2-06`'s out-of-scope notes are updated to point here — already done, both already
+      reference this item by name.
 
 ## Open questions
 
