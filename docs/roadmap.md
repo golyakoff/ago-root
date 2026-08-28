@@ -56,19 +56,18 @@ Three items sit parked below the table rather than in it, because they cannot be
 
 | # | Item | Why here |
 |---|---|---|
-| 1 | `18-07` returning-visitor history | Directly after `18-06` (shipped `ago-chat#108`, 2026-08-28) on purpose — closing conversations automatically only pays off if an operator can still see a returning channel visitor's past ones, or `18-06` quietly throws away the one thing point 2 of that same discussion asked to keep. **In progress** |
-| 2 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
-| 3 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
-| 4 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` (shipped `ago-chat#96`, 2026-08-27) because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
-| 5 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
-| 6 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other. Directly after `16-02` (shipped `ago-chat#110`/`ago-console#52`, 2026-08-28), same personal-data area |
-| 7 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
-| 8 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 9 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type. `adr/0031`'s addendum (2026-08-29) settled a related question: the partition key stays as `adr/0031` decided, `site_id` is denormalized onto `messages` as a plain column instead |
-| 10 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
-| 11 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
-| 12 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
-| 13 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
+| 1 | `13-03` subscription lifecycle | Unblocked 2026-08-25 — renewal, failure, cancellation and mid-cycle changes are all decided policy now |
+| 2 | `13-04` console billing view | Tier, seats used, upgrade and downgrade, out of `11-05`'s components |
+| 3 | `13-06` retention class and archive | The mechanism behind `adr/0031`: partition by immutable class, archive before dropping. Directly after `15-04` (shipped `ago-chat#96`, 2026-08-27) because it reuses that item's bounded-batch deletes and partition drops rather than writing a second copy |
+| 4 | `15-05` capacity and disk | Deliberately not first any more: its prerequisite is done and the slope it needs is now accumulating, so the useful next step is to *let it run* and read the rate |
+| 5 | `16-03` tenant data export | Its format is also `13-06`'s archive format, so the two want doing near each other. Directly after `16-02` (shipped `ago-chat#110`/`ago-console#52`, 2026-08-28), same personal-data area |
+| 6 | `16-04` the widget's processing notice | Plus the ADR on controller versus processor. The legal confirmation is `ago-business`'s, and does not block the mechanism |
+| 7 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
+| 8 | `18-01` search across conversations | The one with real depth: a full-text index over a table partitioned twice, where the question is what a search may cost rather than which index type. `adr/0031`'s addendum (2026-08-29) settled a related question: the partition key stays as `adr/0031` decided, `site_id` is denormalized onto `messages` as a plain column instead |
+| 9 | `18-02` transfer a conversation | A contended change to the state `4-02` protects — two compare-and-sets that must agree, and `adr/0037`'s lock order to respect |
+| 10 | `18-03` canned responses | Reuses `14-04`'s per-site scripted replies rather than inventing a second store of canned text |
+| 11 | `18-04` internal notes and tags | Its correctness property: the visitor-facing read path must be incapable of returning a note, not merely filter it |
+| 12 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one. Placed last rather than ranked, because the ordering above is the author's |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |

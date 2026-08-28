@@ -109,6 +109,21 @@ not who is legally answerable for them — that second question is `16-04`'s and
 | Backups | One encrypted artifact per run holding both Postgres databases, the roles, the MinIO objects and the overlay's `.env`. **Not** Redis and **not** RabbitMQ — see below | AGO. Staged on the node (newest 7 runs), collected onto the author's own machine, which is where the backup actually is. No third party holds a copy; nothing leaves Russia (`adr/0050`) | **30 days** on the collected copies — a choice, not a derivation, and it must be set to whatever the published privacy policy states | The window expiring, enforced by `backup-pull.sh` on every run | `adr/0050`, `runbooks/backup-and-restore.md` |
 | Retention archive | Expired conversation history in `16-03`'s export format | AGO, or a destination `adr/0031` has not chosen | `adr/0031`: archived rather than deleted | Object deletion — and the store's class must permit it, which `adr/0031` records as a selection constraint | `adr/0031` |
 
+### `18-07` widens who can read `messages.body`
+
+Every row in the table above describes *where* data is held; this is a note on a new *who*.
+`GetVisitorHistoryHandler`'s cross-conversation rule (`authorization.md`'s own "A new way to read
+someone else's conversation") lets an operator read a past, `Closed` conversation's `messages.body`
+by proving they are assigned to a different, live conversation with the same channel-identified
+visitor — the first case in this codebase where a message becomes visible to an operator who was
+never a party to the conversation that contains it. Scoped, not open-ended: gated on the visitor
+having a `channel_identity` at all (a widget visitor's history is structurally unreachable, `14-01`'s
+model) and on the requesting operator holding a live assignment with that same visitor, proven by a
+test that a different operator at the same site cannot pull it for a conversation they are not on.
+`16-02`'s erasure guarantees are unaffected by this widening: erasing a conversation or a site removes
+the rows this handler reads from the same cascade as every other read path, so there is nothing new
+to delete, only a new way the same rows could have been read before they were.
+
 ### Two corrections `16-01` made to the first draft
 
 **There is no `visitors.token_hash`.** Both this file and `data-model.md` described a column that was
