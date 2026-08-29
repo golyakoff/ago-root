@@ -14,12 +14,12 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **42**, across 36 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **22** |
-| Deliberately not RBAC-gated, each with a stated reason | **20** |
-| HTTP routes and hub methods that carry tenant data | **23** |
-| Routes taking a **client-supplied** `siteId` | **8** — three route groups, all permission-gated |
-| Read-model queries | **5**, in three read stores |
+| Use-case entry points in `Ago.Chat.Application` | **60**, across 52 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **33** |
+| Deliberately not RBAC-gated, each with a stated reason | **27** |
+| HTTP routes and hub methods that carry tenant data | **48** |
+| Routes taking a **client-supplied** `siteId` | **17** — nine route groups, all permission-gated |
+| Read-model queries | **7**, in three read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
 
 **Re-derived in `14-04`**, from the scan itself rather than by adding a delta: the first three rows
@@ -30,6 +30,21 @@ and `UpdateOfflineAutoReply`, both `site:configure`-gated, and `SendOfflineAutoR
 `GET`/`PUT /api/v1/sites/{siteId}/offline-auto-reply` pair, the third route group to take a
 client-supplied `siteId`. The route and read-query rows below the first three are still hand-counted;
 only this item's own two routes were added to them.
+
+**Re-derived again on 2026-08-29**, for the identical reason `14-04` gives above:
+`TenantScopeExemptions.cs`'s own dictionary had grown to 27 entries and this document's counts, bullet
+lists and route table had not kept pace with what shipped in between — `13-01`/`13-02` (operator
+invites, billing/YooKassa), `13-07` (`ListMyTenanciesHandler`), `14-01`/`14-02` (channel receive/
+deliver/credentials), `16-02` (conversation lookup and erasure requests), `16-03` (tenant export),
+`18-06` (auto-close) and `18-07` (returning-visitor history) each added one or more entry points,
+several of them behind new client-supplied-`siteId` route groups the routes row had not counted. Two
+more gaps predate even `14-04` and were simply never folded in: `8-07`'s `MintDemoTenantHandler`, and
+`14-04`'s own `GetOfflineAutoReplyHandler`/`UpdateOfflineAutoReplyHandler` — that item's own paragraph
+above says both were added as RBAC-gated, but neither row ever made it into the table below. All seven
+headline rows are restated from a full rescan rather than a further delta, the same way `14-04` chose
+to for the first three: 60 entry points across 52 handler classes (33 gated, 27 exempt), 48 routes and
+hub methods (17 of them client-supplied `siteId`, across nine route groups), and 7 read-model queries.
+The cross-tenant-read count alone held at 1 — nothing added since `12-02` reads across tenants.
 
 The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
@@ -46,9 +61,12 @@ compares against.
    impossible by construction, not by check. Most operator routes work this way.
 2. **A signed visitor token.** `AuthEndpoints` mints `(visitorId, siteId)` together and signs them,
    so the pairing is not forgeable either. Same property as (1), different issuer.
-3. **The client, in a route segment.** Exactly three route groups —
-   `/api/v1/sites/{siteId}/widget-config`, `/api/v1/sites/{siteId}/webhooks/...` and, since `14-04`,
-   `/api/v1/sites/{siteId}/offline-auto-reply`. This is
+3. **The client, in a route segment.** Nine route groups as of this writing —
+   `/api/v1/sites/{siteId}/widget-config`, `/api/v1/sites/{siteId}/webhooks/...`, since `14-04`
+   `/api/v1/sites/{siteId}/offline-auto-reply`, and since `13-01`/`13-02`/`14-02`/`16-02`/`16-03`
+   `/api/v1/sites/{siteId}/operator-invites`, `/api/v1/sites/{siteId}/billing/checkout-sessions`,
+   `/api/v1/sites/{siteId}/channels/max`, `/api/v1/sites/{siteId}/channels/telegram`,
+   `/api/v1/sites/{siteId}/erase` and `/api/v1/sites/{siteId}/exports/...`. This is
    deliberate and documented in the code: an operator's own site claim is not necessarily the site
    being configured. **On these routes the permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
@@ -78,7 +96,7 @@ Grouped by gate. The full machine-checked list lives in
 `ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs`; this table is the same
 information organised for a reader.
 
-### RBAC-gated (21)
+### RBAC-gated (33)
 
 Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything else.
 
@@ -104,9 +122,22 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `ListWebhookEndpointsHandler` | **route segment** | `webhook:manage` | n/a — loads by site |
 | `RevokeWebhookEndpointHandler` | **route segment** | `webhook:manage` | `endpoint.SiteId == command.SiteId` |
 | `GetWebhookDeliveriesHandler` | **route segment** | `webhook:manage` | `endpoint.SiteId == query.SiteId` |
+| `GetOfflineAutoReplyHandler` | **route segment** | `site:configure` | n/a — the site *is* the object |
+| `UpdateOfflineAutoReplyHandler` | **route segment** | `site:configure` | n/a — the site *is* the object |
+| `CreateCheckoutSessionHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `13-02` |
+| `CreateOperatorInviteHandler` | **route segment** | `site:manage-operators` | n/a — the invited role is looked up by the same `SiteId`; `13-01` |
+| `RegisterChannelCredentialHandler` | **route segment** | `channel:manage` | n/a — creates a row for that site; `14-02`/`adr/0069` |
+| `RevokeChannelCredentialHandler` | **route segment** | `channel:manage` | `credential.SiteId == command.SiteId`; `14-02`/`adr/0069` |
+| `RequestSiteErasureHandler` | **route segment** | `site:erase` | n/a — the site *is* the object; `16-02` |
+| `RequestSiteExportHandler` | **route segment** | `site:export` | n/a — the site *is* the object; `16-03` |
+| `GetSiteExportStatusHandler` | **route segment** | `site:export` | `record.SiteId == query.SiteId`, inside `IExportRequestRepository.GetAsync`; `16-03` |
+| `GetConversationByIdHandler` | operator claim | `conversation:erase` | `readStore.GetByIdAsync` is scoped by `query.SiteId`; a different site's conversation is `NotFound`, not `Forbidden`; `16-02` |
+| `RequestConversationErasureHandler` | operator claim | `conversation:erase` | `erasureRequests.RequestConversationErasureAsync` is scoped by `command.SiteId` as well as `ConversationId`; `16-02` |
+| `GetVisitorHistoryHandler.HandleAsOperatorAsync` | operator claim | `conversation:read` | `conversation.OperatorId == caller`; `18-07` |
+| `GetVisitorHistoryHandler.HandleHistoricalConversationAsOperatorAsync` | operator claim | `conversation:read` | `conversation.OperatorId == caller` on the requesting conversation, **and** `historical.VisitorId == conversation.VisitorId` on the historical one; `18-07` |
 | *(the two `GetConversationHistory` operator entry points are counted separately above)* | | | |
 
-### Not RBAC-gated, with the reason (16)
+### Not RBAC-gated, with the reason (27)
 
 **Visitor paths (7).** A visitor is outside the role system entirely (`adr/0016`), so there is nothing
 to ask `IPermissionChecker`. What replaces it is *narrower* than a site check: the handler compares
@@ -124,7 +155,7 @@ does not hold, which is why the participant comparison is the stronger of the tw
 relies on is *created*, from a token that already carries both ids. There is no prior object to check
 ownership of.
 
-**Public, pre-authentication surface (4).** These serve a site's *public* configuration — the same
+**Public, pre-authentication surface (6).** These serve a site's *public* configuration — the same
 values any visitor's browser is handed during the widget handshake — so there is no tenant secret to
 leak and, in most cases, no principal yet to check anything for.
 
@@ -136,25 +167,67 @@ leak and, in most cases, no principal yet to check anything for.
   Its callers are `HubOriginValidator` on both hubs, passing the connection's own validated claim, and
   since `14-04` `SendOfflineAutoReplyHandler`, passing the site id off an envelope this system
   published. No route maps it.
+- `MintDemoTenantHandler` — `8-07`/`adr/0058`'s live-demo bootstrap. Creates the tenant, the same
+  category as `RegisterSiteHandler` right below, but reachable with no principal at all by design: a
+  per-IP rate limit and a cap on total live demo tenants replace authentication, and the handler only
+  ever writes a brand-new Site/Operator/roles package, never reads or touches an existing site. Off
+  entirely unless `DemoTenant:Enabled` says otherwise.
 - `RegisterSiteHandler` — creates the tenant, so there is no site to be scoped to. Gated instead by
   `10-01`'s `RequireKeycloakIdentity` plus one-registration-per-subject, enforced by a unique index
   inside the registration transaction.
+- `RedeemOperatorInviteHandler` — `13-01`. The redeeming caller has no `SiteId` claim yet, by
+  definition — the same category and the same reason as `RegisterSiteHandler` right above. The
+  presented invite code's own `code_hash` lookup resolves the site the write lands on, never a value
+  this caller supplies.
 
-**Consumer and worker side (6).** No external caller reaches these. The input is an integration event
-this system itself published, so the site is a fact already established by the write that raised it.
+**Consumer and worker side (10).** No external caller reaches most of these: the input is an
+integration event this system itself published, so the site is a fact already established by the
+write that raised it. Three of the ten (`ReceiveChannelMessageHandler`, `AutoCloseConversationHandler`,
+`ListMyTenanciesHandler`) are not broker-triggered and are called out individually below — they sit
+here because, like the broker-fed ones, none of them has a caller-supplied `SiteId` to check.
 
 `DispatchWebhooksForEventHandler`, `RecordUnreadMessageHandler`, `SendOfflineAutoReplyHandler`,
 `ResolveConversationAssignmentTargetsHandler`, `ResolveMessageDeliveryTargetsHandler`,
-`ResolveOperatorIdentityHandler` — the last of which is what *produces* the `OperatorId`/`SiteId`
-claims every gated handler then trusts, and so cannot itself depend on them.
+`DeliverChannelMessageHandler`, `ResolveOperatorIdentityHandler` — the last of which is what
+*produces* the `OperatorId`/`SiteId` claims every gated handler then trusts, and so cannot itself
+depend on them.
 
-`SendOfflineAutoReplyHandler` (`14-04`, `adr/0066`) is the newest and the only one that *writes a
-message*, so it is worth one extra sentence. Its `SiteId` comes off a `MessageAccepted` envelope this
-system itself published; it uses that id for exactly two things, both self-consistent — reading that
-same site's cached configuration, and asking whether that same site has an operator online — and it
-then writes into the conversation that envelope named. There is no principal to check a permission
-for: nobody asked for the reply, a broker delivery did, and the message it writes is authored by the
-system itself, which `adr/0016` has no representation for (exactly as it has none for a visitor).
+`SendOfflineAutoReplyHandler` (`14-04`, `adr/0066`) is the newest of that broker-fed group and the
+only one that *writes a message*, so it is worth one extra sentence. Its `SiteId` comes off a
+`MessageAccepted` envelope this system itself published; it uses that id for exactly two things, both
+self-consistent — reading that same site's cached configuration, and asking whether that same site has
+an operator online — and it then writes into the conversation that envelope named. There is no
+principal to check a permission for: nobody asked for the reply, a broker delivery did, and the message
+it writes is authored by the system itself, which `adr/0016` has no representation for (exactly as it
+has none for a visitor).
+
+`ReceiveChannelMessageHandler` (`14-01`, adapter side for AGO Inbox) carries a `SiteId` no external
+caller can influence either, but not from a broker envelope: no channel provider's payload has a way
+to name a site, so the concrete adapter resolves it from the credentials the message arrived on — the
+site that owns the MAX bot token, or rents the SMS long number — before the command is even
+constructed. There is also no principal to check a permission for, an SMS sender being outside the
+RBAC model exactly as a visitor is (`adr/0016`); what replaces it is stronger than a site check: every
+write lands only in the `Visitor` that this site's own `ChannelIdentity` row resolves to, so a message
+can only ever reach a conversation belonging to the site whose credentials received it.
+
+`AutoCloseConversationHandler` (`18-06`, worker side) is keyed by neither a caller nor a broker event —
+the only input is a `ConversationId` that `AutoCloseInactiveConversationsJob`'s own candidate scan
+already restricted to `Assigned` conversations past their per-channel-kind inactivity window, a fact
+the scan itself established by reading `conversations.state` and `messages.created_at`, not a claim to
+verify. There is also no principal to check a permission for — nobody asked for this close, a
+scheduled sweep did — and what a `SiteId` check would have protected against is already ruled out
+structurally: `IConversationRepository.GetByIdAsync` loads exactly the row the scan named.
+
+`ListMyTenanciesHandler` (`13-07`/`adr/0068`) is the odd one structurally: it is reached by an
+authenticated caller over HTTP, not a broker delivery, but it has no single `SiteId` to scope to *by
+design* — it is the console switcher's own read, "every site this identity administers." Gated instead
+by `RequireKeycloakIdentity` (an identity with zero or several tenancies cannot yet satisfy
+`RequireOperatorIdentity`), and `IOperatorRepository.ListByExternalSubjectIdAsync` filters at the query
+itself on the caller's own `sub`, read from the validated token, so the row set this handler can ever
+see is already restricted to that identity's own operator rows before a `Site` is joined in —
+structurally the same "`sub`-keyed lookup feeding an identity's own tenancy" category
+`ResolveOperatorIdentityHandler` above is in, not a cross-tenant read the way `ListSitesForOwnerHandler`
+below genuinely is.
 
 **An operator's own presence (2).** `SetOperatorPresenceHandler.GoOnlineAsync`/`GoOfflineAsync`
 (`4-06`), called only from `OperatorHub.OnConnectedAsync`/`OnDisconnectedAsync`. No `SiteId` at all,
@@ -162,6 +235,18 @@ deliberately: the only input is the caller's own `OperatorId`, resolved from the
 validated JWT before either method runs. There is no site-scoped resource being acted on to check
 ownership of — only "record this connection's own presence" — so a `SiteId` parameter would be an
 unused, unverifiable claim rather than a real check.
+
+**Inbound, HTTP-triggered webhook (1).** `13-02`/`adr/0025`. The third-party mirror of the consumer/
+adapter category above — reached over HTTP rather than the broker, but the same shape: the tenant is a
+fact established by our own prior write, not a caller's claim. `ProcessYooKassaWebhookHandler` carries
+no `SiteId` at all: the input is ЮKassa's own payment id, which no external caller can choose a site
+with — `IBillingWebhookApplier` resolves the one `billing_subscriptions` row that payment id names and
+acts on that row's own `SiteId`, a fact `CreateCheckoutSessionHandler` already established (gated by
+`site:configure` the ordinary way) at checkout-session creation. There is also no principal to check a
+permission for — nobody asked for this write, ЮKassa's own webhook delivery did — and the attack
+surface is narrower still: the endpoint rejects a missing or invalid `Webhook-Signature` header before
+this handler is ever constructed, so every payment id it ever sees is one ЮKassa itself signed with a
+key only this deployment and ЮKassa hold.
 
 **The one cross-tenant read (1).** `ListSitesForOwnerHandler`, `12-02`'s platform-owner overview. It
 carries no `SiteId` **because** it is cross-tenant. The whole access-control story is `12-01`'s
@@ -189,10 +274,16 @@ is exactly what makes it interesting. See *The guard* below.
 | `POST /api/v1/visitor-sessions` | anonymous | n/a — resolved from the public key, and this is what *issues* the pairing |
 | `POST /api/v1/visitor-sessions/renew` | Visitor scheme | visitor claim — **and** the request's own public key must resolve to the *same* site, else `403` (`17-08`, `adr/0048`). The only route where the two `siteId` sources are compared rather than one being trusted |
 | `POST /api/v1/sites` | `RequireKeycloakIdentity` — `12-04` added a `NotThePlatformOwner` policy here and `12-05` withdrew it (`adr/0063`'s amendment); the platform owner may register a tenant of their own | n/a — creates the tenant |
+| `POST /api/v1/demo/credentials` | anonymous | n/a — creates a brand-new tenant, deliberately with no principal at all; `8-07`/`adr/0058`, off unless `DemoTenant:Enabled` |
+| `GET /api/v1/me/tenancies` | `RequireKeycloakIdentity` | n/a — deliberately no single site, the console switcher's own read; `13-07`/`adr/0068` |
+| `POST /api/v1/operator-invites/redeem` | `RequireKeycloakIdentity` | n/a — the presented invite's own `code_hash` names the site, not the caller; `13-01` |
 | `GET /api/v1/conversations/queue` | `RequireOperatorIdentity` | operator claim |
 | `GET /api/v1/conversations/all` | `RequireOperatorIdentity` | operator claim |
 | `POST /api/v1/conversations/{id}/close` | `RequireOperatorIdentity` | operator claim |
 | `POST /api/v1/conversations/{id}/read` | `RequireOperatorIdentity` | operator claim |
+| `POST /api/v1/conversations/{id}/erase` | `RequireOperatorIdentity` | operator claim; `16-02` |
+| `GET /api/v1/conversations/{id}` | `RequireOperatorIdentity` | operator claim; `16-02`, the erasure completion poll |
+| `GET /api/v1/conversations/{id}/visitor-history` | `RequireOperatorIdentity` | operator claim; `18-07` |
 | `GET /api/v1/operators/me` | `RequireOperatorIdentity` | operator claim |
 | `POST /api/v1/conversations/{id}/attachments` | `EitherTokenKind` | operator claim, or the visitor token |
 | `POST /api/v1/attachments/{id}/confirm` | `EitherTokenKind` | operator claim, or the visitor token |
@@ -203,9 +294,20 @@ is exactly what makes it interesting. See *The guard* below.
 | `POST`/`GET /api/v1/sites/{siteId}/webhooks` | `RequireOperatorIdentity` | **client-supplied** |
 | `DELETE /api/v1/sites/{siteId}/webhooks/{id}` | `RequireOperatorIdentity` | **client-supplied** |
 | `GET /api/v1/sites/{siteId}/webhooks/{id}/deliveries` | `RequireOperatorIdentity` | **client-supplied** |
+| `POST /api/v1/sites/{siteId}/operator-invites` | `RequireOperatorIdentity` | **client-supplied**; `13-01` |
+| `POST /api/v1/sites/{siteId}/billing/checkout-sessions` | `RequireOperatorIdentity` | **client-supplied**; `13-02` |
+| `POST /api/v1/billing/webhooks/yookassa` | anonymous, signature-verified | n/a — resolved from the payment id via `billing_subscriptions`; `13-02`/`adr/0025` |
+| `POST /api/v1/sites/{siteId}/channels/max` | `RequireOperatorIdentity` | **client-supplied**; `14-02`/`adr/0069` |
+| `DELETE /api/v1/sites/{siteId}/channels/max/{id}` | `RequireOperatorIdentity` | **client-supplied**; `14-02`/`adr/0069` |
+| `POST /webhooks/max/{credentialId}` | anonymous, signature-verified | n/a — resolved from the credential id, not the caller; `14-01`/`14-02` |
+| `POST /api/v1/sites/{siteId}/channels/telegram` | `RequireOperatorIdentity` | **client-supplied**; `14-02`/`adr/0069` |
+| `DELETE /api/v1/sites/{siteId}/channels/telegram/{id}` | `RequireOperatorIdentity` | **client-supplied**; `14-02`/`adr/0069` |
+| `POST /api/v1/sites/{siteId}/erase` | `RequireOperatorIdentity` | **client-supplied**; `16-02` |
+| `POST /api/v1/sites/{siteId}/exports` | `RequireOperatorIdentity` | **client-supplied**; `16-03` |
+| `GET /api/v1/sites/{siteId}/exports/{exportId}` | `RequireOperatorIdentity` | **client-supplied**; `16-03` |
 | `GET /api/v1/owner/sites` | `RequirePlatformOwner` | none, deliberately |
-| `/hubs/visitor` — `JoinAsync`, `SendMessageAsync`, `GetHistoryAsync` | Visitor scheme | signed visitor token |
-| `/hubs/operator` — `JoinConversationAsync`, `SendMessageAsync`, `GetHistoryAsync`, `GetVisitorPresenceAsync` | `RequireOperatorIdentity` | operator claim |
+| `/hubs/visitor` — `JoinAsync`, `SendMessageAsync`, `SendStructuredMessageAsync`, `GetHistoryAsync` | Visitor scheme | signed visitor token |
+| `/hubs/operator` — `JoinConversationAsync`, `SendMessageAsync`, `SendStructuredMessageAsync`, `GetHistoryAsync`, `GetVisitorHistoryConversationAsync`, `GetVisitorPresenceAsync` | `RequireOperatorIdentity` | operator claim |
 
 Note the shape of the hub methods: they take a **conversation id**, not a site. That is why
 `AssignConversationHandler` matters so much — see below.
@@ -220,6 +322,8 @@ visible. Every query, and what scopes it:
 | `ConversationReadStore.GetHistoryAsync` | `conversation_id` | `messages` carries no `site_id` (`data-model.md`) — the tenant is reachable only through `conversations`. `GetConversationHistoryHandler` has already proved the caller is the conversation's visitor or its assigned operator. |
 | `ConversationReadStore.GetDeltaAsync` | `conversation_id` | Same handler, same two checks. |
 | `ConversationReadStore.GetAllForSiteAsync` | **`site_id`** | Its input *is* a site; `GetAllConversationsForSiteHandler` gates it on `site:configure`. |
+| `ConversationReadStore.GetByIdAsync` | `conversation_id` **and** `site_id` | `16-02`. Returns `null` for a different site's conversation, indistinguishable from a nonexistent one; `GetConversationByIdHandler` gates the call on `conversation:erase`. |
+| `ConversationReadStore.GetVisitorHistoryAsync` | `conversation_id` (excluded) via `visitor_id` | `18-07`. `visitor_id` is not itself a `site_id`, but `GetVisitorHistoryHandler` has already proved the caller is assigned to a live conversation with this visitor before this query runs. |
 | `WebhookDeliveryReadStore.GetForEndpointAsync` | `endpoint_id` | `webhook_deliveries` has no `site_id` either. `GetWebhookDeliveriesHandler`'s `endpoint.SiteId != query.SiteId` branch is the whole of the isolation here — which is why `17-01` gave that branch a test that fails when it is removed. |
 | `PlatformOverviewReadStore.ListSitesAsync` | **none, deliberately** | `12-02`. The `RequirePlatformOwner` policy, and nothing else. |
 
