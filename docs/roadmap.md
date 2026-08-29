@@ -58,10 +58,9 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
-| 3 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one, and five further design questions settled in planning (2026-08-29, see the item's own file). Placed last rather than ranked, because the ordering above is the author's. **In progress** |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
-| — | `20-08` who confirms a chat-originated booking | **Blocked on `20-07`**, and a named tension with `adr/0027`: a chat operator acting on a booking card is an identity Calendar has no `operators` row for |
+| — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
 
 ### Soon — folded into the queue above, 2026-08-25
 
@@ -792,6 +791,10 @@ Deliverables:
   event, vendor choice left as a real, named open question rather than an invented number (`20-05`).
 - A tenant/operator console and a public, embeddable booking widget, reusing AGO Chat's own per-site
   CORS and Keycloak/OIDC patterns rather than inventing new ones (`20-06`).
+- **Calendar becomes a chat module** (`20-07`, done 2026-08-29) — a visitor books inside a
+  conversation, on any channel, with `Ago.Chat.*` carrying no knowledge that appointments exist
+  (`adr/0065`, `adr/0077`). Live end-to-end verification (a real click-through booking, and the same
+  flow over a real text channel) is the one piece still open - see the item's own file.
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
