@@ -1,8 +1,10 @@
 # AGO Calendar: SMS booking-confirmation delivery
 
 - **Stage**: 20
-- **Status**: ready — scoped so the real vendor choice (Open questions, below) does not block the port,
-  outbox wiring, or a testable fake adapter; only the *real* SMS-gateway adapter is deferred
+- **Status**: won't build (2026-08-29) — same business decision as `14-03`'s own:
+  `ago-business/docs/decisions/0008-lestnica-tarifov-imena-ceny-kanaly-calendar.md` records SMS
+  deprioritized entirely in favour of WhatsApp. Left in the backlog, not deleted, since the port
+  design below stays findable if this is ever revisited.
 - **Depends on**: `20-04-confirmation-sweep-and-operator-queue.md` (the `BookingConfirmed` integration
   event this item's consumer subscribes to)
 

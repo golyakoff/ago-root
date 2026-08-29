@@ -1,9 +1,14 @@
 # AGO Inbox: SMS channel adapter
 
 - **Stage**: 14
-- **Status**: ready — scoped so the real vendor choice (Open questions, below, shared with `20-05`'s
-  own identical open question) does not block the port wiring or a documented fake adapter; only the
-  real-gateway adapter is deferred
+- **Status**: won't build (2026-08-29) — business decision, not a technical one:
+  `ago-business/docs/decisions/0008-lestnica-tarifov-imena-ceny-kanaly-calendar.md` records the author
+  changing course on this channel entirely (not merely its price) in favour of WhatsApp
+  (`14-05`'s own open legal question), which `ago-business/decisions/0009` separately argues is the
+  qualitatively more important gap against this product's nearest direct competitor. Left in the
+  backlog rather than deleted so the reasoning and the port-design work below stay findable if this is
+  ever revisited — the `14-01` port itself does not change shape because of this decision, only this
+  one concrete adapter goes unbuilt.
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md`
 
 ## Goal
