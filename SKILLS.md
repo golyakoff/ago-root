@@ -23,6 +23,7 @@ and in `docs/`.
 | `rebase-cleanup` | A branch looks wrong after a GitHub rebase-merge, or before deleting any branch. |
 | `context-resume` | The start of a session continuing after a `/compact` context refresh. |
 | `workspace-cleanup` | `C:\git\ago` has grown large, or periodically — remove worktrees/branches whose work already merged. |
+| `dependabot-sweep` | Working through a repository's open Dependabot PRs — package bumps and CI-less infra image bumps alike. |
 
 ## How they relate
 
