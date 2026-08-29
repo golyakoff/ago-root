@@ -1,7 +1,7 @@
 # Canned responses
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (2026-08-29, `ago-chat#119` + `ago-console#58`) — see Outcome below
 - **Depends on**: nothing
 
 ## Goal
@@ -34,10 +34,24 @@ before adding a table. `adr/0016`'s RBAC — `site:configure` already gates this
 
 ## Done when
 
-- [ ] Responses are editable per site, gated by `site:configure`.
-- [ ] An operator inserts one without leaving the keyboard.
-- [ ] The shared-or-separate decision against `14-04` is recorded.
+- [x] Responses are editable per site, gated by `site:configure`.
+- [x] An operator inserts one without leaving the keyboard.
+- [x] The shared-or-separate decision against `14-04` is recorded.
 
 ## Open questions
 
 None.
+
+## Outcome
+
+Shipped as `GetCannedResponsesHandler`/`UpdateCannedResponsesHandler` (`ago-chat#119`) plus a settings
+screen and composer picker (`ago-console#58`). **Decided: two small, honest types, not one shared with
+`OfflineAutoReplyRule`** — the shapes are similar at rest, but the access pattern differs: an auto-reply
+is matched against visitor text automatically, with no human in the loop; a canned response is browsed
+by an operator's own eyes and picked, with nothing ever compared against message text. Forcing one type
+to serve both would mean a dead `Keyword` field on canned responses or a `Title` the auto-reply matcher
+never reads — recorded in `CannedResponse.cs`'s own remarks. Keyboard insertion: typing `/` as the first
+character of the composer draft opens a filterable picker (title match), `↑`/`↓` to highlight, `Enter`
+to insert and close — the same interaction convention independently proposed for the visitor-facing
+`20-07` module-invocation design during planning (`docs/backlog/20-07-*.md`'s own "Decided in planning"
+section), not shared code between the two (different apps) but a deliberate, repeated UX choice.

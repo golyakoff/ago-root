@@ -4,7 +4,10 @@
   dozen docs already reference `5-13`; renumbering a file to record a scheduling decision would
   break those references to no benefit. It belongs to Stage 15's work because it was found while
   investigating the public deployment's disk-exhaustion exposure, and it is the one path by which a
-  stranger can write unbounded bytes to a shared 2Gi volume (`15-05`).
+  stranger can write unbounded bytes to the node's shared disk (`15-05`) — **corrected 2026-08-29**:
+  there never was a 2Gi ceiling to write past; `local-path` applies no quota, so the target is the
+  node's shared free space (58G measured 2026-08-29), less urgent by volume than a 2Gi ceiling would
+  have made it, worse in kind, since filling it takes down every component at once rather than one.
 - **Status**: done (`ago-platform` `0.16.0`) — the declared length is signed into the presigned PUT
   (`GetPreSignedUrlRequest.Headers.ContentLength`) and MinIO refuses a mismatched request with
   `403 SignatureDoesNotMatch` before accepting a byte. Proven at the storage layer, not the
