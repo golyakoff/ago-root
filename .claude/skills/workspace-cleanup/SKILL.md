@@ -1,6 +1,6 @@
 ---
 name: workspace-cleanup
-description: Reclaim disk space in C:\git\ago by removing worktrees and branches whose work has already landed. Use when C:\git\ago has grown large (each worktree carries its own bin/obj/node_modules, so worktree count drives disk use directly), periodically as a housekeeping pass, or whenever asked to "clean up the workspace" or similar. Never run while a background worker or peer session might still be using a worktree — confirm everything relevant is idle first.
+description: Reclaim disk space in C:\git\ago and tidy local branches once everything is landed. Covers worktrees (each carries its own bin/obj/node_modules, so worktree count drives disk use directly), orphan local branches with no worktree at all, and stray non-worktree directories/dev-server processes left over from past sessions. Use periodically, when C:\git\ago has grown large, or whenever asked to "clean up the workspace"/"delete merged branches" or similar. Never run while a background worker or peer session might still be using a worktree — confirm everything relevant is idle first.
 ---
 
 # Workspace cleanup
@@ -87,6 +87,75 @@ still succeed; that warning is normal here; see `rebase-cleanup` for why. If `-d
 warns), stop and re-check the PR's `state` via `gh pr view --json state,mergedAt` rather than escalating
 to `-D` — a refusal after `gh` claims MERGED means the local branch has diverged from what merged, and
 force-deleting it would be discarding whatever that divergence is, not "just" clearing a merged branch.
+
+## 3.5 Orphan local branches — no worktree at all
+
+A branch does not need a worktree to pile up: `git branch <name>` or an old worktree removal that
+dropped the directory but not the branch both leave one behind. Once §§1-3 have cleared every
+worktree-backed branch, sweep what remains:
+
+```
+git -C <repo> branch --list           # a leading `+` marks a branch checked out in ANOTHER worktree -
+                                       # never touch those; a leading `*` is the primary checkout's own
+gh pr list --repo <owner>/<repo> --state merged --json headRefName --limit 500 -q '.[].headRefName' \
+  | sort -u > /tmp/merged_<repo>.txt
+```
+
+For every local branch not `main`, not `+`-marked, and not on the never-touch list below: if its exact
+name appears in the merged list, `git branch -d` it (same `-d`-then-verify-then-`-D` escalation as §3).
+If it does **not** appear, do not assume it is live work — this project's git-mechanics notes describe
+a repeated pattern of a branch going stale mid-flight and being closed and rebuilt under a new name
+(often suffixed `-v2`/`-v3`) that then merges instead. An orphan whose name looks like an earlier
+attempt at something that *did* merge under a different name is real, just under the wrong name to
+match automatically:
+
+- Diff it against its likely successor (`git diff <old> <new> --stat`) — if the delta is purely
+  additive (the new one contains everything the old one has, plus more), the old one is a discarded
+  precursor, not divergent work, and `-D` is safe once you've looked.
+- If no successor is obvious, or the diff shows the old branch has content the new one dropped, leave
+  it and flag it — this is exactly the "ambiguous, don't guess" case §0 already describes, just for a
+  branch instead of a worktree.
+
+**Never touch a branch matching `worktree-agent-*`, `worktree-agent-a[0-9a-f]{16}`, or any other
+agent-runtime-looking name, even with no `git worktree list` entry for it.** These are the agent
+runtime's own bookkeeping and this skill does not know enough about how resumability keys off them to
+safely say an orphaned one is dead. Leave every one, flag them as a group, move on.
+
+**If the primary checkout itself is not on `main`**, do not delete the branch it has checked out
+(git will refuse anyway) — confirm that branch is merged and clean the same way, then
+`git checkout main && git pull --ff-only` in the primary checkout before deleting it, so the primary
+stops floating on a stale feature branch as a side effect of the sweep.
+
+## 3.6 Stray non-worktree directories and locked files
+
+Not everything under `C:\git\ago` that looks like a worktree still is one — a `git worktree remove`
+that failed partway (see below) can leave a plain directory with a dead or missing `.git` pointer.
+Find them with:
+
+```
+for d in /c/git/ago/*/; do [ -e "$d/.git" ] || echo "$d"; done
+```
+
+Cross-check each: does it have real content unrelated to any repo (a user's own files - leave it
+untouched, it is not this skill's business) or does it look like an abandoned repo checkout (empty, or
+holds only `node_modules`/`README.md`/build output with a merged PR of the same name)? Only remove the
+latter kind.
+
+**A locked file, not a real conflict, is the usual reason `git worktree remove`/`rm -rf` fails on
+Windows** with `Permission denied`, `Device or resource busy`, or `Invalid argument`. It is almost
+always a stray dev-server process (`npm run dev`/`preview`, `npx serve`, `vite preview`, an old
+`dotnet run`) left running from a past session, still holding a file handle in that directory. Find it
+rather than guessing:
+
+```
+netstat -ano | grep ':<port>'                                    # if you know the port
+powershell.exe -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Select-Object ProcessId,CommandLine"   # or 'dotnet.exe'
+taskkill //PID <pid> //F
+```
+
+Kill only processes that are plainly orphaned local preview/dev servers (no task in this session needs
+them) — never a process tied to work still in flight. Retry the removal after; it will succeed once the
+handle is released.
 
 ## 4. What this skill does not do
 
