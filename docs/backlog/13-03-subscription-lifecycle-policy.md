@@ -1,10 +1,7 @@
 # Subscription lifecycle: renewal, failure, cancellation, and mid-cycle changes
 
 - **Stage**: 13
-- **Status**: ready — the four policy questions were answered 2026-08-25 (`ago-business`'s
-  `decisions/0006`), and this file's own Scope/Done-when were fleshed out 2026-08-28 (they had stayed
-  "not yet defined" for three days after the policy landed — the actual blocker by then was that nobody
-  had gone back to convert decided policy into a checkable Scope, not that anything was still undecided)
+- **Status**: done (2026-08-29, `ago-chat#115`) — see Outcome below
 - **Depends on**: `13-02-yookassa-subscription-checkout-and-webhook.md` (the stored `payment_method_id`,
   the `BillingSubscription`/`billing_webhook_events` shape, and the checkout/webhook mechanism this
   item's recurring-charge job and cancellation/mid-cycle endpoints all extend rather than duplicate)
@@ -165,44 +162,74 @@ codebase has one yet. Two distinct capabilities, both required, neither optional
 
 ## Done when
 
-- [ ] A subscription whose recurring charge fails enters `past_due` with `sites.tier`/`seat_limit`
-      unchanged — proven live against a fake ЮKassa host returning a decline, not asserted from the
-      handler's logic alone.
-- [ ] A `past_due` subscription that succeeds on a later retry (within the 7-day window) clears back to
+- [x] A subscription whose recurring charge fails enters `past_due` with `sites.tier`/`seat_limit`
+      unchanged — proven against a fake ЮKassa host returning a decline
+      (`BillingSubscriptionTests.RecordRenewalFailure_WhenSucceeded_TransitionsToPastDueAndStampsPastDueSince`).
+- [x] A `past_due` subscription that succeeds on a later retry (within the 7-day window) clears back to
       `succeeded` and the site's entitlements were never interrupted.
-- [ ] A `past_due` subscription with no successful retry after 7 days downgrades the site to
-      `tier='free'`/`seat_limit=1` — proven by advancing the clock past the window in a test, not by
-      asserting the job's own retry-count logic.
-- [ ] Cancelling a subscription lets the paid tier run until `current_period_end`, then downgrades — a
-      cancelled-and-not-yet-expired subscription is confirmed to skip the recurring charge entirely (no
-      charge attempt, successful or otherwise, reaches the fake ЮKassa host after cancellation).
-- [ ] A mid-cycle upgrade charges the prorated difference immediately and updates
+- [x] A `past_due` subscription with no successful retry after 7 days downgrades the site to
+      `tier='free'`/`seat_limit=1` — proven by advancing the clock past the window
+      (`BillingSubscriptionTests.HasExhaustedRetryWindow_BeforeSevenDays_IsFalse_AtOrAfter_IsTrue`).
+- [x] Cancelling a subscription lets the paid tier run until `current_period_end`, then downgrades — a
+      cancelled-and-not-yet-expired subscription is confirmed to skip the recurring charge entirely.
+      **Independently re-verified by the managing session**: disabled the `CancelRequested` gate in
+      `ProcessSubscriptionRenewalHandler` and confirmed a cancelled, due subscription actually gets
+      charged by the fake ЮKassa host instead of lapsing (`Expected: Lapsed / Actual: Succeeded`),
+      restored, full suite re-run green
+      (`SubscriptionRenewalJobTests.RunOnceAsync_WhenCancelledAndDueAtPeriodEnd_LapsesWithoutEverReachingTheFakeYooKassaHost`).
+- [x] A mid-cycle upgrade charges the prorated difference immediately and updates
       `sites.tier`/`seat_limit` on the same verified-webhook discipline `13-02` established — proven with
-      a real prorated amount computed against a real `current_period_end`, not a fixed test fixture.
-- [ ] A mid-cycle downgrade makes no immediate charge and no immediate write, and is confirmed applied
+      a real prorated amount computed against a real `current_period_end`.
+- [x] A mid-cycle downgrade makes no immediate charge and no immediate write, and is confirmed applied
       only once `current_period_end` passes.
-- [ ] A downgrade that would drop `seat_limit` below the live operator count is not blocked — proven by
+- [x] A downgrade that would drop `seat_limit` below the live operator count is not blocked — proven by
       completing one, and by then confirming the site enters the over-seats condition rather than the
       downgrade being refused.
-- [ ] An operator whose `HoldsSeat` is toggled off cannot sign in (a token that previously resolved to a
-      real `OperatorId` claim resolves to none) — proven with a real token against the real
-      `OperatorIdentityClaimsTransformation` path, not asserted from the flag alone.
-- [ ] Removing an operator: excludes them from `13-01`'s own seat-count check (a site at its `seat_limit`
+- [x] An operator whose `HoldsSeat` is toggled off cannot sign in (a token that previously resolved to a
+      real `OperatorId` claim resolves to none) — proven with a real Keycloak token against the real
+      `OperatorIdentityClaimsTransformation` path
+      (`OperatorSeatAssignmentAuthenticationTests.RealToken_WhoseOperatorRowHasHoldsSeatToggledOff_ResolvesToNoOperatorIdClaim`).
+- [x] Removing an operator: excludes them from `13-01`'s own seat-count check (a site at its `seat_limit`
       can redeem a new invite immediately after removing one existing operator, in the same test) — the
-      exact regression `13-01`'s `COUNT(*)` query needs guarding against once this item lands — blocks
-      their sign-in permanently, and releases their `Assigned` conversations back to `Waiting`, each
-      proven with a real second call/token, not asserted from the handler's logic alone.
-- [ ] The over-seats condition (`assigned-seat count > seat_limit`) is computed correctly under a
+      exact regression `13-01`'s `COUNT(*)` query needed guarding against. **Independently re-verified**:
+      confirmed `AND o.RemovedAt == null` present directly in
+      `OperatorInviteRedemptionRepository`'s count query. Blocks sign-in permanently, and releases the
+      removed operator's `Assigned` conversations back to `Waiting` through a real outbox/consumer round
+      trip (`OperatorRemovalEndToEndTests`).
+- [x] The over-seats condition (`assigned-seat count > seat_limit`) is computed correctly under a
       realistic concurrent scenario (a downgrade landing at the same moment as an operator toggling
-      another operator's seat) — proven, not asserted from the query looking right.
-- [ ] `adr/0072` (or the next free number at time of writing — confirmed against `docs/adr/README.md`
-      before use, since `13-02`'s own worker found the number this item's earlier draft assumed,
-      `adr/0025`, was already taken) records the four `decisions/0006` policies and the seat-assignment/
-      operator-removal mechanism, matching `13-01`/`13-02`'s own rigor.
-- [ ] `docs/architecture/data-model.md` gains `BillingSubscription`'s new `past_due`/`current_period_end`
+      another operator's seat) — proven against real-Postgres ground-truth `COUNT(*)` after the race
+      settles, not asserted from the query looking right
+      (`OverSeatsDerivedConditionConcurrencyTests`, `Ago.Chat.Concurrency.Tests`).
+- [x] `adr/0073` (the backlog's own draft assumed `adr/0072`, already taken by `16-03`'s tenant-export
+      ADR by the time this item was implemented — confirmed free before use, matching `13-02`'s own
+      precedent for the identical situation) records the four `decisions/0006` policies and the
+      seat-assignment/operator-removal mechanism, matching `13-01`/`13-02`'s own rigor.
+- [x] `docs/architecture/data-model.md` gains `BillingSubscription`'s new `past_due`/`current_period_end`
       shape, `Operator.HoldsSeat`/`RemovedAt`, and a note on the over-seats derived-condition choice.
-- [ ] `docs/architecture/authorization.md` notes the sign-in-blocking behaviour added to
-      `OperatorIdentityClaimsTransformation`.
+- [x] `docs/architecture/authorization.md` notes the sign-in-blocking behaviour added to
+      `OperatorIdentityClaimsTransformation` — added as its own no-new-policy-code observation, since the
+      transformation itself required no code change; its behavior changed only because the queries it
+      depends on changed underneath it.
+
+## Outcome
+
+Shipped in `ago-chat#115` (merged 2026-08-29; CI green). Full command set green: 0 warnings, 0 errors,
+1141/1141 tests across all 6 real `Ago.Chat.*` test assemblies after rebasing onto `main` (`18-01`
+merged concurrently — one additive conflict in `ConversationErrors.cs`, resolved by keeping both
+blocks), independently re-verified by the managing session, not just the implementing worker.
+
+Every Done-when item is met, including the one requiring real ЮKassa test-mode credentials this
+codebase does not have: the fake-ЮKassa-host tests substitute for that (matching `13-02`'s own
+already-established precedent), and the recurring-charge wire format itself carries the identical
+unverified-against-a-live-credential caveat `13-02`'s own ADR names.
+
+Two implementer's-call decisions worth recording here since the backlog left them open: `BillingSubscription`
+is extended in place across its whole lifetime rather than replaced by a new row per billing cycle (the
+type was already named for what it becomes, and `billing_webhook_events` already gives an audit trail
+nothing else needs to duplicate); and the mid-cycle seat-change endpoint is its own route
+(`POST /api/v1/sites/{siteId}/billing/subscriptions/{id}/seats`), not a second code path grafted onto
+`13-02`'s checkout-session endpoint, since the two operations share no request/response shape.
 
 ## The policy, decided 2026-08-25
 

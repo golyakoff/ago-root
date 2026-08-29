@@ -73,3 +73,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0070 | Telegram outbound calls routed through a VLESS relay | Accepted |
 | 0071 | ЮKassa webhook signature scheme and credential shape | Accepted |
 | 0072 | Tenant export format, versioning, and why attachment bytes are referenced, not embedded | Accepted |
+| 0073 | Subscription lifecycle: recurring charge, retry, cancellation, mid-cycle change, seat assignment | Accepted |

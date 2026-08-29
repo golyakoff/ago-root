@@ -484,6 +484,27 @@ it — defeating the feature's own purpose. The two-check shape survives unchang
 party to the conversation containing it, for the first time in this codebase — see that document's
 own note on `18-07` for what this changes about `messages.body`'s exposure.
 
+## Seat assignment blocks sign-in with no new policy code: shipped in `13-03`
+
+`OperatorIdentityClaimsTransformation` needed no code change at all to gain a new sign-in-blocking
+behaviour — the two queries `ResolveOperatorIdentityHandler` resolves a signed-in principal's `sub`
+through (`IOperatorRepository.GetByExternalSubjectIdAndSiteIdAsync`, the `RequestedSiteId`-present path
+`adr/0068` added, and `ListByExternalSubjectIdAsync`, the `RequestedSiteId`-absent path) now both filter
+on `HoldsSeat AND RemovedAt IS NULL`. A real `operators` row whose `HoldsSeat` is `false`, or whose
+`RemovedAt` is set, now resolves to no row at all from either query — which `ResolveOperatorIdentityHandler`
+already turns into "no `OperatorId`/`SiteId` claim added", the exact same shape `RequireOperatorIdentity`'s
+`RequireClaim` check already refuses for a `sub` matching no `operators` row whatsoever.
+
+In other words: this is not a third gate added above the existing two-actor resolution path, it is the
+same resolution path now answering "no" for two more real situations (a seat toggled off, an operator
+removed) that could not previously arise, because nothing before `13-03` ever gave `operators` a row
+either fact to record. Proven with a real Keycloak-issued token against the real resolution path
+(`OperatorSeatAssignmentAuthenticationTests`, `Ago.Chat.Integration.Tests`): a token that resolves an
+operator successfully, then — after the same row's `HoldsSeat` is toggled off, or the row is removed,
+with no new token issued — is refused `403` on its very next request, exactly as
+`KeycloakUserWithNoMatchingOperatorRow_IsRejected` already proves for an identity with no `operators`
+row at all.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

@@ -113,6 +113,27 @@ denial.
   operator whose `holds_capacity_claim` is true** - see the `conversations` bullet below and
   `adr/0033`.
 
+  **Shipped in `13-03`.** Two new columns: `holds_seat` (`bool`, default `true` - every operator
+  created today is created inside `13-01`'s own seat-limit check and therefore already fits) and
+  `removed_at` (`timestamptz?`, `null` until a real "this person is gone" action, never cleared once
+  set - there is no un-remove). Both are plain flags, not a value object - neither has any lifecycle
+  beyond "on or off" / "set once", the same "one column, no object to bundle it into yet" judgement
+  `sites.tier`/`sites.seat_limit` below already made for the analogous case. `13-01`'s own
+  `operator_invites` seat-limit check (`OperatorInviteRedemptionRepository`'s `COUNT(*) FROM operators
+  WHERE site_id = @siteId`) now adds `AND removed_at IS NULL` - without it, a removed operator counted
+  against the seat limit forever, a real regression this item's own backlog named explicitly.
+  `holds_seat` is deliberately not part of that filter: the invite check answers "how many operator
+  rows does this site have", a different question from "how many currently hold an assigned seat".
+
+  **The over-seats condition - `count(operators WHERE holds_seat AND removed_at IS NULL) >
+  sites.seat_limit` - is a derived read, computed at request time, never a stored column.** A stored
+  flag would need its own invalidation path fired from at least three independent write paths (a
+  downgrade applying at renewal, an operator's own seat toggled, an operator removed) for a value a
+  plain two-table read already computes correctly on demand - the same reasoning `13-01`'s own
+  row-lock-vs-shadow-counter note gives for a different, low-frequency check below. Surfaced by
+  `GetSeatAssignmentSummaryHandler` (`GET /api/v1/sites/{siteId}/operators/seat-assignment-summary`).
+  Migration `Stage13AddSubscriptionLifecycleAndOperatorSeats`.
+
 - `operator_invites` (**shipped in `13-01`**) - `id` (uuid v7), `site_id`, `role_id` (FK to that site's
   own `roles` row - `"Operator"` or `"Admin"`, `adr/0016`'s tenant-local role scoping), `code_hash`
   (SHA-256 of a `RandomNumberGenerator`-generated plaintext code shown to the inviting operator exactly
@@ -153,6 +174,28 @@ denial.
   happens (`Site.ActivateSubscription`, this item's own first real writer of those two columns). Named
   for what it becomes, not only what it starts as: `13-03`'s recurring-charge job is scoped to extend
   this same row via `payment_method_id`, not create a new one per cycle.
+
+  **Extended in `13-03`.** `status` gains two values: `past_due` (a recurring re-charge failed;
+  `sites.tier`/`seat_limit` stay exactly as they were - `decisions/0006`'s "full access retained") and
+  `lapsed` (this row no longer entitles anything - reached either by exhausting a 7-day `past_due`
+  retry window with no successful recharge, or by an explicit cancellation running out its own
+  paid-through period; one terminal state for both, since from the site's own point of view the two
+  end in the identical place). Six new columns: `current_period_end` (`timestamptz?`, `null` until the
+  first payment succeeds, then advanced by a fixed 30-day period on every successful renewal - `13-02`'s
+  own checkout had no prior period to measure from, `13-03`'s recurring charge does),
+  `past_due_since` (`timestamptz?`, the anchor the 7-day retry window is measured from, set once on
+  entering `past_due` and never moved by a later retry), `last_renewal_attempt_at` (`timestamptz?`,
+  gates "no more than one retry attempt per calendar day" independently of `past_due_since`),
+  `cancel_requested` (`bool`, default `false` - the recurring-charge job checks this before ever
+  attempting a charge, so a cancelled-and-due row lapses with no charge attempt reaching ЮKassa),
+  `pending_seat_count`/`pending_tier` (`int?`/`text?`, a mid-cycle downgrade recorded but not applied -
+  `decisions/0006`'s "downgrades apply at the next renewal" - cleared and applied together the next
+  time a renewal actually succeeds, whether on-time or a `past_due` retry). The row is extended in
+  place across its whole lifetime, never replaced by a new row per billing cycle - an implementer's
+  call this item's own backlog left open, decided in favour of one row per subscription since nothing
+  in scope needs a queryable per-cycle history the `billing_webhook_events` ledger does not already
+  give as an audit trail. Migration `Stage13AddSubscriptionLifecycleAndOperatorSeats`.
+
 - `billing_webhook_events` (**shipped in `13-02`**) - `id`, `yookassa_payment_id`, `event_type`,
   `received_at`; unique on `(yookassa_payment_id, event_type)`. The idempotency ledger for ЮKassa's
   inbound webhook, adapted from `6-05`'s `(endpoint_id, message_id)` shape to this item's one-sender

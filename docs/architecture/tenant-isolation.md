@@ -14,11 +14,11 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **60**, across 52 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **33** |
-| Deliberately not RBAC-gated, each with a stated reason | **27** |
-| HTTP routes and hub methods that carry tenant data | **48** |
-| Routes taking a **client-supplied** `siteId` | **17** — nine route groups, all permission-gated |
+| Use-case entry points in `Ago.Chat.Application` | **66**, across 59 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **38** |
+| Deliberately not RBAC-gated, each with a stated reason | **28** |
+| HTTP routes and hub methods that carry tenant data | **54** |
+| Routes taking a **client-supplied** `siteId` | **22** — ten route groups, all permission-gated |
 | Read-model queries | **7**, in three read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
 
@@ -46,6 +46,18 @@ to for the first three: 60 entry points across 52 handler classes (33 gated, 27 
 hub methods (17 of them client-supplied `siteId`, across nine route groups), and 7 read-model queries.
 The cross-tenant-read count alone held at 1 — nothing added since `12-02` reads across tenants.
 
+**A same-day delta, not a third rescan.** `13-03` (subscription lifecycle, seat assignment) merged the
+day this document was reconciled, adding six entry points across five new handler classes:
+`CancelSubscriptionHandler`, `ChangeSubscriptionSeatsHandler`, `ToggleOperatorSeatHandler`,
+`RemoveOperatorHandler` and `GetSeatAssignmentSummaryHandler` (all `site:configure` or
+`site:manage-operators`-gated, on a new `/api/v1/sites/{siteId}/operators/...` route group plus two more
+routes on the existing billing group) and `ProcessSubscriptionRenewalHandler` (worker-side, exempt — the
+identical shape `AutoCloseConversationHandler` already has). Folded straight into the counts above rather
+than left for a future rescan, since the gap would otherwise reopen within hours of closing it: 66 entry
+points across 59 handler classes (38 gated, 28 exempt), 54 routes and hub methods (22 client-supplied
+`siteId`, across ten route groups). Read-model queries and the cross-tenant-read count are unaffected —
+`13-03` added no new read store.
+
 The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
 `TenantScopeExemptions` with a reason. The counts above are what that scan reports.
@@ -61,14 +73,16 @@ compares against.
    impossible by construction, not by check. Most operator routes work this way.
 2. **A signed visitor token.** `AuthEndpoints` mints `(visitorId, siteId)` together and signs them,
    so the pairing is not forgeable either. Same property as (1), different issuer.
-3. **The client, in a route segment.** Nine route groups as of this writing —
+3. **The client, in a route segment.** Ten route groups as of this writing —
    `/api/v1/sites/{siteId}/widget-config`, `/api/v1/sites/{siteId}/webhooks/...`, since `14-04`
    `/api/v1/sites/{siteId}/offline-auto-reply`, and since `13-01`/`13-02`/`14-02`/`16-02`/`16-03`
    `/api/v1/sites/{siteId}/operator-invites`, `/api/v1/sites/{siteId}/billing/checkout-sessions`,
    `/api/v1/sites/{siteId}/channels/max`, `/api/v1/sites/{siteId}/channels/telegram`,
-   `/api/v1/sites/{siteId}/erase` and `/api/v1/sites/{siteId}/exports/...`. This is
-   deliberate and documented in the code: an operator's own site claim is not necessarily the site
-   being configured. **On these routes the permission check is the entire defence**, which is why
+   `/api/v1/sites/{siteId}/erase` and `/api/v1/sites/{siteId}/exports/...`, and since `13-03`
+   `/api/v1/sites/{siteId}/billing/subscriptions/{id}/...` (two more routes on the existing billing
+   group) plus a new `/api/v1/sites/{siteId}/operators/...` group (seat toggle, removal, seat-summary).
+   This is deliberate and documented in the code: an operator's own site claim is not necessarily the
+   site being configured. **On these routes the permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
    real `PermissionChecker`, rather than at the handler level with a fake.
 4. **Nowhere — deliberately.** `GET /api/v1/owner/sites` (`12-02`) has no `site_id` at all. See
@@ -135,9 +149,14 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `RequestConversationErasureHandler` | operator claim | `conversation:erase` | `erasureRequests.RequestConversationErasureAsync` is scoped by `command.SiteId` as well as `ConversationId`; `16-02` |
 | `GetVisitorHistoryHandler.HandleAsOperatorAsync` | operator claim | `conversation:read` | `conversation.OperatorId == caller`; `18-07` |
 | `GetVisitorHistoryHandler.HandleHistoricalConversationAsOperatorAsync` | operator claim | `conversation:read` | `conversation.OperatorId == caller` on the requesting conversation, **and** `historical.VisitorId == conversation.VisitorId` on the historical one; `18-07` |
+| `CancelSubscriptionHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `13-03` |
+| `ChangeSubscriptionSeatsHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `13-03` |
+| `ToggleOperatorSeatHandler` | **route segment** | `site:manage-operators` | n/a — the operator being toggled is looked up by the same `SiteId`; `13-03` |
+| `RemoveOperatorHandler` | **route segment** | `site:manage-operators` | n/a — the operator being removed is looked up by the same `SiteId`; `13-03` |
+| `GetSeatAssignmentSummaryHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `13-03` |
 | *(the two `GetConversationHistory` operator entry points are counted separately above)* | | | |
 
-### Not RBAC-gated, with the reason (27)
+### Not RBAC-gated, with the reason (28)
 
 **Visitor paths (7).** A visitor is outside the role system entirely (`adr/0016`), so there is nothing
 to ask `IPermissionChecker`. What replaces it is *narrower* than a site check: the handler compares
@@ -180,11 +199,12 @@ leak and, in most cases, no principal yet to check anything for.
   presented invite code's own `code_hash` lookup resolves the site the write lands on, never a value
   this caller supplies.
 
-**Consumer and worker side (10).** No external caller reaches most of these: the input is an
+**Consumer and worker side (11).** No external caller reaches most of these: the input is an
 integration event this system itself published, so the site is a fact already established by the
-write that raised it. Three of the ten (`ReceiveChannelMessageHandler`, `AutoCloseConversationHandler`,
-`ListMyTenanciesHandler`) are not broker-triggered and are called out individually below — they sit
-here because, like the broker-fed ones, none of them has a caller-supplied `SiteId` to check.
+write that raised it. Four of the eleven (`ReceiveChannelMessageHandler`, `AutoCloseConversationHandler`,
+`ListMyTenanciesHandler`, `ProcessSubscriptionRenewalHandler`) are not broker-triggered and are called
+out individually below — they sit here because, like the broker-fed ones, none of them has a
+caller-supplied `SiteId` to check.
 
 `DispatchWebhooksForEventHandler`, `RecordUnreadMessageHandler`, `SendOfflineAutoReplyHandler`,
 `ResolveConversationAssignmentTargetsHandler`, `ResolveMessageDeliveryTargetsHandler`,
@@ -217,6 +237,14 @@ the scan itself established by reading `conversations.state` and `messages.creat
 verify. There is also no principal to check a permission for — nobody asked for this close, a
 scheduled sweep did — and what a `SiteId` check would have protected against is already ruled out
 structurally: `IConversationRepository.GetByIdAsync` loads exactly the row the scan named.
+
+`ProcessSubscriptionRenewalHandler` (`13-03`, worker side) is the identical shape as
+`AutoCloseConversationHandler` immediately above — the only input is a `BillingSubscriptionId` that
+`SubscriptionRenewalJob`'s own candidate scan already restricted to rows whose `current_period_end` has
+passed or whose retry is due, a fact the scan established by reading `billing_subscriptions` directly,
+not a claim to verify. No principal to check a permission for — nobody asked for this renewal attempt,
+a scheduled sweep did — and the one write this handler can make (a real charge against a stored payment
+method) acts only on the row the scan named, never on a caller-supplied id.
 
 `ListMyTenanciesHandler` (`13-07`/`adr/0068`) is the odd one structurally: it is reached by an
 authenticated caller over HTTP, not a broker delivery, but it has no single `SiteId` to scope to *by
