@@ -14,10 +14,10 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **66**, across 59 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **38** |
+| Use-case entry points in `Ago.Chat.Application` | **67**, across 60 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **39** |
 | Deliberately not RBAC-gated, each with a stated reason | **28** |
-| HTTP routes and hub methods that carry tenant data | **54** |
+| HTTP routes and hub methods that carry tenant data | **55** |
 | Routes taking a **client-supplied** `siteId` | **22** — ten route groups, all permission-gated |
 | Read-model queries | **7**, in three read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
@@ -57,6 +57,15 @@ than left for a future rescan, since the gap would otherwise reopen within hours
 points across 59 handler classes (38 gated, 28 exempt), 54 routes and hub methods (22 client-supplied
 `siteId`, across ten route groups). Read-model queries and the cross-tenant-read count are unaffected —
 `13-03` added no new read store.
+
+**A second same-day delta.** `18-02` (transfer a conversation) added one entry point in one new
+handler class, `TransferConversationHandler` — `conversation:assign`-gated (the same permission
+`AssignConversationHandler` already uses), `siteId` from the operator claim like `/close` and `/read`
+beside it, not client-supplied, on the existing `/api/v1/conversations/{conversationId}/transfer`
+sub-resource rather than a new route group. Folded straight in for the same reason `13-03`'s delta was:
+67 entry points across 60 handler classes (39 gated, 28 exempt), 55 routes and hub methods (22
+client-supplied `siteId`, across ten route groups, unchanged — the new route is not one of them).
+Read-model queries and the cross-tenant-read count are unaffected — `18-02` added no new read store.
 
 The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
@@ -110,7 +119,7 @@ Grouped by gate. The full machine-checked list lives in
 `ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs`; this table is the same
 information organised for a reader.
 
-### RBAC-gated (33)
+### RBAC-gated (39)
 
 Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything else.
 
@@ -154,6 +163,7 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `ToggleOperatorSeatHandler` | **route segment** | `site:manage-operators` | n/a — the operator being toggled is looked up by the same `SiteId`; `13-03` |
 | `RemoveOperatorHandler` | **route segment** | `site:manage-operators` | n/a — the operator being removed is looked up by the same `SiteId`; `13-03` |
 | `GetSeatAssignmentSummaryHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `13-03` |
+| `TransferConversationHandler` | operator claim | `conversation:assign` | `conversation.OperatorId == command.FromOperatorId`; target looked up by `(OperatorId, SiteId)` so a cross-site target is structurally impossible, not merely refused; `18-02` |
 | *(the two `GetConversationHistory` operator entry points are counted separately above)* | | | |
 
 ### Not RBAC-gated, with the reason (28)

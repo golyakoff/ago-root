@@ -75,3 +75,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0072 | Tenant export format, versioning, and why attachment bytes are referenced, not embedded | Accepted |
 | 0073 | Subscription lifecycle: recurring charge, retry, cancellation, mid-cycle change, seat assignment | Accepted |
 | 0074 | Retention archive: precise attachment expiry, and retrieval as a direct read | Accepted |
+| 0075 | An explicit-transaction port, and a canonical lock order, for transferring a conversation | Accepted |

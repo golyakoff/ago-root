@@ -244,6 +244,24 @@ rule - `ConcurrencyTestFixture` runs Postgres with `deadlock_timeout=10ms` and `
 that asserts no close escapes with an exception, that the exact claim/assignment invariant survives,
 and that Postgres genuinely detected deadlocks during the run, so a quiet run cannot pass vacuously.
 
+**Shipped in `18-02`: a fourth writer, and a third branch of the rule above.** `TransferConversationHandler`
+takes two `operators` rows - the source being released, the target being claimed - inside one
+`IUnitOfWork` transaction, the codebase's first explicit-transaction port (`adr/0075`). Unlike the
+engine's batches, a transfer always knows both rows before it starts, so it does not have to accept a
+data-dependent order the way `4-02`'s batch does: it takes "many rows, own the retry" but with a
+**fixed** order instead - whichever operator id sorts smaller is touched first, regardless of transfer
+direction - which rules out a transfer inverting against an opposite-direction transfer of the same two
+operators. It remains a plain participant in the engine's own accepted, data-dependent cycle above
+(`adr/0037`) and absorbs that the same way: the whole transaction retries, 5 attempts, `Random 4-16ms
+x attempt` jittered backoff, matching `ReleaseAsync`'s own proven bound - revised up from an initial
+guess of 2 after `TransferringRacesTheAssignmentEngine_NeverCorruptsCapacityOrDropsTheConversation`
+measured a bare single retry losing every transfer under a real storm. On exhausting its attempts the
+handler returns a clean `Result` failure rather than throwing - **an operator never sees `40P01` for
+pressing "transfer"**, the same guarantee `CloseConversationHandler` gives above, reached the opposite
+way: nothing here ever partially commits, so there is no already-succeeded outcome to protect on the
+way out, unlike the close's leaked-slot residual. See `adr/0075` for the full reasoning, including a
+named gap in one concurrency test's own proof of the lock-order claim.
+
 Both participants are notified through the same fan-out path `3-02` built:
 `ConversationAssignedToOperator` (a new integration event, named differently from the domain event
 `ConversationAssigned` - `Contracts`/`Domain` naming split established in `3-02` for the same

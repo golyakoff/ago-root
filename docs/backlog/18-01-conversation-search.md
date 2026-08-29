@@ -1,7 +1,7 @@
 # Search across conversations
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (2026-08-29, `ago-chat#114` + `ago-console#56`) — see Outcome below
 - **Depends on**: nothing new architecturally — but read the partitioning note below before assuming
   this is an ordinary index
 
@@ -66,14 +66,32 @@ forgets `site_id` is the worst possible instance of the defect that item exists 
 
 ## Done when
 
-- [ ] An operator can find a conversation by a phrase in it, within the stated bound.
-- [ ] The bound is visible, not silent.
-- [ ] `messages` carries a denormalized `site_id` column, populated at write time, with a migration
+- [x] An operator can find a conversation by a phrase in it, within the stated bound.
+- [x] The bound is visible, not silent.
+- [x] `messages` carries a denormalized `site_id` column, populated at write time, with a migration
       backfilling existing rows via the owning `Conversation`.
-- [ ] Cross-site isolation is proven by a test, not by the query looking right.
-- [ ] The partition consequences of the index are written down in `data-model.md`; the "`messages`
+- [x] Cross-site isolation is proven by a test, not by the query looking right.
+- [x] The partition consequences of the index are written down in `data-model.md`; the "`messages`
       carries no `site_id`" fact is updated to reflect the new column.
 
 ## Open questions
 
 None. The scope decision above is this item's own to make and record.
+
+## Outcome
+
+Shipped as `SearchConversationsHandler` (`ago-chat#114`) plus a console search page
+(`ago-console#56`). The bound chosen: an operator-supplied phrase **and** an optional `from`/`to` date
+range, both visible as real query parameters — no silent window. `messages.site_id` was denormalized
+(`adr/0031`'s Addendum, decided alongside `13-02`) with a composite index carrying it next to the
+full-text index; cross-site isolation was proven by `ConversationSearchStoreTests` and independently
+re-verified by mutating the `WHERE m.site_id = @SiteId` predicate to a tautology, confirming a leak of
+two rows across sites instead of one, then restoring and re-running green.
+
+Archived history was answered honestly rather than assumed: no REST history endpoint existed for a hit
+to link into at the time this item shipped, and the SignalR hub's `JoinConversationAsync` has the real
+side effect of claiming a `Waiting` conversation — so an `Assigned` search hit gets a real
+`?at=<sequence>` deep link with backward-paging-to-target and highlight, while a `Waiting`/`Closed` hit
+gets no link, only an explanatory note that opening it is not yet wired. Recorded here rather than left
+implicit, since it is the kind of gap a later item could otherwise silently reopen believing search
+already covers it.
