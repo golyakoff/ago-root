@@ -156,6 +156,24 @@ store live on this one filesystem. 15% of 79 GB is roughly 12 GB — chosen as "
 fix this", not "you are out of room". `nfr.md` states no disk target, so this number is a headroom
 choice and is labelled as one rather than dressed up as a derived limit.
 
+**Why 12 GB is enough room, checked rather than assumed (`15-05`, 2026-08-29).** Prometheus's own
+`node_filesystem_avail_bytes` series gives a real trailing-4-day fill rate of ~0.56 GB/day — 12 GB of
+headroom at that rate is roughly 21 days from this alert firing to actual exhaustion, well past this
+rule's own 24h `repeat_interval`. That rate is real but explicitly fragile (one demo tenant, no real
+traffic pattern, measured before `15-04`'s pruning has removed anything) and is not a promise about
+when the disk actually fills — treat it as the reason 12 GB is comfortable today, not as a countdown.
+
+**Why 12 GB and not less — what a local fill test found.** `15-05` filled a throwaway, size-capped
+Postgres volume locally (never this deployment) and found Postgres does not degrade gracefully as free
+space drops — it is fine until it is not. A write that needs to grow a heap or temp file at zero bytes
+free fails cleanly (a normal SQL error, no crash); a write that needs to grow the WAL at that same
+moment `PANIC`s the whole instance, and the crash recovery that follows needs its own WAL space — if
+the disk is still full, recovery fails too and Postgres does not come back on its own. It recovers
+reliably once real space exists again anywhere on the same filesystem (not necessarily inside
+Postgres's own directory), with no corruption observed. The operational reading: this alert firing is
+the calm point to free space; past zero bytes free, freeing space is the only way Postgres returns, and
+it will not happen by itself.
+
 **First check.**
 
 ```bash

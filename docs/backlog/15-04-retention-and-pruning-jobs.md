@@ -13,10 +13,14 @@
 
 Nothing on the deployment grows without bound. Today several things do: `outbox` rows are never
 deleted after publication, `messages` partitions are created and never dropped, and the webhook
-delivery log accumulates one row per attempt forever. On a 2Gi Postgres volume on a one-node VPS, an
-unbounded table is not a hygiene issue, it is an outage with a delay fuse. After this item each of
-those has something that removes what is no longer needed, on a schedule, with the removal itself
-observable.
+delivery log accumulates one row per attempt forever. **Corrected 2026-08-29 (`15-05`)**: this was
+originally framed against "a 2Gi Postgres volume" — there is no such ceiling; `local-path` applies no
+quota, so Postgres shares the node's real disk with every other component. The reframed version is no
+less urgent for being a different shape: on a one-node VPS with ~58G of real shared free space shrinking
+at a measured ~0.56 GB/day (`15-05`, fragile — one pre-traffic tenant), an unbounded table is not a
+hygiene issue, it is an outage with a delay fuse whose length is the node's headroom divided by its
+fill rate, not any one volume's declared size. After this item each of those has something that removes
+what is no longer needed, on a schedule, with the removal itself observable.
 
 ## Context to read first
 
@@ -94,5 +98,7 @@ belongs to `13-05` and is deliberately left there rather than answered here as a
 
 Note added 2026-08-25: `architecture/personal-data.md` records that message content is the bulk of the
 personal data here and the part that cannot be minimised by choosing fields, which makes this item's
-machinery the mechanism behind the strongest privacy lever available — not only a way to keep a 2Gi
-volume alive. The scope boundary above is unchanged; the reason to build it well is larger.
+machinery the mechanism behind the strongest privacy lever available — not only a way to keep the
+node's shared disk headroom intact (corrected 2026-08-29, `15-05`; originally "not only a way to keep a
+2Gi volume alive" — the same non-existent ceiling corrected above). The scope boundary above is
+unchanged; the reason to build it well is larger.

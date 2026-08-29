@@ -221,6 +221,10 @@ directory) and `Certificate` (one cert covering `chat.`, `auth.`, and `console.r
   network-partition testing) carry over unchanged to the public deployment — this item does not
   change that reality, it only moves it to a real, internet-reachable machine. `nfr.md`'s "not an
   uptime SLA — this is a demo cluster" framing is the honest bar this deployment is held to.
+  **Added 2026-08-29 (`15-05`)**: a fourth limit carries over the same way and was not named when this
+  bullet was first written — `local-path` applies no per-PVC quota, so the six PVCs' declared sizes are
+  labels, not capacity limits, on this VPS exactly as on `k8s-local.md`'s own Docker Desktop cluster;
+  the node's shared free space is the real ceiling, not any one volume's requested size.
 - Keycloak keeps running in `start-dev --import-realm` mode (matching local, per the backlog's own
   instruction to reuse `5-05`'s realm-import mechanism unmodified) with `--hostname`/`--proxy-headers`
   flags added so its issuer URL matches the public route — full production hardening of Keycloak

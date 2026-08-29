@@ -252,6 +252,14 @@ Only the cluster can answer these, so use it for them:
 
 - One node: pod anti-affinity, node drain and real network partitions cannot be tested here. Say so
   rather than claiming coverage that does not exist.
+- **PVC sizes are labels here too, not enforced limits — found live while building `15-05`'s local
+  disk-fill test.** Docker Desktop's default `hostpath` StorageClass backs a PVC with a plain directory
+  on the VM's own disk and applies no quota, the same character as the demo overlay's `local-path`
+  (`k8s/base/*.yaml`'s own PVC comments have the full reasoning). A `kubectl get pvc` "2Gi" here means
+  exactly as little as it does on the public deployment: every pod actually shares the VM's own free
+  space. If you need to reproduce real disk-pressure behaviour locally, cap the volume a different way
+  — an `emptyDir` with `medium: Memory` and a `sizeLimit` is kernel-enforced and does not risk the VM's
+  real disk the way trying to actually fill a `hostpath` PVC to its declared size would.
 - Docker Desktop's resource limits are the effective ceiling for every load number produced locally,
   and every report must state them (`load-testing.md`).
 - **`17-05`'s `securityContext` blocks are in `k8s/base/`, so the local overlay gets them too — and

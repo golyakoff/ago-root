@@ -148,6 +148,33 @@ section) is still true today — the column does not exist until `18-01` builds 
 now carries a forward note recording that this is *changing*, per this addendum, the same convention
 already used there for `adr/0031`'s own partitioning change.
 
+## Addendum (2026-08-29) — `15-05`'s numbers, and the window is still not set here
+
+**This ADR's Decision 5 said the window's length "is set once `15-05` has measured real storage growth
+per tenant, which nobody has done."** `15-05` has now done the first part of that — real measurement,
+not the second part, deliberately: the window's actual length is still `13-05`'s call, unblocked by
+real input rather than answered here. This addendum exists so a reader does not have to chase `15-05`
+separately to know what changed and what didn't.
+
+**What `15-05` measured (2026-08-29)**: the node's real free disk is 58G of 79G total, shrinking at a
+Prometheus-measured ~0.56 GB/day over its first four days of continuous data, giving a naive linear
+runway of roughly 100 days. **Stated exactly as `15-05` itself states it, because restating it any more
+confidently would misrepresent it**: one slope from one demo tenant carrying no real customer traffic,
+measured before `15-04`'s pruning jobs have removed anything at all (nothing in this deployment is old
+enough yet) and before this ADR's own archive-then-drop mechanism (`13-06`, shipped 2026-08-29) has
+processed a single real period. It is real, measured data — better than the nothing this ADR's Decision
+5 had to work with in August — and it is not a number to plan a retention window against yet.
+
+**Why the window still is not set here.** `15-05`'s own number describes the *aggregate* node — every
+tenant, every component, today's traffic. `13-05`'s question is a *per-tenant, per-tier* window, which
+needs a different measurement this ADR's own numbers cannot supply: how much of that 0.56 GB/day is one
+tenant's message history specifically, versus attachments, versus Postgres/Prometheus/RabbitMQ
+overhead, versus every other tenant on the same node. Setting a window from the aggregate rate alone
+would repeat the exact mistake `CLAUDE.md` rule 7 warns against — a number that sounds derived but was
+really invented from data that doesn't answer the question asked. `13-05` stays blocked on its own
+business decision (time-boxed vs. unlimited) and, once decided in shape, on a real per-tenant number
+this addendum's data does not yet provide.
+
 ## Alternatives considered
 
 - **A uniform window for every tier.** The cheapest possible answer — a plain `DROP PARTITION` with no
