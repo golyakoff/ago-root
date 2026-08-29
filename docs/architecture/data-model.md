@@ -313,13 +313,20 @@ denial.
 
 ## Partitioning
 
-**Changing, per `adr/0031` (decided 2026-08-25, built by `backlog/13-06`)**: `messages` becomes
-multi-level — `PARTITION BY LIST (retention_class)` at the top, each class partitioned by month
-exactly as below. The class is stamped from the tenant's tier when a message is written and never
-changes, so a tier change moves no rows; the product statement is "history is kept according to the
-plan it was written under". Every unique constraint widens by that column again, extending `adr/0019`
-rather than reopening it. The rest of this section describes what is shipped today and stays true of
-each class's own monthly grid.
+**Shipped in `13-06`** (`adr/0031`, decided 2026-08-25): `messages` is multi-level —
+`PARTITION BY LIST (retention_class)` at the top, each class partitioned by month exactly as below.
+The class is stamped from the tenant's tier when a message is written and never changes, so a tier
+change moves no rows — proved with a real Postgres by a test that changes a site's tier and checks an
+already-written row's class afterwards. Every unique constraint widens by that column again, extending
+`adr/0019` rather than reopening it (`adr/0019`'s own addendum). Three classes exist today
+(`RetentionClass.KnownClasses`, mirroring `SubscriptionTierBands`' three tiers): `messages_free`,
+`messages_starter`, `messages_growth`, each carrying the monthly grid the rest of this section
+describes. `13-06`'s own migration (`Stage13RepartitionMessagesByRetentionClass`) applied the identical
+rename/create/copy/drop technique `2-06`'s own migration established, one level deeper — existing
+rows' `retention_class` is a one-time approximation from the owning site's *current* tier at migration
+time, stated as such rather than smoothed over. See `adr/0074` for the two things this item's
+implementation surfaced that `adr/0031` itself did not specify (precise attachment expiry across a
+mid-month tier change; retrieval as a direct read rather than a request/poll pipeline).
 
 ### Structured message content (`14-06`)
 
@@ -374,6 +381,12 @@ current month plus the next two always present afterward, via `CREATE TABLE IF N
 PARTITION OF` per partition - idempotent by construction, safe under a missed run or two `Worker`
 replicas racing to create the same one.
 
+**Deepened once, in `13-06`**: each class-level partition above (`messages_free` etc.) is itself
+`PARTITION BY RANGE (created_at)`, monthly — the shape `2-06` originally gave to `messages` itself
+before `13-06` inserted the class level above it. `PartitionMaintenanceJob` now creates this grid once
+per class, not once total; the same `CREATE TABLE IF NOT EXISTS ... PARTITION OF` idempotency applies
+per class, unchanged.
+
 **Consequence for the uniqueness guarantee** (`adr/0019`): Postgres requires every unique
 constraint on a partitioned table - primary key included - to include the partition column. The
 primary key becomes `(id, created_at)`, and the `(conversation_id, sequence)` unique index widens to
@@ -382,7 +395,18 @@ land in the same partition with different `created_at` values no longer collide 
 level. It is an acceptable one because this index was always the *last* line of defence
 (`concurrency.md`) - the first is the `Conversation` aggregate's optimistic-concurrency
 load-mutate-save on `xmin`, which still rejects the race that matters (two saves computing the same
-`LastSequence`) regardless of what the `messages` index can see.
+`LastSequence`) regardless of what the `messages` index can see. **Widened a second time in `13-06`**
+to `(id, created_at, retention_class)`/`(conversation_id, sequence, created_at, retention_class)` -
+`adr/0019`'s own addendum has the detail; nothing about the argument above changed, only the column
+count.
+
+**Reading the partition list now needs `pg_partition_tree`, not a direct `pg_inherits` lookup on
+`messages`.** Verified against a real Postgres 17 while building `13-06`: `pg_inherits` filtered to
+`inhparent = 'messages'::regclass` returns only the three class-level partitions, never the monthly
+leaves underneath them, now that there are two levels. `MessagePartitionPruneQuery.ListPartitionsAsync`
+(shared by `MessagePartitionPruneJob`, `MessageSearchIndexJob` and `MessageSiteIdBackfillJob`) reads
+`pg_partition_tree('messages') WHERE isleaf` instead, which returns the correct set regardless of
+nesting depth.
 
 ## Personal data
 
@@ -486,6 +510,16 @@ via `PostgresFixture`'s own migration run), including that the unique index actu
 `(site_id, kind, external_address)` at the storage level - proven with a raw insert that bypasses the
 repository, and shown to be load-bearing by removing `unique: true` from the migration and watching that
 one test go red.
+
+`Stage13RepartitionMessagesByRetentionClass` and `Stage13AddMessageArchives` (`13-06`) are verified
+against a real Postgres 17, from scratch: the two-level rename/create/copy/drop conversion applies
+cleanly, existing `site_id` values and the pre-existing `ck_messages_content_length` CHECK constraint
+both survive the copy (the latter found missing by a failing test during development, then restored -
+the rename/drop step silently loses every constraint on the old table that is not explicitly
+re-added), and a live-fire test proves a failed archive upload leaves the partition undropped. Both
+migrations are additive/one-way respectively - `Stage13RepartitionMessagesByRetentionClass`'s `Down`
+throws, for the same "reassembling a two-level grid is a data-recovery procedure, not a rollback"
+reason `Stage2PartitionMessages` already established one level shallower.
 
 EF Core migrations, one per change, named `<Stage><Verb><Subject>`. Rules:
 

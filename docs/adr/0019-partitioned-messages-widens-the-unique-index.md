@@ -81,3 +81,18 @@ gets past everything upstream.
   unique one. Rejected: query plans already use the unique index for the equality-on-conversation
   lookup pattern this table has today, so a second index would only add write overhead without
   serving a query the first one does not already serve.
+
+## Addendum (2026-08-29) — widened a second time by `13-06`
+
+`13-06`/`adr/0031` repartitions `messages` a second time — `PARTITION BY LIST (retention_class)` on
+top of this ADR's own `PARTITION BY RANGE (created_at)` — and the consequence this ADR already argued
+for applies once more, unchanged in kind: the physical primary key becomes
+`(id, created_at, retention_class)` and the `(conversation_id, sequence, created_at)` unique index
+widens to `(conversation_id, sequence, created_at, retention_class)`. Nothing in this ADR's own
+Decision or Alternatives needed to be reopened — `adr/0031`'s own Consequences section states this
+widening as "a further weakening of the same backstop, not a new kind of risk," which is this ADR's
+own argument, reapplied rather than replaced. `MessageConfiguration`'s `HasKey(m => m.Id)` divergence
+(this ADR's own second bullet) stays exactly as documented.
+
+This is now the ADR every future partition-key widening on `messages` should extend, rather than
+restate.

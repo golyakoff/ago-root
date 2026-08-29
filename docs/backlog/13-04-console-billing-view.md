@@ -1,7 +1,9 @@
 # Console: account and billing view
 
 - **Stage**: 13
-- **Status**: ready
+- **Status**: done (2026-08-29, `ago-chat#116`, `ago-console#57`) — see Outcome below. **Queue sweep
+  for this item was missed at merge time** and is being done here, alongside `13-06`'s own sweep, not
+  as a separate change — caught while sweeping `13-06`'s row and finding this one still `ready` too.
 - **Depends on**: `13-01-operator-invitations-and-seat-entitlement.md` (the seat count/limit this screen
   displays), `13-02-yookassa-subscription-checkout-and-webhook.md` (the checkout-session endpoint the
   upgrade action calls)
@@ -77,11 +79,34 @@ return alone (see Scope below for how this screen must reflect that honestly).
 - [ ] Manually verified against the local cluster, the same "verified live, not asserted" bar `5-06`/
       `10-03`/`12-03` used: a real admin-role operator reaches the screen, sees their site's real tier and
       seat usage, starts an upgrade through a real ЮKassa test-mode checkout, and the screen reflects the
-      pending-then-confirmed state honestly once `13-02`'s webhook lands.
-- [ ] A non-admin operator token is rejected cleanly from the route (a normal "not authorized" state, no
+      pending-then-confirmed state honestly once `13-02`'s webhook lands. **Not done** — no live ЮKassa
+      test-mode credentials exist in this environment, the same gap `13-02`/`13-03`/`16-03` already
+      documented. Everything else about this item is fully verified (route gating, display, the
+      pending-state polling logic against mocked backend sequences, the request shapes).
+- [x] A non-admin operator token is rejected cleanly from the route (a normal "not authorized" state, no
       billing data leaked), matching `12-03`'s own verification shape for its owner-only route.
-- [ ] CI build+lint stays green, matching every earlier console item's own precedent for what this
-      repository automates versus verifies by hand for `ago-console`.
+- [x] CI build+lint stays green, matching every earlier console item's own precedent for what this
+      repository automates versus verifies by hand for `ago-console` — 49 test files, 403 tests, all
+      green; `dotnet` side 1149/1149 across all 6 real test assemblies.
+
+## Outcome
+
+Shipped in `ago-chat#116` and `ago-console#57` (merged 2026-08-29). **Scope explicitly expanded
+beyond this item's own text**: this file's own Out-of-scope section excluded downgrade and
+cancellation, naming the reason as "`13-03`'s policy questions... unanswered." `13-03` merged before
+this item was implemented and answered all of them (`decisions/0006`) — shipping upgrade-only while
+citing that now-false reason would itself have been a small honesty gap, so the screen includes
+upgrade, downgrade and cancellation. Per-operator seat-assignment/toggle UI was deliberately **not**
+included — a genuinely different, current reason: it is gated by `site:manage-operators`, not
+`site:configure`, and is conceptually operator-management rather than billing.
+
+A real backend gap was found and closed in the same wave: no endpoint anywhere exposed
+`Site.Tier`/`SeatLimit` or the active `BillingSubscription` to a `site:configure` operator — blocking
+even this item's original upgrade-only scope, not just the expansion. `GET
+/api/v1/sites/{siteId}/billing/status` (`ago-chat#116`) closes it.
+
+Full command set green: `ago-chat` 1149/1149 across all 6 real test assemblies; `ago-console` 49 test
+files, 403 tests, typecheck and lint clean — both independently re-verified by the managing session.
 
 ## Open questions
 

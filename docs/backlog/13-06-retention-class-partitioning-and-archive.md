@@ -1,9 +1,7 @@
 # Retention class: repartition `messages`, prune per class, archive before dropping
 
 - **Stage**: 13
-- **Status**: ready — the shape is decided (`adr/0031`, 2026-08-25); the window's length is a
-  measurement `15-05` supplies, and the operational default from `15-04` holds until it does, so this
-  item can be built and switched on without it
+- **Status**: done (2026-08-29, `ago-chat#117`) — see Outcome below
 - **Depends on**: `15-04-retention-and-pruning-jobs.md` (the bounded-batch and partition-drop machinery
   this reuses rather than duplicates), `16-03-tenant-data-export.md` (its export format is the
   archive's format — whichever lands first defines it), and `15-05-capacity-and-disk-headroom.md` for
@@ -70,17 +68,59 @@ a cheaper disk.
 
 ## Done when
 
-- [ ] `messages` is partitioned by class then month, with the migration applied to a real Postgres
-      from scratch and the keys widened per `adr/0019`.
-- [ ] `retention_class` is stamped at write time and provably never updated afterwards — including a
-      test that changing a site's tier leaves existing rows untouched.
-- [ ] `PartitionMaintenanceJob` maintains the full grid idempotently.
-- [ ] A period is archived to object storage and only then dropped, proven by a test where the archive
-      write fails and the drop does not happen.
-- [ ] Attachments and thumbnails for an expired period are gone.
-- [ ] A tenant can request and receive an archived period.
-- [ ] `adr/0019`, `data-model.md` and `personal-data.md` all describe the schema and stores as they
-      now are.
+- [x] `messages` is partitioned by class then month, with the migration applied to a real Postgres
+      from scratch and the keys widened per `adr/0019` — `Stage13RepartitionMessagesByRetentionClass`,
+      verified against a real Postgres 17 from scratch.
+- [x] `retention_class` is stamped at write time and provably never updated afterwards — including a
+      test that changing a site's tier leaves existing rows untouched
+      (`MessageBatchWriterTests.FlushAsync_StampsRetentionClassFromTheSitesCurrentTier_...`; fails-before
+      re-proven independently by the managing session).
+- [x] `PartitionMaintenanceJob` maintains the full grid idempotently — per class per month.
+- [x] A period is archived to object storage and only then dropped, proven by a test where the archive
+      write fails and the drop does not happen
+      (`MessageRetentionArchiveEndToEndTests.WhenTheArchiveUploadFails_TheGateRefusesToConfirm_AndTheDropDoesNotHappen`
+      — real Postgres, real MinIO with a failure-injecting decorator, drives the real prune job end to
+      end. **Independently re-verified by the managing session**: disabled the gate check in
+      `MessagePartitionPruneJob`, confirmed the exact same test fails with `Expected: True / Actual:
+      False` — the partition was genuinely dropped despite the failed upload — restored, full suite
+      re-run green).
+- [x] Attachments and thumbnails for an expired period are gone — swept from the exact `attachment_id`
+      set a dropped partition's own rows referenced (`adr/0074`), not a date-range guess.
+- [x] A tenant can request and receive an archived period — `ListMessageArchivesHandler`/
+      `GetMessageArchiveDownloadUrlHandler`, a direct permission-gated read rather than a request/poll
+      pipeline (`adr/0074`'s own Decision 2, a deliberate departure from the backlog's "same async job
+      shape" wording since nothing is left to enqueue by the time a caller could ask).
+- [x] `adr/0019`, `data-model.md` and `personal-data.md` all describe the schema and stores as they
+      now are — plus `adr/0074`, a new ADR for the two things this item's implementation surfaced that
+      `adr/0031` itself did not specify.
+
+## Outcome
+
+Shipped in `ago-chat#117` (merged 2026-08-29; CI green). This is the single riskiest change landed
+this session — an irreversible two-level repartitioning of the busiest table in the system, with
+unrecoverable data loss as the literal failure mode if archive-before-drop ordering were ever wrong.
+Verified with unusual care as a result: the managing session independently re-ran the full suite twice
+(once immediately after the implementing worker's own report, once again after rebasing onto a moved
+`main`), and personally re-proved the two highest-stakes fails-before entries by mutating and reverting
+the code directly rather than trusting the worker's own report of having done so.
+
+Full command set green: 0 warnings, 0 errors, 1145/1145 tests across all 6 real `Ago.Chat.*` test
+assemblies, both before and after the rebase.
+
+A real, subtle bug was found and fixed during implementation, not by inspection but by testing against
+a real Postgres 17: `MessagePartitionPruneQuery.ListPartitionsAsync` (shared by
+`MessagePartitionPruneJob`, `MessageSearchIndexJob` from `18-01`, and `MessageSiteIdBackfillJob` from
+`18-01`) read `pg_inherits` directly on `messages`, which returned only the three new class-level
+partitions the moment `messages` gained a second partition level — never the monthly leaves
+underneath. All three jobs would have silently stopped finding anything to act on, failing closed
+rather than loudly. Fixed by switching to `pg_partition_tree('messages') WHERE isleaf`, which returns
+the correct leaf set regardless of nesting depth. See `adr/0074`.
+
+Two real design questions `adr/0031` itself left unspecified were resolved during implementation and
+are recorded in `adr/0074`: attachment expiry keyed to the exact rows a partition held (not a
+date-range guess, which is provably wrong the first time a tenant changes tier mid-month), and archive
+retrieval as a direct read rather than `16-03`'s own request/poll shape (the archive already exists
+by the time anyone could ask).
 
 ## Open questions
 
