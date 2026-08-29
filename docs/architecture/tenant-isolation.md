@@ -14,11 +14,11 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **67**, across 60 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **39** |
+| Use-case entry points in `Ago.Chat.Application` | **76**, across 69 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **48** |
 | Deliberately not RBAC-gated, each with a stated reason | **28** |
-| HTTP routes and hub methods that carry tenant data | **55** |
-| Routes taking a **client-supplied** `siteId` | **22** — ten route groups, all permission-gated |
+| HTTP routes and hub methods that carry tenant data | **64** |
+| Routes taking a **client-supplied** `siteId` | **26** — eleven route groups, all permission-gated |
 | Read-model queries | **7**, in three read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
 
@@ -66,6 +66,22 @@ sub-resource rather than a new route group. Folded straight in for the same reas
 67 entry points across 60 handler classes (39 gated, 28 exempt), 55 routes and hub methods (22
 client-supplied `siteId`, across ten route groups, unchanged — the new route is not one of them).
 Read-model queries and the cross-tenant-read count are unaffected — `18-02` added no new read store.
+
+**A third same-day delta.** `18-04` (internal notes and tags) added nine entry points across nine new
+handler classes, all RBAC-gated, none exempt: `AddConversationNoteHandler`
+(`conversation:note_write`), `GetConversationNotesHandler`/`ListTagsHandler`/
+`GetConversationTagsHandler` (`conversation:read` — a note or a tag is read context for whoever can
+already read the conversation, the same reasoning the write permission's own remarks give),
+`CreateTagHandler`/`RenameTagHandler`/`DeleteTagHandler` (`site:configure` — managing the tag
+vocabulary itself, distinct from applying one), `TagConversationHandler`/`UntagConversationHandler`
+(`conversation:tag`). Nine new routes: two on the existing `/api/v1/conversations/{conversationId}/notes`
+sub-resource shape (`siteId` from the operator claim, not client-supplied) and three more on
+`/api/v1/conversations/{conversationId}/tags` (same shape), but the tag *vocabulary* endpoints
+(`GET`/`POST /api/v1/sites/{siteId}/tags`, `PUT`/`DELETE .../{tagId}`) are a genuinely new,
+**eleventh** client-supplied-`siteId` route group — four of the nine new routes. Folded straight in:
+76 entry points across 69 handler classes (48 gated, 28 exempt), 64 routes and hub methods (26
+client-supplied `siteId`, across eleven route groups). Read-model queries and the cross-tenant-read
+count are unaffected — `18-04` added no new read store.
 
 The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
@@ -119,7 +135,7 @@ Grouped by gate. The full machine-checked list lives in
 `ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs`; this table is the same
 information organised for a reader.
 
-### RBAC-gated (39)
+### RBAC-gated (48)
 
 Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything else.
 
@@ -164,6 +180,15 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `RemoveOperatorHandler` | **route segment** | `site:manage-operators` | n/a — the operator being removed is looked up by the same `SiteId`; `13-03` |
 | `GetSeatAssignmentSummaryHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `13-03` |
 | `TransferConversationHandler` | operator claim | `conversation:assign` | `conversation.OperatorId == command.FromOperatorId`; target looked up by `(OperatorId, SiteId)` so a cross-site target is structurally impossible, not merely refused; `18-02` |
+| `AddConversationNoteHandler` | operator claim | `conversation:note_write` | `readStore.GetByIdAsync` is scoped by `command.SiteId`; a different site's conversation is `NotFound`, not `Forbidden`; `18-04` |
+| `GetConversationNotesHandler` | operator claim | `conversation:read` | same site-scoped conversation lookup as the write side; `18-04` |
+| `CreateTagHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `18-04` |
+| `RenameTagHandler` | **route segment** | `site:configure` | `tag.SiteId == command.SiteId`; `18-04` |
+| `DeleteTagHandler` | **route segment** | `site:configure` | `tag.SiteId == command.SiteId`; `18-04` |
+| `ListTagsHandler` | **route segment** | `conversation:read` | n/a — the read is keyed by `SiteId` directly; `18-04` |
+| `GetConversationTagsHandler` | operator claim | `conversation:read` | conversation lookup scopes to `SiteId`; `18-04` |
+| `TagConversationHandler` | operator claim | `conversation:tag` | conversation *and* tag both resolved by `SiteId`, so a cross-site tag cannot be attached; `18-04` |
+| `UntagConversationHandler` | operator claim | `conversation:tag` | same double scoping as the apply side; `18-04` |
 | *(the two `GetConversationHistory` operator entry points are counted separately above)* | | | |
 
 ### Not RBAC-gated, with the reason (28)

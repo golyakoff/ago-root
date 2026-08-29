@@ -275,6 +275,29 @@ denial.
   only so `5-04`'s orphan sweep can ask "which attachments were never linked to a message" with a
   plain `WHERE message_id IS NULL`, not an anti-join against `messages`). Neither column carries a
   foreign key to the other table - see Keys and indexes below.
+- `conversation_notes` (**added in `18-04`**) - `id`, `conversation_id`, `author_id`, `body`
+  (`varchar(4000)`), `created_at`. Its own table, deliberately not a `messages` row with a `Kind`
+  discriminator - `18-04`'s own backlog item and `ConversationNote`'s own remarks give the full
+  argument: the visitor-facing read path (`GetConversationHistoryHandler`'s visitor entry point,
+  `ConversationReadStore.GetHistoryAsync`) has no predicate over `messages` at all today, so a note
+  stored there would need a filter *added* to keep it from a visitor - filtered instead of
+  structurally absent. A separate table with its own repository (`INoteRepository`, sharing no method
+  with `IConversationRepository`/`IConversationReadStore`) means there is no predicate to forget,
+  proven against a real Postgres by `NoteLeakProofTests`. `ix_conversation_notes_conversation` on
+  `(conversation_id, created_at)` for the one real read shape (an operator's notes panel, oldest or
+  newest first). Cascades on `conversation_id` - a note has no independent lifecycle once its
+  conversation is gone.
+- `tags` (**added in `18-04`**) - `id`, `site_id`, `name` (`varchar(60)`), `created_at`. A per-site
+  vocabulary, not per-conversation - `site:configure`-gated creation, unique on `(site_id, name)`
+  (`ix_tags_site_name`) so two operators cannot create two rows meaning the same word. Cascades on
+  `site_id`, reaching the same site-level erasure cascade every other per-site table does.
+- `conversation_tags` (**added in `18-04`**) - `conversation_id`, `tag_id`, no surrogate key - the
+  pair itself is the identity, the same shape `operator_roles` above already uses for a join table
+  with no attributes of its own. `ix_conversation_tags_tag_id` on `tag_id` alone (the reverse lookup
+  "which conversations carry this tag", the direction the queue/admin-list filter actually queries;
+  `(conversation_id, tag_id)` is already the primary key and covers the forward direction for free).
+  Cascades on both `conversation_id` and `tag_id` - removing a conversation or deleting a tag from the
+  vocabulary both clean up silently rather than leaving an orphaned pairing.
 
 ## Keys and indexes
 

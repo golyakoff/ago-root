@@ -1,7 +1,7 @@
 # Internal notes and tags on a conversation
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (2026-08-29, `ago-chat#121` + `ago-console#59`) — see Outcome below
 - **Depends on**: nothing
 
 ## Goal
@@ -45,10 +45,33 @@ things, and the two want to agree on what a filter is.
 
 ## Done when
 
-- [ ] A note is visible to operators and provably unreachable by a visitor.
-- [ ] Conversations can be tagged and filtered by tag.
-- [ ] `16-02` and `16-03` name notes and tags among what they cover.
+- [x] A note is visible to operators and provably unreachable by a visitor.
+- [x] Conversations can be tagged and filtered by tag.
+- [x] `16-02` and `16-03` name notes and tags among what they cover.
 
 ## Open questions
 
 None. Where a note is stored is this item's decision, argued from the leak-proofing above.
+
+## Outcome
+
+Shipped as nine new handlers across `ago-chat#121` (notes: `AddConversationNoteHandler`/
+`GetConversationNotesHandler`, `conversation_notes` its own table; tags: `CreateTag`/`RenameTag`/
+`DeleteTag`/`ListTags`/`GetConversationTags`/`TagConversation`/`UntagConversation`, `tags` +
+`conversation_tags`) plus `ago-console#59` (Notes/Tags panels, a `/settings/tags` management screen,
+a tag filter on the queue and the admin list). `docs/architecture/tenant-isolation.md`,
+`data-model.md` and `personal-data.md` all updated in the same change as this Outcome.
+
+**The leak-proof test, run before the code that would make it pass, as the item's own Scope
+required**: `NoteLeakProofTests` proved against a real Postgres — fails-before confirmed by
+temporarily `UNION`-ing a note into `ConversationReadStore.GetHistoryAsync`'s SQL (simulating the
+rejected "note as a `messages` row" design) and watching the note's own body appear in what the
+handler was about to hand the visitor.
+
+**A real gap found and fixed while landing, beyond this item's own diff**: `conversation:note_write`/
+`conversation:tag` were defined and both new handlers checked them, but neither `RegisterSiteHandler`'s
+nor `MintDemoTenantHandler`'s Operator role seed ever granted either — every real operator on every
+real site would have been permanently `Forbidden` from the entire feature, despite every unit and
+integration test passing (none of them exercise real role seeding). Fixed in both handlers and in the
+`ago-deploy` demo-tenant seed script (`ago-deploy#89`), plus the two exact-match seeding tests that
+should have caught it.
