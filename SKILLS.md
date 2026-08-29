@@ -22,6 +22,7 @@ and in `docs/`.
 | `background-worker-brief` | About to delegate a backlog item to a background worker — including deciding whether it deserves one. |
 | `rebase-cleanup` | A branch looks wrong after a GitHub rebase-merge, or before deleting any branch. |
 | `context-resume` | The start of a session continuing after a `/compact` context refresh. |
+| `workspace-cleanup` | `C:\git\ago` has grown large, or periodically — remove worktrees/branches whose work already merged. |
 
 ## How they relate
 
