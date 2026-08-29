@@ -216,3 +216,20 @@ transaction"); `data-model.md` has the full column list and the reasoning for wh
 `attachments.message_id` nor `messages.attachment_id` carries a real foreign key (`messages` is
 range-partitioned, so Postgres cannot target `messages(id)` alone). `thumbnail_key` is reserved by
 the column, not by any writer - `5-04`'s async thumbnail job is the intended one.
+
+## Tenant export: attachment bytes referenced, not embedded (`16-03`, `adr/0072`)
+
+`16-03`'s tenant export names this its own main design question: does the archive embed attachment
+bytes, or reference them by presigned URL? **Decided: referenced.** `IFileStorage` (`Ago.Platform.
+Abstractions`) has exactly four methods and none returns bytes - only `CreateDownloadUrlAsync`,
+returning a `Uri`. Embedding would need a new platform-port method, an `ago-platform` change outside
+this single-repository item's scope; referencing needs nothing new and keeps this rule's own spirit
+even though the caller is `Ago.Chat.Worker`, not `Ago.Chat.Api` - the export job itself never touches
+attachment bytes any more than the ordinary download flow above does.
+
+**Cost, stated rather than hidden**: the export decays. The embedded attachment URLs are minted with
+a **7-day lifetime** - `SiteExportJobOptions.AttachmentUrlLifetime`, the actual SigV4 `X-Amz-Expires`
+protocol ceiling, not a guess - so a tenant who downloads the manifest and waits past that window
+gets metadata (`attachments.jsonl`) with links that no longer resolve, not the bytes themselves. This
+is accepted, not overlooked: re-requesting a fresh export is the remedy, matching this item's own
+Out-of-scope ("no continuous export" - a tenant who needs current bytes triggers a new run).
