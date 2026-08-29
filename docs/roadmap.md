@@ -56,12 +56,13 @@ Three items sit parked below the table rather than in it, because they cannot be
 
 | # | Item | Why here |
 |---|---|---|
-| 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one, and five further design questions settled in planning (2026-08-29, see the item's own file). Placed last rather than ranked, because the ordering above is the author's. **In progress** |
+| 1 | `14-08` VK channel adapter | New, `ago-business/decisions/0009` (2026-08-29): named as the qualitatively most important gap against the nearest direct competitor for this product's actual target customer - Russian social commerce runs heavily through VK |
+| 2 | `18-08` basic operator/site analytics | New, same business decision: cheap (no new write path), and genuinely wanted by the target customer independent of any competitor's own feature list - "how am I doing" is table stakes this product has never had |
+| 3 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
+| 4 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
+| 5 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one, and five further design questions settled in planning (2026-08-29, see the item's own file). Placed last rather than ranked, because the ordering above is the author's. **In progress** |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
-| — | `14-03` SMS channel adapter | **Parked**: needs a real SMS vendor chosen, which is the author's decision and a real cost |
-| — | `20-05` SMS booking confirmation | **Parked** on the same vendor question as `14-03`, and wants deciding once for both |
 | — | `20-08` who confirms a chat-originated booking | **Blocked on `20-07`**, and a named tension with `adr/0027`: a chat operator acting on a booking card is an identity Calendar has no `operators` row for |
 
 ### Soon — folded into the queue above, 2026-08-25
@@ -498,20 +499,27 @@ Deliverables:
 - A new domain concept - an external channel identity (which external chat-id/phone-number maps to
   which visitor/conversation) - and a channel-adapter port behind `Ago.Platform.Resilience`'s existing
   timeout/retry/breaker/bulkhead mechanism, reused unchanged per provider (`14-01`).
-- Two concrete channel adapters that need no legal or reliability spike first: MAX, chosen deliberately
-  as the first one built (an open Bot API, no known regulatory friction, `14-02`), and SMS (`14-03`).
+- The first concrete channel adapter, needing no legal or reliability spike: MAX, chosen deliberately
+  as the first one built (an open Bot API, no known regulatory friction, `14-02`, done). **SMS
+  (`14-03`) will not be built** — a business decision, not a technical one
+  (`ago-business/decisions/0008`, 2026-08-29): deprioritized entirely in favour of WhatsApp.
 - Offline auto-reply: a tenant-toggleable, off-by-default scripted keyword reply for when no operator is
   available, on any connected channel including the widget itself (`14-04`).
 - Telegram and WhatsApp explicitly gated behind their own spike/legal-review prerequisites, not built
   speculatively ahead of either (`14-05`). Telegram's own prerequisite is now answered — a measured
   ~53% direct-connection failure rate, fixed by routing outbound calls through a relay (`adr/0070`) —
   and its adapter is done, live-verified both directions against a real bot (`14-07`). WhatsApp's legal
-  review is the one still open.
+  review is the one still open, and now the higher business priority of the two remaining channels
+  (`ago-business/decisions/0008`/`0009`).
+- **VK (`14-08`) and email (`14-09`) join this stage's deliverables 2026-08-29**, cut from
+  `ago-business/decisions/0009`'s honest gap analysis against this product's nearest direct
+  competitor - VK named as the qualitatively more important of the two for the actual target customer,
+  email as plain table-stakes.
 
-**Done when:** a real message sent via MAX or SMS reaches an operator through the same console queue a
-widget conversation already does, and a visitor gets an automatic reply when no operator is online, on
-at least one connected channel - proven live, the same bar every other stage's "done when" already
-holds itself to.
+**Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
+conversation already does, and a visitor gets an automatic reply when no operator is online, on at
+least one connected channel - already true today (`14-02`/`14-04`, both done); VK/email/WhatsApp each
+extend the same bar to a new channel as they land, not raise it.
 
 ---
 
