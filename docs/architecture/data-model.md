@@ -29,7 +29,14 @@ denial.
   constraint restricting it to `'bottom-right'`/`'bottom-left'` - cheap storage-level backstop for the
   `Position` enum, matching this table's own `Ago.Chat.Domain.Position`/`PositionConverter` mapping
   (kebab-case in the column, the CLR enum's own member names on the wire - the two boundaries are free
-  to differ). **`created_at timestamptz NULL` added in `12-02`** (`Stage12AddSiteCreatedAt`,
+  to differ). **`widget_notice_text text NULL` and `widget_notice_url text NULL` added in `16-04`**
+  (`Stage16AddSiteWidgetNotice`, additive/reversible, `adr/0076`) - the tenant's own processing notice
+  and link, both `NULL` for every row that predates this column so the widget shows nothing rather than
+  an AGO-authored default. No `CHECK` constraint, unlike `widget_position` just above: free text and a
+  URL are not a closed set SQL can enumerate the way an enum is - `Ago.Chat.Domain.WidgetConfig`'s own
+  constructor (length bound on the text, `https://`-only scheme check on the URL) is this value's only
+  validation, the same boundary `offline_auto_reply_rules`' own free-text shape already draws below.
+  **`created_at timestamptz NULL` added in `12-02`** (`Stage12AddSiteCreatedAt`,
   additive/reversible) - the same kind of real gap `name` records above: `12-02`'s owner overview needs
   a per-tenant creation time and this table had none, though `conversations`, `messages` and
   `attachments` all carry one. **Nullable with no default and no backfill, on purpose**: giving existing
