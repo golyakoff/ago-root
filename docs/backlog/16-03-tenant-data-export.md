@@ -1,7 +1,7 @@
 # Export: a tenant can take their data out
 
 - **Stage**: 16
-- **Status**: ready
+- **Status**: done (2026-08-28, `ago-chat#113`) — see Outcome below
 - **Depends on**: `16-01-personal-data-map-and-residency-constraint.md` — an export that omits a store
   is a wrong answer to a subject's request, and the map is what says which stores exist
 
@@ -54,12 +54,50 @@ platform owner, this one stays strictly inside one tenant for that tenant.
 
 ## Done when
 
-- [ ] A tenant can trigger an export and download the result when it is ready.
-- [ ] The archive contains every store `personal-data.md` lists as belonging to that tenant.
-- [ ] The format is documented.
-- [ ] The attachment-bytes decision is recorded with its reasoning.
-- [ ] The export is streamed and rate-limited.
-- [ ] A test proves a tenant cannot export another tenant's data.
+- [x] A tenant can trigger an export and download the result when it is ready — `POST
+      /api/v1/sites/{siteId}/exports` (`202`), `GET /api/v1/sites/{siteId}/exports/{exportId}`
+      (status/download poll, the same completion-poll shape `16-02`'s `GetConversationByIdHandler`
+      established), gated by a new `site:export` permission.
+- [x] The archive contains every store `personal-data.md` lists as belonging to that tenant — site,
+      operators, visitors, channel identities, conversations, messages, attachment metadata. Two
+      stores were deliberately excluded, stated rather than silent: `webhook_deliveries` (body-free by
+      contract — operational/integration log about the tenant's own webhook receiver, not conversation
+      data, and not named in this item's own Scope enumeration) and `channel_credentials` (holds only
+      the tenant's own bot-token/webhook-secret ciphertext — not personal data, and secret-shaped
+      besides).
+- [x] The format is documented — `adr/0072`, plus `docs/architecture/file-storage.md`'s new section.
+      One `.zip` per export, `manifest.json` + one JSON Lines file per store, `formatVersion: 1`.
+- [x] The attachment-bytes decision is recorded with its reasoning — `adr/0072`: referenced by
+      presigned URL (7-day lifetime, SigV4's own ceiling), not embedded, since `IFileStorage` has no
+      byte-returning method and adding one is an `ago-platform` change outside this item's scope.
+- [x] The export is streamed and rate-limited — `SiteExportArchiveWriter` reads each store through a
+      forward-only `NpgsqlDataReader` straight into the zip, never materializing a `List` of rows;
+      `SiteExportRateLimitOptions`/`IRateLimiter` (`3-05`) gate the trigger per site.
+- [x] A test proves a tenant cannot export another tenant's data — `SiteExportIntegrationTests`,
+      against a real Postgres, and enforced in the query itself (`ExportRequestRepository.GetAsync`'s
+      `WHERE id = @id AND site_id = @siteId`), not only in the handler.
+
+## Outcome
+
+Shipped in `ago-chat#113` (merged 2026-08-29; CI green — `build-test` `SUCCESS`). Full command set
+green: 0 warnings, 0 errors, 1068/1068 tests across all 6 real `Ago.Chat.*` test assemblies (verified
+independently by the managing session after rebasing onto `main`, since `18-07` merged concurrently
+mid-task — one additive conflict in `ChatModule.cs`, resolved by keeping both `using` additions).
+
+**Two real gaps found during this queue sweep, neither fixed here, both tracked separately**:
+
+- `ago-deploy/seed/create-demo-tenant.sh`'s Admin role permission array does not grant `site:export`
+  — the same pre-existing staleness already present for `16-02`'s `site:erase`/`conversation:erase`,
+  in a different repository this item's worker did not touch. Flagged as its own follow-up task.
+- **`SiteErasureJob` does not delete a site's export archives.** Verified directly: the `exports/`
+  object-storage prefix `SiteExportJob.cs` writes to (`exports/site/{siteId}/{exportId}.zip`) appears
+  nowhere else in the codebase except that one writer and one test — no erasure path references it.
+  A site erased under `16-02` leaves any export archives it ever produced behind in MinIO indefinitely.
+  This is a real hole in `16-02`'s own erasure guarantee, discovered because `16-03` created the first
+  data this codebase writes to object storage outside the attachment/thumbnail paths `16-02`'s erasure
+  already knows to reach. Flagged as its own follow-up task rather than fixed inline here, since it is
+  a `SiteErasureJob` change (a different item's code) and deserves its own verification pass, not a
+  drive-by edit in a documentation change.
 
 ## Open questions
 
