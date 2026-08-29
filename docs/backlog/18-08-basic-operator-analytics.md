@@ -4,7 +4,7 @@
   visibility, not strictly "operator does the obvious thing faster" the way `18-01`-`18-07` are, but it
   lives in the console the same way they do and needs no new architectural surface. Revisit placement if
   a future session finds a stage that fits it better; not worth inventing a new stage for one item.
-- **Status**: ready
+- **Status**: done (2026-08-29, `ago-chat#123` + `ago-console#61`) — see Outcome below
 - **Depends on**: nothing new architecturally — reads existing data through a new Dapper read store, the
   same access-strategy shape every other console read already uses
 
@@ -61,15 +61,45 @@ assumption going in is that none is.
 
 ## Done when
 
-- [ ] A real conversation volume, average first-response time, and missed-conversation count are
+- [x] A real conversation volume, average first-response time, and missed-conversation count are
       computed correctly for a real site with real seeded data, proven by a test against real values,
       not by the query looking right.
-- [ ] The same three numbers are broken down per channel.
-- [ ] A console panel/page renders them, gated by the permission this item's own scope decides on.
-- [ ] Cross-site isolation is proven by a test — a caller cannot see another site's numbers through
+- [x] The same three numbers are broken down per channel.
+- [x] A console panel/page renders them, gated by the permission this item's own scope decides on.
+- [x] Cross-site isolation is proven by a test — a caller cannot see another site's numbers through
       this endpoint, the same bar `17-01`'s own tenant-isolation discipline holds every new read to.
 
 ## Open questions
 
-Which existing permission (`conversation:read` vs `site:configure`) gates this is this item's own call,
-argued from precedent, not decided here.
+None left open — see Outcome below.
+
+## Outcome
+
+`OperatorAnalyticsReadStore` (`Ago.Chat.Infrastructure.Postgres`) answers the whole shape in one query:
+`GROUPING SETS ((), (channel_label))` computes the site-wide total and every channel's bucket in one
+pass over a `detail` CTE built from two `LEFT JOIN LATERAL ... ON TRUE`s — one resolving the visitor's
+earliest-linked `channel_identities` row (widget visitors get the literal label `"Widget"`, since
+`ChannelKind` deliberately has no `Widget` member), the other resolving each conversation's first
+visitor/first operator message timestamps. `ON TRUE` is load-bearing: without it a conversation with no
+channel identity or no messages yet would drop out of the result instead of producing an honest zero
+row. First-response time is an average over conversations that *did* get an operator reply — a
+conversation with none is excluded from that average, not counted as zero. Missed = `Closed` state with
+no operator reply at all. A site with zero conversations in the window returns zero rows (Postgres's
+`GROUPING SETS` has nothing to group), which `GetSiteAnalyticsAsync` turns into an explicit zero bucket
+rather than an empty response the caller would have to special-case.
+
+`GetOperatorAnalyticsForSiteHandler` gates on `Permission.SiteConfigure` (chosen over
+`conversation:read`: this is site-level operational visibility, the same tier as the site's other
+configuration reads, not a conversation-content read). Console: `OperatorAnalyticsPage.tsx`, a plain
+summary table, no charting library, matching the item's own scope.
+
+**Tenant isolation independently re-verified by the managing session**, not just accepted from the
+worker's report: mutated `where c.site_id = @SiteId` to `where (c.site_id = @SiteId or true)` in the
+read store's SQL, confirmed 4 tests then failed with real cross-site leakage in their assertions,
+reverted, re-ran the full suite green twice.
+
+One real complication surfaced during the build: `13-06`'s same-day repartitioning of `messages` by
+retention class (`Stage13RepartitionMessagesByRetentionClass`) broke the naive test-seeding helper this
+item's tests first used (Postgres `42P16`, inserting into a partitioned parent without routing) — fixed
+by seeding through the correct partition via `MessagePartitionNames`, the same helper `13-06`'s own
+tests already established as the pattern.

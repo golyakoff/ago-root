@@ -56,11 +56,9 @@ Three items sit parked below the table rather than in it, because they cannot be
 
 | # | Item | Why here |
 |---|---|---|
-| 1 | `14-08` VK channel adapter | New, `ago-business/decisions/0009` (2026-08-29): named as the qualitatively most important gap against the nearest direct competitor for this product's actual target customer - Russian social commerce runs heavily through VK |
-| 2 | `18-08` basic operator/site analytics | New, same business decision: cheap (no new write path), and genuinely wanted by the target customer independent of any competitor's own feature list - "how am I doing" is table stakes this product has never had |
-| 3 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 4 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
-| 5 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one, and five further design questions settled in planning (2026-08-29, see the item's own file). Placed last rather than ranked, because the ordering above is the author's. **In progress** |
+| 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
+| 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
+| 3 | `20-07` Calendar becomes a chat module | The seam `adr/0065` fixed, with the two things it deliberately left open - the primitive set and the transport - decided against `20-06`'s real booking flow rather than an imagined one, and five further design questions settled in planning (2026-08-29, see the item's own file). Placed last rather than ranked, because the ordering above is the author's. **In progress** |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | **Blocked on `20-07`**, and a named tension with `adr/0027`: a chat operator acting on a booking card is an identity Calendar has no `operators` row for |
@@ -511,10 +509,11 @@ Deliverables:
   and its adapter is done, live-verified both directions against a real bot (`14-07`). WhatsApp's legal
   review is the one still open, and now the higher business priority of the two remaining channels
   (`ago-business/decisions/0008`/`0009`).
-- **VK (`14-08`) and email (`14-09`) join this stage's deliverables 2026-08-29**, cut from
+- VK (`14-08`, done 2026-08-29) and email (`14-09`) join this stage's deliverables, cut from
   `ago-business/decisions/0009`'s honest gap analysis against this product's nearest direct
   competitor - VK named as the qualitatively more important of the two for the actual target customer,
-  email as plain table-stakes.
+  email as plain table-stakes. VK's own live verification against a real community remains open — see
+  the item's own file.
 
 **Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
 conversation already does, and a visitor gets an automatic reply when no operator is online, on at
@@ -745,6 +744,10 @@ Deliverables:
   — nothing is deleted, and `15-04`/`16-02` still own retention and erasure unchanged.
 - `18-07` — a returning channel visitor's past conversations, visible to the operator handling their
   current one. What makes `18-06` safe rather than lossy actually worth something to a human.
+- `18-08` — basic operator/site analytics (done 2026-08-29), cut from
+  `ago-business/decisions/0009`'s gap analysis: conversation volume, first-response time and missed
+  count, per channel - "how am I doing" visibility this product has never had, distinct from `12-02`'s
+  cross-tenant platform-owner view.
 
 Interface i18n stays out of scope (`vision.md`), and is the one entry on `11-06`'s original list that
 did not become work here.
