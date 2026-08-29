@@ -1,7 +1,8 @@
 # AGO Calendar becomes a chat module, behind the contract rather than beside it
 
 - **Stage**: 20 (and 14 — the contract is Chat's, the first implementation is Calendar's)
-- **Status**: ready — `20-06` merged
+- **Status**: built (2026-08-29, `ago-chat#125` + `ago-calendar#11` + `ago-widget#38`) — two Done-when
+  boxes (live end-to-end proof, widget and a real text channel) remain unchecked; see Outcome below.
 - **Depends on**: `20-06` — the console and booking widget. Deliberately built *outside* this seam, so
   that the seam is designed against a flow that exists.
 - **Decides**: two of the questions `adr/0065` explicitly left open.
@@ -151,21 +152,35 @@ Telegram, not as a reason to complicate the primitive contract itself now.
 
 ## Done when
 
-- [ ] A visitor completes a booking end to end inside a conversation, in the widget.
+- [ ] A visitor completes a booking end to end inside a conversation, in the widget. **Not verified
+      live** — no click-through against a real browser and a real seeded calendar was run. The wire
+      contract, the state machine, and the text/UI rendering are each proven in isolation (see
+      Outcome), but nobody has watched one message-by-message booking complete start to finish.
 - [ ] The same flow completes over a text-only channel using the primitives' text renderings, proving
-      the vocabulary is not secretly widget-shaped.
-- [ ] `Ago.Chat.*` contains no type reference to `Ago.Calendar.*` **and no string literal of a module
-      key** — both proven by a test that fails when either is added.
-- [ ] The base widget bundle has zero inputs from module directories, checked the way `8-11` checked
-      the demo bundle.
-- [ ] A module that is unreachable degrades to the escape to an operator, and the visitor is told —
-      proven by a test, not by inspection.
-- [ ] An ADR records the transport decision with the measured step latency.
-- [ ] A visitor-typed trigger command starts the task on every channel the flow is proven on, matched
+      the vocabulary is not secretly widget-shaped. **Not verified live**, same reason — proven instead
+      at the primitive-rendering and wire level (`PrimitiveTextRendererTests`,
+      `ModuleTaskGatewayIntegrationTests`'s real-HTTP reply-by-id parity), not end to end over an actual
+      text channel such as Telegram.
+- [x] `Ago.Chat.*` contains no type reference to `Ago.Calendar.*` **and no string literal of a module
+      key** — both proven by a test that fails when either is added. Guard 1 (existing IL scan) and
+      guard 2 (new `ModuleKeyLiteralRule`, source-level) both fails-before proven; see Outcome for the
+      honest overlap finding between them.
+- [x] The base widget bundle has zero inputs from module directories, checked the way `8-11` checked
+      the demo bundle. `src/bundleInputs.test.ts` — the first automated version of this guard.
+- [x] A module that is unreachable degrades to the escape to an operator, and the visitor is told —
+      proven by `ModuleTaskGatewayIntegrationTests`' unreachable-module test, against a real stopped
+      Kestrel server.
+- [x] An ADR records the transport decision with the measured step latency. `adr/0077` — a real,
+      measured hop (~1.5-2 ms steady state, loopback, real Postgres-backed `Ago.Calendar.Api` host),
+      not an assumed number.
+- [x] A visitor-typed trigger command starts the task on every channel the flow is proven on, matched
       against the registry's opaque trigger array — and two modules registering the same trigger on one
-      site is rejected, proven by a test.
-- [ ] Every choice-shaped primitive is answered by option id/number on every channel, including the
+      site is rejected, proven by a test. The mechanism is channel-agnostic by construction (driven by
+      `MessageAccepted`, the same event every channel produces) rather than tested per real channel.
+- [x] Every choice-shaped primitive is answered by option id/number on every channel, including the
       widget — proven by the same reply path handling a widget click and a text reply identically.
+      `ChoiceReplyTextResolver` is one function reused for every kind/channel, per the Chat worker's
+      own report.
 
 ## Open questions
 
@@ -176,3 +191,68 @@ Telegram, not as a reason to complicate the primitive contract itself now.
 - **What happens to a half-finished task when an operator intervenes.** The principle is decided —
   the operator may always intervene, and the escape cannot be suppressed. Whether the task stays open,
   and who may resume it, is not.
+
+## Outcome
+
+Shipped across three repositories on matching `feat/20-07-calendar-becomes-a-chat-module` branches:
+`ago-chat#125` (the contract, the registry, the routing handler, both guards), `ago-calendar#11` (the
+`ChatBookingTask` state machine and the wire-contract endpoints), `ago-widget#38` (the generic primitive
+renderers, the booking module moved out of the base bundle, the bundle-input guard).
+
+**Layer-placement reasoning (Chat side), stated once here rather than per file**: the four primitives
+and their text renderers, the trigger matcher and the choice-reply resolver live in `Ago.Chat.Domain`
+because each is pure logic with no I/O — `clean-architecture.md`'s split (pure logic → Domain; anything
+needing a repository read → Application) settles it positively, and putting them in Application "because
+that's where use-case logic lives" would make them untestable without a fake port for something that
+needs none. `EnabledModule` and `ModuleTask` are a separate aggregate rather than fields bolted onto
+`Site`/`Conversation`: `EnabledModule` has its own lifecycle nothing else needs loaded alongside `Site`,
+and while `ModuleTask` is owned by `Conversation` (the "at most one active task" invariant genuinely
+belongs there, same reasoning as `AssignTo`'s own state-machine enforcement), it is still its own EF
+entity with a `_moduleTasks` shadow navigation, mirroring `Message`/`_messages`. `IModuleGateway` sits in
+`Application/Abstractions` for the same reason `IInboundChannelAdapter` does — inner code must call
+outer code through a port — with its implementation in a new `Ago.Chat.Infrastructure.Modules` project
+(`naming-and-structure.md`'s one-project-per-external-technology rule, identical to
+`Infrastructure.MaxBot`/`Infrastructure.Telegram`). The resilience wrapping lives in `Ago.Chat.Module`,
+not `Infrastructure.Modules`, matching `ChannelResiliencePipelines`'s own placement: protecting a
+boundary is composition-root work, not the adapter's own concern.
+
+`RouteConversationToModuleHandler` is driven by `Ago.Chat.Worker`'s `ModuleTaskConsumer` off
+`MessageAccepted`, not called inline from `SendVisitorMessageHandler` — the same precedent
+`SendOfflineAutoReplyHandler` already set, for the same reason: the handler that enqueues onto the
+batched write pipeline never touches Postgres itself, so a routing decision made there would be judging
+conversation state that has not committed yet. Reacting to the durable event afterward also means the
+widget and every `14-0x` channel converge on one routing path for free.
+
+**Guard 1 and guard 2 fully overlap on the one module key that exists (`"calendar"`)**, because it is
+already a curated English word guard 1's IL-scan word list would catch on its own. Guard 2's real value
+is a *future* module key that is not an obvious English word — an opaque code or abbreviation guard 1's
+curated list would never think to include, but guard 2's maintained-registry approach catches regardless.
+Stated in `ModuleKeyLiteralRule`'s own doc comment rather than presented as two guards independently
+proving the same thing for a different reason.
+
+**Rebase conflicts, handled by the managing session**: all three branches were cut before `14-08`,
+`18-04`, `18-08` (`ago-chat`) and `16-04` (`ago-widget`) landed, so pushing required resolving real
+conflicts — every one purely additive (two features adding their own lines to the same shared file:
+`ConversationErrors.cs`'s error-code list, `IdConverters.cs`, `ServiceCollectionExtensions.cs`,
+`AgoChatDbContext.cs`, `ChatModule.cs`, the widget's own import list and README bundle-size section) with
+one exception: `ago-chat`'s EF migration/model snapshot was regenerated fresh against the merged base
+(`dotnet ef migrations add`) rather than hand-merged, since a generated snapshot file is not something to
+resolve by picking halves of a diff. The widget's own bundle size was re-measured fresh after the merge
+(**26.5 KB gzipped**, both features combined) rather than trusting either side's pre-merge number, since
+neither reflected what actually ships together.
+
+**Exact verification, independently re-run by the managing session, not just accepted from worker
+reports**:
+- `ago-chat`: `dotnet format`/`build -c Release` — 0 warnings, 0 errors. Full suite —
+  Domain 326, Application 466, Architecture 40, FakeCrm 21, Concurrency 38, Integration 516 —
+  **1407/1407**.
+- `ago-calendar`: `dotnet format`/`build -c Release` — 0 warnings, 0 errors. Full suite —
+  Domain 96, Application 64, Architecture 18, Concurrency 17, Integration 107 — **302/302**.
+- `ago-widget`: `npm run typecheck`/`lint` — clean. `npm test` — **219/219**, 24 files. Fresh build:
+  26.5 KB gzipped (18.5 KB of the 45 KB budget unused), booking module 0.23 KB gzipped.
+
+**Explicitly not built** (see the two unchecked Done-when boxes above, and `adr/0065` §5's unprompted-
+push direction, and an internal HTTP endpoint for `EnableModuleForSite` — all optional or out of this
+item's own task list per the Chat worker's own honest accounting). **No service-to-service
+authentication exists yet** between `ago-chat` and `ago-calendar` on this wire — named plainly in
+`ChatModuleTaskEndpoints.cs`'s own remarks and in `adr/0077`, not solved here.
