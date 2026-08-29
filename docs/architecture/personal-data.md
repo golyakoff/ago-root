@@ -263,12 +263,15 @@ own deletion by 30 days, and it is small enough to state in a policy.
 
 ### Who answers to whom
 
-Working direction, to be confirmed by the lawyer and recorded in an ADR by `backlog/16-04`: AGO is the
+**Recorded as a decision in `adr/0076` (`16-04`), not merely a direction any more.** AGO is the
 controller for its own account holders' data (they registered with AGO), and a processor acting on the
 tenant's instruction for visitors' conversation data (the visitor was the shop's customer, not AGO's).
-That split is what makes tenant-initiated export and deletion a product requirement rather than a
-courtesy, and it is why the widget carries a processing notice the tenant configures (`16-04`) — AGO
-supplies the mechanism, the tenant owns the text and its accuracy.
+That split is what makes tenant-initiated export and deletion (`16-02`/`16-03`) a product requirement
+rather than a courtesy, and it is why the widget carries a processing notice the tenant configures
+(`16-04`, shipped) — AGO supplies the mechanism, the tenant owns the text and its accuracy, and AGO
+never authors a default. The lawyer's confirmation of this split is still the open item — `adr/0076`
+says so plainly, and is superseded rather than edited if that confirmation lands differently; see "What
+is not decided here" below, unchanged by this ADR.
 
 ## What is unestablished
 
