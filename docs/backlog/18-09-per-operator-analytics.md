@@ -1,7 +1,7 @@
 # Per-operator analytics: the same numbers, broken down by who answered
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (`ago-chat#126`, `ago-console#63`, merged 2026-08-30)
 - **Depends on**: `18-08-basic-operator-analytics.md` (done) — this item is the operator-filtered
   extension `18-08`'s own Out of scope section named as a real, deliberate follow-up rather than an
   afterthought
@@ -63,14 +63,16 @@ that would misrepresent what it measures.
 
 ## Done when
 
-- [ ] Per-operator conversation count, first-response time, and missed count are computed correctly
+- [x] Per-operator conversation count, first-response time, and missed count are computed correctly
       for a real site with real seeded data spanning multiple operators, proven by a test against real
       values, not by the query looking right.
-- [ ] A conversation transferred (`18-02`) between operators attributes correctly to whichever operator
+- [x] A conversation transferred (`18-02`) between operators attributes correctly to whichever operator
       this item decided is "the" answering operator, proven by a test — the ambiguity named above,
-      resolved and checked, not left implicit.
-- [ ] Cross-site isolation is proven by a test, the same bar every read in this codebase holds.
-- [ ] A console panel renders the per-operator breakdown, gated by `site:configure`.
+      resolved and checked, not left implicit. Independently re-proven by the managing session: mutating
+      `coalesce(first_operator_id, assigned_operator_id)` down to `assigned_operator_id` alone made the
+      transfer-attribution test fail as expected.
+- [x] Cross-site isolation is proven by a test, the same bar every read in this codebase holds.
+- [x] A console panel renders the per-operator breakdown, gated by `site:configure`.
 
 ## Open questions
 

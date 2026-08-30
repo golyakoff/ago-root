@@ -58,12 +58,12 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
-| 3 | `14-10` WhatsApp Business channel adapter | `ago-business/decisions/0009`+`0010`: the one channel `0009` named directly as the nearest direct competitor's own biggest Level-1 gap against AGO; `0010` removes `14-05`'s own unfinished legal-review box as a prerequisite for starting the engineering work - the risk is accepted explicitly, not resolved |
-| 4 | `14-11` Avito channel adapter | `ago-business/decisions/0010`: builds on `0009`'s own open question (unverified demand) by direct author decision, the same qualitative-argument shape `14-08` (VK) was already scoped on |
-| 5 | `18-09` per-operator analytics | `18-08`'s own named follow-up, cut for real now: `ago-business/decisions/0009`'s "how good is each operator" gap |
-| 6 | `18-10` conversation outcome and conversion report | New write path (an operator-reported outcome), closing `0009`'s "sales funnel" reporting gap the only way that stays inside this project's own CRM-depth boundary |
-| 7 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; honestly limited until `19-02` lands, since `18-04`'s tagging is manual-only today |
-| 8 | `19-01` AI operator reply-draft assist | First use of the newly-planned Stage 19 (`docs/adr/0078`) — lowest AI risk, no architecture change, never reaches a visitor without an operator choosing to send it |
+| 3 | `14-11` Avito channel adapter | `ago-business/decisions/0010`: builds on `0009`'s own open question (unverified demand) by direct author decision, the same qualitative-argument shape `14-08` (VK) was already scoped on |
+| 4 | `18-10` conversation outcome and conversion report | New write path (an operator-reported outcome), closing `0009`'s "sales funnel" reporting gap the only way that stays inside this project's own CRM-depth boundary |
+| 5 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; honestly limited until `19-02` lands, since `18-04`'s tagging is manual-only today |
+| 6 | `18-12` visitor traffic-source report | `ago-business/decisions/0009`'s "источники диалогов" half of the reporting gap `18-08`/`18-09` do not touch - a second dimension (where a visitor came from) independent of channel (how they messaged) |
+| 7 | `18-13` conversation duration report | The cheapest item in this round - the timestamps already exist; extends `18-08`'s own query with one more aggregate column, no new write path |
+| 8 | `18-14` chat-to-booking conversion report | The literal "конвертировалось ли в запись" ask - an honest proxy (started/closed `calendar` module task, never claimed as a confirmed booking) given `ModuleTaskState`'s own two-value ceiling, named plainly rather than overclaimed |
 | 9 | `19-02` AI automatic conversation categorization | `docs/adr/0078` kind 2 - the real dependency `18-11`'s own file names, unblocking that report from manual-tagging-only coverage |
 | 10 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
@@ -521,10 +521,11 @@ Deliverables:
   competitor - VK named as the qualitatively more important of the two for the actual target customer,
   email as plain table-stakes. VK's own live verification against a real community remains open — see
   the item's own file.
-- **WhatsApp (`14-10`) and Avito (`14-11`) join this stage's deliverables 2026-08-30**, cut from
+- **WhatsApp (`14-10`, done 2026-08-30) and Avito (`14-11`) join this stage's deliverables**, cut from
   `ago-business/decisions/0010` - WhatsApp built without waiting on `14-05`'s own unfinished legal
   review (the risk is accepted explicitly, not resolved), Avito built without the quantitative demand
-  check `0009` had asked for and never got.
+  check `0009` had asked for and never got. WhatsApp's own live verification against a real Business
+  number remains open, the same honest gap `14-08`'s own file names for VK — see the item's own file.
 
 **Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
 conversation already does, and a visitor gets an automatic reply when no operator is online, on at
@@ -759,11 +760,20 @@ Deliverables:
   `ago-business/decisions/0009`'s gap analysis: conversation volume, first-response time and missed
   count, per channel - "how am I doing" visibility this product has never had, distinct from `12-02`'s
   cross-tenant platform-owner view.
-- `18-09` — the same numbers, per operator (`18-08`'s own named follow-up). `18-10` — an
-  operator-reported conversion outcome and the report built on it, the only shape that closes
+- `18-09` — the same numbers, per operator (`18-08`'s own named follow-up, **done 2026-08-30**). `18-10`
+  — an operator-reported conversion outcome and the report built on it, the only shape that closes
   `0009`'s "sales funnel" gap without reopening the CRM-depth question `0009` already rejected.
   `18-11` — a topic/tag breakdown on top of `18-04`'s tagging, honestly limited until `19-02` gives it
-  real coverage. All three added 2026-08-30, cut from `ago-business/decisions/0009`/`0010`.
+  real coverage. All three cut 2026-08-30, from `ago-business/decisions/0009`/`0010`.
+- **A second reporting round, cut 2026-08-30** after the author's own direct follow-up that per-operator
+  numbers alone were not the reporting depth asked for: `18-12` — a visitor traffic-source report
+  (referrer/UTM), the "источники диалогов" half of `0009`'s own gap that no existing report touches at
+  all, since channel (`18-08`) answers a different question than traffic source. `18-13` — average
+  conversation duration, the cheapest item either round has cut (the timestamps already exist). `18-14`
+  — a chat-to-booking conversion report, the literal "did this convert into a booking" ask, built as an
+  honest proxy (a `calendar` module task started/closed) rather than a confirmed-booking claim
+  `ModuleTaskState`'s own two-value ceiling cannot honestly support — see the item's own file for why,
+  and its own named relationship to the still-unstarted `20-08`.
 
 Interface i18n stays out of scope (`vision.md`), and is the one entry on `11-06`'s original list that
 did not become work here.
@@ -787,9 +797,11 @@ named in that ADR with their real prerequisites, not cut as items here. Chat-sid
 through, so it takes the number Stage 10 left reserved rather than a new one after Stage 21.
 
 Deliverables:
-- `19-01` — an AI-drafted reply suggestion into an operator's composer, editable and discardable,
-  never sent without the operator choosing to. No architecture change, no customer-facing hallucination
-  risk - the visitor never sees anything the operator did not read first.
+- `19-01` (**done 2026-08-30**) — an AI-drafted reply suggestion into an operator's composer, editable
+  and discardable, never sent without the operator choosing to. No architecture change, no
+  customer-facing hallucination risk - the visitor never sees anything the operator did not read first.
+  Live verification against a real YandexGPT account remains open — no such account exists in this
+  environment.
 - `19-02` — automatic conversation categorization into a site's own existing tags (never inventing
   new ones), closing the real dependency `18-11`'s own file names.
 - `19-03` — an AI FAQ module, the second real consumer of `20-07`'s module contract after Calendar -

@@ -1,8 +1,8 @@
 # AGO Inbox: WhatsApp Business channel adapter
 
 - **Stage**: 14
-- **Status**: built (2026-08-30, `ago-chat` branch `feat/14-10-whatsapp-channel-adapter`, not yet
-  merged) — a real message reaches an operator and a real console reply reaches WhatsApp back, both
+- **Status**: done (`ago-chat#129`, `ago-root#258`, merged 2026-08-30) — a real message reaches an
+  operator and a real console reply reaches WhatsApp back, both
   proven against a real Postgres and the real production handler/endpoint chain (`WhatsAppWebhookEndpointsTests`);
   **not yet verified against a real WhatsApp Business number and a real Meta App** — no such account
   exists in the environment this item was built in. See "What was and wasn't verified" below before
