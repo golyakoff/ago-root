@@ -1,7 +1,7 @@
 # Visitor traffic-source report: where a conversation actually came from
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (`ago-chat#136`, `ago-console#70`, `ago-widget#39`, `ago-root#262`, merged 2026-08-30)
 - **Depends on**: `18-08-basic-operator-analytics.md` (done) — the per-channel breakdown shape this
   item adds a second, orthogonal dimension alongside; `14-01-external-channel-identity-and-inbound-port.md`
   (done) — this item's own capture point sits beside, not instead of, channel identity
@@ -91,13 +91,17 @@ per-instance timestamps (`personal-data.md:89`); a landing source captured once 
 
 ## Done when
 
-- [ ] The widget captures referrer/UTM params at conversation start and they reach the server, proven
-      by a test (including the empty-referrer case — the common one, not the exception).
-- [ ] The report groups conversations by traffic source correctly against real seeded data, including a
+- [x] The widget captures referrer/UTM params at conversation start and they reach the server, proven
+      by a test (including the empty-referrer case — the common one, not the exception). Independently
+      re-proven by the managing session: making the empty-referrer case return `""` instead of `undefined`
+      broke 2 of 6 dedicated widget tests.
+- [x] The report groups conversations by traffic source correctly against real seeded data, including a
       mix of UTM-tagged and plain-referrer and direct-visit conversations, proven by a test.
-- [ ] `docs/architecture/personal-data.md`'s `conversations` row is updated to name this new field
+      Independently re-proven: removing the SQL's `coalesce(..., @DirectLabel)` fallback made the
+      dedicated test fail with no "Direct" bucket.
+- [x] `docs/architecture/personal-data.md`'s `conversations` row is updated to name this new field
       explicitly.
-- [ ] Cross-site isolation is proven by a test.
+- [x] Cross-site isolation is proven by a test.
 
 ## Open questions
 

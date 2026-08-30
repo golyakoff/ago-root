@@ -1,7 +1,8 @@
 # AI automatic conversation categorization
 
 - **Stage**: 19 (AI assistance)
-- **Status**: ready
+- **Status**: done (`ago-chat#134`, `ago-console#68`, merged 2026-08-30) - not verified against a real
+  YandexGPT account, no live API key/folder id exists in this environment
 - **Depends on**: `18-04-internal-notes-and-tags.md` (done) — the tag vocabulary this item assigns
   into, never invents its own; `19-01-operator-reply-draft-assist.md` — reuses whichever LLM provider
   port that item establishes, a second consumer of the same port rather than a second integration
@@ -59,13 +60,16 @@ waiting on.
 
 ## Done when
 
-- [ ] A real conversation with no tags gets classified into zero or more of the site's own existing
+- [x] A real conversation with no tags gets classified into zero or more of the site's own existing
       tags by a real periodic job run, proven against a real seeded site with a real tag vocabulary.
-- [ ] A site with zero configured tags produces zero AI-applied tags, proven by a test, not left
+      Independently re-proven by the managing session: disabling the handler-level candidate-membership
+      guard let the handler apply a tag outside the site's own vocabulary.
+- [x] A site with zero configured tags produces zero AI-applied tags, proven by a test, not left
       untested as "probably fine."
-- [ ] An AI-applied tag is visibly distinguishable from an operator-applied one in the console, proven
-      by a rendered-component test.
-- [ ] A conversation that already carries a manual tag is skipped by this item's own job, proven by a
+- [x] An AI-applied tag is visibly distinguishable from an operator-applied one in the console, proven
+      by a rendered-component test. Independently re-proven: hardcoding the neutral tone and disabling
+      the AI-marker branch made the dedicated test fail.
+- [x] A conversation that already carries a manual tag is skipped by this item's own job, proven by a
       test.
 
 ## Open questions

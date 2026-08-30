@@ -58,14 +58,10 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
-| 3 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; honestly limited until `19-02` lands, since `18-04`'s tagging is manual-only today |
-| 4 | `18-12` visitor traffic-source report | `ago-business/decisions/0009`'s "источники диалогов" half of the reporting gap `18-08`/`18-09` do not touch - a second dimension (where a visitor came from) independent of channel (how they messaged) |
-| 5 | `18-13` conversation duration report | The cheapest item in this round - the timestamps already exist; extends `18-08`'s own query with one more aggregate column, no new write path |
-| 6 | `19-02` AI automatic conversation categorization | `docs/adr/0078` kind 2 - the real dependency `18-11`'s own file names, unblocking that report from manual-tagging-only coverage |
-| 7 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
-| 8 | `14-12` verified channel-identity linking | `adr/0079`, cut from the author's own concrete scenario (an operator learning a visitor's Telegram id mid-conversation) - closes `adr/0055`'s own deferred "future, deliberate, verified linking step" |
-| 9 | `14-13` preferred reply channel | `adr/0079` - depends on `14-12`; a visitor only has more than one linked identity once that item ships |
-| 10 | `14-14` unverified contact details | `adr/0079` - independent of `14-12`/`14-13`, for a channel with no adapter at all (SMS/email) or any fact an operator wants on record without verification |
+| 3 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; now buildable at real coverage rather than honestly-limited, since `19-02` (auto-categorization) has landed |
+| 4 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
+| 5 | `14-13` preferred reply channel | `adr/0079` - depends on `14-12` (done); a visitor now has more than one linked identity possible |
+| 6 | `14-14` unverified contact details | `adr/0079` - independent of `14-12`/`14-13`, for a channel with no adapter at all (SMS/email) or any fact an operator wants on record without verification |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -521,11 +517,16 @@ Deliverables:
   competitor - VK named as the qualitatively more important of the two for the actual target customer,
   email as plain table-stakes. VK's own live verification against a real community remains open — see
   the item's own file.
-- **WhatsApp (`14-10`, done 2026-08-30) and Avito (`14-11`) join this stage's deliverables**, cut from
-  `ago-business/decisions/0010` - WhatsApp built without waiting on `14-05`'s own unfinished legal
+- **WhatsApp (`14-10`) and Avito (`14-11`) join this stage's deliverables, both done 2026-08-30**, cut
+  from `ago-business/decisions/0010` - WhatsApp built without waiting on `14-05`'s own unfinished legal
   review (the risk is accepted explicitly, not resolved), Avito built without the quantitative demand
-  check `0009` had asked for and never got. WhatsApp's own live verification against a real Business
-  number remains open, the same honest gap `14-08`'s own file names for VK — see the item's own file.
+  check `0009` had asked for and never got. Neither has a live-verification pass against a real
+  account — the same honest gap `14-08`'s own file names for VK — see each item's own file.
+- **Verified channel-identity linking (`14-12`, done 2026-08-30)**, cut from `adr/0079`: closes
+  `adr/0055`'s own deferred "future, deliberate, verified linking step" - an operator or a visitor
+  themselves can link a second channel identity to the same `Visitor`, verified by the visitor sending
+  a real code from the new channel, never inferred. `14-13` (preferred reply channel) and `14-14`
+  (unverified contact details) are its own named follow-ups, not yet built.
 
 **Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
 conversation already does, and a visitor gets an automatic reply when no operator is online, on at
@@ -766,10 +767,11 @@ Deliverables:
   `18-11` — a topic/tag breakdown on top of `18-04`'s tagging, honestly limited until `19-02` gives it
   real coverage. All three cut 2026-08-30, from `ago-business/decisions/0009`/`0010`.
 - **A second reporting round, cut 2026-08-30** after the author's own direct follow-up that per-operator
-  numbers alone were not the reporting depth asked for: `18-12` — a visitor traffic-source report
-  (referrer/UTM), the "источники диалогов" half of `0009`'s own gap that no existing report touches at
-  all, since channel (`18-08`) answers a different question than traffic source. `18-13` — average
-  conversation duration, the cheapest item either round has cut (the timestamps already exist). `18-14`
+  numbers alone were not the reporting depth asked for: `18-12` (**done 2026-08-30**) — a visitor
+  traffic-source report (referrer/UTM), the "источники диалогов" half of `0009`'s own gap that no
+  existing report touches at all, since channel (`18-08`) answers a different question than traffic
+  source. `18-13` (**done 2026-08-30**) — average conversation duration, the cheapest item either round
+  has cut (the timestamps already exist). `18-14`
   (**done 2026-08-30**) — a chat-to-booking conversion report, the literal "did this convert into a
   booking" ask, built as an
   honest proxy (a `calendar` module task started/closed) rather than a confirmed-booking claim
@@ -803,8 +805,9 @@ Deliverables:
   customer-facing hallucination risk - the visitor never sees anything the operator did not read first.
   Live verification against a real YandexGPT account remains open — no such account exists in this
   environment.
-- `19-02` — automatic conversation categorization into a site's own existing tags (never inventing
-  new ones), closing the real dependency `18-11`'s own file names.
+- `19-02` (**done 2026-08-30**) — automatic conversation categorization into a site's own existing tags
+  (never inventing new ones), closing the real dependency `18-11`'s own file names. Not verified against
+  a real YandexGPT account — no such account exists in this environment.
 - `19-03` — an AI FAQ module, the second real consumer of `20-07`'s module contract after Calendar -
   the actual evidence for or against `adr/0065`'s own bet that the closed-primitive-vocabulary design
   would generalize beyond one module.
