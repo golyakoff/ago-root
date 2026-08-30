@@ -1,7 +1,7 @@
 # Chat-to-booking conversion report — an honest proxy, not a confirmed-booking count
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (`ago-chat#132`, `ago-console#66`, merged 2026-08-30)
 - **Depends on**: `20-07-calendar-becomes-a-chat-module.md` (done) — the `module_tasks` table this
   item reads; `18-10-conversation-outcome-and-conversion-report.md` (ready — build in either order,
   this item does not touch any file `18-10` scopes) — the same "operator-reported outcome" honesty
@@ -74,13 +74,16 @@ without changing" relationship `18-11` already has with `19-02`.**
 
 ## Done when
 
-- [ ] The report correctly counts started-vs-closed `calendar` module tasks per site and date range
+- [x] The report correctly counts started-vs-closed `calendar` module tasks per site and date range
       against real seeded data, proven by a test that includes a conversation with no module task at
       all (must not appear as a zero-row false positive) and one still `Open` at report time.
-- [ ] The console's own copy states the "flow closed, not confirmed booked" distinction in the text a
-      site owner actually reads, not only in this document.
-- [ ] Cross-site isolation is proven by a test.
-- [ ] Cross-module isolation: a site with an enabled module other than `calendar` (if any exist by the
+- [x] The console's own copy states the "flow closed, not confirmed booked" distinction in the text a
+      site owner actually reads, not only in this document. Independently re-proven by the managing
+      session: removing the `Alert` rendering the caveat made the dedicated test fail on the expected
+      copy.
+- [x] Cross-site isolation is proven by a test. Independently re-proven by the managing session:
+      loosening the read-store's `site_id` filter made all 8 `ModuleFlowReadStoreTests` fail.
+- [x] Cross-module isolation: a site with an enabled module other than `calendar` (if any exist by the
       time this is built) does not appear in this report's numbers — proven by a test, not assumed from
       the `module_key` filter alone.
 

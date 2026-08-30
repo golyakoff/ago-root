@@ -61,12 +61,11 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 3 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; honestly limited until `19-02` lands, since `18-04`'s tagging is manual-only today |
 | 4 | `18-12` visitor traffic-source report | `ago-business/decisions/0009`'s "источники диалогов" half of the reporting gap `18-08`/`18-09` do not touch - a second dimension (where a visitor came from) independent of channel (how they messaged) |
 | 5 | `18-13` conversation duration report | The cheapest item in this round - the timestamps already exist; extends `18-08`'s own query with one more aggregate column, no new write path |
-| 6 | `18-14` chat-to-booking conversion report | The literal "конвертировалось ли в запись" ask - an honest proxy (started/closed `calendar` module task, never claimed as a confirmed booking) given `ModuleTaskState`'s own two-value ceiling, named plainly rather than overclaimed |
-| 7 | `19-02` AI automatic conversation categorization | `docs/adr/0078` kind 2 - the real dependency `18-11`'s own file names, unblocking that report from manual-tagging-only coverage |
-| 8 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
-| 9 | `14-12` verified channel-identity linking | `adr/0079`, cut from the author's own concrete scenario (an operator learning a visitor's Telegram id mid-conversation) - closes `adr/0055`'s own deferred "future, deliberate, verified linking step" |
-| 10 | `14-13` preferred reply channel | `adr/0079` - depends on `14-12`; a visitor only has more than one linked identity once that item ships |
-| 11 | `14-14` unverified contact details | `adr/0079` - independent of `14-12`/`14-13`, for a channel with no adapter at all (SMS/email) or any fact an operator wants on record without verification |
+| 6 | `19-02` AI automatic conversation categorization | `docs/adr/0078` kind 2 - the real dependency `18-11`'s own file names, unblocking that report from manual-tagging-only coverage |
+| 7 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
+| 8 | `14-12` verified channel-identity linking | `adr/0079`, cut from the author's own concrete scenario (an operator learning a visitor's Telegram id mid-conversation) - closes `adr/0055`'s own deferred "future, deliberate, verified linking step" |
+| 9 | `14-13` preferred reply channel | `adr/0079` - depends on `14-12`; a visitor only has more than one linked identity once that item ships |
+| 10 | `14-14` unverified contact details | `adr/0079` - independent of `14-12`/`14-13`, for a channel with no adapter at all (SMS/email) or any fact an operator wants on record without verification |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -771,7 +770,8 @@ Deliverables:
   (referrer/UTM), the "источники диалогов" half of `0009`'s own gap that no existing report touches at
   all, since channel (`18-08`) answers a different question than traffic source. `18-13` — average
   conversation duration, the cheapest item either round has cut (the timestamps already exist). `18-14`
-  — a chat-to-booking conversion report, the literal "did this convert into a booking" ask, built as an
+  (**done 2026-08-30**) — a chat-to-booking conversion report, the literal "did this convert into a
+  booking" ask, built as an
   honest proxy (a `calendar` module task started/closed) rather than a confirmed-booking claim
   `ModuleTaskState`'s own two-value ceiling cannot honestly support — see the item's own file for why,
   and its own named relationship to the still-unstarted `20-08`.
