@@ -58,6 +58,14 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
+| 3 | `14-10` WhatsApp Business channel adapter | `ago-business/decisions/0009`+`0010`: the one channel `0009` named directly as Jivo's own biggest Level-1 gap against AGO; `0010` removes `14-05`'s own unfinished legal-review box as a prerequisite for starting the engineering work - the risk is accepted explicitly, not resolved |
+| 4 | `14-11` Avito channel adapter | `ago-business/decisions/0010`: builds on `0009`'s own open question (unverified demand) by direct author decision, the same qualitative-argument shape `14-08` (VK) was already scoped on |
+| 5 | `18-09` per-operator analytics | `18-08`'s own named follow-up, cut for real now: `ago-business/decisions/0009`'s "how good is each operator" gap |
+| 6 | `18-10` conversation outcome and conversion report | New write path (an operator-reported outcome), closing `0009`'s "sales funnel" reporting gap the only way that stays inside this project's own CRM-depth boundary |
+| 7 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; honestly limited until `19-02` lands, since `18-04`'s tagging is manual-only today |
+| 8 | `19-01` AI operator reply-draft assist | First use of the newly-planned Stage 19 (`docs/adr/0078`) — lowest AI risk, no architecture change, never reaches a visitor without an operator choosing to send it |
+| 9 | `19-02` AI automatic conversation categorization | `docs/adr/0078` kind 2 - the real dependency `18-11`'s own file names, unblocking that report from manual-tagging-only coverage |
+| 10 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -513,11 +521,15 @@ Deliverables:
   competitor - VK named as the qualitatively more important of the two for the actual target customer,
   email as plain table-stakes. VK's own live verification against a real community remains open — see
   the item's own file.
+- **WhatsApp (`14-10`) and Avito (`14-11`) join this stage's deliverables 2026-08-30**, cut from
+  `ago-business/decisions/0010` - WhatsApp built without waiting on `14-05`'s own unfinished legal
+  review (the risk is accepted explicitly, not resolved), Avito built without the quantitative demand
+  check `0009` had asked for and never got.
 
 **Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
 conversation already does, and a visitor gets an automatic reply when no operator is online, on at
-least one connected channel - already true today (`14-02`/`14-04`, both done); VK/email/WhatsApp each
-extend the same bar to a new channel as they land, not raise it.
+least one connected channel - already true today (`14-02`/`14-04`, both done); VK/email/WhatsApp/Avito
+each extend the same bar to a new channel as they land, not raise it.
 
 ---
 
@@ -747,6 +759,11 @@ Deliverables:
   `ago-business/decisions/0009`'s gap analysis: conversation volume, first-response time and missed
   count, per channel - "how am I doing" visibility this product has never had, distinct from `12-02`'s
   cross-tenant platform-owner view.
+- `18-09` — the same numbers, per operator (`18-08`'s own named follow-up). `18-10` — an
+  operator-reported conversion outcome and the report built on it, the only shape that closes
+  `0009`'s "sales funnel" gap without reopening the CRM-depth question `0009` already rejected.
+  `18-11` — a topic/tag breakdown on top of `18-04`'s tagging, honestly limited until `19-02` gives it
+  real coverage. All three added 2026-08-30, cut from `ago-business/decisions/0009`/`0010`.
 
 Interface i18n stays out of scope (`vision.md`), and is the one entry on `11-06`'s original list that
 did not become work here.
@@ -758,11 +775,31 @@ conversations nobody is coming back to.
 
 ---
 
-## Stage 19 — reserved
+## Stage 19 — AI assistance
 
-Not yet planned, and now the only number left in the range Stage 10 froze open (2026-08-23). Stages 14
-through 18 took the rest; 19 stays reserved so later `ago-chat`/`ago-platform` work does not collide
-with Stage 20's own number.
+**Goal:** the largest and riskiest gap `ago-business/decisions/0009` named against Jivo, planned
+2026-08-30 (`ago-business/decisions/0010` moves it from "not yet, no real demand signal" to "scope it
+now" by direct author decision). `docs/adr/0078` splits "AI automation" into five distinct
+capabilities with five different risk profiles rather than treating it as one feature - this stage
+builds the three lowest-risk ones; the other two (product/inventory Q&A, AI-triggered booking) are
+named in that ADR with their real prerequisites, not cut as items here. Chat-side work through and
+through, so it takes the number Stage 10 left reserved rather than a new one after Stage 21.
+
+Deliverables:
+- `19-01` — an AI-drafted reply suggestion into an operator's composer, editable and discardable,
+  never sent without the operator choosing to. No architecture change, no customer-facing hallucination
+  risk - the visitor never sees anything the operator did not read first.
+- `19-02` — automatic conversation categorization into a site's own existing tags (never inventing
+  new ones), closing the real dependency `18-11`'s own file names.
+- `19-03` — an AI FAQ module, the second real consumer of `20-07`'s module contract after Calendar -
+  the actual evidence for or against `adr/0065`'s own bet that the closed-primitive-vocabulary design
+  would generalize beyond one module.
+
+**Done when:** an operator can request and use an AI-drafted reply, a real site's conversations get
+tagged automatically from its own vocabulary without operator effort, and a visitor's routine question
+gets answered by a module `Ago.Chat.*` has no special knowledge of - the third one proven, not
+assumed, by the identical guard 1/guard 2 tests `20-07` already built passing unmodified against a
+second module.
 
 ---
 
