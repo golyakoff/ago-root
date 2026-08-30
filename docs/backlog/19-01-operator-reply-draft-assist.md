@@ -1,7 +1,8 @@
 # AI operator reply-draft assist
 
 - **Stage**: 19 (AI assistance — reserved stage, first use)
-- **Status**: ready
+- **Status**: done (`ago-chat#127`, `ago-console#64`, merged 2026-08-30) — one Done-when box stays
+  honestly unmet below: no real YandexGPT account/API key exists in this environment
 - **Depends on**: nothing new architecturally — console-side, reads data the operator already sees
 
 ## Goal
@@ -68,13 +69,20 @@ constant.
 
 - [ ] An operator can request a draft reply for a real conversation and receives real generated text
       into the composer, editable before sending — proven end to end against the real provider chosen.
-- [ ] The provider is never called with more context than the conversation's own message history plus
-      the minimal framing needed — proven by inspecting the actual request payload in a test, not by
-      code review alone.
-- [ ] A rate/cost cap exists and is enforced, proven by a test that exceeds it and confirms the
-      expected rejection, not just that a config value exists.
-- [ ] The resilience pipeline's own unreachable-provider path degrades to "suggestion unavailable,"
-      never to a stuck or silently-failing UI control.
+      **Not verified live** — no real YandexGPT account or API key exists in this environment, the
+      same honest gap `14-08`/`14-10` name for VK/WhatsApp. Proven instead against the real production
+      handler/endpoint chain with a stub provider standing in for the HTTP boundary.
+- [x] The provider is never called with more context than the conversation's own message history plus
+      the minimal framing needed — proven by inspecting the actual request payload in a test
+      (`YandexGptReplyDraftClientTests.SendsExactlyTheSuppliedMessagesAndTheFixedSystemFraming_NothingElse`),
+      not by code review alone.
+- [x] A rate/cost cap exists and is enforced, proven by a test that exceeds it and confirms the
+      expected rejection, not just that a config value exists (per-operator and per-site, each its own
+      test).
+- [x] The resilience pipeline's own unreachable-provider path degrades to "suggestion unavailable,"
+      never to a stuck or silently-failing UI control. Independently re-proven by the managing session:
+      removing `ResilientReplyDraftGenerator`'s catch block made exactly the three degrade-to-Unavailable
+      tests fail (breaker-open, retries-exhausted, terminal-refusal).
 
 ## Open questions
 
