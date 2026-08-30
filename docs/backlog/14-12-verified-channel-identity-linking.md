@@ -1,7 +1,7 @@
 # Verified channel-identity linking and unlinking
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done (`ago-chat#135`, `ago-console#69`, merged 2026-08-30)
 - **Depends on**: `adr/0079-verified-channel-identity-linking-and-a-preferred-reply-channel.md` - the
   full "why this shape" statement; `14-01-external-channel-identity-and-inbound-port.md` (done) - the
   `ChannelIdentity` aggregate this item adds the first real mutation to since it shipped
@@ -72,20 +72,22 @@ why that is a separate, harder problem. This item only ever creates a link where
 
 ## Done when
 
-- [ ] An operator can generate a pending link request from a conversation, relay the code, and the
+- [x] An operator can generate a pending link request from a conversation, relay the code, and the
       visitor confirming it from the new channel results in a real `ChannelIdentity` linked to the
       correct visitor - proven end to end through the real inbound handler chain.
-- [ ] A visitor can start the same process themselves with `/linkidentity <channel-kind>` from inside an
+- [x] A visitor can start the same process themselves with `/linkidentity <channel-kind>` from inside an
       existing conversation and receive the code/instructions in that same conversation, proven by a
       test.
-- [ ] A site attempting to register a module trigger word that collides with `linkidentity` (or any
+- [x] A site attempting to register a module trigger word that collides with `linkidentity` (or any
       other reserved Chat-native command) is refused, proven by a test - `docs/conventions/text-commands.md`'s
       own registration-time collision guard.
-- [ ] A claimed address already linked to a different visitor is refused, not merged, proven by a test.
-- [ ] An operator without `Permission.ChannelIdentityUnlink` cannot unlink; one who holds it (via a role
+- [x] A claimed address already linked to a different visitor is refused, not merged, proven by a test.
+- [x] An operator without `Permission.ChannelIdentityUnlink` cannot unlink; one who holds it (via a role
       the tenant defined) can; the resulting identity is excluded from `FindMostRecentForVisitorAsync`
-      and analytics channel attribution - proven by tests covering all three.
-- [ ] Cross-site isolation is proven by a test (a pending code for one site must never match an inbound
+      and analytics channel attribution - proven by tests covering all three. Independently re-proven by
+      the managing session: removing the `Active` filter from `FindMostRecentForVisitorAsync` left an
+      unlinked identity still eligible for delivery.
+- [x] Cross-site isolation is proven by a test (a pending code for one site must never match an inbound
       message on another site, even with the identical code value by coincidence).
 
 ## Open questions

@@ -1,7 +1,7 @@
 # Conversation duration report
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (`ago-chat#133`, `ago-console#67`, merged 2026-08-30)
 - **Depends on**: `18-08-basic-operator-analytics.md` (done) — the read-store and `GROUPING SETS`
   shape this item extends with one more aggregate column, not a new query
 
@@ -51,13 +51,15 @@ with one more `avg(...)` expression in the same query.
 
 ## Done when
 
-- [ ] The report's `AverageDurationSeconds` field is correct against real seeded data spanning closed
+- [x] The report's `AverageDurationSeconds` field is correct against real seeded data spanning closed
       conversations with a known duration and at least one still-open conversation, proven by a test
       that specifically checks the open conversation is excluded from the average, not just that the
-      closed ones average correctly.
-- [ ] The number appears correctly in every bucket the existing report already returns (overall,
+      closed ones average correctly. Independently re-proven by the managing session: replacing the
+      `filter (where closed_at is not null)` with `coalesce(..., 0)` produced the exact wrong number
+      (175 instead of 233.33).
+- [x] The number appears correctly in every bucket the existing report already returns (overall,
       per-channel, per-operator), proven by a test.
-- [ ] Cross-site isolation is proven by a test (already covered by the existing suite for this
+- [x] Cross-site isolation is proven by a test (already covered by the existing suite for this
       read-store — confirm the new column does not weaken that, don't re-derive it from scratch).
 
 ## Open questions
