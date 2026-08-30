@@ -91,15 +91,18 @@ denial.
   Personal data: `external_address` is a phone number for `Sms`, so this table holds a direct identifier
   in a way `visitors` next to it does not - see `personal-data.md`.
 - `channel_credentials` (**shipped in `14-02`**, AGO Inbox) - `id` (uuid v7), `site_id`, `kind`
-  (`Max|Sms|Telegram|WhatsApp`, `ChannelIdentity`'s own vocabulary reused), `token_ciphertext` (the
+  (`Max|Sms|Telegram|WhatsApp|Vk`, `ChannelIdentity`'s own vocabulary reused), `token_ciphertext` (the
   shop's own bot token, AES-256-GCM, reversible - it must be reproduced for every outbound call),
   `webhook_secret_hash` (the value AGO generated and handed the provider at registration, SHA-256,
   one-way - never reproduced, only ever verified against what a webhook delivery echoes back),
-  `active`, `created_at`. `ChannelCredential` (`Ago.Chat.Domain`), keyed by `(site_id, kind)` -
-  channel-neutral, not `MaxBotCredential`, so `14-03`'s SMS aggregator key inherits this shape rather
-  than re-deriving it (`adr/0069`). Encrypted under a dedicated `Channels:CredentialEncryptionKey`,
-  distinct from `Webhooks:SecretEncryptionKey` - see `secrets.md`. Personal data: none - a bot token
-  and a generated secret belong to the shop, not to any individual.
+  `active`, `created_at`, `provider_account_id` (nullable text, **added `14-08`**: the provider-side
+  identifier a token alone does not disclose - VK's own `group_id`, and now `14-10`'s WhatsApp
+  `phone_number_id`; still `null` for MAX/Telegram, whose bot tokens are self-addressing).
+  `ChannelCredential` (`Ago.Chat.Domain`), keyed by `(site_id, kind)` - channel-neutral, not
+  `MaxBotCredential`, so `14-03`'s SMS aggregator key inherits this shape rather than re-deriving it
+  (`adr/0069`). Encrypted under a dedicated `Channels:CredentialEncryptionKey`, distinct from
+  `Webhooks:SecretEncryptionKey` - see `secrets.md`. Personal data: none - a bot token and a generated
+  secret belong to the shop, not to any individual.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
   shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
@@ -340,6 +343,19 @@ denial.
   (`RegisterChannelCredentialHandler` refuses a second active credential before calling
   `ChannelCredential.Register`) is the primary mechanism; this index is the storage-level backstop, the
   same division `adr/0019` draws for `messages` (`adr/0069`).
+- `channel_credentials` unique `(kind, provider_account_id)` **filtered to `active AND
+  provider_account_id IS NOT NULL`** (`ux_channel_credentials_kind_provideraccountid_active`, `14-10`) -
+  a guarantee no channel needed until WhatsApp, whose inbound webhook resolves a delivery's tenant *by*
+  `provider_account_id` (`IChannelCredentialRepository.GetActiveByProviderAccountIdAsync` - WhatsApp's
+  own webhook is App-wide, not per-credential, so there is no `{credentialId}` path segment to route on
+  the way MAX's/Telegram's/VK's own webhooks have). Without this index, two sites could both register the
+  identical `phone_number_id` (a mistake this system does not otherwise prevent, since Meta's own
+  uniqueness guarantee for that id is a fact about their platform, not a constraint this schema
+  enforced), and an inbound delivery would route to whichever row a lookup happened to find first -
+  silently misattributing one shop's visitor conversation to another. Partial for the identical reason
+  the `(site_id, kind)` index above is: a revoked credential must never block re-registering the same
+  number, and MAX's/Telegram's own rows (`provider_account_id` always `null`) must never collide with
+  each other under a plain unique index on a column most rows leave unset.
 
 ## Partitioning
 
