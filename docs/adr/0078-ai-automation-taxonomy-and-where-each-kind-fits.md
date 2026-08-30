@@ -6,15 +6,15 @@ Accepted
 
 ## Context
 
-`ago-business/docs/decisions/0009` named AI automation as the largest, riskiest gap against Jivo and
-deliberately did not turn it into a backlog item — "too large and too early to estimate without real
+`ago-business/docs/decisions/0009` named AI automation as the largest, riskiest gap against this
+project's nearest direct competitor, and deliberately did not turn it into a backlog item — "too large and too early to estimate without real
 customer demand for it specifically." `ago-business/docs/decisions/0010` reverses that specific call:
 the author decided to scope real work now rather than wait for a demand signal. This ADR is the
 engineering side of that reversal — not a re-litigation of whether to build AI features (that question
 is `0010`'s), but of *what kind of AI feature* means what, and which of those kinds this project can
 build without breaking what `adr/0065` already decided.
 
-Jivo's own example, quoted directly (`ago-business/decisions/0009`'s own source): a visitor asks
+The competitor's own example, quoted directly (`ago-business/decisions/0009`'s own source): a visitor asks
 whether a specific TV model is in stock and whether a discount applies; the bot answers with a live
 price and stock check and offers to place the order. That single example already names three distinct
 capabilities bundled together — answering from a knowledge base, answering from *live, external* data
@@ -75,7 +75,7 @@ operator" already covers "the module is down"; a *low-confidence* answer needs t
 triggered by the module's own judgment rather than a network failure, which is new behavior worth its
 own Done-when when this is actually built, not assumed to fall out of the existing contract for free.
 
-### 4. Product / inventory Q&A — the literal Jivo example, higher risk, needs a port that does not exist yet
+### 4. Product / inventory Q&A — the literal competitor example, higher risk, needs a port that does not exist yet
 
 Answering "is X in stock, does a discount apply" needs *live* data from a system this project has
 never touched: the shop's own product catalog and pricing, which lives in whatever the shop's own
@@ -108,7 +108,7 @@ contract does not grow a second, fuzzier invocation path alongside the determini
 
 ### Explicitly out of scope, permanently, not just "not yet": AI processing payment or completing an order
 
-The "Оформить заказ?" step in Jivo's own example is a checkout, and a checkout is a financial
+The "Оформить заказ?" step in the competitor's own example is a checkout, and a checkout is a financial
 transaction this project has never touched and has no reason to start touching now — `0009`'s Level 4
 rejection (CRM/e-commerce depth is a different product) applies with even more force to actually moving
 money. The correct shape, if kind 4 is ever built for real, is the module handing back a link to the

@@ -13,7 +13,7 @@ has.
 
 ## Why this, and why now
 
-`ago-business/docs/decisions/0009-razryv-po-fucham-s-jivo-chto-stroim-chto-net.md` names email
+`ago-business/decisions/0009` names email
 explicitly as "table stakes, does not distinguish from the competitor, just closes a hole" — deliberately
 lower business priority than VK (`14-08`), which the same decision argues is qualitatively more
 important for the actual target customer. Scoped and filed now so it is ready when its turn in the

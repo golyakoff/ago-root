@@ -58,7 +58,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
-| 3 | `14-10` WhatsApp Business channel adapter | `ago-business/decisions/0009`+`0010`: the one channel `0009` named directly as Jivo's own biggest Level-1 gap against AGO; `0010` removes `14-05`'s own unfinished legal-review box as a prerequisite for starting the engineering work - the risk is accepted explicitly, not resolved |
+| 3 | `14-10` WhatsApp Business channel adapter | `ago-business/decisions/0009`+`0010`: the one channel `0009` named directly as the nearest direct competitor's own biggest Level-1 gap against AGO; `0010` removes `14-05`'s own unfinished legal-review box as a prerequisite for starting the engineering work - the risk is accepted explicitly, not resolved |
 | 4 | `14-11` Avito channel adapter | `ago-business/decisions/0010`: builds on `0009`'s own open question (unverified demand) by direct author decision, the same qualitative-argument shape `14-08` (VK) was already scoped on |
 | 5 | `18-09` per-operator analytics | `18-08`'s own named follow-up, cut for real now: `ago-business/decisions/0009`'s "how good is each operator" gap |
 | 6 | `18-10` conversation outcome and conversion report | New write path (an operator-reported outcome), closing `0009`'s "sales funnel" reporting gap the only way that stays inside this project's own CRM-depth boundary |
@@ -777,7 +777,8 @@ conversations nobody is coming back to.
 
 ## Stage 19 — AI assistance
 
-**Goal:** the largest and riskiest gap `ago-business/decisions/0009` named against Jivo, planned
+**Goal:** the largest and riskiest gap `ago-business/decisions/0009` named against this project's
+nearest direct competitor, planned
 2026-08-30 (`ago-business/decisions/0010` moves it from "not yet, no real demand signal" to "scope it
 now" by direct author decision). `docs/adr/0078` splits "AI automation" into five distinct
 capabilities with five different risk profiles rather than treating it as one feature - this stage
