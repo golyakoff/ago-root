@@ -12,7 +12,7 @@ them inside our own process is cargo cult; omitting them at a third-party HTTP e
 | Redis | Down, slow, evicting | Short timeout, circuit breaker, **fallback to cache miss** — never surface an error (`adr/0009`) |
 | S3 / MinIO | Down, slow presign, slow HEAD | Timeout, retry, circuit breaker on the presign path; uploads themselves never touch our process |
 | Outbound webhooks to a shop's CRM | Slow (30s hangs), 5xx, disappeared endpoint, one tenant dragging everyone down | Timeout, retry with backoff, **circuit breaker per endpoint**, **bulkhead**, DLQ, per-tenant concurrency cap |
-| Outbound channel provider APIs (MAX, later SMS/WhatsApp) | Provider outage, slow or hanging send, terminal refusal of one recipient | Timeout, retry with backoff, **circuit breaker per channel**, **bulkhead per channel** — see the note below |
+| Outbound channel provider APIs (MAX, Telegram, VK, WhatsApp — SMS remains deprioritized, `14-03`) | Provider outage, slow or hanging send, terminal refusal of one recipient | Timeout, retry with backoff, **circuit breaker per channel**, **bulkhead per channel** — see the note below |
 | Outbound Telegram Bot API calls | Provider outage, slow/hanging send, terminal refusal (blocked bot, unknown/deleted chat) — **plus this deployment's own outbound SOCKS5 relay being unreachable**, since Telegram was found unreachable directly from this VPS about half the time (`adr/0070`) and every Telegram call now depends on a relay this process does not control | Timeout, retry with backoff, circuit breaker per channel, bulkhead per channel — the identical `ChannelResiliencePipelines` wiring as the row above, plus a proxy-aware `HttpClient` (`ChatModule`, `TelegramProxyOptions`); the circuit breaker cannot distinguish "Telegram is down" from "the relay is down" — both surface identically as this channel being unreachable |
 | Inbound traffic | Overload, abusive tenant | Rate limiting per tenant, bounded channels, load shedding, `429` with `Retry-After` |
 
@@ -47,6 +47,22 @@ MAX specifically (400/401/403/404 terminal, everything else transient) is a reas
 confirmed against real provider error responses — `14-02`'s own note on this, pending a live-verified
 message exchange. The thresholds otherwise remain starting points modelled on the dispatcher's, not
 measured numbers.
+
+`14-10`'s WhatsApp adapter is the first of the four to combine both outcome shapes MAX and VK each use
+in isolation: a real non-200 HTTP status on failure (MAX's own shape), *and* the terminal/transient
+distinction read from the JSON body's own numeric `error.code` regardless of status (VK's own shape) —
+`WhatsAppApiClient`'s own remarks have the full reasoning for why neither precedent's split transfers
+unchanged. Confirmed live against Meta's own Cloud API error-codes documentation (reachable from this
+environment, unlike MAX's/VK's own primary documentation host), not reconstructed from a third party:
+`100`/`131008`/`131009`/`131021`/`131026`/`131037`/`131050` (parameter and recipient/account problems)
+and `131047`/`131049` (the 24-hour customer-service-window refusal and its ecosystem-quality cousin —
+this channel's own genuinely new constraint, absent from MAX/Telegram/VK, and deliberately left
+unaddressed by template-message support; `WhatsAppChannelAdapter`'s own remarks record that scope
+decision) are terminal; the documented rate-limit and temporary-downtime codes default to transient, the
+identical "err toward retrying" default MAX's and VK's own classes apply to an unrecognised code. Unlike
+every other channel, WhatsApp's outbound send carries **no idempotency key** of its own — Meta's own
+`/messages` endpoint offers no equivalent to VK's `random_id` — a real, named gap shared with MAX's and
+Telegram's own outbound clients (neither offers one either), not a WhatsApp-specific regression.
 
 ## The webhook dispatcher: why it is a separate deployable
 
