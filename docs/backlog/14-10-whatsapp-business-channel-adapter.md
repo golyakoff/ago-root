@@ -14,7 +14,7 @@ through the same channel — the fourth concrete external channel adapter.
 ## Why this, and why now
 
 `ago-business/docs/decisions/0009` names WhatsApp as Level 1 (basic trust as a chat tool) — the single
-channel it calls out by name as the one Jivo has and AGO does not, for the target customer (`0002`: a
+channel it calls out by name as the one the nearest direct competitor has and AGO does not, for the target customer (`0002`: a
 small Russian online shop) specifically. `ago-business/docs/decisions/0010` removes the one thing that
 was blocking it: `14-05`'s own WhatsApp legal-review box, still genuinely unfinished, is no longer a
 prerequisite for starting the engineering work — the author accepted that risk explicitly, in `0010`,

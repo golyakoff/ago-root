@@ -10,8 +10,8 @@
 
 A site owner can see, per operator, the same shape of numbers `18-08` already computes site-wide:
 conversation count, average first-response time, and missed count — "how good is each operator", the
-question `ago-business/docs/decisions/0009` names directly as something Jivo already reports and AGO
-does not.
+question `ago-business/docs/decisions/0009` names directly as something the nearest direct competitor
+already reports and AGO does not.
 
 ## Why this, and why now
 

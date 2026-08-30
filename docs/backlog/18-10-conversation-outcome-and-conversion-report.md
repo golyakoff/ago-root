@@ -9,8 +9,8 @@
 
 An operator can mark what a conversation actually led to (an order, no sale, a follow-up needed), and a
 site owner can see a real conversion rate — "how much benefit is the business actually getting from
-paying us", the second half of what `ago-business/docs/decisions/0009` names Jivo as already reporting
-("воронка продаж" — the sales funnel) that AGO does not.
+paying us", the second half of what `ago-business/docs/decisions/0009` names the nearest direct
+competitor as already reporting ("воронка продаж" — the sales funnel) that AGO does not.
 
 ## Why this is a new write path, not just a new report
 

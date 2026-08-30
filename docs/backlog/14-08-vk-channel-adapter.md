@@ -17,8 +17,8 @@ adapter after MAX (`14-02`) and Telegram (`14-07`).
 
 ## Why this, and why now
 
-`ago-business/docs/decisions/0009-razryv-po-fucham-s-jivo-chto-stroim-chto-net.md` names VK as a real,
-qualitatively weighty gap against the nearest direct competitor (Jivo), specifically for the target
+`ago-business/decisions/0009` names VK as a real,
+qualitatively weighty gap against the nearest direct competitor, specifically for the target
 customer this project already committed to (`0002`: a small Russian online shop) — Russian social
 commerce runs heavily through VK, arguably more than through Telegram for this exact segment, though
 that is a qualitative argument in the business decision, not a number measured here. This item exists

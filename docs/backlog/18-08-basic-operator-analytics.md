@@ -17,8 +17,8 @@ have at all today.
 
 ## Why this, and why now
 
-`ago-business/docs/decisions/0009-razryv-po-fucham-s-jivo-chto-stroim-chto-net.md` names this as "Level
-2" of the gap against the nearest direct competitor (Jivo) — cheap to build (no new write path, purely
+`ago-business/decisions/0009` names this as "Level
+2" of the gap against the nearest direct competitor — cheap to build (no new write path, purely
 derived from data already recorded) and, unlike CRM depth or telephony (also named in that document,
 and explicitly rejected), genuinely wanted by the target customer independent of what any competitor
 offers: a small shop owner wants to know how their own support is doing, not to match a feature list.
