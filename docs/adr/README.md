@@ -78,3 +78,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0075 | An explicit-transaction port, and a canonical lock order, for transferring a conversation | Accepted |
 | 0076 | AGO is controller for its own accounts, processor for a tenant's visitor data - and the widget carries the tenant's notice | Accepted |
 | 0077 | A chat module's transport is the wire, confirmed by a real measured hop, not a package reference | Accepted |
+| 0078 | AI automation is several different capabilities, not one feature, and most of them fit the existing module contract unchanged | Accepted |
