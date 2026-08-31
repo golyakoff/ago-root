@@ -192,10 +192,11 @@ that cited it — before landing.
 **What is honestly not done**: the first Done-when box (a real conversation through the widget, on a
 real text-only channel) was out of scope for every worker's own brief and remains unverified — it needs
 a live `ago-faq` deployment plus `ago-chat`'s module registry pointing at it, integration across three
-repositories no single worker's worktree could exercise. `ago-faq`'s own CI is red on its first run: it
-needs the `AGO_PLATFORM_PACKAGES_TOKEN` repository secret (`adr/0018`) that `ago-chat`/`ago-calendar`
-already carry — the managing session cannot mint or read that value and has asked the author to add it.
-The LLM call itself was never exercised against a real OpenAI-compatible provider, only against an
+repositories no single worker's worktree could exercise. `ago-faq` also needed the
+`AGO_PLATFORM_PACKAGES_TOKEN` repository secret (`adr/0018`) that `ago-chat`/`ago-calendar` already
+carry — the managing session could not mint or read that value; the author added it, and `ago-faq`'s CI
+is green (`build-test`, `Vulnerability check`, `Format check`, `Build`, `Test` all passing). The LLM call
+itself was never exercised against a real OpenAI-compatible provider, only against an
 in-process fake Kestrel host standing in for one (`OpenAiCompatibleFaqAnswerGeneratorTests`, the same
 technique `ago-chat`'s own `YandexGptReplyDraftClientTests` established) — no real API key exists
 anywhere in this environment. The console's knowledge-base-edit endpoint does not yet re-verify
