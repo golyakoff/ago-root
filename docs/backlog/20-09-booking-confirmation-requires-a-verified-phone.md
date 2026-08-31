@@ -1,7 +1,9 @@
 # Booking confirmation requires a verified phone, plus prioritized additional channels
 
 - **Stage**: 20 (and 14 — the verification mechanism it consumes lives there)
-- **Status**: ready
+- **Status**: built, chat-only (2026-08-31, `ago-chat#144`, `ago-calendar#12`, not yet merged) — see
+  Outcome below; the public booking widget is out of this item's own scope, covered instead by
+  `20-10-public-booking-widget-requires-a-verified-phone.md`
 - **Depends on**: `14-15-phone-verification-via-call-or-sms-code.md` — this item is that primitive's
   first real consumer, and cannot be built before it. `20-07-calendar-becomes-a-chat-module.md` (done) —
   the chat-originated booking flow this item's own trigger scenario describes, and the flow that must
@@ -34,10 +36,21 @@ item's own requirement is the mirror of it applied to a visitor-supplied, must-b
 a **verified** qualifier to a field that already exists, rather than inventing a new one. This lives in
 Calendar regardless of which surface created the booking — the chat-originated flow this item's own
 trigger scenario describes, and (if this deployment ever ships one) a booking widget with no chat
-conversation behind it at all. Scoping this to "chat-originated bookings only" would leave a second,
-un-gated path the moment one exists — decide explicitly whether the rule is universal (recommended,
-named as the default below) or chat-only, and record which, rather than let the two paths silently
-diverge.
+conversation behind it at all. Scoping this to "chat-originated bookings only" leaves a second, un-gated
+path open — named honestly below, not silently left to diverge.
+
+**Decided: chat-only, reversing this section's own earlier "universal, recommended" framing.** The
+first implementation attempt built the gate universally and found the real cost of that choice, not
+just its theoretical existence: the public booking widget's own `/book` endpoint is unauthenticated and
+browser-reachable, so making the gate universal without first building a *secure* way for that endpoint
+to supply a verification assertion meant either a self-asserted field any caller could forge (rejected
+outright as a real hole) or a widget that can no longer complete any booking at all (the shape actually
+built and tested, then reverted). Narrowed to chat-only after review: `BookEvent` gained a
+`RequiresVerifiedPhone` flag, `true` only from the chat-module flow — the public widget is functionally
+unaffected by this item, proven by its own pre-existing tests staying byte-identical. The public
+widget's own path to the same guarantee is `20-10`, a named, separate follow-up — not a hypothetical
+someday, but a real prerequisite named by the author as needed before this product's first live
+customer, tracked in the Now queue at the same priority as this item.
 
 ## Correction: `Event.Claim` is never called in production code, `IBookingStore.TryBookAsync` is
 
@@ -160,24 +173,51 @@ want, rather than inventing a second data-flow pattern for it.
 
 ## Done when
 
-- [ ] `Event.Claim` cannot be called by the chat-originated flow without a completed `14-15`
-      verification immediately preceding it, proven end to end through the real module task flow.
-- [ ] `20-04`'s own sweep is unmodified and still proven to confirm an (already-verified-at-claim-time)
+- [x] `IBookingStore.TryBookAsync` (the real claim mechanism, see the correction above) cannot be
+      reached by the chat-originated flow without a completed `14-15` verification immediately
+      preceding it, proven end to end through the real module task flow, against a real Postgres.
+- [x] `20-04`'s own sweep is unmodified and still proven to confirm an (already-verified-at-claim-time)
       `PendingConfirmation` row normally — the regression guard that the decision above did not quietly
       leave a gap where the sweep's own behavior was assumed rather than re-tested.
-- [ ] A claim attempt that loses the slot-availability race during verification surfaces a specific,
-      actionable error, not a generic failure, proven by a test.
-- [ ] A visitor can add additional contact channels for a specific booking, each refused a place in the
-      priority list until independently verified, proven by a test per channel kind exercised.
-- [ ] Whether the rule is universal across every booking-creation surface or chat-originated-only is
-      recorded explicitly, per "Why this is a Calendar-side rule" above.
+- [x] A claim attempt that loses the slot-availability race during verification surfaces a specific,
+      actionable outcome, not a generic failure — reuses the existing re-offer path a lost availability
+      race already produces (`ReplyToModuleTaskHandler`'s own `ReopenForSlotChoice`), proven by a test.
+- [ ] **Deferred, not built**: a visitor adding additional contact channels for a specific booking,
+      priority-ordered, each independently verified. Out of this item's own delivered scope — see
+      Outcome below for why, and `20-11` for where this is now tracked as its own item.
+- [x] Whether the rule is universal across every booking-creation surface or chat-originated-only is
+      recorded explicitly: **chat-only**, decided above, with the public widget's own path to the same
+      guarantee tracked as `20-10`.
+
+## Outcome
+
+Built 2026-08-31 across `ago-chat` (`#144`) and `ago-calendar` (`#12`), not yet merged. Independently
+re-verified by the managing session, not only reported by the implementing worker: `ago-chat` 1867/1867,
+`ago-calendar` 310/310 (after the chat-only narrowing — the worker's own first pass, built universal,
+scored 308/308 with the widget's own tests rewritten to expect permanent failure; narrowing back to
+chat-only restored those two files to byte-identical with `main` and net +2 tests, the two the universal
+pass had removed). Fails-before independently re-proven for the core gate (three tests, including two
+proving the public endpoint would silently succeed without `RequiresVerifiedPhone`'s own check).
+
+**What shipped**: a sixth Chat primitive (`VerifiedPhoneForm`), the wire-contract extension
+(`RequiresVerifiedPhone`/`PhoneVerifiedAt`, additive per `api-design.md`), the Calendar-side refusal at
+the real claim call site, the `phone_verified_at` snapshot (earliest-wins, matching `display_name`'s own
+`COALESCE` pattern), and the sweep regression guard. Every Done-when box above is met **for the
+chat-originated flow**.
+
+**What did not ship, honestly**: additional prioritized/verified channels (deferred entirely, tracked as
+`20-11`), and the public widget's own verification (never in this item's final scope, tracked as
+`20-10`). Neither is a gap in this item's own delivery — both are real, separate items this Outcome
+names rather than leaves implicit.
 
 ## Open questions
 
 - What the module task does when the claim-after-verification race is actually lost (the slot went to
   someone else during the verification window): offer the visitor another slot in the same conversation
   immediately, or end the task and require restarting the booking flow from the top — a real UX question
-  the timing change above introduces, not present in the rejected shape.
+  the timing change above introduces, not present in the rejected shape. **Resolved during
+  implementation**: the existing re-offer path handles it; see Outcome above.
 - Interaction with `14-13`'s own visitor-wide preferred channel: whether this item's own per-booking
   priority list overrides it for booking-related messages specifically, or the two are meant to be the
-  same list read two different ways — decide before both exist and quietly disagree.
+  same list read two different ways — moot until `20-11` (the deferred additional-channels scope) is
+  picked up; decide there.
