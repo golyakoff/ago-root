@@ -58,7 +58,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `14-15` phone verification via a proactive call or SMS code | **New, 2026-08-31**, from a real prospective-customer conversation. Extends `14-12`'s verified-`ChannelIdentity` mechanism to a phone number, which has no inbound-message channel to supply `14-12`'s own evidence - this system has to call or text first |
-| 3 | `20-09` booking confirmation requires a verified phone | **New, 2026-08-31**, same conversation. `14-15`'s first real consumer: `Event.Confirm(now)` refuses without a verified phone - and so must `20-04`'s own sweep, a real polarity conflict with its "confirm by default" design, named in the item's own file - plus a priority-ordered list of additional channels the visitor offers, each independently verified the same way |
+| 3 | `20-09` booking confirmation requires a verified phone | **New, 2026-08-31**, same conversation. `14-15`'s first real consumer: verification runs *before* `Event.Claim`, not by gating `Confirm` - decided specifically to leave `20-04`'s "confirm by default" sweep untouched, at the honest cost of the slot staying claimable by someone else during verification. Plus a priority-ordered list of additional channels the visitor offers, each independently verified the same way |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -865,9 +865,10 @@ Deliverables:
   (`adr/0065`, `adr/0077`). Live end-to-end verification (a real click-through booking, and the same
   flow over a real text channel) is the one piece still open - see the item's own file.
 - **Booking confirmation requires a verified phone (`20-09`, new 2026-08-31)**, from a real
-  prospective-customer conversation: `Event.Confirm(now)` refuses without one, and `20-04`'s own
-  confirm-by-default sweep has to change polarity for unverified rows too - the real conflict this
-  item's own file names rather than glosses over. First real consumer of `14-15` (Stage 14).
+  prospective-customer conversation: `14-15` verifies *before* `Event.Claim` is ever called, deliberately
+  leaving `20-04`'s own confirm-by-default sweep untouched - the real polarity conflict a `Confirm`-side
+  gate would have hit, resolved by moving the gate earlier rather than reconciling two defaults. First
+  real consumer of `14-15` (Stage 14).
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
