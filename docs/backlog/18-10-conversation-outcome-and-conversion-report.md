@@ -1,7 +1,7 @@
 # Conversation outcome, and a conversion report built on it
 
 - **Stage**: 18
-- **Status**: ready
+- **Status**: done (`ago-chat#131`, `ago-console#65`, merged 2026-08-30)
 - **Depends on**: `18-08-basic-operator-analytics.md` (done) — the read-store shape this item's report
   extends
 

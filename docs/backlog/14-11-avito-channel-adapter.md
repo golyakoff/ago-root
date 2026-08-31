@@ -1,7 +1,7 @@
 # AGO Inbox: Avito channel adapter
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done (`ago-chat#130`, merged 2026-08-30)
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md` — reuses the port and
   `ChannelIdentity` concept unchanged, the same way `14-02`/`14-07`/`14-08`/`14-10` already do
 

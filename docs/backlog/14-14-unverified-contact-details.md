@@ -1,7 +1,7 @@
 # Unverified contact details
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done (`ago-chat#137`, `ago-console#71`, merged 2026-08-30)
 - **Depends on**: `adr/0079-verified-channel-identity-linking-and-a-preferred-reply-channel.md` - the
   "why this is not a `ChannelIdentity`" reasoning. Independent of `14-12`/`14-13` - buildable in any
   order relative to them, and touches none of their files.

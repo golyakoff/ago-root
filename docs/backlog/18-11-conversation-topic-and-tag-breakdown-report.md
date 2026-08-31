@@ -1,7 +1,7 @@
 # Conversation topic and tag breakdown report
 
 - **Stage**: 18
-- **Status**: ready, but see the real dependency named below before starting
+- **Status**: done (`ago-chat#139`, `ago-console#73`, merged 2026-08-30)
 - **Depends on**: `18-04-internal-notes-and-tags.md` (done) — the tag data this item reports on;
   `18-08-basic-operator-analytics.md` (done) — the per-channel breakdown shape this item extends with a
   second dimension
