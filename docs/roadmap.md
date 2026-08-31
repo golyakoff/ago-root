@@ -57,7 +57,9 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `20-09` booking confirmation requires a verified phone | **New, 2026-08-31**, from a real prospective-customer conversation. `14-15` (built, `ago-chat#143`) is this item's own dependency - verification runs *before* `Event.Claim`, not by gating `Confirm` - decided specifically to leave `20-04`'s "confirm by default" sweep untouched, at the honest cost of the slot staying claimable by someone else during verification. Plus a priority-ordered list of additional channels the visitor offers, each independently verified the same way |
+| 2 | `20-09` chat-originated booking requires a verified phone | **Built 2026-08-31, `ago-chat#144`/`ago-calendar#12`, not yet merged.** From a real prospective-customer conversation, and a real prerequisite to that customer's own launch, not a hypothetical - verification runs *before* the real claim (`IBookingStore.TryBookAsync`), leaving `20-04`'s sweep untouched. Scoped to chat-only after the first draft's universal gate was found to leave the public widget unable to book at all - split into `20-10`/`20-11` below |
+| 3 | `20-10` public booking widget requires a verified phone | **New, 2026-08-31**, `20-09`'s own named follow-up and the other half of the same launch prerequisite. Three shapes weighed, none chosen yet - see the item's own file |
+| 4 | `20-11` additional verified contact channels for a booking | **New, 2026-08-31**, deferred from `20-09` under real time pressure, named as its own item rather than left a silent gap - priority-ordered extra channels (another phone, a messenger), each independently verified |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -865,11 +867,12 @@ Deliverables:
   conversation, on any channel, with `Ago.Chat.*` carrying no knowledge that appointments exist
   (`adr/0065`, `adr/0077`). Live end-to-end verification (a real click-through booking, and the same
   flow over a real text channel) is the one piece still open - see the item's own file.
-- **Booking confirmation requires a verified phone (`20-09`, new 2026-08-31)**, from a real
-  prospective-customer conversation: `14-15` verifies *before* `Event.Claim` is ever called, deliberately
-  leaving `20-04`'s own confirm-by-default sweep untouched - the real polarity conflict a `Confirm`-side
-  gate would have hit, resolved by moving the gate earlier rather than reconciling two defaults. First
-  real consumer of `14-15` (Stage 14).
+- **Chat-originated booking requires a verified phone (`20-09`, built 2026-08-31)**, from a real
+  prospective-customer conversation and a real launch prerequisite for that customer, not a
+  hypothetical: `14-15` verifies before the real claim (`IBookingStore.TryBookAsync`) is ever reached,
+  deliberately leaving `20-04`'s own confirm-by-default sweep untouched. First real consumer of `14-15`
+  (Stage 14). Scoped to chat-only, not universal - the public widget's own path to the same guarantee is
+  `20-10`, and the deferred additional-channels want is `20-11`, both new the same day.
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
