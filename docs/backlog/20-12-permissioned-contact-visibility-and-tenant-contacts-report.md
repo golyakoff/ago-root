@@ -41,11 +41,16 @@ What is missing, confirmed by reading the real code rather than assumed:
   permanent — the slot never becomes `Available` again for a different visitor. Worth naming, not
   necessarily worth fixing in this item (see Out of scope).
 - **`Permission.CustomerRead` already exists** (`Ago.Calendar.Domain/Permission.cs`) but is not yet
-  wired to anything in the queue, and **exactly one role exists today** (`Role.cs` seeds a single
-  `"Operator"` role holding all seven permissions, including `CustomerRead`) — so granting `CustomerRead`
-  to one operator and withholding it from another is not possible in the current system at all. This
-  item's own permission gate is meaningless until Calendar's role system can express more than one role,
-  which makes that a real, in-scope dependency, not a detail.
+  wired to anything in the queue. **The gap is thinner than it first looks**: `Role.Create(id, tenantId,
+  name, permissions)` is already a fully general factory (any name, any permission subset) and
+  `Operator.Grant(Role)` already supports assigning more than one role to an operator (a no-op, not an
+  error, on a repeat grant) — nothing in the Domain layer needs to change. What is actually missing is
+  that **only one role is ever seeded in production** (`Role.SeedOperatorRole`, holding all seven
+  permissions including `CustomerRead`, per `20-06`'s own provisioning transaction) and **nothing calls
+  `Role.Create` a second time, and no surface lets a tenant create a role or reassign an operator's
+  roles** — a provisioning/console gap, not a domain-model one. This item's own permission gate is still
+  meaningless without closing that gap, so it stays in scope, just smaller than "extend the role system"
+  implied.
 - **No owner-bypass mechanism exists in Calendar.** Chat's own closest-sounding precedent (`14-12`'s
   "site owner's unconditional unlink") resolves, on inspection, to AGO's own *platform* owner
   (`adr/0032`'s cross-tenant staff role) — not a tenant's own account owner, and not reusable here.
@@ -56,13 +61,14 @@ What is missing, confirmed by reading the real code rather than assumed:
   personal data — this item's own contacts report is a new kind of screen for both products, not a
   copy of an existing one.
 
-## Decided: two permission tiers, not a bypass
+## Decided: a second role and a way to assign it, not a domain change
 
-**Extend Calendar's role system to support more than the single seeded `"Operator"` role** — the
-concrete, structural gap named above. The shape: a tenant can grant `Permission.CustomerRead`
-per-operator (through whatever role-assignment mechanism this item builds — a second seeded role, or a
-per-operator permission override; decide and record which when implemented, the same "state the real
-mechanism, don't guess" discipline this backlog already holds itself to elsewhere). The tenant's own
+**No Domain change is needed** — `Role.Create`/`Operator.Grant` already support exactly this shape.
+What this item builds is the missing *surface*: a way for a tenant to actually get a second role
+provisioned (a second call to `Role.Create` — either seeded automatically alongside `SeedOperatorRole`
+at `20-06`'s own provisioning time, or created on demand from the console; decide and record which when
+implemented) and a way to move an operator between roles (an endpoint + console action calling
+`Operator.Grant`/an equivalent revoke, neither of which exists today either). The tenant's own
 account-owner identity — itself a real, open question named below — always holds `CustomerRead` by
 construction, not through a bypass path parallel to the permission system (`adr/0032`'s own platform-
 owner shape is deliberately not reused here, since that concept is cross-tenant AGO staff, not a
@@ -70,10 +76,9 @@ tenant's own admin).
 
 ## Scope
 
-- **The role-granularity gap**: Calendar's role system gains the ability to express at least two
-  distinct operator roles (or an equivalent per-operator override), so `CustomerRead` can genuinely be
-  granted to one operator and withheld from another — proven by a test that an operator without it
-  cannot read a customer's phone even though one with it, on the same tenant, can.
+- **A second role actually gets provisioned, and an operator can actually be moved between roles** —
+  the surface gap named above, not a Domain change. Proven by a test that an operator without
+  `CustomerRead` cannot read a customer's phone even though one with it, on the same tenant, can.
 - **The pending queue's own read model gains the phone field**, returned only when the requesting
   operator holds `Permission.CustomerRead` — checked per-request (the queue is shared/unassigned, so
   this cannot be a static per-row property) — proven by a test that the same queue request returns the
@@ -107,8 +112,8 @@ tenant's own admin).
 
 - [ ] An operator holding `Permission.CustomerRead` sees a pending booking's phone number in the queue;
       one without it does not, on the identical underlying booking — proven by a test.
-- [ ] The role-granularity gap is closed: a tenant can actually grant `CustomerRead` to one operator and
-      withhold it from another, proven by a test using two real operators with different roles.
+- [ ] A tenant can actually get a second role provisioned and move an operator onto/off it, proven by a
+      test using two real operators ending up with different roles.
 - [ ] The tenant's own account-owner concept (whatever this item decides it means, per Scope above)
       always sees contact data regardless of role, proven by a test.
 - [ ] A tenant contacts report exists, listing every customer's contact/personal data for an operator
