@@ -57,11 +57,9 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `14-09` email channel adapter | New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
-| 3 | `18-11` conversation topic and tag breakdown report | Extends `18-08`'s per-channel numbers with a topic dimension; now buildable at real coverage rather than honestly-limited, since `19-02` (auto-categorization) has landed |
-| 4 | `19-03` AI FAQ module | `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
-| 5 | `14-13` preferred reply channel | `adr/0079` - depends on `14-12` (done); a visitor now has more than one linked identity possible |
-| 6 | `14-14` unverified contact details | `adr/0079` - independent of `14-12`/`14-13`, for a channel with no adapter at all (SMS/email) or any fact an operator wants on record without verification |
+| 2 | `15-08` static frontend cache headers | **In progress, managing session.** Found live 2026-08-30 fixing `ago-widget#40` (the `SendMessageAsync` arity bug): none of the four static frontends sets `Cache-Control` at all, so a deployed fix can sit invisible to an already-cached visitor for an unknown, uncontrolled length of time - a security-relevant gap, not only a UX one |
+| 3 | `14-09` email channel adapter | **In progress, background worker.** New, same business decision - lower priority than `14-08`: "table stakes, does not distinguish from the competitor, just closes a hole" |
+| 4 | `19-03` AI FAQ module | **In progress, background worker, open questions left to its own judgment by the author's own instruction.** `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -525,8 +523,11 @@ Deliverables:
 - **Verified channel-identity linking (`14-12`, done 2026-08-30)**, cut from `adr/0079`: closes
   `adr/0055`'s own deferred "future, deliberate, verified linking step" - an operator or a visitor
   themselves can link a second channel identity to the same `Visitor`, verified by the visitor sending
-  a real code from the new channel, never inferred. `14-13` (preferred reply channel) and `14-14`
-  (unverified contact details) are its own named follow-ups, not yet built.
+  a real code from the new channel, never inferred. Its own named follow-ups, both done 2026-08-30:
+  `14-13` (preferred reply channel - an operator's override for which of a visitor's several linked
+  identities a reply goes to, read-time tolerant of a since-unlinked preference) and `14-14`
+  (unverified contact details - a phone/email an operator types because a visitor said it, for a
+  channel with no adapter at all, deliberately never used for delivery).
 
 **Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
 conversation already does, and a visitor gets an automatic reply when no operator is online, on at
@@ -567,6 +568,11 @@ Deliverables:
 - A real image registry, tagged images, and a rollback proven by performing one (`15-06`) — replacing
   build-on-the-VPS-and-import, which leaves no previous version to roll back to and gives a rebuilt
   cluster nothing to run.
+- The four static frontends joined the registry too (`15-07`, done) — every running pod now says which
+  commit it is, not only the three `Ago.Chat.*` hosts. **What that item left standing, found live
+  2026-08-30**: none of the four sets `Cache-Control` at all, so identity and freshness turned out to
+  be two different questions - a deployed, verified fix can still be invisible to an already-cached
+  visitor for an unknown length of time (`15-08`, in progress).
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a
@@ -762,10 +768,11 @@ Deliverables:
   count, per channel - "how am I doing" visibility this product has never had, distinct from `12-02`'s
   cross-tenant platform-owner view.
 - `18-09` — the same numbers, per operator (`18-08`'s own named follow-up, **done 2026-08-30**). `18-10`
-  — an operator-reported conversion outcome and the report built on it, the only shape that closes
-  `0009`'s "sales funnel" gap without reopening the CRM-depth question `0009` already rejected.
-  `18-11` — a topic/tag breakdown on top of `18-04`'s tagging, honestly limited until `19-02` gives it
-  real coverage. All three cut 2026-08-30, from `ago-business/decisions/0009`/`0010`.
+  (**done 2026-08-30**) — an operator-reported conversion outcome and the report built on it, the only
+  shape that closes `0009`'s "sales funnel" gap without reopening the CRM-depth question `0009` already
+  rejected. `18-11` (**done 2026-08-30**) — a topic/tag breakdown on top of `18-04`'s tagging, now built
+  at real coverage since `19-02` landed the same day. All three cut 2026-08-30, from
+  `ago-business/decisions/0009`/`0010`.
 - **A second reporting round, cut 2026-08-30** after the author's own direct follow-up that per-operator
   numbers alone were not the reporting depth asked for: `18-12` (**done 2026-08-30**) — a visitor
   traffic-source report (referrer/UTM), the "источники диалогов" half of `0009`'s own gap that no

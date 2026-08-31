@@ -1,7 +1,7 @@
 # Preferred reply channel
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: done (`ago-chat#138`, `ago-console#72`, merged 2026-08-30)
 - **Depends on**: `14-12-verified-channel-identity-linking.md` - a visitor only ever has more than one
   active `ChannelIdentity` once that item ships; `adr/0079` - the full "why `Visitor`, not
   `Conversation`" reasoning
