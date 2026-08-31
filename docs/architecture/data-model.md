@@ -103,6 +103,18 @@ denial.
   (`adr/0069`). Encrypted under a dedicated `Channels:CredentialEncryptionKey`, distinct from
   `Webhooks:SecretEncryptionKey` - see `secrets.md`. Personal data: none - a bot token and a generated
   secret belong to the shop, not to any individual.
+- `email_threads` (**shipped in `14-09`**, AGO Inbox) - `conversation_id` (uuid, primary key - a 1:1
+  extension of `conversations`, not a synthetic id: nothing ever addresses one of these rows on its own,
+  the only lookup is "the thread state for conversation X"), `root_message_id`/`last_inbound_message_id`
+  (the first and most recent inbound email's own RFC 5322 `Message-ID` header value, verbatim - what
+  `EmailChannelAdapter` reads back to build `In-Reply-To`/`References` on an operator's reply), `subject`
+  (captured once, from the first inbound message). The one channel-specific table this stage has needed
+  besides `channel_identities`/`channel_credentials`: no other channel replies to a chat id or phone
+  number and needs any of a *specific earlier message's* own identifier read back later - email's own
+  threading is client-side, driven entirely by these headers (`adr/0080`). Personal data: none directly -
+  a `Message-ID` is an opaque identifier, not a phone number or address; `channel_identities.external_address`
+  already carries the visitor's own email address for this channel, the same column `Sms`'s phone number
+  uses.
 - `operators` - `id`, `site_id`, `status` (`offline|online|away`), `capacity`, `active_chats`.
   **Shipped in `4-01`**: `active_chats` is not part of the `Operator` aggregate - EF maps it as a
   shadow property (`OperatorConfiguration`, `Ago.Chat.Infrastructure.Postgres`) purely so migrations
