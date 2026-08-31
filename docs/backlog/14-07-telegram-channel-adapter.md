@@ -3,7 +3,7 @@
 - **Stage**: 14
 - **Status**: done (2026-08-28) — code merged `ago-chat#106`, deploy merged `ago-deploy#84`/`#85`/`#86`,
   both live-verification Done-when items closed against a real bot (`@ago_chat_demo_bot`); the log-leak
-  fix (`ago-chat#107`) is open, not yet merged, tracked separately below
+  fix (`ago-chat#107`, merged 2026-08-28) is also in, tracked separately below
 - **Depends on**: `14-01-external-channel-identity-and-inbound-port.md` (the port this implements),
   `14-05-telegram-whatsapp-spike.md` (the prerequisite this item was blocked on — now answered for
   Telegram, `adr/0070`)

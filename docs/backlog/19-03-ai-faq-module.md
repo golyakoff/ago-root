@@ -1,8 +1,8 @@
 # AI FAQ / knowledge-base module
 
 - **Stage**: 19 (AI assistance)
-- **Status**: built (2026-08-31, `ago-chat#142`, new `ago-faq` repository, `ago-console#80`, not yet
-  merged) — see Outcome below for exact scope and the honestly-unmet Done-when boxes
+- **Status**: done (2026-08-31, `ago-chat#142`, new `ago-faq` repository, `ago-console#80`,
+  `ago-root#267`, all merged) — see Outcome below for exact scope and the honestly-unmet Done-when boxes
 - **Depends on**: `20-07-calendar-becomes-a-chat-module.md` (done) — this item is the second real
   consumer of the module contract `adr/0065`/`adr/0077` built, and the first test of whether that
   contract actually generalizes beyond Calendar or was accidentally Calendar-shaped
