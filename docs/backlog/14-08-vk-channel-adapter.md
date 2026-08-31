@@ -1,7 +1,7 @@
 # AGO Inbox: VK (ВКонтакте) channel adapter
 
 - **Stage**: 14
-- **Status**: built (2026-08-29, `ago-chat#124`, not yet merged) — a
+- **Status**: done (`ago-chat#124`, merged 2026-08-29) — a
   real message reaches an operator and a real console reply reaches VK back, both proven against a real
   Postgres and the real production handler/endpoint chain; **not yet verified against a real VK
   community and a real account** — no VK access token exists in the environment this item was built in.

@@ -1,7 +1,7 @@
 # AGO Inbox: email channel adapter
 
 - **Stage**: 14
-- **Status**: built (2026-08-31, `ago-chat#141`, not yet merged) —
+- **Status**: done (`ago-chat#141`, merged 2026-08-31) —
   a real inbound email reaches an operator and a real console reply reaches the visitor back, both proven
   against a real Postgres and the real production handler/endpoint chain, and — unlike every channel
   before it — with **no live-verification gap left by a missing third-party account**: this channel's
