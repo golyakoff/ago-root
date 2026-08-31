@@ -1,7 +1,7 @@
 # Booking confirmation requires a verified phone, plus prioritized additional channels
 
 - **Stage**: 20 (and 14 — the verification mechanism it consumes lives there)
-- **Status**: built, chat-only (2026-08-31, `ago-chat#144`, `ago-calendar#12`, not yet merged) — see
+- **Status**: done, chat-only (`ago-chat#144`, `ago-calendar#12`, merged 2026-08-31) — see
   Outcome below; the public booking widget is out of this item's own scope, covered instead by
   `20-10-public-booking-widget-requires-a-verified-phone.md`
 - **Depends on**: `14-15-phone-verification-via-call-or-sms-code.md` — this item is that primitive's
