@@ -39,6 +39,28 @@ un-gated path the moment one exists — decide explicitly whether the rule is un
 named as the default below) or chat-only, and record which, rather than let the two paths silently
 diverge.
 
+## Correction: `Event.Claim` is never called in production code, `IBookingStore.TryBookAsync` is
+
+Every mention of `Event.Claim(...)` below is shorthand for "the claim operation," not a literal call
+site — checked against the real `ago-calendar` code before scoping this further. `20-03`'s own real
+implementation (`Ago.Calendar.Infrastructure.Postgres/BookingStore.cs`) never loads the `Event` aggregate
+and calls its `Claim` method in application code; the claim is a single atomic `UPDATE events SET
+status = 'PendingConfirmation', customer_id = @customerId, ... WHERE id = @eventId AND status =
+'Available' AND starts_at > @now` (`BookingStore.ClaimSlotSql`), inside the same transaction as
+`UpsertCustomerAsync` (the phone-keyed customer upsert), both called from `IBookingStore.TryBookAsync`.
+`Event.Claim`'s own C# method exists in `Ago.Calendar.Domain/Event.cs` as the precondition's canonical
+statement (and is what unit tests exercise), but the SQL statement is what actually runs in production —
+`ClaimSlotSql`'s own doc comment states this explicitly ("checked in application code it would be
+checked against a reading of the row from milliseconds ago").
+
+**This changes where this item's own gate has to live**: not "add a check before a C# method call," but
+"add the verified-phone condition to the same atomic SQL statement, or a companion check inside the same
+transaction" — the identical reasoning that put the `status = 'Available'`/`starts_at > @now` checks in
+the `WHERE` clause rather than in application code applies here too. Whoever implements this decides the
+exact SQL shape (an added `WHERE` condition reading a value already present on the `customers` upsert, a
+second `UPDATE` in the same transaction, or something else) and records it — this file only establishes
+that "gate `Event.Claim`" means gating `TryBookAsync`'s real SQL path, not the domain method.
+
 ## Decided 2026-08-31: verify before claiming, not before confirming — the sweep is untouched
 
 An earlier draft of this item gated `Event.Confirm(now)` (the `PendingConfirmation → Booked`
