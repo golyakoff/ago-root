@@ -57,8 +57,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `15-08` static frontend cache headers | **In progress, managing session.** Found live 2026-08-30 fixing `ago-widget#40` (the `SendMessageAsync` arity bug): none of the four static frontends sets `Cache-Control` at all, so a deployed fix can sit invisible to an already-cached visitor for an unknown, uncontrolled length of time - a security-relevant gap, not only a UX one |
-| 3 | `19-03` AI FAQ module | **In progress, background worker, open questions left to its own judgment by the author's own instruction.** `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
+| 2 | `19-03` AI FAQ module | **In progress, background worker, open questions left to its own judgment by the author's own instruction.** `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -573,7 +572,7 @@ Deliverables:
   commit it is, not only the three `Ago.Chat.*` hosts. **What that item left standing, found live
   2026-08-30**: none of the four sets `Cache-Control` at all, so identity and freshness turned out to
   be two different questions - a deployed, verified fix can still be invisible to an already-cached
-  visitor for an unknown length of time (`15-08`, in progress).
+  visitor for an unknown length of time (`15-08`, done 2026-08-31, verified live).
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a
