@@ -1,7 +1,8 @@
 # Static frontends serve no Cache-Control header at all
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-08-31, `ago-widget#41`, `ago-console#74`, `ago-landing#7`+`#8`,
+  `ago-deploy#102`, all merged and deployed to the demo)
 - **Depends on**: `15-07-publish-the-frontends-too.md` (done) — that item made every frontend image a
   truthful, SHA-tagged artifact; this item is the gap it left standing, that *identity* and
   *freshness in a browser's own cache* are two different questions
@@ -80,17 +81,40 @@ Dockerfiles — all three currently rely on `nginx:*-alpine-slim`'s stock config
 
 ## Done when
 
-- [ ] `curl -i` against each of the four frontends' main entry file shows an explicit `Cache-Control`
+- [x] `curl -i` against each of the four frontends' main entry file shows an explicit `Cache-Control`
       header, not nginx's own bare defaults.
-- [ ] A real deploy of a changed commit is picked up by a normal browser reload (not a hard-reload, not
+- [x] A real deploy of a changed commit is picked up by a normal browser reload (not a hard-reload, not
       a manual cache bypass) — proven live against the demo, the same way this gap was originally found.
-- [ ] If `ago-console`'s built assets are confirmed content-hashed, they carry an immutable long-lived
+- [x] If `ago-console`'s built assets are confirmed content-hashed, they carry an immutable long-lived
       `Cache-Control`; if they are not (or that could not be confirmed), state so plainly and apply the
       same always-revalidate policy every other file in this item gets, rather than guessing.
+
+## Outcome
+
+Verified live 2026-08-31, from the VPS node itself (curl against a real browser's cache is not
+trustworthy from this environment's own sandboxed network path — see this repository's own operational
+notes on the outbound proxy):
+
+```
+console.reserve-me.ru/    -> cache-control: no-cache
+demo-shop1.reserve-me.ru/ -> cache-control: no-cache
+demo-shop2.reserve-me.ru/ -> cache-control: no-cache
+reserve-me.ru/            -> cache-control: no-cache
+console.reserve-me.ru/assets/index-2Ol8xuHJ.js -> cache-control: public, max-age=31536000, immutable
+```
+
+Confirms both open questions this item named: `ago-console`'s Vite build still content-hashes
+`/assets/*` filenames, and every fixed-filename file across all four images now revalidates instead of
+serving an unbounded, uncontrolled stale copy. `ago-landing`'s own image needed a second, unplanned fix
+(`ago-landing#8`) before it could publish at all — its Trivy scan started failing on a real, unrelated
+CVE (`CVE-2026-14456`) once this item's own image tried to go through `publish-images` for the first
+time, closed by applying the `17-04` apk-upgrade pattern `ago-widget`/`ago-console` already carried.
+`ago-deploy#102` pinned all three affected repositories' new commits in the demo overlay's
+`kustomization.yaml` and `deploy.sh` moved the live cluster to them, `smoke.sh` green throughout.
 
 ## Open questions
 
 None load-bearing — the two policies above (always-revalidate for fixed-filename files, immutable-cache
 for confirmed-hashed ones) are standard, well-understood HTTP caching practice; the only genuine unknown
-is a fact to go verify (whether `ago-console`'s `/assets/*` are actually hashed today), not a design
-decision.
+was a fact to go verify (whether `ago-console`'s `/assets/*` are actually hashed today), not a design
+decision, and it is now confirmed above.
