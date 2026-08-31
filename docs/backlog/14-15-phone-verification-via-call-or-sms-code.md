@@ -1,7 +1,7 @@
 # Phone verification via a proactive call or SMS code
 
 - **Stage**: 14
-- **Status**: built (2026-08-31, `ago-chat#143`, not yet merged) — no live gateway account exists in
+- **Status**: done (`ago-chat#143`, merged 2026-08-31) — no live gateway account exists in
   this environment; see the "Live-verification gap" note on the first Done-when box
 - **Depends on**: `adr/0079-verified-channel-identity-linking-and-a-preferred-reply-channel.md` — the
   verification-by-evidence principle this item extends to a channel class that cannot supply the
