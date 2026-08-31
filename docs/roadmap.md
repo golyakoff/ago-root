@@ -57,7 +57,6 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `19-03` AI FAQ module | **In progress, background worker, open questions left to its own judgment by the author's own instruction.** `docs/adr/0078` kind 3 - the second real consumer of `20-07`'s module contract, and the actual test of whether that contract generalizes beyond Calendar |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -815,9 +814,11 @@ Deliverables:
 - `19-02` (**done 2026-08-30**) — automatic conversation categorization into a site's own existing tags
   (never inventing new ones), closing the real dependency `18-11`'s own file names. Not verified against
   a real YandexGPT account — no such account exists in this environment.
-- `19-03` — an AI FAQ module, the second real consumer of `20-07`'s module contract after Calendar -
-  the actual evidence for or against `adr/0065`'s own bet that the closed-primitive-vocabulary design
-  would generalize beyond one module.
+- `19-03` (**done 2026-08-31**) — an AI FAQ module, the second real consumer of `20-07`'s module
+  contract after Calendar - `adr/0065`'s own bet that the closed-primitive-vocabulary design would
+  generalize beyond one module, confirmed: both guard tests pass unmodified. A real conversation
+  through the widget, and a real OpenAI-compatible provider, remain unverified — no such deployment or
+  API key exists in this environment.
 
 **Done when:** an operator can request and use an AI-drafted reply, a real site's conversations get
 tagged automatically from its own vocabulary without operator effort, and a visitor's routine question

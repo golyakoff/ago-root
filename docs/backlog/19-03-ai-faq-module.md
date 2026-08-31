@@ -1,10 +1,82 @@
 # AI FAQ / knowledge-base module
 
 - **Stage**: 19 (AI assistance)
-- **Status**: ready
+- **Status**: built (2026-08-31, `ago-chat#142`, new `ago-faq` repository, `ago-console#80`, not yet
+  merged) — see Outcome below for exact scope and the honestly-unmet Done-when boxes
 - **Depends on**: `20-07-calendar-becomes-a-chat-module.md` (done) — this item is the second real
   consumer of the module contract `adr/0065`/`adr/0077` built, and the first test of whether that
   contract actually generalizes beyond Calendar or was accidentally Calendar-shaped
+
+## Decided, 2026-08-31 — read before touching Scope below
+
+Three questions this item's own file named as genuinely open, argued through and settled ahead of
+writing code, the same discipline `20-07`'s own "Decided in planning" section modelled: reasoning
+recorded in full rather than left as a bare conclusion, so a later reader does not have to reconstruct
+*why*.
+
+**Knowledge-base storage: a plain text column, one per site, exactly the honest minimum this item's own
+text asked for.** No document-ingestion pipeline (PDF upload, crawling, chunking, embeddings) was built,
+and no investigation in this pass found the plain-text shape insufficient - there is no real tenant
+content yet to test "insufficient" against, so building a richer pipeline now would be guessing at a
+need rather than answering one, exactly the premature generalisation `CLAUDE.md` warns against. The
+whole knowledge base is passed to the LLM as context on every question - no retrieval step exists
+because none is needed at "a few paragraphs" scale (the item's own words); a genuinely large knowledge
+base is the concrete, measured trigger a future item would need before chunking/embeddings become
+justified, not a mood. Storage lives in `ago-faq`'s own Postgres (`Ago.Faq.Domain.KnowledgeBase`, one
+row per `SiteId`, a bounded text field, an `UpdatedAt`) - the module's own data, never Chat's, matching
+`adr/0065` decision 1's "Chat never opens the payload" applied one level up: Chat does not hold FAQ's
+knowledge base any more than it holds a booking's service catalogue.
+
+**The low-confidence escape: a fifth closed-vocabulary primitive, `PrimitiveKinds.Escalate`, recorded in
+full in `adr/0081`.** In short: a module signals "hand this to an operator" through an ordinary step
+whose `kind` is `"escalate"` - the identical wire shape every other primitive already uses, recognised
+by `RouteConversationToModuleHandler` as a structural string comparison against Chat's own vocabulary,
+never by reading what the module's payload means. The task force-closes regardless of the module's own
+`complete` flag (`adr/0065` decision 7's "cannot be suppressed by the module", now given a
+module-triggered path to the same outcome as the unreachable-module path), and is reported through the
+identical `RouteConversationToModuleOutcome.Escalated` value the unreachable case already produces - one
+outcome, two roads into it, so a future report asking "was this conversation escalated" already covers
+both without knowing there are two.
+
+A **successful** answer does *not* get a sixth primitive. It rides `choice_list` with zero actions and a
+`payload.prompt` holding the answer text - a shape `MessageContent`'s own doc comment already documents
+and blesses ("a payload with no actions is a card nobody has to answer") before this item ever existed.
+Inventing a distinct "plain answer" kind would have been vocabulary growth with no new structural need
+behind it - the exact test escalate had to pass and this did not.
+
+**Where the module's backend lives: a new, lightweight repository, `ago-faq`, one host
+(`Ago.Faq.Api`), no `Worker`, no `Webhooks`.** It qualifies as its own repository under
+`architecture/repositories.md`'s own rule ("only when the thing versions or deploys independently") the
+same way Calendar did: it is reachable over its own wire contract, registered per site in Chat's
+registry, and has a release cadence of its own. It does **not** get Calendar's three-way host split
+(`adr/0013`'s "split by failure profile" reasoning): FAQ has exactly one failure profile (answer an HTTP
+request), no outbox-driven async pipeline, no webhook source and no worker loop of its own to justify a
+second or third host - building `Ago.Faq.Worker`/`Ago.Faq.Webhooks` with nothing to run in them would be
+exactly the premature-generalisation `CLAUDE.md` warns a platform layer against, applied here to a
+product's own host count instead.
+
+**Two authentication shapes on `Ago.Faq.Api`, both real, one with a named gap.** The module-task wire
+endpoints (`start`/`reply`) are server-to-server and `AllowAnonymous`, the identical shape
+`Ago.Calendar.Api/ChatModule/ChatModuleTaskEndpoints.cs` already established and `adr/0077` already
+named as a real, open, accepted gap ("no service-to-service authentication exists yet") - extended here
+without re-litigating it. The knowledge-base config endpoint (console-facing, operator-authenticated) is
+different: it validates the **same** Keycloak-issued operator JWT `ago-chat`'s own console already
+obtains - no second Keycloak client was provisioned, because validating a bearer token needs only the
+issuer's public signing keys, never a shared secret, so trusting the identical issuer costs nothing new
+to set up. This is a real, deliberate difference from Calendar's own separate OIDC client
+(`adr/0027`/`adr/0064`): Calendar duplicates its own client because it has a genuinely separate identity
+domain (its own `Operator`/`Worker`/`Customer`), while FAQ has none at all - "who may edit this site's
+knowledge base" is not a question FAQ's own domain can answer independently, because FAQ has no concept
+of a site's operators to begin with. What this endpoint does **not** yet do is re-verify that the
+authenticated operator specifically holds `Permission.SiteConfigure` on the site named in the request the
+way `EnableModuleForSiteHandler` does inside `ago-chat` - a real, bounded, named gap of the same shape
+`adr/0077` already accepted for the module-task endpoints (authenticity is checked; cross-tenant
+authorization is not, yet), not silently shipped. Closing it would need either a cross-repository
+permission-check call (a new, reversed wire dependency: `ago-faq` calling `ago-chat`) or a
+locally-duplicated permission table - both real, larger changes this item's own scope did not ask for
+and did not build.
+
+## Context to read first
 
 ## Goal
 
@@ -86,16 +158,51 @@ same way `14-02`'s tenant-routing question was decided explicitly rather than as
 - [ ] A visitor asking a question the tenant's knowledge base actually covers gets a correct, grounded
       answer through a real conversation, on the widget and proven over at least one text-only channel
       (matching `20-07`'s own "not secretly widget-shaped" bar).
-- [ ] A visitor asking something the knowledge base does not cover gets the low-confidence escape to an
+- [x] A visitor asking something the knowledge base does not cover gets the low-confidence escape to an
       operator, proven by a test, not by inspection.
-- [ ] `Ago.Chat.*` gains zero new type references and zero new string literals of this module's own key
+- [x] `Ago.Chat.*` gains zero new type references and zero new string literals of this module's own key
       — proven by the identical guard 1/guard 2 tests `20-07` already built, run again unmodified
       against this second module, the direct evidence for or against `adr/0065`'s own generalization
       bet.
-- [ ] The knowledge-base storage decision and the module-hosting decision are both recorded, the same
+- [x] The knowledge-base storage decision and the module-hosting decision are both recorded, the same
       way `14-02`'s tenant-routing decision is recorded in its own file.
+
+## Outcome
+
+Landed 2026-08-31 across four repositories: `ago-chat#142` (the `Escalate` primitive and
+`EnableModuleForSite`'s endpoint mapping), the new `ago-faq` repository (the module's own backend,
+initial commit on `main`), `ago-console#80` (the two-panel `/settings/faq` config screen), this
+companion doc PR (`adr/0081`, this Outcome).
+
+**Independently re-verified by the managing session, not only reported by the implementing workers**:
+`ago-chat` rebased onto `main` (which by then included `14-09`) and its full suite re-run clean,
+1805/1805; `ago-faq`'s own suite re-run clean, 61/61, plus one fails-before claim re-proven by hand
+(the empty-knowledge-base-escalates check, reverted and confirmed 2 tests go red, restored, full suite
+re-confirmed green); `ago-console`'s three checks the implementing worker's own sandbox broke before it
+could run itself — `npm run lint` found two real errors (`faqKnowledgeBaseApi.test.ts`'s `vi.spyOn`
+typed as `any`, not this codebase's own established `vi.fn()`/`vi.stubGlobal` pattern), fixed and
+re-verified; `npm test` 583/583; `npm run build` succeeds.
+
+**A genuine collision, caught before it caused a problem**: this item and `14-09` (running as parallel
+background workers) both independently claimed ADR number `0080` for their own decision. `14-09`
+merged first, so this item's own ADR was renumbered `0081` throughout — the file itself, every
+cross-reference in `ago-chat`'s `PrimitiveKinds.cs`, this backlog file, and five files in `ago-faq`
+that cited it — before landing.
+
+**What is honestly not done**: the first Done-when box (a real conversation through the widget, on a
+real text-only channel) was out of scope for every worker's own brief and remains unverified — it needs
+a live `ago-faq` deployment plus `ago-chat`'s module registry pointing at it, integration across three
+repositories no single worker's worktree could exercise. `ago-faq`'s own CI is red on its first run: it
+needs the `AGO_PLATFORM_PACKAGES_TOKEN` repository secret (`adr/0018`) that `ago-chat`/`ago-calendar`
+already carry — the managing session cannot mint or read that value and has asked the author to add it.
+The LLM call itself was never exercised against a real OpenAI-compatible provider, only against an
+in-process fake Kestrel host standing in for one (`OpenAiCompatibleFaqAnswerGeneratorTests`, the same
+technique `ago-chat`'s own `YandexGptReplyDraftClientTests` established) — no real API key exists
+anywhere in this environment. The console's knowledge-base-edit endpoint does not yet re-verify
+`Permission.SiteConfigure` on the target site (named and accepted in the "Decided" section above, the
+same shape `adr/0077` already accepted for the module-task endpoints).
 
 ## Open questions
 
 The knowledge-base format and the module's own hosting location, both named above as this item's real
-decisions to make, not questions to leave for a future session.
+decisions to make, not questions to leave for a future session — both answered in "Decided" above.

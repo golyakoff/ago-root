@@ -81,3 +81,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0078 | AI automation is several different capabilities, not one feature, and most of them fit the existing module contract unchanged | Accepted |
 | 0079 | Verified channel-identity linking, unlinking, and a preferred reply channel | Accepted |
 | 0080 | The email channel has no per-tenant credential, and threads by subaddress | Accepted |
+| 0081 | A reachable-but-unsure module escalates through a fifth primitive, not a new signal | Accepted |
