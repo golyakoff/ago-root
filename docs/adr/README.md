@@ -82,3 +82,5 @@ naming, formatting, or anything a convention doc already covers.
 | 0079 | Verified channel-identity linking, unlinking, and a preferred reply channel | Accepted |
 | 0080 | The email channel has no per-tenant credential, and threads by subaddress | Accepted |
 | 0081 | A reachable-but-unsure module escalates through a fifth primitive, not a new signal | Accepted |
+| 0082 | Phone verification gets a fourth rate-limit bucket, keyed on the caller's own IP | Accepted |
+| 0083 | Calendar's account owner is an aggregate invariant, not a bypass | Accepted |
