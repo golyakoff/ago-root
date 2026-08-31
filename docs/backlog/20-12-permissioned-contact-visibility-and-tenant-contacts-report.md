@@ -1,7 +1,7 @@
 # Permissioned contact visibility in the pending queue, and a tenant contacts report
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (`ago-calendar#13`, `ago-calendar-console#14`, merged 2026-08-31) — see Outcome below
 - **Depends on**: `20-04-confirmation-sweep-and-operator-queue.md` (done) — the pending-bookings queue
   this item adds a field and a permission gate to. `20-09-booking-confirmation-requires-a-verified-phone.md`
   (built, chat-only) — a cheaper, faster stopgap for exactly the risk `20-09`/`20-10` solve by full
@@ -110,23 +110,41 @@ tenant's own admin).
 
 ## Done when
 
-- [ ] An operator holding `Permission.CustomerRead` sees a pending booking's phone number in the queue;
+- [x] An operator holding `Permission.CustomerRead` sees a pending booking's phone number in the queue;
       one without it does not, on the identical underlying booking — proven by a test.
-- [ ] A tenant can actually get a second role provisioned and move an operator onto/off it, proven by a
+- [x] A tenant can actually get a second role provisioned and move an operator onto/off it, proven by a
       test using two real operators ending up with different roles.
-- [ ] The tenant's own account-owner concept (whatever this item decides it means, per Scope above)
-      always sees contact data regardless of role, proven by a test.
-- [ ] A tenant contacts report exists, listing every customer's contact/personal data for an operator
+- [x] The tenant's own account-owner concept always sees contact data regardless of role, proven by a
+      test — enforced as a Domain invariant (`adr/0083`), not a read-time bypass.
+- [x] A tenant contacts report exists, listing every customer's contact/personal data for an operator
       holding `CustomerRead`, tenant-isolated, proven by a test.
-- [ ] The console renders both the gated queue field and the new report screen, with an honest
+- [x] The console renders both the gated queue field and the new report screen, with an honest
       "hidden, not absent" treatment when the field is withheld.
+
+## Outcome
+
+Built and merged 2026-08-31 (`ago-calendar#13`, `ago-calendar-console#14`). Independently re-verified
+by the managing session: `ago-calendar` 344/344 (Domain 103, Application 85, Architecture 18,
+Concurrency 17, Integration 121), `ago-calendar-console` 28/28, `dotnet format`/`npm run
+typecheck`/`lint` clean on both, zero build warnings. Fails-before independently re-proven for the
+core new invariant: reverted `Operator.Revoke`'s account-owner guard, confirmed
+`TheAccountOwner_CannotBeRevokedDownToNoContactAccess` goes red, restored, full suite re-confirmed
+green.
+
+**Tenant owner, decided**: `Operator.IsAccountOwner`, a `bool` set only once, by
+`RegisterTenantHandler`'s own provisioning transaction, for the first operator a tenant ever gets — no
+later mutator, matching how `Id`/`TenantId` themselves carry no setter. Full reasoning for why this
+lives as an aggregate invariant rather than a `PermissionChecker` bypass: `adr/0083`.
+
+**Second-role naming, decided**: no general role-builder UI. The console ships one fixed template
+("add a role without contact access" — the seeded role's own permission set minus `CustomerRead`) —
+the backend stays fully general (`Role.Create` accepts any name, any permission subset), so a richer
+UI is a small, additive follow-up if a tenant ever needs a role shaped differently.
+
+**A real gap found and closed along the way, not in the original Scope**: `Operator.Revoke` did not
+exist before this item — only `Grant` did. Building the account-owner guarantee required both
+directions to exist.
 
 ## Open questions
 
-- Exact mechanism for "who is the tenant owner" — named as a real, in-scope decision above, not
-  resolved here; the answer likely has to reconcile with however account/tenant identity already works
-  elsewhere in this deployment (`13-07`), rather than inventing a Calendar-only concept that could
-  disagree with it.
-- Whether the second role this item introduces should be named something specific (`Admin`, `Manager`)
-  or left as a bare permission grant with no named role at all — a naming/UX question, not a structural
-  one, left for implementation.
+None outstanding — both were resolved during implementation; see Outcome above.
