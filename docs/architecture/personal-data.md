@@ -129,6 +129,47 @@ test that a different operator at the same site cannot pull it for a conversatio
 the rows this handler reads from the same cascade as every other read path, so there is nothing new
 to delete, only a new way the same rows could have been read before they were.
 
+### `20-12` widens who can read `customers`
+
+Another note on a new *who*, this time in **AGO Calendar** rather than AGO Chat. Before this item,
+nothing in the product gated a read of a customer's phone number by permission at all: the pending-
+bookings queue (`20-04`) carried no phone number in its own row, by a deliberate PII-minimisation
+choice that queue's own read model documented, and no report existed that listed customer data at all.
+`20-12` opens two new read paths onto the row `personal-data.md` already inventories above
+(`customers`, "the most directly identifying store either product has"), both gated on the same
+permission, `Permission.CustomerRead`:
+
+- **The pending-bookings queue** (`GetPendingBookingsForTenantHandler`) now includes each row's phone
+  number, but only in the response returned to an operator who holds `customer:read` in that tenant -
+  checked per request, since the queue is shared and unassigned across every operator (`IPendingBookingReadStore`'s
+  own remarks). An operator without the permission still sees the queue and can still act on it
+  (`booking:reject` is the read gate, unchanged); the phone field is simply absent from their copy of
+  the row, not blanked - `PendingBookingReadStore`'s own SQL never joins to `customers` at all for that
+  caller, so `20-04`'s original minimisation argument stays true for exactly the operators it was
+  written for.
+- **A tenant contacts report** (`GetTenantContactsHandler`, `ContactsReadStore`) lists every customer
+  row for the tenant - phone, display name, notes, no-show count, first/last-seen - for an operator who
+  holds `customer:read`. Nothing scoped this narrower existed before; the nearest precedent
+  (`ago-chat`'s `18-08` operator analytics) aggregates counts and holds no personal data at all.
+
+**Who holds `customer:read` is no longer fixed to "every operator".** `20-01`'s v1 seeded exactly one
+role holding every permission including `customer:read`, so in practice every operator held it. `20-12`
+makes a second, narrower role reachable from the console (`CreateRoleHandler`, any permission subset -
+`Role.Create` was already general) and a way to move an operator onto or off a role
+(`GrantOperatorRoleHandler`/`RevokeOperatorRoleHandler`, calling `Operator.Grant`/`Operator.Revoke`) -
+so a tenant can now have an operator who works the queue and cannot see a customer's phone, name or
+notes at all. One operator per tenant is exempted from ever losing that permission entirely: the
+account owner (`Operator.IsAccountOwner`, set only for the first operator a tenant's own provisioning
+transaction creates) is refused by the aggregate itself - not by a console convention - if a role
+change would leave them with no role granting `customer:read`
+(`AccountOwnerRoleException`, proven by `OperatorAccountOwnerTests` and, over HTTP, by
+`AccessControlEndpointTests`).
+
+No new personal data exists as a result of this item and no retention or erasure story changes: both
+new read paths return columns `customers` already held (this file's own table row above), through
+`ON DELETE CASCADE` chains that are unaffected by who is permitted to read them. What widened is
+*visibility*, not *storage* - the same distinction `18-07`'s own entry above draws for `messages.body`.
+
 ### Two corrections `16-01` made to the first draft
 
 **There is no `visitors.token_hash`.** Both this file and `data-model.md` described a column that was
