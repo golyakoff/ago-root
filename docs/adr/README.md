@@ -80,3 +80,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0077 | A chat module's transport is the wire, confirmed by a real measured hop, not a package reference | Accepted |
 | 0078 | AI automation is several different capabilities, not one feature, and most of them fit the existing module contract unchanged | Accepted |
 | 0079 | Verified channel-identity linking, unlinking, and a preferred reply channel | Accepted |
+| 0080 | The email channel has no per-tenant credential, and threads by subaddress | Accepted |
