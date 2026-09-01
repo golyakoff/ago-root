@@ -1,7 +1,8 @@
 # A booking longer than one slot: consecutive slots claimed as one
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (`ago-calendar#18`, `ago-calendar-console#19`, `adr/0086` amending `adr/0059`,
+  merged 2026-09-01) — see Outcome below
 - **Depends on**: `20-14-worker-schedule-template.md` — the explicit slot length that creates this
   problem, and whose interim "not offered" rule this item removes.
 
@@ -125,21 +126,48 @@ or overturn when implementing, and record which.
 
 ## Done when
 
-- [ ] A 90-minute service on a 30-minute grid occupies three consecutive slots as one booking.
-- [ ] The 70/30/10 case, both ways, as two tests with exactly those numbers: two slots ending 13:10
+- [x] A 90-minute service on a 30-minute grid occupies three consecutive slots as one booking.
+- [x] The 70/30/10 case, both ways, as two tests with exactly those numbers: two slots ending 13:10
       with the setting on, three slots ending 13:50 with it off.
-- [ ] Two customers racing for overlapping runs: exactly one wins, the loser's slots are all still
+- [x] Two customers racing for overlapping runs: exactly one wins, the loser's slots are all still
       `Available`, and no partial claim survives — proven in `Ago.Calendar.Concurrency.Tests`.
-- [ ] A run whose middle slot is already taken is neither offered nor claimable when requested
+- [x] A run whose middle slot is already taken is neither offered nor claimable when requested
       directly by id.
-- [ ] Cancel, reject and no-show each release or mark every slot of the run, proven on a three-slot
+- [x] Cancel, reject and no-show each release or mark every slot of the run, proven on a three-slot
       booking.
-- [ ] The pending queue shows one row for a three-slot booking.
-- [ ] `20-15`'s slot table shows all three slots occupied and attributed to the same booking.
-- [ ] `20-14`'s "not offered" rule is gone, and a service longer than the slot is bookable.
+- [x] The pending queue shows one row for a three-slot booking.
+- [x] `20-15`'s slot table shows all three slots occupied and attributed to the same booking.
+- [x] `20-14`'s "not offered" rule is gone, and a service longer than the slot is bookable.
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-calendar#18`, `ago-calendar-console#19`, `adr/0086`). Independently
+re-verified by the managing session: `ago-calendar` 460/460 (Domain 158, Application 108, Architecture
+18, Concurrency 19, Integration 157), `ago-calendar-console` 57/57, `dotnet format`/`npm run
+typecheck`/`lint`/`build` all clean, zero build warnings. Fails-before independently re-proven for the
+highest-stakes guarantee in this wave, on real Postgres with two real connections: neutralised the
+partial-match rollback check in `BookingStore.ClaimAsync`, confirmed the overlapping-run race test
+failed with **both** customers receiving a `BookingConfirmation` for overlapping runs — the exact torn
+claim this guarantee exists to prevent — restored, full suite re-confirmed green.
+
+**Data-model decision, confirmed**: a `booking_id` column on `events`, not a separate `bookings` table
+— with the shape settled during implementation: `booking_id` is another event row's own id, the run's
+anchor (equal to its own id for a single-slot booking), rather than a freshly minted id. Grouping is
+one rule with no special case, and no second id type was needed.
+
+**The confirmation sweep's `SKIP LOCKED` claim had to change shape, not just widen** — a real
+consequence found during implementation, not named in the original scope. A plain `SKIP LOCKED` over
+every row of a multi-row booking would let two `Ago.Calendar.Worker` replicas each lock a *different*
+row of the *same* run. Fixed with a two-step claim: `SKIP LOCKED` on the booking's anchor row only,
+then a plain `FOR UPDATE` on the won group's siblings — preserves the sweep's pre-existing cross-
+replica liveness guarantee (a locked booking is skipped entirely, not partially claimed) while still
+confirming a whole group atomically with one outbox row per booking.
+
+The branch was cut before `20-16` (landing the same wave) merged; the managing session rebased it
+(cherry-pick, clean auto-merge in all four overlapping files) before independent verification — see
+`ago-calendar#18`'s own PR description for the detail.
 
 ## Open questions
 
-None outstanding. The one real decision left inside this item — a `booking_id` column on `events`
-versus a separate `bookings` table — is named above with a stated leaning, to be settled against the
-read models when implementing.
+None outstanding — the data-model decision above is the one this file's own "Open questions" pointed
+to; see Outcome.

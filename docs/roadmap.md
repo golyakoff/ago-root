@@ -63,10 +63,8 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `20-18` a booking longer than one slot | Immediately after `20-14` **and not later**, because `20-14`'s explicit slot length leaves a shop with 30/60/90-minute services able to sell only the 30-minute one until this lands. Amends `adr/0059` |
-| 3 | `20-16` re-cutting an already-materialised horizon | Without it a template change does nothing for up to 180 days. Makes destruction an explicit human action with a preview, leaving the background job insert-only. ADR-0085 |
-| 4 | `20-10` public booking widget requires a verified phone | `20-09`'s own named follow-up and the other half of the same launch prerequisite. **Decided 2026-09-01**: Calendar builds its own verification primitive, mirroring `14-15`, with a fake sender (real code, real hash/lockout/expiry, no real SMS) so the whole flow is live-demonstrable with zero vendor spend - see the item's own file |
-| 5 | `20-11` additional verified contact channels for a booking | Deferred from `20-09` under real time pressure, named as its own item rather than left a silent gap - priority-ordered extra channels (another phone, a messenger), each independently verified |
+| 2 | `20-10` public booking widget requires a verified phone | `20-09`'s own named follow-up and the other half of the same launch prerequisite. **Decided 2026-09-01**: Calendar builds its own verification primitive, mirroring `14-15`, with a fake sender (real code, real hash/lockout/expiry, no real SMS) so the whole flow is live-demonstrable with zero vendor spend - see the item's own file |
+| 3 | `20-11` additional verified contact channels for a booking | Deferred from `20-09` under real time pressure, named as its own item rather than left a silent gap - priority-ordered extra channels (another phone, a messenger), each independently verified |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 | — | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
@@ -895,12 +893,14 @@ Deliverables:
   `adr/0084`); a plain table of what the materialiser actually
   produced, reusing `20-12`'s contact gate rather than working around it (`20-15`, done 2026-09-01,
   `ago-calendar#15`/`ago-calendar-console#16`); and re-cutting an
-  already-materialised horizon (`20-16`, `adr/0085`) - which leaves the background job insert-only as
-  `adr/0053` promised and makes destruction one explicit human action with a preview. Two follow-ons
-  fall out of it: a booking may span several consecutive slots (`20-18`, amending `adr/0059`), queued
-  immediately after `20-14` because an explicit slot length makes a 90-minute service unsellable
-  without it; and moving a booking into the new grid instead of cancelling it (`20-17`), deferred by
-  the author and not queued.
+  already-materialised horizon (`20-16`, done 2026-09-01, `ago-calendar#17`/`ago-calendar-console#18`,
+  `adr/0085`) - which leaves the background job insert-only as `adr/0053` promised and makes
+  destruction one explicit human action with a preview. Two follow-ons fall out of it: **a booking may
+  span several consecutive slots** (`20-18`, done 2026-09-01, `ago-calendar#18`/`ago-calendar-console#19`,
+  `adr/0086` amending `adr/0059`) - the claim generalises from a single-row compare-and-set to a
+  claimed-set one, still one statement, still Postgres as the sole arbiter, still atomic: a booking is
+  claimed whole or not at all; and moving a booking into the new grid instead of cancelling it
+  (`20-17`), deferred by the author and not queued.
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
