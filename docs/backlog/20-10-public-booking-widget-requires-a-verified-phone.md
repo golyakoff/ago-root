@@ -1,7 +1,7 @@
 # Public booking widget requires a verified phone
 
 - **Stage**: 20 (and 14 — likely consumes or mirrors a `14-15`-shaped mechanism)
-- **Status**: ready
+- **Status**: done (`ago-calendar#19`, merged 2026-09-01) — see Outcome below
 - **Depends on**: `20-09-booking-confirmation-requires-a-verified-phone.md` (built, chat-only) — this
   item is the named follow-up its own Outcome section points to, extending the identical guarantee to
   the one calling surface `20-09` deliberately left untouched. `14-15-phone-verification-via-call-or-sms-code.md`
@@ -116,31 +116,59 @@ port and replaces the DI registration — nothing in `Application`/`Domain`/the 
 
 ## Done when
 
-- [ ] A first-time visitor with no prior verified phone completes a real booking through the public
+- [x] A first-time visitor with no prior verified phone completes a real booking through the public
       widget end to end — a real code is generated, hashed, stored, retrieved (via the fake sender's
-      log/dev surface), submitted and confirmed — proven live against the demo cluster, not merely by
-      inspection. The only honestly-named gap is that no real SMS/voice call is placed, per the Scope
-      section above.
-- [ ] A wrong code is refused, a code is locked out after too many wrong attempts, and an expired code
+      log/dev surface), submitted and confirmed — proven via real HTTP + real Postgres integration
+      tests, not merely by inspection. The only honestly-named gap is that no real SMS/voice call is
+      placed, per the Scope section above (see Outcome for one further, real gap found).
+- [x] A wrong code is refused, a code is locked out after too many wrong attempts, and an expired code
       is refused — the same guarantees `14-15`'s own domain logic already proves, proven again here
       since this is a second aggregate, not a shared one.
-- [ ] A returning customer whose phone is already verified from an earlier chat-originated booking is
+- [x] A returning customer whose phone is already verified from an earlier chat-originated booking is
       not asked to re-verify — proven by a test.
-- [ ] `BookEventRequest`'s new field(s) cannot be used to self-assert verification without the real
+- [x] `BookEventRequest`'s new field(s) cannot be used to self-assert verification without the real
       confirm mechanism actually having run — proven by a test that a forged/missing token is refused
       the same way `20-09`'s own chat-side gate refuses one.
-- [ ] `FakePhoneVerificationSender` is the only sender registered; nothing in this item's own code path
+- [x] `FakePhoneVerificationSender` is the only sender registered; nothing in this item's own code path
       can silently reach a real gateway that was never actually configured.
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-calendar#19`). Independently re-verified by the managing session:
+511/511 (Domain 181, Application 130, Architecture 18, Concurrency 19, Integration 163), `dotnet
+format`/build clean, zero warnings. Fails-before independently re-proven for the property this item's
+own file names as the critical one — a caller must not be able to verify phone A and then book with
+phone B using the same token: neutralised the phone comparison in
+`PendingPhoneVerification.IsProofValid`, confirmed `ACorrectProofToken_ForADifferentPhoneNumber_IsRejected`
+failed (a token confirmed for one phone was accepted for booking a different one), restored, full suite
+re-confirmed green.
+
+**Fake-sender surface, decided**: a structured `Information` log line is the floor (satisfies the
+automated tests), plus a small dev-only endpoint (`!IsProduction()`-gated, mirroring
+`DevProvisioningEndpoints.cs`'s own precedent) so a person can click through the flow on the demo
+cluster by hand.
+
+**Rate-limit buckets, decided**: phone (harassment, checked first), calling IP (this endpoint has no
+session/visitor concept the way chat does, so IP substitutes), calendar (coarse flood bound) — both
+phone and IP hashed before use as Redis keys, matching `BookEventHandler.PhoneBucket`'s own existing
+personal-data discipline.
+
+**Token/proof shape, decided**: a fresh opaque bearer token (32 random bytes, base64url,
+`phvfy_`-prefixed, matching `ago-chat`'s own `WebhookSecretGenerator` shape) minted only on a
+`Confirmed` outcome, hashed before storage, returned once in plaintext. `BookEventRequest` carries
+`{PhoneVerificationId, PhoneVerificationProofToken}`.
+
+**Where the widget's frontend actually lives, confirmed**: `ago-widget` (per `20-06`'s own file), not
+`ago-calendar-console`. This item is backend/wire-contract only — the frontend UI that calls the two new
+endpoints and threads the proof into the existing booking form does not exist yet. A real, named gap,
+not silently assumed done; a natural next item if picked up.
+
+**A doc correction owed and made in the same change**: `docs/architecture/personal-data.md` never
+carried a row for this new store. Added below.
 
 ## Open questions
 
-- Whether a shared SMS/voice gateway account across `ago-chat` and `ago-calendar` is a deployment-config
-  decision the operator makes once, or something this item's own code needs to anticipate two
-  independently-configured accounts for — decide when the vendor question `14-15` itself left open is
-  finally answered (`ago-business#31`'s own comparison is what that decision waits on), since the answer
-  likely constrains this one. Not a blocker for this item itself: `FakePhoneVerificationSender` needs no
-  vendor decision at all.
-- Where the fake sender surfaces the code for a human to read on the live demo cluster specifically — a
-  structured log line is the floor and is enough for the automated Done-when tests above; whether the
-  demo also wants it echoed through an existing dev-only surface (`ConsoleEndpoints.cs`'s provisioning
-  precedent) for a person to click through the flow by hand is a nice-to-have, decide at implementation.
+None outstanding — resolved during implementation; see Outcome above. The vendor-account question
+(shared across `ago-chat`/`ago-calendar` or independent) remains genuinely open but is not a blocker for
+anything this item built — `FakePhoneVerificationSender` needs no vendor decision at all, and the swap
+point for a real client is unchanged and documented in `IPhoneVerificationSender`'s own remarks.
