@@ -87,3 +87,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0084 | A worker's schedule is a template of two kinds, and a cycle chooses days, not hours | Accepted |
 | 0085 | Re-cutting an already-materialised horizon is a second, manual, destructive entry point | Accepted |
 | 0086 | The booking claim generalises from one row to a claimed set | Accepted |
+| 0087 | `messages` is partitioned by tenant hash, not by time | Accepted — amends 0031's mechanism and 0019's index shape |
