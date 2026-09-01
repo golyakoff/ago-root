@@ -55,11 +55,26 @@ that a deferred scope becomes a named item, not a silent gap.
 - [ ] The cross-product/storage data shape is recorded in this file, following `20-09`'s own snapshot
       pattern or explicitly justifying a departure from it.
 
-## Open questions
+## Decided (2026-09-01)
 
-- Interaction with `14-13`'s own visitor-wide preferred channel: whether this item's own per-booking
-  priority list overrides it for booking-related messages specifically, or the two are meant to be the
-  same list read two different ways — `20-09`'s own file left this open too; decide here, since this is
-  the item that actually builds the list.
-- Whether this item applies to chat-originated bookings only (matching `20-09`'s own current scope) or
-  needs `20-10` to exist first if it is meant to cover widget-originated bookings too.
+**Relationship to `14-13`: this item *is* the override `14-13` itself deferred, not a second list.**
+`14-13`'s own "Out of scope" section names exactly this gap: "a per-conversation override on top of the
+visitor-level default — the author's own framing was durable/cross-conversation; a future item can add
+a narrower override later without changing this item's own shape." A booking is narrower than a
+conversation, so this item's own priority-ordered list is narrower still: a per-*booking* override.
+Resolution order for a booking-related message: this item's own list, if the visitor added one for this
+booking; otherwise `14-13`'s own `Visitor.PreferredChannelIdentityId`; otherwise today's existing
+most-recent-channel fallback, unchanged. Two lists that answer two different questions — "where should
+this one booking's reminders go" versus "where should this visitor's replies go by default" — not one
+list read two ways.
+
+**Scope stays chat-originated only, structurally, not by choice.** `20-10` now exists, so this is no
+longer "wait for a mechanism that doesn't exist" — but the reason to stay chat-only survives anyway,
+for a reason specific to *this* item: an additional messenger channel (`14-12`'s own mechanism) can only
+ever be verified through an inbound message on a real conversation — there is no such thing as linking a
+Telegram identity from a bare, sessionless `POST /book`. A widget-originated booking has no conversation
+to link one through, structurally, regardless of whether `20-10`'s own phone gate exists for it. An
+additional *phone* number could in principle reuse `20-10`'s own primitive for a widget booking, but
+`20-10`'s own frontend (in `ago-widget`) does not exist yet even for the *primary* phone gate — building
+a secondary-channels UI on top of a primary flow that has no UI yet would be building on nothing. Revisit
+once `ago-widget` actually calls `20-10`'s endpoints.
