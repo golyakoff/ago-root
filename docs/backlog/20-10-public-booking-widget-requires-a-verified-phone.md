@@ -184,16 +184,22 @@ the code review above stands — but its own premise ("a public, embeddable book
 complete a booking at all") was already stale by the time this item was written, because that widget
 path had already been deleted five days earlier by `20-07`.
 
-**So who does call the public endpoint?** Decided by the author, 2026-09-01: **a third-party
-integrator** — a tenant's own custom-built page, calling `Ago.Calendar.Api` directly, with no AGO Chat
-in the loop at all. This reading is consistent with `adr/0027`'s own framing of Calendar as
-independently bookable, not merely independently deployable, and it means this item was not wasted
-work — it is exactly the guarantee a real third-party caller needs, just aimed at a different caller
-than the item's own title names. **`20-19`** is the new item that follows from this: what a third-party
-integrator actually needs (documentation, a reference flow, and any missing polish) to use this
-endpoint for real. This item's own title stays as the historical record of what was asked for; the
-correct destination for anyone picking up "make this endpoint usable" is `20-19`, not a new `ago-widget`
-task.
+**So who does call the public endpoint? Revisited by the author, 2026-09-01, same day: nobody, and
+that is the honest answer, not a placeholder for one.** A third-party-integrator reading was proposed
+first and briefly recorded here; the author reconsidered it the same day and could not construct a real
+case where a tenant would integrate directly against Calendar's own API rather than through the chat
+widget every other product decision already routes bookings through. `20-19` (a documentation/reference
+item built on the third-party premise) is **withdrawn** — see that file's own note.
+
+**What this leaves standing**: `Ago.Calendar.Api`'s public `POST /calendars/{id}/events/{id}/book`
+endpoint, and the phone-verification gate this item built in front of it, currently have **no real
+caller in any product combination the author can presently justify**. The guarantee itself is real,
+correctly implemented, and independently verified (see Outcome above) — this is not a defect in what
+was built, and nothing here proposes removing tested code on a guess. It is a fact worth recording
+plainly rather than papering over with an invented consumer: this item's own done-when was satisfied at
+the wire-contract level, against a caller that turns out not to exist yet. Whether the endpoint should
+stay as dormant, defensible infrastructure for a future integration surface, or whether it is worth
+retiring, is a separate decision the author has not made and this item does not make for them.
 
 ## Open questions
 

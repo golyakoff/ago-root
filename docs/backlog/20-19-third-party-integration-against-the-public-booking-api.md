@@ -1,7 +1,12 @@
 # A third-party integrator can actually use Calendar's public booking API
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: won't build (2026-09-01) — the author reconsidered this item's own premise the same day
+  it was written and could not construct a real case for a tenant integrating directly against
+  Calendar's public API rather than through the chat widget every other product decision already routes
+  bookings through. Kept, not deleted, as the record of why this was proposed and then withdrawn — see
+  `20-10`'s own file for the fuller trail. If a real third-party-integration need is ever named, revisit
+  this file rather than starting a fresh one; the scoping below is still the right shape for it.
 - **Depends on**: `20-10-public-booking-widget-requires-a-verified-phone.md` (done) — the phone-
   verification guarantee this item's own caller needs. `20-01`/`20-03` — the endpoint itself, already
   built and already correctly gated; this item does not touch its guarantees.
