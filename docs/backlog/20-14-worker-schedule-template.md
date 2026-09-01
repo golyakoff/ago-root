@@ -111,7 +111,10 @@ and not later.
 ## Out of scope
 
 - Re-cutting already-materialised days — `20-16`.
-- Bookings spanning several slots — `20-18`.
+- Bookings spanning several slots — `20-18`. That includes the schedule setting deciding whether
+  buffers inside a long booking count toward its service duration: the field, its column and its
+  control all belong to `20-18`, because the setting has no meaning while a service longer than a slot
+  is not offered at all. **Do not add the column here** to save a migration.
 - Per-service slot grids. A slot is still one row with one status, materialised before anybody has
   chosen a service; that stays true.
 - A lunch break as a first-class field. Two weekly rules on one day already express it.

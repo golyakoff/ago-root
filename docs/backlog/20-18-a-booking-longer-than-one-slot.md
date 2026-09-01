@@ -58,7 +58,30 @@ slots are simply adjacent, which is the degenerate case of the same rule.
 
 Nothing needs to be stored to make that true: a buffer is a gap with no row in it, so there is
 nothing for another customer to claim there. What it changes is the arithmetic that decides how many
-slots a service needs — see Open questions, which names the one case where the two readings differ.
+slots a service needs — and that arithmetic is the tenant's to set, below.
+
+## Decided: whether the buffers count toward the service duration is a tenant setting
+
+*(Author's own call, 2026-09-01, on the case that separates the two readings.)* A 70-minute service on
+a 30-minute grid with a 10-minute buffer: two slots span 70 minutes end to end (30 + 10 + 30) but
+carry only 60 minutes of slot time. So
+
+- **counting the buffers** — capacity is `N*slot + (N-1)*buffer` — gives two slots, 12:00–13:10, and
+  is the physically accurate reading for one continuous service: the worker does not stop working
+  during a gap that exists only because the grid has one;
+- **not counting them** — capacity is `N*slot` — gives three slots, 12:00–13:50, and never
+  under-allocates, at the price of 40 minutes of that worker's day.
+
+Neither is right for every trade, so `WorkerSchedule` gains a boolean the tenant sets. The
+author's own framing — *перерывы включаются в групповой слот* — is the default: buffers count.
+
+**The whole parameter lives in this item, not in `20-14`.** The field, its column, its console control
+and its behaviour all arrive together, because the setting has no meaning at all while a service
+longer than a slot is simply not offered (`20-14`'s interim rule). Putting the column in `20-14` would
+have saved one small migration and cost the thing that matters more: a control in the schedule form
+that changes nothing, which is worse than a missing one. `BookingCalendar.BufferMinutes` shipped that
+way in `20-01` — "consumed by `20-02`; nothing reads it yet" — and it is not a precedent worth
+repeating for something a tenant can see and toggle.
 
 ## Decided shape to weigh in implementation: a grouping column, leaning yes
 
@@ -79,6 +102,9 @@ or overturn when implementing, and record which.
 ## Scope
 
 - The grouping mechanism above, plus its migration.
+- `WorkerSchedule.BuffersCountTowardServiceDuration` (default true), its migration, and the console
+  control on the schedule form — which shows the resulting arithmetic for that worker's own numbers
+  ("услуга 70 мин займёт 2 слота, 12:00–13:10") rather than making the tenant work it out.
 - Run-finding: from a chosen slot and service, the consecutive run that covers the service, or nothing.
 - The multi-row claim, and the corresponding release on reject and cancel.
 - `Cancel`, `Reject`, `MarkNoShow` and the confirmation sweep operate on the whole run.
@@ -97,6 +123,8 @@ or overturn when implementing, and record which.
 ## Done when
 
 - [ ] A 90-minute service on a 30-minute grid occupies three consecutive slots as one booking.
+- [ ] The 70/30/10 case, both ways, as two tests with exactly those numbers: two slots ending 13:10
+      with the setting on, three slots ending 13:50 with it off.
 - [ ] Two customers racing for overlapping runs: exactly one wins, the loser's slots are all still
       `Available`, and no partial claim survives — proven in `Ago.Calendar.Concurrency.Tests`.
 - [ ] A run whose middle slot is already taken is neither offered nor claimable when requested
@@ -109,11 +137,7 @@ or overturn when implementing, and record which.
 
 ## Open questions
 
-- **Do the buffers inside a run count toward covering the service's duration?** The Decided section
-  above says they belong to the booking; it does not settle the arithmetic. Concretely, a 70-minute
-  service on a 30-minute grid with a 10-minute buffer: two slots span 70 minutes end to end
-  (30 + 10 + 30) but carry only 60 minutes of slot time. Two readings — capacity is
-  `N*slot + (N-1)*buffer`, giving two slots; or capacity is `N*slot`, giving three. The 90-minute
-  example the author used gives three slots either way, which is why the question survived the
-  conversation. Confirm before implementing, and put whichever is chosen in a test with exactly these
-  numbers.
+- **What the setting is called on screen.** "Перерывы внутри длинной записи считаются рабочим
+  временем" is accurate and unreadable; whatever replaces it has to be understood by a shop owner who
+  has never thought about a slot grid, which is why the form shows the arithmetic for their own
+  numbers next to the control. A naming question, not a structural one.
