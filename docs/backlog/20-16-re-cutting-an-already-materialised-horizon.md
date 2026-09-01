@@ -1,7 +1,8 @@
 # Re-cutting an already-materialised horizon
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (`ago-calendar#17`, `ago-calendar-console#18`, `adr/0085`, merged 2026-09-01) — see
+  Outcome below
 - **Depends on**: `20-14-worker-schedule-template.md` — the cursor this moves backwards, and the
   template whose change makes moving it necessary.
 
@@ -85,21 +86,41 @@ this item is built to prevent.
 
 ## Done when
 
-- [ ] Days with no bookings in the re-cut range are cleared and regenerated from the current template,
+- [x] Days with no bookings in the re-cut range are cleared and regenerated from the current template,
       proven by a test where the template changed between the two cuts.
-- [ ] A day whose booking the operator kept is left entirely in the old grid, and the response says
+- [x] A day whose booking the operator kept is left entirely in the old grid, and the response says
       which days those were.
-- [ ] A booking the operator chose to cancel is cancelled through the ordinary cancellation path — its
-      row still exists, with a cancellation reason — and is not deleted.
-- [ ] A booking created between preview and confirm causes the whole operation to be refused, proven
+- [x] A booking the operator chose to cancel is cancelled through the ordinary cancellation path — its
+      row still exists — and is not deleted. **Correction found during implementation**: `events`
+      carries no persisted cancellation-reason column today (`CancellationReason` lives only on the
+      transient `EventCancelled` domain event, cleared before saving — the same pre-existing shape
+      `RejectBookingHandler` already had). Not something this item introduces or is scoped to fix.
+- [x] A booking created between preview and confirm causes the whole operation to be refused, proven
       by a test that inserts one in between.
-- [ ] Nothing outside `[from, horizon]` for that worker is touched, proven by a test with a second
+- [x] Nothing outside `[from, horizon]` for that worker is touched, proven by a test with a second
       worker on the same calendar whose slots must survive untouched.
-- [ ] No path in this item deletes a `Booked`, `PendingConfirmation` or `NoShow` row.
+- [x] No path in this item deletes a `Booked`, `PendingConfirmation` or `NoShow` row.
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-calendar#17`, `ago-calendar-console#18`, `adr/0085`). Independently
+re-verified by the managing session: `ago-calendar` 426/426 (Domain 138, Application 100, Architecture
+18, Concurrency 17, Integration 153), `ago-calendar-console` 53/53, `dotnet format`/`npm run
+typecheck`/`lint`/`build` all clean, zero build warnings, zero migrations confirmed (`MaterializeFrom`
+already existed as a column from `20-14`). Fails-before independently re-proven for the highest-stakes
+guarantee: forced `kept = false` unconditionally in `RecutConfirmHandler`, confirmed the kept-day test
+failed *and* the no-show test threw a real domain exception attempting to cancel a terminal `NoShow`
+row (the code would have silently cancelled a booking it should have left untouched) — restored, full
+suite re-confirmed green.
+
+**Staleness check, decided**: a SHA-256 fingerprint over `(bookingId, status)` pairs for every booking
+in range, sorted by id for determinism — the cheap option this file itself named, not a per-booking
+version number. A mismatch refuses the whole confirm.
+
+**A real gap found and named, not fixed here**: a `NoShow` row cannot be decided at all — `Event.Cancel`
+refuses a terminal state — so a day holding only an old no-show is always skipped, with no way for a
+tenant to reclaim it through this item. Real and narrow; not addressed.
 
 ## Open questions
 
-- **What the staleness check compares.** A fingerprint over the booking ids and statuses in range is
-  the cheap version; a per-booking version number is the precise one. The cheap version can refuse
-  spuriously when an unrelated booking in range merely changed status, which for an operation this
-  rare is a fine trade — but decide it deliberately rather than by accident.
+None outstanding — resolved during implementation; see Outcome above.

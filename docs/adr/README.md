@@ -85,3 +85,5 @@ naming, formatting, or anything a convention doc already covers.
 | 0082 | Phone verification gets a fourth rate-limit bucket, keyed on the caller's own IP | Accepted |
 | 0083 | Calendar's account owner is an aggregate invariant, not a bypass | Accepted |
 | 0084 | A worker's schedule is a template of two kinds, and a cycle chooses days, not hours | Accepted |
+| 0085 | Re-cutting an already-materialised horizon is a second, manual, destructive entry point | Accepted |
+| 0086 | The booking claim generalises from one row to a claimed set | Accepted |
