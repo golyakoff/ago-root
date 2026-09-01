@@ -55,22 +55,64 @@ so the authority question is the one to settle before the presentation question.
   product, connected only through Keycloak — exactly `adr/0027`'s own mechanism, applied a second
   time. Preserves the ADR literally, at the cost of the tenant having to do something.
 
-## Decided (2026-09-02): the narrow granted capability — `adr/0088`
+## Decided (2026-09-02): a real Calendar `Operator`, invited by email — `adr/0088`
 
-The author weighed all three directly. Explicit linking (the third shape) was named "engineering-honest"
-in the same breath it was rejected: full accountability, every chat-originated action traceable to a
-real Calendar operator — but it asks a real tenant, a shop owner, to understand and perform an account-
-linking step before a chat operator can do something as ordinary as confirm a booking. That onboarding
-cost was judged real and unacceptable, not hypothetical. Read-only was rejected for the usability cost
-already named above. The narrow capability wins on both fronts: no `Operator` row, no linking step, no
-onboarding cost — see `adr/0088` for the full reasoning and the one real cost this choice accepts (a
-coarser audit trail than full linking would give).
+**The first answer here was the narrow capability, and it was wrong.** It was chosen on the argument
+that it costs a tenant nothing to set up, while explicit linking asks a shop owner to perform a linking
+step. The author challenged it: *if a table is needed either way, the cheapness argument disappears —
+do the honest thing.* Checking against the real code showed the challenge was right, and the original
+argument had a hole in it — recorded here because the hole is the useful part:
 
-**One structural consequence worth flagging before implementation, not discovered during it**: the
-capability grant cannot reuse `20-12`'s `Role`/`RoleAssignment` tables — every one of those is keyed on
-an `Operator` row, and this item's own Done-when below forbids a chat-originated action from ever
-creating or mutating one. A new, small, separate concept is required (a `sub` + capability string,
-checked only on the chat-originated path). This is real new Domain work, not a flag to flip.
+- The capability's "no setup cost" held **only if the grant were blanket**. A deliberate grant needs
+  somebody to grant it, which means an endpoint and a screen — precisely the cost it was meant to avoid.
+- The capability needs **entirely new machinery**: `20-12`'s `Role`/`RoleAssignment`/`PermissionChecker`
+  are each keyed on an `Operator` row, so a capability grant would need a parallel table, its own check
+  and its own screen.
+- Explicit linking **reuses everything already built**. `Operator.ExternalSubjectId` and
+  `LinkExternalIdentity` exist. `OperatorIdentityClaimsTransformation` already resolves a Keycloak `sub`
+  to a Calendar operator on every authenticated request. Roles, permissions and the Access screen came
+  with `20-12`. The one real gap: `Operator.Create` has exactly one caller today
+  (`RegisterTenantHandler`, for the account owner), so a tenant cannot add a second operator at all.
+
+So the shape that looked more expensive is the cheaper one, and it is the one with real accountability.
+The onboarding objection is real but is a **user-interface** problem, and it is solved below rather than
+designed around.
+
+## The interface, designed rather than left to implementation
+
+The tenant never encounters "linking", "subject", or "a second account". They encounter the
+invite-a-teammate flow every SaaS product already taught them.
+
+**On the Access screen** (`ago-calendar-console`'s `AccessPage.tsx`, built by `20-12` — this extends it,
+it does not add a screen):
+
+- A new control, *"Invite a colleague"* — two fields, display name and email address. Nothing else.
+- The operators table gains a status column: **Invited** (no `ExternalSubjectId` yet) or **Active**. An
+  invited row still shows its role checkboxes, so the owner can decide someone's permissions before they
+  ever sign in.
+- Copy is about people and permissions, never about identity plumbing: the heading stays "Operators",
+  the invite says "They will use the account they already sign in with."
+
+**What happens underneath**, in order:
+
+1. Invite creates an `Operator` row: display name, invited email, `ExternalSubjectId` null,
+   `IsAccountOwner` false. The owner grants roles to it immediately if they want.
+2. The invited person opens the Calendar console and signs in with the account they already have.
+3. `OperatorIdentityClaimsTransformation` finds no operator for their `sub`, falls back to matching the
+   token's email claim against invited rows, and calls the existing `LinkExternalIdentity`.
+4. From then on the `sub` resolves directly, and nothing about that person's path is special ever again.
+
+**The friction this genuinely has, stated rather than hidden**: the invited person must sign into the
+Calendar console **once** before they can act on a booking card from the chat console. Until then their
+`sub` resolves to nothing and the action is refused — never auto-provisioned, because this item's own
+Done-when below forbids a chat-originated action from creating an `Operator` row as a side effect. The
+Invited/Active status column exists so the owner can see exactly why. A smoother path (the chat console
+catching that refusal and offering "activate your booking access") is a real improvement and is
+deliberately **out of scope** rather than half-built.
+
+**The failure mode worth designing for**: if the owner types an email that differs from the person's
+Keycloak email, the link silently never happens. Mitigated by the visible Invited status, not by making
+the match cleverer — a fuzzy identity match is a worse thing to own than a visible unresolved invite.
 
 ## Done when
 
@@ -80,7 +122,18 @@ checked only on the chat-originated path). This is real new Domain work, not a f
       they may do, and what they are refused.
 - [ ] `authorization.md` is updated, since this is the second product to need an answer from it.
 - [ ] No path exists by which acting on a card in Chat creates or mutates a Calendar `Operator` row as
-      a side effect — the failure mode `12-04` already caught once, in a different disguise.
+      a side effect — the failure mode `12-04` already caught once, in a different disguise. **Note the
+      shape this now takes**: an action from a `sub` with no operator row must be *refused*, and a test
+      must prove the refusal rather than assume it. Linking happens only on a deliberate console
+      sign-in, never on an action.
+- [ ] A tenant can invite a second operator by name and email, grant them roles before they have ever
+      signed in, and see Invited-versus-Active status — proven end to end, including the case where the
+      invited email never matches anyone (the row stays Invited forever and nothing silently links).
+- [ ] The email fallback in `OperatorIdentityClaimsTransformation` links exactly once and only for an
+      invited row — proven by a test that a `sub` already bound to one operator can never be re-bound to
+      another by an email collision.
+- [ ] `personal-data.md`'s own `operators` (AGO Calendar) row records the new invited-email column — a
+      direct identifier where that table previously held only a display name.
 
 ## Open questions
 
