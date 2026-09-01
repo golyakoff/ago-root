@@ -65,8 +65,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `20-14` worker schedule template | "2 через 2" and "сутки через трое" cannot be expressed at all - `WorkingHoursRule` is keyed on `DayOfWeek` and a cycle needs an anchor date. Also moves slot length, buffer and horizon to where a tenant can set them. ADR-0084 |
 | 3 | `20-18` a booking longer than one slot | Immediately after `20-14` **and not later**, because `20-14`'s explicit slot length leaves a shop with 30/60/90-minute services able to sell only the 30-minute one until this lands. Amends `adr/0059` |
-| 4 | `20-15` materialised slot view | The tenant's only way to check their own schedule today is to open the public widget and count. Small, plain table between two large items |
-| 5 | `20-16` re-cutting an already-materialised horizon | Without it a template change does nothing for up to 180 days. Makes destruction an explicit human action with a preview, leaving the background job insert-only. ADR-0085 |
+| 4 | `20-16` re-cutting an already-materialised horizon | Without it a template change does nothing for up to 180 days. Makes destruction an explicit human action with a preview, leaving the background job insert-only. ADR-0085 |
 | 6 | `20-10` public booking widget requires a verified phone | `20-09`'s own named follow-up and the other half of the same launch prerequisite. **Decided 2026-09-01**: Calendar builds its own verification primitive, mirroring `14-15`, with a fake sender (real code, real hash/lockout/expiry, no real SMS) so the whole flow is live-demonstrable with zero vendor spend - see the item's own file |
 | 7 | `20-11` additional verified contact channels for a booking | Deferred from `20-09` under real time pressure, named as its own item rather than left a silent gap - priority-ordered extra channels (another phone, a messenger), each independently verified |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
@@ -894,7 +893,8 @@ Deliverables:
   schedule template that can express a **cycle** - "2 через 2",
   "сутки через трое" - rather than only an ordinary week, with slot length, buffer and horizon moved to
   where a tenant sets them (`20-14`, `adr/0084`); a plain table of what the materialiser actually
-  produced, reusing `20-12`'s contact gate rather than working around it (`20-15`); and re-cutting an
+  produced, reusing `20-12`'s contact gate rather than working around it (`20-15`, done 2026-09-01,
+  `ago-calendar#15`/`ago-calendar-console#16`); and re-cutting an
   already-materialised horizon (`20-16`, `adr/0085`) - which leaves the background job insert-only as
   `adr/0053` promised and makes destruction one explicit human action with a preview. Two follow-ons
   fall out of it: a booking may span several consecutive slots (`20-18`, amending `adr/0059`), queued
