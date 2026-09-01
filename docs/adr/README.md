@@ -88,3 +88,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0085 | Re-cutting an already-materialised horizon is a second, manual, destructive entry point | Accepted |
 | 0086 | The booking claim generalises from one row to a claimed set | Accepted |
 | 0087 | `messages` is partitioned by tenant hash, not by time | Accepted — amends 0031's mechanism and 0019's index shape |
+| 0088 | A chat operator acts on a booking through a narrow, granted capability, not a second `Operator` row | Accepted — extends 0027 |

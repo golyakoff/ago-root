@@ -1,7 +1,8 @@
 # Public booking widget requires a verified phone
 
 - **Stage**: 20 (and 14 — likely consumes or mirrors a `14-15`-shaped mechanism)
-- **Status**: done (`ago-calendar#19`, merged 2026-09-01) — see Outcome below
+- **Status**: done (`ago-calendar#19`, merged 2026-09-01) — then closed the same day (`ago-calendar#20`,
+  merged 2026-09-01), see the Correction section below
 - **Depends on**: `20-09-booking-confirmation-requires-a-verified-phone.md` (built, chat-only) — this
   item is the named follow-up its own Outcome section points to, extending the identical guarantee to
   the one calling surface `20-09` deliberately left untouched. `14-15-phone-verification-via-call-or-sms-code.md`
@@ -200,6 +201,18 @@ plainly rather than papering over with an invented consumer: this item's own don
 the wire-contract level, against a caller that turns out not to exist yet. Whether the endpoint should
 stay as dormant, defensible infrastructure for a future integration surface, or whether it is worth
 retiring, is a separate decision the author has not made and this item does not make for them.
+
+**Decided the same day: closed, not retired.** `ago-calendar#20` adds `PublicBookingApiGate`, an
+`IEndpointFilter` on the booking endpoint and both phone-verification endpoints, off by default via
+`PublicBookingApi:Enabled`. No exception for any caller, including AGO's own platform-owner role — the
+filter never inspects `HttpContext.User` at all, so there is no principal to special-case in the first
+place. Refuses with `403 booking.public_api_disabled` rather than `404`, since nothing here is
+tenant-specific for a `404` to protect, and a bare `404` from a route that plainly exists would read as
+a stale link rather than a deliberate refusal. Nothing from this item was deleted — the aggregate, the
+handlers, the migration, and every route stay exactly as built; reopening this later is one config
+value, not a rebuild. `BookEvent.RequiresVerifiedPhone` also lost its `= false` default in the same
+change, so a future third caller of the command must now name the requirement explicitly — the compiler
+enforces what this item's own doc comment had previously only asked a future reader to remember.
 
 ## Open questions
 

@@ -64,8 +64,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
 | 2 | `15-09` repartition `messages` by tenant hash | **Ahead of `20-11` because it unblocks it**: the monthly partition grid rejects inserts dated before the current month, so `ago-chat`'s CI is red for any PR landing in the first days of a month - `20-11`'s own PR is sitting on exactly that. Decided in `adr/0087`; removes the failure structurally rather than patching it, and makes the two dominant read paths prune to one partition |
-| 3 | `20-11` additional verified contact channels for a booking | Deferred from `20-09` under real time pressure, named as its own item rather than left a silent gap - priority-ordered extra channels (another phone, a messenger), each independently verified. `20-10`'s own mechanism now exists to build against. **Its own PR (`ago-chat#145`) is verified green locally and blocked only by the CI failure `15-09` above removes** |
-| 4 | `20-08` who confirms a chat-originated booking | `20-07` (the seam) is now built, so the code-level blocker is gone; what remains is the named tension with `adr/0027` itself - a chat operator acting on a booking card is an identity Calendar has no `operators` row for - which is a decision to make, not a dependency to wait on |
+| 3 | `20-08` who confirms a chat-originated booking | **Decided 2026-09-02, `adr/0088`**: a chat operator acts through a narrow, granted capability checked at the moment of the action - never a second Calendar `Operator` row. Explicit account-linking was named "engineering-honest" by the author and rejected anyway, for a real onboarding-cost reason: a shop owner should not have to link two accounts before a chat operator can confirm a booking. Queued behind `15-09` (unrelated, already in flight), picked up next once it lands |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 
@@ -877,7 +876,9 @@ Deliverables:
   hypothetical: `14-15` verifies before the real claim (`IBookingStore.TryBookAsync`) is ever reached,
   deliberately leaving `20-04`'s own confirm-by-default sweep untouched. First real consumer of `14-15`
   (Stage 14). Scoped to chat-only, not universal - the public widget's own path to the same guarantee is
-  `20-10`, and the deferred additional-channels want is `20-11`, both new the same day.
+  `20-10` (done 2026-09-01, then reversed - see below), and the deferred additional-channels want is
+  `20-11` (done 2026-09-01, `ago-chat#145`) - a priority-ordered list of extra verified contact channels
+  per booking, scoped to the chat conversation's own module task, both new the same day as `20-09`.
 - **Permissioned contact visibility, a tenant contacts report (`20-12`, done 2026-08-31)** - a cheaper,
   faster interim step named ahead of `20-10`'s own full verification: an operator holding
   `Permission.CustomerRead` sees a pending booking's phone and can eyeball/reject an obviously fake one
@@ -901,16 +902,21 @@ Deliverables:
   claimed-set one, still one statement, still Postgres as the sole arbiter, still atomic: a booking is
   claimed whole or not at all; and moving a booking into the new grid instead of cancelling it
   (`20-17`), deferred by the author and not queued.
-- **The public widget's own verified-phone mechanism (`20-10`, done 2026-09-01, `ago-calendar#19`)** -
-  `20-09`'s own named follow-up for the one calling surface it deliberately left untouched. A second,
-  independent `PendingPhoneVerification` aggregate mirroring `14-15`'s confirm-side domain logic (code
-  hash, expiry, lockout, constant-time compare), with no cross-product dependency (`adr/0027`).
-  `FakePhoneVerificationSender` is the only sender registered, unconditionally - the code is real,
-  generated, hashed, checked for real; only the SMS/voice call is faked, which is what makes the whole
-  flow live-demonstrable on the demo cluster with zero vendor account and zero spend, a bar `14-15`
-  itself never cleared. `BookEvent.RequiresVerifiedPhone` is now `true` on the public `/book` endpoint.
-  The frontend that actually calls the two new endpoints lives in `ago-widget`, not touched by this
-  item - a named follow-up, not silently assumed done.
+- **The public widget's own verified-phone mechanism, built then closed, same day (`20-10`, done
+  2026-09-01, `ago-calendar#19`)** - `20-09`'s own named follow-up for the one calling surface it
+  deliberately left untouched. A second, independent `PendingPhoneVerification` aggregate mirroring
+  `14-15`'s confirm-side domain logic (code hash, expiry, lockout, constant-time compare), with no
+  cross-product dependency (`adr/0027`). `FakePhoneVerificationSender` is the only sender registered,
+  unconditionally - the code is real, generated, hashed, checked for real; only the SMS/voice call is
+  faked, which is what makes the whole flow live-demonstrable with zero vendor spend, a bar `14-15`
+  itself never cleared. **Found the same day it shipped**: `20-07` had already deleted `ago-widget`'s
+  entire direct HTTP client to Calendar five days earlier, so no caller reaches this endpoint at all -
+  every booking now runs through the chat conversation instead. The endpoint and its verification
+  primitive stay in the codebase, closed rather than deleted (`PublicBookingApiGate`, `ago-calendar#20`,
+  off by default, no exception for any caller including AGO's own platform-owner role), reversible with
+  one config flip if a real third-party-integration need is ever named. `20-19`, proposed on the premise
+  that such a caller was a tenant's own integration, was reconsidered and withdrawn the same day - see
+  `20-10`'s own file for the full trail.
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
