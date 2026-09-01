@@ -1,7 +1,7 @@
 # The materialised slot view: what the tenant's schedule actually produced
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (`ago-calendar#15`, `ago-calendar-console#16`, merged 2026-09-01) — see Outcome below
 - **Depends on**: `20-13-worker-card-and-list.md` — the card this is reached from.
   `20-12-permissioned-contact-visibility-and-tenant-contacts-report.md` (done) — the permission gate
   this reuses rather than works around.
@@ -69,18 +69,49 @@ permission is worse than one that never had it.
 
 ## Done when
 
-- [ ] The table shows a worker's slots over a date range with date, weekday, local time and status.
-- [ ] An occupied slot shows the customer's name and phone to a caller holding `CustomerRead`, and
+- [x] The table shows a worker's slots over a date range with date, weekday, local time and status.
+- [x] An occupied slot shows the customer's name and phone to a caller holding `CustomerRead`, and
       `hidden` to one without — on identical underlying data, proven by a test.
-- [ ] The unpermitted query genuinely does not read `customers` — proven by a test whose fixture puts
-      a customer row in place that must not appear in the response.
-- [ ] Another tenant's worker returns not-found rather than an empty list, proven by a test.
-- [ ] The console reaches the screen from both the worker list row and the worker card.
+- [x] The unpermitted query genuinely does not read `customers` — proven by a test whose fixture puts
+      a customer row in place that must not appear in the response. Proven at the strongest level
+      available: a Postgres role granted `SELECT` on `events`/`services` but not `customers` gets a
+      real `42501: permission denied for table customers` if the unpermitted branch is ever forced to
+      run the permitted query — not merely an assertion that the response omits the fields.
+- [x] Another tenant's worker returns not-found rather than an empty list, proven by a test.
+- [x] The console reaches the screen from both the worker list row and the worker card, via `20-13`'s
+      own extension seam (`WorkersTable.renderRowActions`).
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-calendar#15`, `ago-calendar-console#16`). The branch was cut before
+`20-13` landed on `main`; the managing session rebased it (cherry-pick onto fresh `origin/main`, clean
+auto-merge in `ConsoleEndpoints.cs`/`ConsoleContracts.cs`/`CalendarModule.cs`) and fixed two compile
+breaks the rebase exposed — a test-only `IWorkerRepository` fake missing `20-13`'s new
+`DeleteIfNeverBookedAsync` member, and two `Worker.Create(...)` calls still using the pre-`20-13`
+single-`displayName` signature — before independently re-verifying.
+
+Independently re-verified by the managing session: `ago-calendar` 383/383 (Application 102, Domain 108,
+Architecture 18, Concurrency 17, Integration 138), `ago-calendar-console` 39/39, `dotnet
+format`/`npm run typecheck`/`lint`/`build` all clean, zero build warnings. Fails-before independently
+re-proven for the critical guarantee: forced the unpermitted branch to always execute
+`SqlWithContactData`, confirmed `TheUnpermittedQuery_TrulyNeverReadsCustomers...` failed with the real
+Postgres permission error above (not a masked-in-C# assertion), restored, full suite re-confirmed
+green.
+
+**Discriminator decided during implementation, not named in this file's own Scope**: `CustomerId` is
+carried ungated on every row, because `phone === null` alone is ambiguous here in a way it never was
+for `20-12`'s pending queue — every queue row has a customer, but this screen also lists `Available`
+and `Blocked` slots, which have none. Without `CustomerId` a caller could not tell "nobody booked this"
+from "someone did, hidden from you" — exactly the blank-cell trap this item's own Scope warned against.
 
 ## Open questions
 
-- **The default date range.** Today through the worker's own horizon is the most informative and can
-  be 180 rows per worker; today through +14 is the readable default. Leaning to +14 with the range
-  editable, but decide when implementing.
-- **Whether past days are shown at all.** They answer "who came last Tuesday", which is arguably the
-  contacts report's job (`20-12`), not this screen's.
+Both resolved during implementation:
+
+- **Default date range**: today through +14 days, computed and fully editable client-side. The
+  endpoint itself takes required `from`/`to` with no server-side default, keeping the UX decision in
+  the console rather than making the handler resolve "business-local today" for a screen that doesn't
+  need it to.
+- **Past days**: not restricted. Nothing stops widening `from` backward; a second code path to forbid
+  it would exist only to enforce a distinction an operator checking their own schedule has no reason to
+  care about.
