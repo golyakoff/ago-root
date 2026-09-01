@@ -1,7 +1,7 @@
 # Additional verified contact channels for a booking, priority-ordered
 
 - **Stage**: 20 (and 14 — reuses `14-12`/`14-15`'s own verification mechanisms)
-- **Status**: ready
+- **Status**: done (`ago-chat#145`, merged 2026-09-01) — see Outcome below
 - **Depends on**: `20-09-booking-confirmation-requires-a-verified-phone.md` (built, chat-only) — this
   item is the scope its own Outcome section named as deferred, not built. `14-12-verified-channel-identity-linking.md`
   (done) — the mechanism an additional messenger channel reuses unchanged. `14-15-phone-verification-via-call-or-sms-code.md`
@@ -49,11 +49,44 @@ that a deferred scope becomes a named item, not a silent gap.
 
 ## Done when
 
-- [ ] A visitor can add additional contact channels for a specific booking, each refused a place in the
+- [x] A visitor can add additional contact channels for a specific booking, each refused a place in the
       priority list until independently verified, proven by a test per channel kind exercised.
-- [ ] The priority order a visitor sets is stored and retrievable, proven by a test.
-- [ ] The cross-product/storage data shape is recorded in this file, following `20-09`'s own snapshot
-      pattern or explicitly justifying a departure from it.
+- [x] The priority order a visitor sets is stored and retrievable, proven by a test.
+- [x] The cross-product/storage data shape is recorded in this file, following `20-09`'s own snapshot
+      pattern or explicitly justifying a departure from it — it departs; see Outcome.
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-chat#145`). Independently re-verified by the managing session:
+1883/1891 (Domain 424, Application 634, Architecture 40, FakeCrm 21, Concurrency 38, Integration
+726/734 — the 8 Integration failures are the pre-existing, unrelated partition-window bug fixed
+separately by `15-09`/`ago-chat#146`, independently reproduced on unmodified `main` before trusting the
+claim), `dotnet format`/build clean, zero warnings. Fails-before independently re-proven for the
+headline guarantee: removed the `!identity.Active` clause from
+`SetModuleTaskChannelPriorityListHandler`'s eligibility check, confirmed
+`HandleAsync_AnUnlinkedIdentityOfThisVisitorsOwn_IsRefused` failed (an unlinked identity was accepted
+into the priority list), restored, full suite re-confirmed green twice.
+
+**Storage shape, departs from `20-09`'s snapshot pattern, as flagged in Scope**: `ModuleTaskChannelPreference`
+stores a live foreign-key reference to `ChannelIdentity` rather than a denormalized
+kind/address/verified-at copy. Both verification paths (`14-15` for a phone, `14-12` for a messenger)
+already converge on one `ChannelIdentity` row; copying its fields would duplicate a fact that can drift
+on unlink. Re-validated `Active` at read time, not just at write time — the same shape `14-13`'s own
+`Visitor.PreferredChannelIdentityId` already uses, one level narrower (per-module-task instead of
+per-visitor).
+
+**Scoped to `Conversation.ActiveModuleTask.Id`** (`20-07`'s own chat-module-task concept), not the
+conversation as a whole — `ModuleKey` is deliberately opaque in this codebase (architecture-tested), so
+the mechanism is structurally generic to any module task, not calendar-specific by name.
+
+**Resolution order, as decided**: this item's own per-module-task list first, then `14-13`'s own
+per-visitor preference, then the pre-existing most-recent-channel fallback — proven unchanged for any
+non-module-task message.
+
+**No console surface built** — no existing per-conversation "active booking" screen exists yet to
+extend, and no reorderable-list UI pattern exists in this codebase. REST endpoints
+(`GET`/`PUT .../module-task-channel-priority`) are complete, so a future console item has a full backend
+to build against.
 
 ## Decided (2026-09-01)
 
