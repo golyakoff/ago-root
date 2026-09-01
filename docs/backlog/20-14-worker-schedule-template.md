@@ -1,7 +1,8 @@
 # The worker's schedule template: cycle patterns, explicit slot and buffer, per-worker horizon
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (`ago-calendar#16`, `ago-calendar-console#17`, `adr/0084`, merged 2026-09-01) — see
+  Outcome below
 - **Depends on**: `20-13-worker-card-and-list.md` — the card this adds a section to.
   `20-02-availability-materialization-and-manual-editing.md` (done) — the materialiser this changes
   the inputs of.
@@ -121,23 +122,46 @@ and not later.
 
 ## Done when
 
-- [ ] A `2/2` cycle anchored on a given date produces slots on exactly the right business-local days
+- [x] A `2/2` cycle anchored on a given date produces slots on exactly the right business-local days
       across a month — proven by a test covering the anchor day itself and a resting day.
-- [ ] `1/3` ("сутки через трое") produces slots on one day in four, inside the stated hours, with no
+- [x] `1/3` ("сутки через трое") produces slots on one day in four, inside the stated hours, with no
       slot crossing midnight.
-- [ ] A working day 12:00–18:00 at a two-hour slot with a zero buffer produces exactly three slots —
+- [x] A working day 12:00–18:00 at a two-hour slot with a zero buffer produces exactly three slots —
       12–14, 14–16, 16–18. The spec's own example, as a test.
-- [ ] The same day with a 30-minute buffer produces two slots (12:00–14:00, 14:30–16:30) and drops the
+- [x] The same day with a 30-minute buffer produces two slots (12:00–14:00, 14:30–16:30) and drops the
       tail — so the buffer is *shown* consuming time rather than asserted to.
-- [ ] Two workers on one calendar with different slot lengths produce different grids on the same day.
-- [ ] A horizon above 180 is refused by the API.
-- [ ] The cursor advances after a run, and an immediate second run inserts nothing.
-- [ ] A service longer than the worker's slot is not offered for that worker on the booking surface.
-- [ ] `BookingCalendar.BufferMinutes` is gone and no code path reads it.
+- [x] Two workers on one calendar with different slot lengths produce different grids on the same day.
+- [x] A horizon above 180 is refused by the API.
+- [x] The cursor advances after a run, and an immediate second run inserts nothing.
+- [x] A service longer than the worker's slot is not offered for that worker on the booking surface.
+- [x] `BookingCalendar.BufferMinutes` is gone and no code path reads it.
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-calendar#16`, `ago-calendar-console#17`, `adr/0084`). Independently
+re-verified by the managing session: `ago-calendar` 414/414 (Domain 134, Application 100, Architecture
+18, Concurrency 17, Integration 145), `ago-calendar-console` 45/45, `dotnet format`/`npm run
+typecheck`/`lint`/`build` all clean, zero build warnings. `BookingCalendar.BufferMinutes` confirmed
+fully gone by a repo-wide grep excluding migrations — every remaining hit is `WorkerSchedule`'s own
+field. Fails-before independently re-proven for the forward-only cursor guarantee, the highest-stakes
+one in this item: neutralised `ValidateMaterializeFromNotRegressing`'s own guard, confirmed both
+`ReconfigureWeekly_RefusesAMaterializeFromEarlierThanTheCurrentOne` and
+`AdvanceCursor_RefusesToMoveBackwards` fail ("no exception was thrown"), restored, full suite
+re-confirmed green.
+
+**Open question, decided**: no default schedule at provisioning. The question's own premise turned out
+wrong — `RegisterTenantHandler` never creates a worker at all — so the real decision point was
+`CreateWorkerHandler` (`20-13`'s own `POST /workers`), left untouched: a newly created worker gets no
+schedule, matching the pre-existing behaviour for a worker with no `WorkingHoursRule` rows.
+
+**A real gap found and closed along the way, not in the original Scope**: the booking-surface read
+store's own filter for "which services can this worker be booked for" had to switch from an
+`INNER JOIN worker_schedules` to a `LEFT JOIN` with a null-safe predicate after the first pass broke
+pre-existing tests that insert `Event` rows directly, bypassing materialisation entirely (and so never
+create a schedule) — the port's actual job is "exclude an oversized service for a worker whose slot
+doesn't fit," not "exclude any worker with no schedule row," which would have been a second, unstated
+rule.
 
 ## Open questions
 
-- Whether `RegisterTenantHandler`'s provisioning transaction should create a default schedule for the
-  first worker it makes, or whether a worker starts with no schedule and materialises nothing until a
-  human writes one. The second is today's behaviour for a worker with no rules and is the safer
-  default; the first makes the demo tenant work out of the box. Decide when implementing.
+None outstanding — resolved during implementation; see Outcome above.
