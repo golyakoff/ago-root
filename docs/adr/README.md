@@ -84,3 +84,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0081 | A reachable-but-unsure module escalates through a fifth primitive, not a new signal | Accepted |
 | 0082 | Phone verification gets a fourth rate-limit bucket, keyed on the caller's own IP | Accepted |
 | 0083 | Calendar's account owner is an aggregate invariant, not a bypass | Accepted |
+| 0084 | A worker's schedule is a template of two kinds, and a cycle chooses days, not hours | Accepted |
