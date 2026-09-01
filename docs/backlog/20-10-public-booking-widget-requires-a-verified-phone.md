@@ -158,13 +158,42 @@ personal-data discipline.
 `Confirmed` outcome, hashed before storage, returned once in plaintext. `BookEventRequest` carries
 `{PhoneVerificationId, PhoneVerificationProofToken}`.
 
-**Where the widget's frontend actually lives, confirmed**: `ago-widget` (per `20-06`'s own file), not
-`ago-calendar-console`. This item is backend/wire-contract only — the frontend UI that calls the two new
-endpoints and threads the proof into the existing booking form does not exist yet. A real, named gap,
-not silently assumed done; a natural next item if picked up.
-
 **A doc correction owed and made in the same change**: `docs/architecture/personal-data.md` never
 carried a row for this new store. Added below.
+
+## Correction, 2026-09-01: this item's own title is misleading — there is no widget caller
+
+Written into the file the same day the gap was found, before dispatching any further work against a
+wrong premise.
+
+At the time this item was scoped, "the public booking widget" was assumed to mean a browser module
+inside `ago-widget` that talks to `Ago.Calendar.Api` directly, and the endpoint this item gates
+(`POST /calendars/{id}/events/{id}/book`) was assumed to be that module's own call. **That assumption
+predates `20-07`.** `20-07` (Calendar becomes a chat module, done 2026-08-29) deleted `ago-widget`'s
+entire direct HTTP client to Calendar — `calendarClient.ts`, `flow.ts`, `panel.ts`, all of it — and
+replaced it with the booking flow running *through the conversation*, as ordinary chat messages. The
+surviving `src/modules/booking/chip.ts` says so in its own doc comment, in as many words: "There is no
+direct network call to AGO Calendar left anywhere in this repository, base bundle or lazy module
+alike." `20-06`'s own file independently confirms the same decision from the other direction ("no
+second widget and no second script tag"; every booking, from every channel, is reached through the
+conversation).
+
+**Consequence, checked directly rather than assumed**: nothing in `ago-widget` calls, or will ever
+call, the endpoint this item gates. The guarantee this item built is real and correctly implemented —
+the code review above stands — but its own premise ("a public, embeddable booking widget that cannot
+complete a booking at all") was already stale by the time this item was written, because that widget
+path had already been deleted five days earlier by `20-07`.
+
+**So who does call the public endpoint?** Decided by the author, 2026-09-01: **a third-party
+integrator** — a tenant's own custom-built page, calling `Ago.Calendar.Api` directly, with no AGO Chat
+in the loop at all. This reading is consistent with `adr/0027`'s own framing of Calendar as
+independently bookable, not merely independently deployable, and it means this item was not wasted
+work — it is exactly the guarantee a real third-party caller needs, just aimed at a different caller
+than the item's own title names. **`20-19`** is the new item that follows from this: what a third-party
+integrator actually needs (documentation, a reference flow, and any missing polish) to use this
+endpoint for real. This item's own title stays as the historical record of what was asked for; the
+correct destination for anyone picking up "make this endpoint usable" is `20-19`, not a new `ago-widget`
+task.
 
 ## Open questions
 

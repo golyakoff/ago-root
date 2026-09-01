@@ -1,7 +1,8 @@
 # Who confirms a booking that started in a conversation
 
 - **Stage**: 20 (and 12/14 — it is an authorisation question before it is a Calendar one)
-- **Status**: blocked on `20-07`
+- **Status**: ready — `20-07` shipped 2026-08-29; the code-level blocker is gone, what remains is the
+  decision this item's own "shapes worth weighing" section names
 - **Depends on**: `20-07` — the contract and the transport. This question only becomes answerable once
   a booking can actually originate inside a conversation.
 - **Tension with**: `adr/0027`, deliberately and explicitly.
