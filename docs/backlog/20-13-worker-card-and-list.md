@@ -1,7 +1,7 @@
 # The worker card and the worker list: real name fields, activity, timestamps, deletion
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (`ago-calendar#14`, `ago-calendar-console#15`, merged 2026-09-01) — see Outcome below
 - **Depends on**: `20-01-domain-model-and-persistence.md` (done) — the `Worker` aggregate this widens.
   `20-06-console-and-booking-widget.md` (done) — the console screen this replaces the add-only form on.
 
@@ -90,23 +90,46 @@ rule exists to prevent.
 
 ## Done when
 
-- [ ] Creating a worker with only фамилия and имя produces a display name equal to "Имя Фамилия" with
+- [x] Creating a worker with only фамилия and имя produces a display name equal to "Имя Фамилия" with
       collapsed whitespace — proven by a test whose input carries stray spaces.
-- [ ] Editing фамилия *after* a human typed a display name leaves the display name untouched; editing
-      it *before* recomputes it. One test each, on the same worker.
-- [ ] A worker with a `Booked` event cannot be deleted and the API says why; a worker with only
+- [x] Editing фамилия *after* a human typed a display name leaves the display name untouched; editing
+      it *before* recomputes it. One test each, on the same worker — proven sequentially on one worker
+      object, per its own fails-before proof: removing `Rename`'s `if (!DisplayNameIsCustom)` guard
+      made the recompute-after-custom test fail as expected.
+- [x] A worker with a `Booked` event cannot be deleted and the API says why; a worker with only
       `Available` events can be, and his slots, rules and joins go with him — with the booking check
-      proven to run inside the delete transaction.
-- [ ] `UpdatedAt` moves on every mutation and `CreatedAt` never does, proven against a fake clock.
-- [ ] The console lists every worker in one table, opens a card for create and for edit, toggles
+      proven to run inside the delete transaction. Implemented as a single guarded SQL statement
+      (`DELETE ... WHERE ... AND NOT EXISTS (...)`) rather than a separate read-then-delete — a
+      stronger reading of the requirement, since under Postgres READ COMMITTED it closes the gap a
+      two-statement transaction would still leave open for a booking landing in between.
+- [x] `UpdatedAt` moves on every mutation and `CreatedAt` never does, proven against a fake clock.
+- [x] The console lists every worker in one table, opens a card for create and for edit, toggles
       activity, and deletes behind a confirmation.
-- [ ] Another tenant's worker is invisible to all four endpoints, proven by a test.
+- [x] Another tenant's worker is invisible to all four endpoints, proven by a test.
+
+## Outcome
+
+Built and merged 2026-09-01 (`ago-calendar#14`, `ago-calendar-console#15`). Independently re-verified
+by the managing session: `ago-calendar` 368/368 (Domain 108, Application 95, Architecture 18,
+Concurrency 17, Integration 130), `ago-calendar-console` 32/32, `dotnet format`/`npm run
+typecheck`/`lint`/`build` all clean, zero build warnings. Fails-before independently re-proven for the
+delete-safety guarantee: removed the `AND NOT EXISTS (...)` clause from `WorkerRepository`'s delete
+SQL, confirmed both `WorkerEndpointTests` booking-history cases go red (`Conflict` expected, `NoContent`
+got — i.e. silent deletion including the booking, via `ON DELETE CASCADE`), restored, full suite
+re-confirmed green.
+
+**Backfill decision**: `LastName` ← the existing display name verbatim, `FirstName` ← `"—"` (a visible
+em-dash placeholder, not a blank a form would silently accept as already-filled), `DisplayNameIsCustom`
+← `true` (so a later `Rename` cannot silently recompute the preserved name into `"— <last name>"`).
+`CreatedAt`/`UpdatedAt` decoded from each row's own UUIDv7 id — its leading 48 bits are a millisecond
+timestamp — via `uuid_send()`/`get_byte()`, never a fabricated `now()` for a worker that may be weeks
+old. Verified against a real Postgres migration test with both a two-word and a one-word (no-space)
+existing display name.
+
+**Extension seam, as briefed**: `WorkerCard` renders `children` after its own fields, and
+`WorkersTable`'s row actions come through a `renderRowActions` prop rather than hard-coded columns —
+so `20-14`'s schedule link and `20-15`'s slots link extend these files rather than editing them.
 
 ## Open questions
 
-- **Backfilling `LastName`/`FirstName` for workers that already exist.** They have only a display
-  name, and the new fields are required. Splitting on the first space guesses at a name; leaving them
-  empty leaves rows that violate the rule the API enforces for every new row. The live demo tenant is
-  the only real data today, so the cheap answer — backfill `LastName` from the whole display name,
-  `FirstName` empty, `DisplayNameIsCustom = true`, and let the console show it as needing a
-  correction — may simply be right. Decide when implementing, and say which was chosen.
+None outstanding — resolved during implementation; see Outcome above.
