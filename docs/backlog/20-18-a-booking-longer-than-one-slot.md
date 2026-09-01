@@ -103,8 +103,11 @@ or overturn when implementing, and record which.
 
 - The grouping mechanism above, plus its migration.
 - `WorkerSchedule.BuffersCountTowardServiceDuration` (default true), its migration, and the console
-  control on the schedule form — which shows the resulting arithmetic for that worker's own numbers
-  ("услуга 70 мин займёт 2 слота, 12:00–13:10") rather than making the tenant work it out.
+  control on the schedule form, labelled **«Перерывы внутри длинной записи считаются рабочим
+  временем»** (the author's own wording, kept because it states the whole rule in one line and needs no
+  glossary). Next to it the form shows the resulting arithmetic for that worker's own numbers —
+  "услуга 70 мин займёт 2 слота, 12:00–13:10" — so the tenant sees the consequence rather than
+  computing it.
 - Run-finding: from a chosen slot and service, the consecutive run that covers the service, or nothing.
 - The multi-row claim, and the corresponding release on reject and cancel.
 - `Cancel`, `Reject`, `MarkNoShow` and the confirmation sweep operate on the whole run.
@@ -137,7 +140,6 @@ or overturn when implementing, and record which.
 
 ## Open questions
 
-- **What the setting is called on screen.** "Перерывы внутри длинной записи считаются рабочим
-  временем" is accurate and unreadable; whatever replaces it has to be understood by a shop owner who
-  has never thought about a slot grid, which is why the form shows the arithmetic for their own
-  numbers next to the control. A naming question, not a structural one.
+None outstanding. The one real decision left inside this item — a `booking_id` column on `events`
+versus a separate `bookings` table — is named above with a stated leaning, to be settled against the
+read models when implementing.
