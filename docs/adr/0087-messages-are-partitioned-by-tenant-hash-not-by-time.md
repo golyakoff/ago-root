@@ -3,7 +3,8 @@
 - **Status**: Accepted
 - **Date**: 2026-09-02
 - **Amends**: `adr/0031` (its partition-key half — the retention *policy* stands, its *mechanism* changes),
-  `adr/0019` (the unique-index widening, which follows whatever the partition key is)
+  `adr/0019` (the unique-index widening, which follows whatever the partition key is),
+  `adr/0047` (its "every migration so far has been additive" premise — this is the first that is not)
 - **Supersedes in practice**: `2-06`/`13-06`'s own monthly grid
 
 ## Context
@@ -81,6 +82,18 @@ dimension.**
   cold-and-closed old partitions for autovacuum to skip. The full-text GIN index per bucket grows with
   it.
 - **Negative**: 64 is now a one-way door. Changing it later is a rehash of the whole table.
+- **Negative, and the one that reaches outside the database**: this is the **first non-additive
+  migration in the project**, which retires `adr/0047`'s standing premise that an older image is always
+  safe against a newer schema. The migration renames `messages`, recreates it, copies and drops — so an
+  `ago-chat` image from before it must never be rolled onto this schema. `SchemaVersionGuard` does not
+  help: it refuses when the database is *behind* the image and is silent when it is *ahead*, which is
+  precisely this direction. The concrete breakage is `PartitionMaintenanceJob`, still present in the
+  pre-`15-09` worker, adding a monthly `RANGE` partition to a table with no time dimension. Across that
+  boundary recovery is a restore (`15-02`), not a rollback. Accepted knowingly: there are no live
+  clients and no data to lose, which is the cheapest this change will ever be, and the rule itself
+  ("expand now, contract later") continues to bind every future migration. `adr/0047` records the
+  amendment; `deploy.sh`, `rollback.sh` and `redeploy.sh` each carry the warning where somebody would
+  act on it.
 - **Consequence for `adr/0019`**: its rule is unchanged — Postgres still requires the partition key
   inside every unique constraint — but what that means changes. The primary key and both unique indexes
   drop `created_at`/`retention_class` and take `site_id` instead, which is a *narrower* widening than
