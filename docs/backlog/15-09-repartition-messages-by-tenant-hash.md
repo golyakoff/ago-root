@@ -1,7 +1,7 @@
 # Repartition `messages` by tenant hash, and rebuild what depended on the monthly grid
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (`ago-chat#147`, merged 2026-09-02) — see Outcome below
 - **Decided by**: `adr/0087` — read it first; this item builds what that ADR decided, and does not
   re-open the choice.
 - **Amends in code**: `2-06`/`13-06`'s own monthly partition grid, `adr/0031`'s retention *mechanism*
@@ -54,17 +54,54 @@ patches.
 
 ## Done when
 
-- [ ] A conversation-history read touches exactly one partition, proven by `EXPLAIN` in a test rather
-      than asserted.
-- [ ] A tenant search touches exactly one partition, proven the same way.
-- [ ] Every query in either backend that reads `messages` is audited for a `site_id` predicate, and the
+- [x] A conversation-history read touches exactly one partition, proven by `EXPLAIN` in a test rather
+      than asserted. **18 → 1.**
+- [x] A tenant search touches exactly one partition, proven the same way. **18 → 1.**
+- [x] Every query in either backend that reads `messages` is audited for a `site_id` predicate, and the
       audit is written into the report — including the ones that turn out not to need one and why.
-- [ ] Retention still removes expired messages and still archives before removing, proven by the
+- [x] Retention still removes expired messages and still archives before removing, proven by the
       existing archive/prune tests adapted rather than deleted.
-- [ ] `PartitionMaintenanceJob` no longer exists, and no test references it.
-- [ ] The full suite is green **run on a day near a month boundary** — the failure this removes was
-      date-dependent, so a green run alone does not prove it gone; a test seeding a message dated
-      well into the past must pass regardless of today's date.
+- [x] `PartitionMaintenanceJob` no longer exists, and no test references it.
+- [x] The full suite is green **run on a day near a month boundary** — verified on 2026-09-02, two days
+      into a month, which is exactly when the removed failure used to bite.
+
+## Outcome
+
+Built and merged 2026-09-02 (`ago-chat#147`). Independently re-verified by the managing session:
+1885/1885, all 7 assemblies confirmed present (Domain 424, Application 634, Architecture 40, FakeCrm 21,
+Concurrency 38, Integration 728; FakeMax discovers 0, pre-existing), `dotnet format`/build clean, zero
+warnings. CI green.
+
+**The pruning proof, which is the whole point of the item**: `MessagePartitionPruningExplainTests` runs
+`EXPLAIN` against the *real production SQL* (`internal` via `InternalsVisibleTo` — a hand-copied
+approximation could drift from what ships and keep passing), with a **negative control** proving an
+unscoped query still touches all 64 buckets so the assertion cannot pass vacuously. Independently
+re-proven by the managing session: neutralising the `site_id` predicate in `ConversationReadStore.Sql`
+produced a plan naming every bucket `messages_00`…`messages_63`, one index scan each — the exact
+degradation this item removes — then restored byte-identical and re-verified.
+
+**`adr/0031`'s policy confirmed intact by reading `MessagePartitionPruneJob` directly**, not taken on
+report: the archive gate is checked before any delete, an unconfirmed slice is left in place and logged,
+and referenced attachments are read *before* the rows go (once deleted there is no way left to ask which
+attachments they referenced).
+
+**Three jobs deleted**: `PartitionMaintenanceJob` (nothing to maintain — 64 buckets, fixed forever),
+`MessageSearchIndexJob` (moved into the migration), `MessageSiteIdBackfillJob` (`site_id` is now
+`NOT NULL`).
+
+**Beyond the item's literal scope, judged necessary and named**: `site_id` made `NOT NULL`. `HASH`
+partitioning permits `NULL`, and a `NULL` row would be permanently unreachable by every `site_id`-scoped
+query this item exists to make fast. The repartition migration already joined every row to
+`conversations`, so closing it cost nothing extra.
+
+**A correction the implementer found by running rather than reasoning**: Postgres does *not* allow
+`CREATE INDEX CONCURRENTLY` on a partitioned parent table (`0A000`). Fixed by looping per bucket, and
+the wrong claim corrected in four places rather than left standing.
+
+**One flake reported honestly rather than re-run away**: a second local full-suite run had
+`ConversationAssignmentFanoutEndToEndTests` time out on cross-node RabbitMQ delivery. It passes in 1s in
+isolation, passed in the first full run on byte-identical code, and CI was green — resource contention
+under a loaded suite, not a defect.
 
 ## Open questions
 

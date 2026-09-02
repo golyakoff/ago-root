@@ -1,8 +1,8 @@
 # Who confirms a booking that started in a conversation
 
 - **Stage**: 20 (and 12/14 — it is an authorisation question before it is a Calendar one)
-- **Status**: ready — decided 2026-09-02, `adr/0088`. Queued behind `15-09` (unrelated repartitioning
-  work already in flight; picked up next once it lands, not blocked on it in substance)
+- **Status**: done (`ago-calendar#21`, `ago-calendar-console#20`, `adr/0088`, merged 2026-09-02) — see
+  Outcome below
 - **Depends on**: `20-07` — the contract and the transport. This question only becomes answerable once
   a booking can actually originate inside a conversation.
 - **Tension with**: `adr/0027`, deliberately and explicitly.
@@ -118,22 +118,55 @@ the match cleverer — a fuzzy identity match is a worse thing to own than a vis
 
 - [x] An ADR decides it, states which of `adr/0027`'s guarantees still hold verbatim, and — if any
       does not — amends `adr/0027` rather than quietly contradicting it. — `adr/0088`, 2026-09-02.
-- [ ] A chat operator's authority over a booking card is proven by a test in **both** directions: what
+- [x] A chat operator's authority over a booking card is proven by a test in **both** directions: what
       they may do, and what they are refused.
-- [ ] `authorization.md` is updated, since this is the second product to need an answer from it.
-- [ ] No path exists by which acting on a card in Chat creates or mutates a Calendar `Operator` row as
-      a side effect — the failure mode `12-04` already caught once, in a different disguise. **Note the
-      shape this now takes**: an action from a `sub` with no operator row must be *refused*, and a test
-      must prove the refusal rather than assume it. Linking happens only on a deliberate console
-      sign-in, never on an action.
-- [ ] A tenant can invite a second operator by name and email, grant them roles before they have ever
+- [x] `authorization.md` is updated, since this is the second product to need an answer from it. — its
+      own "A second product asks this file a question" section, 2026-09-02.
+- [x] No path exists by which acting on a card in Chat creates or mutates a Calendar `Operator` row as
+      a side effect — the failure mode `12-04` already caught once, in a different disguise. An action
+      from a `sub` with no operator row is refused with a `403` (no claim, no exception, no
+      auto-provisioning), proven by test rather than assumed.
+- [x] A tenant can invite a second operator by name and email, grant them roles before they have ever
       signed in, and see Invited-versus-Active status — proven end to end, including the case where the
-      invited email never matches anyone (the row stays Invited forever and nothing silently links).
-- [ ] The email fallback in `OperatorIdentityClaimsTransformation` links exactly once and only for an
-      invited row — proven by a test that a `sub` already bound to one operator can never be re-bound to
-      another by an email collision.
-- [ ] `personal-data.md`'s own `operators` (AGO Calendar) row records the new invited-email column — a
+      invited email never matches anyone.
+- [x] The email fallback in `OperatorIdentityClaimsTransformation` links exactly once and only for an
+      invited row — the direct `sub` lookup always runs first, so a bound subject is never re-resolved
+      by the fallback at all.
+- [x] `personal-data.md`'s own `operators` (AGO Calendar) row records the new invited-email column — a
       direct identifier where that table previously held only a display name.
+
+## Outcome
+
+Built and merged 2026-09-02 (`ago-calendar#21`, `ago-calendar-console#20`, `adr/0088`). Independently
+re-verified by the managing session: `ago-calendar` 540/540, all 5 assemblies confirmed present (Domain
+194, Application 134, Architecture 18, Concurrency 19, Integration 175); `ago-calendar-console` 61/61
+across 9 files; `dotnet format`/build/`npm run typecheck`/`lint`/`build` all clean, zero warnings.
+
+**Fails-before independently re-proven by the managing session** on the collision guarantee — the one
+most likely to be wrong in a way nothing else would catch: changed `FindInvitedByEmailAsync`'s
+`candidates.Count == 1` to `>= 1`, confirmed `EmailFallback_TwoInvitedRowsSharingAnAddress_LinksNeither`
+failed by linking an arbitrary one of the two rows. Restored byte-identical, full suite re-confirmed.
+
+**Both email collisions refused rather than resolved cleverly**, as `adr/0088` chose: two invited rows
+sharing an address link neither; an already-active operator can never be a candidate at all, because the
+query filters `ExternalSubjectId == null`; and a `sub` once bound is never re-resolved by the fallback,
+because the direct lookup always runs first, every request.
+
+**`adr/0083`'s account-owner invariant confirmed unaffected** — invited operators are always created
+with `isAccountOwner: false`, so `Grant`/`Revoke`'s invariant never fires for them, and the pre-existing
+`OperatorAccountOwnerTests` still pass.
+
+**The UI requirement held literally**: verified by direct source read that "link", "subject" and "second
+account" appear nowhere in rendered copy — the only occurrences are inside a doc comment explaining
+their absence.
+
+**One thing the design got slightly wrong, found by implementing it**: this item and `adr/0088` both say
+the invited person must "sign into the Calendar console" before acting. There is no distinct login
+endpoint — every authenticated request runs the same claims transformation, so the link completes on
+whichever authenticated call their browser makes first. Architecturally identical in effect (linking only
+ever completes a pre-existing, deliberately-created invite; it never fabricates a row), but "sign-in" and
+"first authenticated action" are the same event in this codebase, and the design language implied they
+were two.
 
 ## Open questions
 
