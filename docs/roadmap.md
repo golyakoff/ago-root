@@ -539,6 +539,15 @@ Deliverables:
   than a parallel trust concept. SMS chosen as the default delivery method; the vendor/gateway itself is
   left undecided, same live-account gap `14-08`/`14-10`/`14-11` already carry. First real consumer is
   `20-09` (Stage 20).
+- **Only one process may poll a channel (`14-16`, found 2026-09-02, not yet built)** — found in the
+  demo stand's own logs while deploying `15-09`: a Worker rolling update makes the old and new pods
+  poll the same Telegram bot at once, and Telegram answers `409`. It self-heals and costs only
+  latency (no loss — unacknowledged updates are replayed; no duplicates — `client_message_id`'s
+  unique index refuses them), so the rollout symptom is the smaller half. The half worth an item is
+  that `TelegramLongPollingService` and `MaxLongPollingService` are unstated single-instance
+  services inside a host `concurrency.md` explicitly documents as running multiple competing
+  replicas. `replicas: 1` hides it today; scaling the Worker for throughput would break inbound
+  Telegram and MAX permanently, while doing exactly what that document says is supported.
 
 **Done when:** a real message sent via MAX reaches an operator through the same console queue a widget
 conversation already does, and a visitor gets an automatic reply when no operator is online, on at
