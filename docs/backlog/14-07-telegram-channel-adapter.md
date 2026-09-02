@@ -122,6 +122,32 @@ full, in plain text, through `Ago.Chat.Worker`'s own logs (`HttpClientFactory`'s
 header values but not the request URI, and Telegram's own auth lives in the URL path) — fixed in
 `ago-chat#107`, proven with a real captured-log test rather than asserted.
 
+A **third** gap, 2026-09-02: the same token, through the same URL path, into the *other* telemetry
+signal. `Ago.Platform.Observability.AddPlatformObservability` wires OpenTelemetry's
+`AddHttpClientInstrumentation()` in all three serving hosts, and that instrumentation records the
+outgoing URL as the span attribute `url.full` — checked against the pinned package rather than assumed:
+`OpenTelemetry.Instrumentation.Http` 1.18.0 redacts a URI's `userinfo` component and the *values* in a
+query string, and never touches the path. So every `sendMessage`/`getUpdates`/`getMe` span carried the
+bot token into Jaeger, and the second gap's fix did nothing about it: OpenTelemetry does not observe the
+`HttpClient` handler chain at all, it listens to `System.Net.Http`'s own `DiagnosticSource` from *inside*
+`SocketsHttpHandler`, below every `DelegatingHandler`, so `RemoveAllLoggers()` plus a redacting handler
+is invisible to it. Fixed with `TelegramTraceUrlRedaction` — an
+`HttpClientTraceInstrumentationOptions.EnrichWithHttpRequestMessage` hook that rewrites the token
+segment out of `url.full`, reusing the second fix's own structural redaction so the two signals cannot
+drift apart. Enrichment rather than `FilterHttpRequestMessage`, because a filter would trade the leak
+for having no telemetry at all on this deployment's one continuously-polling channel; and in
+`Ago.Chat.*` rather than `Ago.Platform.Observability`, because "this provider puts its credential in the
+path" is product knowledge the platform must not hold. Proven by a test that drives a real
+`TelegramApiClient` against a real Kestrel stand-in through a real `TracerProvider` and asserts on the
+exported span — confirmed to fail, printing the token, with the enrichment unwired.
+
+The generalisable finding, worth more than the fix: **an audit's premise ages faster than its
+conclusion.** `16-05` (2026-08-26) enumerated every span attribute against real traffic and correctly
+concluded there was no token in any trace — on the premise that "the only outbound call is a webhook",
+so the only secret that could ride an outbound URL was one in a query string, which *is* redacted.
+`14-07` invalidated the premise a few days later without anything noticing, and `personal-data.md` went
+on stating the conclusion. That doc now records the premise alongside it.
+
 ## Open questions
 
 None — `adr/0070` closed the one real prerequisite. The sidecar-vs-Service deploy shape is a decision
