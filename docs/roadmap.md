@@ -411,13 +411,22 @@ Deliverables:
   `site:configure` and proven by a cross-tenant test - a read whose failure mode is unusually quiet,
   since leaking it returns another tenant's key with a `200` rather than throwing.
 
-  **It deliberately prints no `<script>` tag, and that is the finding worth carrying.** Checking the
-  live deployment rather than the code showed that *nothing serves the widget script at a public URL*
-  - `chat.reserve-me.ru/widget.js` is a 404, and the only origin really serving the bundle belongs to
-  a demo shop, because each demo image carries its own copy. `ago-landing`'s copy-me snippet has been
-  pointing at that 404 all along. Composing a URL from the API origin would have handed a tenant a
-  snippet that does not load, so the box stays open and rides with `#324`, where the hosting decision
-  gets made.
+  **It shipped deliberately printing no `<script>` tag, and that is the finding worth carrying.**
+  Checking the live deployment rather than the code showed that *nothing served the widget script at a
+  public URL* - `chat.reserve-me.ru/widget.js` was a 404, and the only origin really serving the
+  bundle belonged to a demo shop, because each demo image carries its own copy. `ago-landing`'s
+  copy-me snippet had been pointing at that 404 all along, so anybody who copied it got a script tag
+  that did not load. Composing a URL from the API origin would have handed a tenant the same thing, so
+  the box was reported unmet and carried to `#324` rather than quietly ticked.
+
+- **The widget gets a public URL (`adr/0092`, done 2026-09-03)** - a bundle-only image built from
+  `ago-widget`'s own Dockerfile (`--target assets`, so the demo images and a tenant's embed cannot
+  drift apart), served at `chat-api.reserve-me.ru/widget/` by one prefix rule. The API's own origin
+  rather than a `widget.`/`cdn.` hostname, on a specific ground: the widget bakes its API origin in at
+  build time, which is what made `adr/0091`'s rename a three-step migration with a cache-expiry wait,
+  and serving the canonical copy from the API's origin is the way out of ever paying that again. That
+  also meant the console needed no second config value - the snippet is composed from `apiBaseUrl`,
+  because the two origins are the same thing by decision. Closed `10-06`'s last box and `#324`.
 
 **Done when:** a new account, site, and operator can be created end to end by a real visitor, with
 zero seed-script involvement - and with no admin-API step standing in for a verification mail that
