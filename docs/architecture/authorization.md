@@ -505,6 +505,39 @@ with no new token issued — is refused `403` on its very next request, exactly 
 `KeycloakUserWithNoMatchingOperatorRow_IsRejected` already proves for an identity with no `operators`
 row at all.
 
+## A second product asks this file a question: shipped in `20-08`
+
+**The first time an authorization question here spanned two products.** `adr/0065` promises a chat
+operator may intervene in a booking a visitor started inside a conversation; `adr/0027` says AGO
+Calendar defines its own `Operator`, never the same row as `Ago.Chat.Domain.Operator`, the two unified
+only through Keycloak. Together they left one thing unanswered: a chat operator acting on a booking card
+is, to Calendar, a `sub` with no `operators` row.
+
+**Answered by applying `adr/0027`'s own mechanism a second time rather than amending it** (`adr/0088`):
+that person becomes a real Calendar `Operator`, created deliberately in advance by the tenant — invited
+by name and email from the Access screen `20-12` built — and resolved from the same Keycloak identity
+they already sign in with. Calendar's own `OperatorIdentityClaimsTransformation` gained one fallback:
+when a `sub` matches no operator, match the token's email claim against not-yet-linked invited rows and
+call the existing `LinkExternalIdentity`.
+
+**What this file's existing rules gave for free, and what had to be new.** Nothing about the RBAC model
+(`adr/0016`), the platform-owner boundary (`adr/0032`) or the claims-transformation shape (`adr/0022`)
+changed — Calendar's copy of that shape simply resolves one more way. What is genuinely new is a
+narrower *identity* state than this file previously described: an operator row that exists, holds roles,
+and is not yet attached to any authenticated principal.
+
+**Two refusals worth stating here rather than only in the ADR**, because both are authorization
+properties and this is the file that collects them:
+
+- **An action from a `sub` with no operator row is refused, never auto-provisioned.** Linking happens on
+  authentication, never on acting. A booking action from an unknown subject produces no claim, no
+  exception, and a `403` — the same shape `KeycloakUserWithNoMatchingOperatorRow_IsRejected` already
+  establishes on Chat's side, now holding for a cross-product action too.
+- **An ambiguous email match is refused, not resolved cleverly.** Two invited rows sharing an address
+  link neither. An already-linked operator can never be a candidate (the query filters
+  `external_subject_id IS NULL`). A `sub` once bound can never be re-bound, because the direct subject
+  lookup always runs first.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

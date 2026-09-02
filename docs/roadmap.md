@@ -63,8 +63,6 @@ Three items sit parked below the table rather than in it, because they cannot be
 | # | Item | Why here |
 |---|---|---|
 | 1 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
-| 2 | `15-09` repartition `messages` by tenant hash | **Ahead of `20-11` because it unblocks it**: the monthly partition grid rejects inserts dated before the current month, so `ago-chat`'s CI is red for any PR landing in the first days of a month - `20-11`'s own PR is sitting on exactly that. Decided in `adr/0087`; removes the failure structurally rather than patching it, and makes the two dominant read paths prune to one partition |
-| 3 | `20-08` who confirms a chat-originated booking | **Decided 2026-09-02, `adr/0088`**: a chat operator acts as a real Calendar `Operator`, invited by email from the Access screen `20-12` already built - `adr/0027`'s own mechanism applied a second time, amending nothing. A narrow per-action capability was chosen first and reversed on the author's own challenge: it needed *more* new machinery than the shape it was supposed to be cheaper than, since `20-12`'s roles are all keyed on an `Operator` row. The interface is designed in the item file, not left to implementation. Queued behind `15-09` (unrelated, already in flight) |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 
@@ -586,6 +584,16 @@ Deliverables:
   2026-08-30**: none of the four sets `Cache-Control` at all, so identity and freshness turned out to
   be two different questions - a deployed, verified fix can still be invisible to an already-cached
   visitor for an unknown length of time (`15-08`, done 2026-08-31, verified live).
+- **`messages` repartitioned by tenant hash** (`15-09`, done 2026-09-02, `ago-chat#147`, `adr/0087`) —
+  from `LIST (retention_class)` → `RANGE (created_at)` monthly to `HASH (site_id)`, 64 fixed buckets,
+  no time dimension. The old key was chosen for retention-by-`DROP` (`adr/0031`) and never for reads:
+  checking the real code found `GetHistoryAsync` — the most frequent query in the product — filtering
+  `conversation_id` alone, so it pruned *nothing* and visited every leaf partition on every conversation
+  open. Both dominant reads now prune to exactly one partition (18 → 1, proven by `EXPLAIN` with a
+  negative control, not asserted). The price, taken deliberately: retention loses `DROP PARTITION` and
+  becomes a bounded `DELETE` sweep, with `adr/0031`'s archive-before-removal policy unchanged. Removes
+  a monthly-recurring CI failure class structurally rather than patching it, and makes buckets a usable
+  shard key. Partition count is now constant against both tenant growth *and* elapsed time.
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a
@@ -796,7 +804,7 @@ Deliverables:
   booking" ask, built as an
   honest proxy (a `calendar` module task started/closed) rather than a confirmed-booking claim
   `ModuleTaskState`'s own two-value ceiling cannot honestly support — see the item's own file for why,
-  and its own named relationship to the still-unstarted `20-08`.
+  and its own named relationship to `20-08` (since done, 2026-09-02).
 
 Interface i18n stays out of scope (`vision.md`), and is the one entry on `11-06`'s original list that
 did not become work here.
@@ -917,6 +925,18 @@ Deliverables:
   one config flip if a real third-party-integration need is ever named. `20-19`, proposed on the premise
   that such a caller was a tenant's own integration, was reconsidered and withdrawn the same day - see
   `20-10`'s own file for the full trail.
+- **A chat operator can act on a booking that started in a conversation** (`20-08`, done 2026-09-02,
+  `ago-calendar#21`/`ago-calendar-console#20`, `adr/0088`) - the tension Stage 20 carried from the day
+  `20-07` shipped: `adr/0065` promises the operator may always intervene, `adr/0027` forbids the two
+  products sharing an `Operator` row. Resolved by **applying `adr/0027` a second time rather than
+  amending it**: the tenant invites a colleague by name and email from the Access screen `20-12` already
+  built, creating a real Calendar `Operator` with no subject yet; the first authenticated request from
+  that person matches their email claim against invited rows and links. Linking happens on
+  authentication, **never on acting** - an action from an unknown subject is refused, not
+  auto-provisioned, which is the failure mode `12-04` caught once already in a different disguise. A
+  narrow per-action capability was chosen first and reversed on the author's own challenge, because it
+  needed *more* new machinery than the shape it was supposed to be cheaper than. First authorization
+  question in this project to span two products, so `authorization.md` gained a section of its own.
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
