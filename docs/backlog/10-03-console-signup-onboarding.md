@@ -1,14 +1,19 @@
 # Console signup and onboarding UI
 
 - **Stage**: 10
-- **Status**: **built and tested; one manual step outstanding, and it is outstanding for a reason a
-  session cannot remove.** The screens shipped with `ago-console` `ead191e` (2026-08-24) and this
-  pass added the behaviour tests they never had, three small defects' worth of fixes, and the two
-  statements the Scope below asks for in writing (how state (b) is detected, and what is checked
-  client-side versus server-side). What is *not* done is the first Done-when box: a real browser
-  completing Keycloak's registration form end to end. An agent cannot type a password into a login
-  form, so the walk stops one field short - see Outcome for exactly where, and for what was verified
-  live instead.
+- **Status**: **done, 2026-09-02** — the author walked the flow end to end on the live deployment, which
+  is the one thing no session here could do, because it means typing a password into a form. The
+  screens shipped with `ago-console` `ead191e` (2026-08-24); a later pass added the behaviour tests
+  they never had, three small defects' worth of fixes, and the two statements the Scope asks for in
+  writing (how state (b) is detected, and what is checked client-side versus server-side).
+
+  **The urgency of this item was understated for a week, and the author found that by asking a
+  question rather than by being told.** It was queued as a nice-to-have on the assumption that a first
+  customer could be provisioned by hand. There is no such interface: `POST /api/v1/sites` binds the
+  new site to the **caller's own** token `sub`, there is no seed script in `ago-chat`, `12-04`
+  deliberately barred the platform owner from registering a site, and the owner endpoints only read.
+  Self-service signup is therefore the only path by which a real tenant can exist at all — so this was
+  never optional, and the first client's very first act would have been an untested flow.
 - **Depends on**: `10-01-self-registration-identity-flow.md` (the Keycloak registration entry point
   and the "authenticated but not yet an operator" token state this UI must detect), `10-02-site-and-operator-registration.md`
   (the endpoint this form calls)
@@ -76,13 +81,16 @@ wiring runs for a first-time caller.
 
 ## Done when
 
-- [ ] Manually verified against the local cluster, the same "verified live, not asserted" bar
-      `5-06`/`5-01` used: a real browser completes Keycloak's registration form, lands back in
-      `ago-console` in the new onboarding state (not silently treated as a login failure), completes
-      the site-setup form, and ends up in the queue view able to see its own (empty) waiting queue.
-      **Half of this was walked for real (2026-08-25) and half cannot be, by an agent** — see
-      "What was verified live, and where it stops" below. This box stays unticked deliberately
-      rather than being reworded to match what was achievable.
+- [x] Manually verified, the same "verified live, not asserted" bar `5-06`/`5-01` used: a real browser
+      completes Keycloak's registration form, lands back in `ago-console` in the new onboarding state
+      (not silently treated as a login failure), completes the site-setup form, and ends up in the
+      queue view. **Walked end to end by the author on the live deployment, 2026-09-02** — the half an
+      agent cannot do, because it means typing a password into a form.
+
+      Confirmed server-side rather than read off the screen, because a successful-looking page over a
+      refused `POST /api/v1/sites` is exactly the failure this box exists to catch: a new non-demo
+      `sites` row appeared at 13:50 UTC, four minutes before the check, and every `operators` row on
+      the deployment carries an `external_subject_id`. The walk wrote through.
 - [ ] A returning, already-provisioned operator's normal login is unaffected — proven by running
       through `5-06`'s existing login flow once this item is merged, confirming state (a) still routes
       exactly as it did before this item existed. **Same blocker**: signing in as `demo-admin` means
