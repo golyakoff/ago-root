@@ -680,8 +680,17 @@ Deliverables:
   where the component tests live. It earned its keep on its first run: all eight `ago-calendar-console`
   screens overflow at 375px (`#22`). The same run emits the screenshots the delivery digest uses -
   including three calendar-console screens nothing else can show, because AGO Calendar is not deployed.
-  Its one undelivered part, making that repository's gate blocking, was moved to
-  `ago-calendar-console#26` rather than left as an unticked box.
+  Its one undelivered part, making that repository's gate blocking, was moved out rather than left as
+  an unticked box — and is now `15-12` in its own right.
+- **Make `ago-calendar-console`'s UX gate blocking (`15-12`, split out of `15-11` 2026-09-02)** — delete
+  one `continue-on-error: true`, and prove the result green by a run. Not blocking today because the
+  gate's first run there found real pre-existing defects (`#22`, `#23`); turning it red for a defect it
+  did not introduce is how people learn to ignore a red build. It had been tracked only as
+  `ago-calendar-console#26`, which kept `15-11`'s number in its title and so claimed to belong to an
+  item already done, with no `ago-root` twin at all — **found by the mirror-aware `queue-audit.sh` on
+  its first real run**, which is exactly the check that tool was extended to make. `11-16` now names
+  this a prerequisite rather than a neighbour: a failing assertion in a gate whose exit code nothing
+  reads changes nothing.
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a
