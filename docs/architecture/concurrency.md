@@ -149,6 +149,16 @@ session. `ChannelPollerOwnershipConcurrencyTests` reproduces the exact sequence
 (`SessionReplacedUnderALiveLease_MakesTheStaleLeaseDetectable`,
 `DisposingAStaleLease_DoesNotRevokeAFreshLeaseForTheSameCredential`).
 
+**How long takeover actually takes, as a number rather than "soon".** Every path back to polling runs
+through `RefreshPollersAsync`'s reap-and-retry tick, so the bound is one tick —
+`CredentialRefreshIntervalSeconds`, **30 seconds** by default, and the same default in both poller
+services. On a clean stop the previous holder has already released its lock explicitly, so the next
+tick is the whole delay. On a crash or node loss nothing releases anything: the lock survives until
+PostgreSQL reaps the session, and the bound becomes that reap plus one tick. Telegram and MAX both
+queue undelivered updates meanwhile, so this is delivery latency, not loss. If a deployment ever needs
+faster takeover, that interval is the one knob — lower it, and pay for it in credential-repository
+reads per tick.
+
 **This lock reduces the probability of a double poller. It is not permitted to become the only thing
 preventing duplicate messages**, and it has not: `ExternalMessageId`'s mapping to `ClientMessageId`
 and the unique index on `(conversation_id, client_message_id, site_id)` are exactly as they were
