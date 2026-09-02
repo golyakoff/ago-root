@@ -113,8 +113,19 @@ At merge:
 - Add the ADR index row in `ago-root`, using the number pre-assigned in the brief.
 - Record the item as done in its stage section of `docs/roadmap.md`, and fix the item file's own
   `Status` line. The stage sections are narrative and still hand-written.
-- Run `bash tools/queue-audit.sh` and resolve anything it flags. It reads open issues and compares
-  each against its backlog file's Done-when boxes.
+- **Close the issue, and every mirror of it** (CLAUDE.md rule 14). Items are filed twice — in
+  `ago-root` and in the repository they change — so closing one is not closing the item. Use an
+  explicit reason: `--reason completed` when solved, `--reason "not planned"` when cancelled. No
+  `--reason` silently means `completed`, which records a cancellation as a delivery.
+- **If part of it did not ship, it gets its own number before you close anything.** Rewrite the item
+  to what actually landed, then file the remainder as a new `ago-root` item *and* a new issue in the
+  code repository. Never leave it under the finished item's number — `NN-NN ·` asserts "this *is*
+  item NN-NN", so it would put undone work under a done identity. And do not reopen the original to
+  cover it: an item narrowed to what it delivered was closed correctly.
+- Run `bash tools/queue-audit.sh` and resolve anything it flags. It reads open issues in `ago-root`
+  **and in every code repository**, comparing each against its backlog file's Done-when boxes — the
+  mirror half exists because closing only the `ago-root` half happened, and the audit called the
+  queue clean.
 
 That last step is not ceremony. Three entries have outlived their items so far, and each was found by
 accident. `16-01` merged with all five Done-when ticked, kept `Status: ready`, and sat in the queue

@@ -116,6 +116,29 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     - Everything else stands unchanged: workers still never spawn anything (rule 12), never write
       history (rule 9), and hand back commit-prep blocks the managing session executes.
     (Agreed 2026-09-02, generalising what had until then been decided per-wave.)
+14. **A ticket ends in an explicit state, and unfinished work always gets a number of its own.**
+    - **Solved → close as done** (`gh issue close <n> --reason completed`). **Cancelled → close as
+      won't-do** (`gh issue close <n> --reason "not planned"`). Passing no `--reason` silently means
+      `completed`, so a cancelled ticket closed without the flag is recorded as *delivered* — the
+      worst of the outcomes, because the queue then claims work exists that never happened.
+    - **Never leave a ticket half-done.** Either finish it, or rewrite it to what actually shipped
+      and carry the remainder out. A ticket rewritten to its delivered scope is closed as done — it
+      is not "partly failed", it is a smaller item that succeeded.
+    - **Carrying a remainder out means a *new number*, not a link.** When work is split off, it gets
+      a new ticket in the code repository **and always a new item plus issue in `ago-root`.** Leaving
+      it under the finished item's number is the failure this clause exists for: by the `NN-NN ·`
+      title convention that prefix asserts "this *is* item NN-NN", so unfinished work ends up
+      claiming the identity of a finished one, with no `ago-root` twin at all.
+    - **Closing means closing every mirror.** Items are filed twice — in `ago-root` and in the
+      repository they change — and closing one is not closing the item. This is part of merging, at
+      the same moment as the roadmap and ADR-index sweep, not a later batch.
+    (Decided 2026-09-02, from two misses in one day. First: `11-15` shipped, `ago-root#322` was
+    closed, its twin `ago-calendar-console#27` stayed open, and `queue-audit.sh` — which then read
+    `ago-root` only — reported a clean queue; it was found because the author asked. Second, found by
+    the mirror-aware audit on its first run: `ago-calendar-console#26` was still titled `15-11 ·`
+    after being split out of `15-11`. The tempting fixes were both wrong — closing it would close
+    undone work, and reopening `15-11` would have re-widened an item that had been *correctly*
+    narrowed to what it delivered. What was missing was a number, which became `15-12`.)
 
 ## Teaching mode (important)
 
