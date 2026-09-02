@@ -89,3 +89,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0086 | The booking claim generalises from one row to a claimed set | Accepted |
 | 0087 | `messages` is partitioned by tenant hash, not by time | Accepted — amends 0031's mechanism and 0019's index shape |
 | 0088 | A chat operator acts on a booking as a real Calendar `Operator`, invited by email | Accepted — applies 0027 a second time, amends nothing |
+| 0089 | A channel poller is owned by one process, per credential, by a Postgres advisory lock | Accepted — amends `concurrency.md`'s unqualified multi-replica claim; declines a platform promotion |
