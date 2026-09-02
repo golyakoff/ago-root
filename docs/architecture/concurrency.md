@@ -85,6 +85,88 @@ Parallel consumers are required for throughput and destroy ordering by default. 
 Test: `Ago.Chat.Concurrency.Tests` fires K messages from M threads into one conversation and asserts the
 persisted sequence is a gap-free ascending run, repeated under stress.
 
+## Channel pollers - multi-replica by construction, contended per credential (`14-16`/`adr/0089`)
+
+Every other section on this page is true of every `Worker` replica running the same code. This one
+was not, silently, until `14-16`: `TelegramLongPollingService` and `MaxLongPollingService`
+(`Ago.Chat.Worker`) each keep one poll loop per active `ChannelCredential`, and neither provider
+tolerates two processes calling its own `getUpdates`-shaped endpoint for the same bot token at once -
+Telegram answers the second with `409 Conflict`. Nothing coordinated which process polled which
+credential; `replicas: 1` hid the defect rather than preventing it, and every rolling update still
+produced a transient `409` because the old and new pod briefly overlapped.
+
+**Ownership of a poll loop is claimed per `ChannelCredentialId`, by a session-scoped PostgreSQL
+advisory lock** (`pg_try_advisory_lock`/`pg_advisory_unlock`, `adr/0089`) - held for the loop's life,
+released explicitly on clean shutdown, and released by PostgreSQL itself when the holding session
+ends otherwise (crash, kill, node loss). No TTL, no renewal, no heartbeat: takeover is the next
+process's next acquire attempt, not a recovery procedure. The key is the *credential*, not a global
+"poller leader" role, which is what turns this from a restriction back into the ordinary claim above:
+several `Worker` replicas share the fleet of bots between them, each polling whatever credentials it
+currently holds the lock for. **The exception is real but temporary by construction** - once every
+credential's lock is contended fairly across replicas, "multiple `Worker` replicas compete" is true
+of this path too, just contended differently (one lock per credential rather than `SKIP LOCKED` over
+a shared queue) and for a different reason (an external provider's own single-poller constraint,
+not this system's own capacity model).
+
+One connection per `Worker` process, not per credential, is held open outside `NpgsqlDataSource`'s
+own pooling for exactly this purpose (`PostgresChannelPollerOwnership`,
+`Ago.Chat.Infrastructure.Postgres`) - many advisory locks can live on one session, and a session
+returned to the pool has every lock it held reset by Npgsql, which is why this one connection is
+never disposed until the process itself stops. `NpgsqlConnection` is not safe for concurrent use, so
+every acquire/verify/release against it is serialised through the adapter's own gate, the same
+`SemaphoreSlim`-around-shared-state shape `_pollers`/`_gate` already use in both poller classes.
+
+**Advisory locks carry no schema and are invisible to anyone reading the database structurally** -
+they exist only as rows in `pg_locks` for as long as a session holds one, visible with
+`SELECT locktype, classid, objid, pid FROM pg_locks WHERE locktype = 'advisory'` against a live
+connection, and nowhere else. A coordination mechanism nobody can find in the schema is one that gets
+broken by accident by someone who does not know to look - `adr/0089` requires this stated plainly for
+exactly that reason.
+
+The half-open-connection case is the accepted, bounded weak spot: if a holder's TCP session
+black-holes rather than closing cleanly, that process can believe it still owns a lock PostgreSQL has
+already released. Each poll iteration verifies the lease is still backed by a live connection before
+trusting it (`IChannelPollerLease.VerifyStillHeldAsync`) - a real round trip, not a re-acquire, since
+`pg_try_advisory_lock` is re-entrant within one session and would trivially "succeed" again regardless
+of whether anything is wrong. A broken connection surfaces there as an exception and stops that
+credential's loop, which the next `RefreshPollersAsync` tick retries from scratch. This bounds the
+window to roughly one poll iteration's worth of staleness; it does not eliminate it, which is why the
+ordinary idempotency defences below are unchanged rather than treated as redundant.
+
+**"Is the connection live" alone is not sufficient, and was found insufficient by review before it
+shipped.** `PostgresChannelPollerOwnership` holds one connection for the whole process, and
+`EnsureConnectionAsync` replaces a dead one with a fresh one the moment *any* credential's next
+acquire attempt discovers it - including a credential that has nothing to do with the lease being
+checked. A lease granted on the old session would see the new one open and wrongly report itself
+still valid, even though its own lock died with the old session and was never re-acquired on the new
+one. Each lease therefore also carries the session *generation* it was granted under
+(`PostgresChannelPollerOwnership._generation`, bumped only when a new physical connection is actually
+opened); `VerifyStillHeldAsync` and the release path both compare the lease's generation against the
+current one first; a mismatch is treated exactly like a dead connection - and, for release
+specifically, a stale lease's own unlock is skipped entirely rather than risking releasing a
+different, currently-valid lease for the same credential that has since been granted on the newer
+session. `ChannelPollerOwnershipConcurrencyTests` reproduces the exact sequence
+(`SessionReplacedUnderALiveLease_MakesTheStaleLeaseDetectable`,
+`DisposingAStaleLease_DoesNotRevokeAFreshLeaseForTheSameCredential`).
+
+**This lock reduces the probability of a double poller. It is not permitted to become the only thing
+preventing duplicate messages**, and it has not: `ExternalMessageId`'s mapping to `ClientMessageId`
+and the unique index on `(conversation_id, client_message_id, site_id)` are exactly as they were
+before `14-16` - CLAUDE.md rule 5 (at-least-once, consumers idempotent) applies here unchanged, the
+lock is a latency and correctness-under-normal-operation improvement layered on top of it, not a
+replacement for it.
+
+**The `bigint` key.** Advisory locks take a signed 64-bit key; `ChannelCredentialId` is a UUID.
+`AdvisoryLockKey.For` (`Ago.Chat.Infrastructure.Postgres`) derives it via SHA-256 over the id's raw
+bytes - deterministic across processes and runs, unlike `object.GetHashCode`, which .NET randomises
+per process and would silently defeat the whole mechanism. A collision between two different
+credentials is negligible at 64 bits and this system's scale but not zero, and a silent one means one
+bot never polls - a bad enough failure mode that `adr/0089` requires it be observable:
+`PostgresChannelPollerOwnership` records which credential it last computed each key for and logs at
+`Critical`, naming both credential ids and the shared key, the moment one process itself computes the
+same key for two different credentials. This does not catch every collision (only ones the same
+process observes both sides of), but it is strictly better than never checking.
+
 ## Operator assignment - the contended path
 
 Multiple `Worker` replicas compete to assign waiting conversations to operators with limited
