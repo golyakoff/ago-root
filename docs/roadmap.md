@@ -455,6 +455,18 @@ Deliverables:
   holder actually sees, and it was missed because it lives in a different repository and belongs to a
   component nobody thought of as ours.
 
+- **Mobile navigation becomes a drawer, in both consoles (`11-14`, raised 2026-09-02)** — a hamburger
+  and a left panel with the items in a column, replacing a horizontal bar that does not fit. Measured
+  rather than felt: `ago-console` builds **fourteen** navigation items for a tenant with
+  `site:configure`, `ago-calendar-console` has six hardcoded ones and **no `@media` rule anywhere**,
+  and `15-11`'s gate found all eight of its screens overflowing at 375px with the nav strip visibly
+  clipping. Cheap in one console and not the other: `ago-console`'s nav is already a permission-filtered
+  `AppShellNavItem[]`, so a drawer is a second renderer over the same array, while the calendar
+  console's is inline `<NavLink>`s that have to become a data list first. Deliberately **not** built as
+  a shared component - the two design layers are 84 tokens against 5, and shaping the first shared
+  component under launch pressure on the weaker foundation is how a shared layer gets decided by
+  accident.
+
 **Done when:** a site owner changes color/position from the console and sees it reflected in the
 embedded widget on their own page without touching code; and an operator can work a shift in the
 console — from the login page onward — without the interface being the hard part — verified live, by actually working conversations
