@@ -91,3 +91,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0088 | A chat operator acts on a booking as a real Calendar `Operator`, invited by email | Accepted — applies 0027 a second time, amends nothing |
 | 0089 | A channel poller is owned by one process, per credential, by a Postgres advisory lock | Accepted — amends `concurrency.md`'s unqualified multi-replica claim; declines a platform promotion |
 | 0090 | An operator creates bookings directly, and a reschedule is a chain rather than an edit | Accepted — extends 0086 without replacing its anchor identity; scopes `20-09`'s verified-phone rule to two of three origins |
+| 0091 | The bare product name belongs to the console, the API takes an `-api` suffix | Accepted — amends 0026's subdomain map; the widget's build-time origin (0051) is why the chat half is staged in three steps |

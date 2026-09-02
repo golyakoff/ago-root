@@ -74,6 +74,13 @@ stays honest about what was actually decided versus what was actually bought:
 
 ### Subdomain-to-service map
 
+> **Amended by `adr/0091` (2026-09-02).** The mapping below assigns `chat.` to the API and `console.`
+> to the console. A second product made that unstateable as a rule, so it is reversed: the bare
+> product name is the human-facing console and the API takes an `-api` suffix — `chat.` becomes
+> `ago-console`, the API moves to `chat-api.`, and `console.` is retired. The table below is left as
+> written because it is what this item decided and built; `adr/0091` carries the current map and the
+> three-step migration the change requires.
+
 | Subdomain | Routes to | Owner |
 |---|---|---|
 | `chat.reserve-me.ru` | `Ago.Chat.Api` — REST + both SignalR hubs | this item |
