@@ -1,7 +1,9 @@
 # Only one process may poll a channel, and the Worker is designed to be many
 
 - **Stage**: 14
-- **Status**: ready
+- **Status**: ready — **decided by `adr/0089` (2026-09-02)**, which settles the mechanism the Scope
+  section below deliberately left open. Read that ADR first; this item builds what it decided and does
+  not re-open the choice.
 - **Found**: 2026-09-02, in the live demo stand's own logs, while deploying `5f9fe37` (`15-09`).
   Not from reading the code — the symptom appeared first and the cause was traced back to it.
 - **Touches**: `Ago.Chat.Infrastructure.Telegram` (`14-07`), `Ago.Chat.Infrastructure.MaxBot`
@@ -91,17 +93,23 @@ that is discovered at the worst possible moment otherwise.
 
 ## Scope
 
-- **Decide and record what may hold a channel poller.** This is an ADR-sized question — it is a
-  concurrency guarantee about a host that another architecture document makes a contrary claim about.
-  The likely shapes, weighed in the ADR rather than pre-judged here:
-  - a Postgres advisory lock per `ChannelCredentialId`, taken by the loop and held for its life —
-    reuses the database already in every Worker, no new infrastructure, and makes the constraint
-    enforced rather than documented;
-  - a Redis lease, which `caching.md` would have to bless explicitly given rule 8 and the fact that
-    losing the lease means losing the poll;
-  - splitting the pollers out of `Ago.Chat.Worker` into a host pinned at one replica, which is the
-    honest expression of "this is not scalable" but adds a fourth host against `adr/0013`'s
-    split-by-failure-profile reasoning.
+- ~~**Decide and record what may hold a channel poller.**~~ **Done — `adr/0089`**, which weighed the
+  three shapes this section had listed and chose the first: a **session-scoped Postgres advisory lock
+  keyed per `ChannelCredentialId`**, held for the life of the loop, released by the database itself
+  when the holding session ends. No TTL, no renewal, takeover as the normal path.
+
+  **The per-credential key changed what this item is.** A global poller-leader lock would have been
+  simpler and confined every bot to one process forever. Keying on the credential means several Worker
+  replicas *share* the bots, each holding the locks it won — so this item no longer forbids scaling
+  the Worker, it is what makes the polling path scale. That is a capability, not a restriction, and
+  the Done-when list below is written against it.
+
+  Rejected in the ADR, with reasons: reusing `RedisDistributedLock` (already used in this very host by
+  `RedisLockAssignmentClaimer`, and wrong here purely on *duration* — a TTL without renewal has no
+  good setting for an indefinitely-held lease); a `poller_leases` table with `SKIP LOCKED` (a
+  lifetime-long row lock is a lifetime-long transaction, working against autovacuum); and a fourth
+  host pinned to one replica (does not even fix the rollout overlap, and discards the capability
+  above).
 - **Make the rollout overlap quiet, not just harmless.** Whichever mechanism wins, a poller that does
   not hold the right to poll should wait for it rather than race and log a warning.
 - **Distinguish a self-inflicted 409 from a provider one** in the logs, so the next person reading
@@ -120,11 +128,15 @@ that is discovered at the worst possible moment otherwise.
 
 ## Done when
 
-- [ ] An ADR decides which process may poll a given channel credential, states the mechanism, and
-      says plainly what happens when that process dies mid-poll.
+- [x] An ADR decides which process may poll a given channel credential, states the mechanism, and
+      says plainly what happens when that process dies mid-poll. — `adr/0089`, 2026-09-02, including
+      the half-open-connection case, which is bounded rather than eliminated and says so.
 - [ ] Running **two** Worker instances against one active Telegram credential is proven, by test, to
       produce exactly one live poll loop — and proven to fail before the change, since that is the
       entire guarantee.
+- [ ] **Two instances and two credentials distribute**: both get polled, one per instance, proving the
+      per-credential key does what `adr/0089` chose it for. A mechanism that serialised every bot onto
+      one process would pass every other box on this list.
 - [ ] The survivor takes over when the holder stops: killing the holding instance leaves the other
       polling within a bounded, stated time. A guarantee that only works while nothing dies is not
       one.
