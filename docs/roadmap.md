@@ -64,7 +64,7 @@ Three items sit parked below the table rather than in it, because they cannot be
 |---|---|---|
 | 1 | `20-20` make AGO Calendar deployable, and deploy it | **The largest gap between the product as built and the product as usable.** Fifteen Stage 20 items are done and none of them runs anywhere: no Dockerfile for either host, no image-publishing job, no migrator, no manifest ever written in `ago-deploy`. Calendar's schema has no way to come into existence outside a test fixture. Every other Stage 20 item is unverifiable by hand until this lands, which is why it goes above work that is merely unfinished |
 | 2 | `15-11` rendered UX gate, and the screenshots that fall out of it | Two of the three defects that reached the live deployment and were found by hand — an input one character wide on mobile, an error message dark grey on dark blue — are **measurements**, not opinions, and neither is catchable in jsdom because it has no layout engine. The same run produces the screenshots the delivery digest currently lacks, and it can photograph the calendar console **without waiting for `20-20`**, because it renders from source rather than from the stand |
-| 3 | `10-03` console signup UI | Built and tested (`ago-console` `ead191e`); the one remaining Done-when box needs a human typing a password into a real browser, which no session here can do — see the item's own Outcome section |
+| 3 | `10-03` console signup UI — **walk it, do not build it** | **Re-read 2026-09-02 and its urgency was understated.** This is not a nice-to-have: it is the *only* path by which a real tenant can come into existence. `POST /api/v1/sites` binds the new site to the **caller's own** token `sub` and cannot provision anybody else; there is no seed script in `ago-chat`; and `12-04` deliberately barred the platform owner from registering a site. Owner endpoints only read. So there is no interface for provisioning a customer by hand, and the first client's very first act will be this flow. Nothing needs building — the code shipped in `ago-console` `ead191e`. The one open Done-when is a human walking Keycloak's registration form end to end, which no session here can do because it means typing a password. **The author should walk it before the client does**; day one is the worst possible moment to find out it is broken |
 | — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
 | — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
 
@@ -958,6 +958,17 @@ Deliverables:
   narrow per-action capability was chosen first and reversed on the author's own challenge, because it
   needed *more* new machinery than the shape it was supposed to be cheaper than. First authorization
   question in this project to span two products, so `authorization.md` gained a section of its own.
+
+- **The booking workflow the first tenant actually uses (`20-21`, `20-22`, `20-23`, cut 2026-09-02 from
+  `adr/0090`)** — all three blocked on `20-20`, because none is verifiable by hand until Calendar runs.
+  `20-21`: an operator creates a customer and a booking, finds an existing customer by a phone typed in
+  any of its equivalent forms, and corrects a mistyped number (which clears its verification). This is
+  the tenant's primary intake — telephone and walk-in — and it has no implementation at all today.
+  `20-22`: moving a booking as a chain, preserving `adr/0086`'s anchor identity, delivering the
+  mechanism `20-17` was deferred waiting for. `20-23`: attendance, revenue as **accounting** rather
+  than a note, and — urgent independently of any policy — recording *when* and *at whose initiative* a
+  cancellation happened, which today survives only in a domain event and is unrecoverable afterwards.
+  `NoShowCount` has had no writer since it shipped and gets one here.
 
 **Done when:** both products run in the same cluster from the same hosts, a real booking can be made
 and confirmed end to end against the local cluster, and the diff against `Ago.Platform.*` shows the
