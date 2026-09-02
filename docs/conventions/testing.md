@@ -29,6 +29,7 @@ this section exists so the next one is.
 | Pure unit | beside the module | Nothing — no DOM, no network | Every build, milliseconds |
 | Component / behaviour | beside the component | A DOM (jsdom or equivalent), fakes for the API and the hub | Every build |
 | Widget isolation | `ago-widget` | A DOM plus a deliberately hostile host page | Every build |
+| Rendered UX gate | `ux-gate/` in each frontend repo | A real browser (Playwright), seeded data, a token injected rather than typed | Every build |
 | Live verification | a real browser against a running stack | Nothing automated | Before calling a UI item done |
 | Deployment smoke | `ago-deploy/k8s/smoke.sh` | A deployed environment | After every deploy |
 
@@ -45,6 +46,40 @@ What belongs at each level, stated so it is not re-argued per item:
 - **Reconnect and resume is the widget's most valuable behaviour**, and the pure `backoff` function
   being tested is not the same as testing it. The behaviour is: the connection drops, sends queue,
   the client resumes from the right `sequence` and does not duplicate (`3-03`).
+- **The rendered UX gate is a fourth level, and it exists because three defects reached the live
+  deployment while every level above was green** (`15-11`, added 2026-09-02): the widget could not
+  send a message, an input rendered one character wide on mobile, and an error message was dark grey
+  on dark blue. The first belongs to the golden path; the other two are **measurements** — a rendered
+  width and a contrast ratio — and measurements deserve a gate rather than a careful look.
+
+  What it asserts, at 375x812 and 1280x800, on every screen it covers: no horizontal overflow, no
+  interactive target under WCAG 2.5.8's 24px, and WCAG AA contrast computed from **rendered** styles.
+  It also emits the screenshots the delivery digest uses, which is a second purpose and not a
+  by-product.
+
+  **It cannot live in the existing component level, and the reason is worth knowing: `jsdom` has no
+  layout engine.** Geometry reads as zero and computed colour is unusable, so an overflow or contrast
+  assertion written beside a component would pass on anything — a green that has measured nothing.
+  That is why this level owns a real browser and the level above it does not.
+
+  Three rules it earned the hard way, each from a real failure:
+
+  - **Scope the colour and size checks to what this repository renders.** `ago-widget`'s gate measures
+    only inside the widget's own shadow roots: its demo page is a deliberately hostile neighbour, and
+    the first run dutifully reported the host page's green-on-white as a defect. Overflow stays
+    document-wide there, because not damaging the host page *is* the widget's promise.
+  - **Pierce the Shadow DOM, and prove that you did.** `document.querySelectorAll` and a `TreeWalker`
+    do not enter one, so a copied check finds nothing in `ago-widget` and passes. Its gate carries a
+    proof that injects a defect *inside* the shadow root, plus an assertion that the scan count is
+    non-zero.
+  - **Measure the target a person can hit, not the element.** A control inside a `<label>` is measured
+    by the label; measuring the `<input>` alone flagged bare 13x13 checkboxes that were never 13x13 to
+    a user. Measured rather than exempted, so a tiny label is still caught.
+
+  **No step in a gate run types a password into a form.** Auth is a token injected into storage. That
+  keeps the run reproducible in CI, and it is also what lets an AI session produce these screenshots
+  at all.
+
 - **The widget's isolation claim gets a test on a hostile page.** It runs inside a stranger's
   document; that the Shadow DOM holds, that nothing leaks into the global scope, and that the host's
   CSS cannot reach in are the claims the `embeddable-widget` skill is built on.

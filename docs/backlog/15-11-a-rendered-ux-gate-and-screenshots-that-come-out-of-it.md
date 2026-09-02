@@ -86,17 +86,35 @@ about a third of the last week's work, currently invisible — **without waiting
 
 ## Done when
 
-- [ ] The three assertions run at both viewports in all three frontend repos, and fail the build when
-      violated — each proven to fail first, by introducing the defect it is meant to catch (an
-      overflowing element, a one-character input, a low-contrast pair) and watching it bite.
-- [ ] The reported historical defects are specifically covered: a one-character-wide input and a
-      dark-grey-on-dark-blue message would both now fail.
-- [ ] Screenshots for both viewports are produced as CI artifacts on every run, named so a human can
-      tell which screen and which viewport without opening them.
-- [ ] No step in the run types a password into a form.
-- [ ] The next digest embeds screenshots taken by this run rather than by hand.
-- [ ] `docs/conventions/testing.md` gains this level, since it is a new one — neither unit nor
-      integration nor the existing e2e shape.
+- [~] The three assertions run at both viewports in all three frontend repos — done — **and fail the
+      build in two of the three.** `ago-console` and `ago-widget` are blocking; `ago-calendar-console`
+      is `continue-on-error` because the gate's first run there found real, pre-existing defects
+      (`ago-calendar-console#22`, `#23`) and a permanently red build teaches people to ignore red
+      builds. That step carries a dated exit condition in its own comment: when those two issues
+      close, one line goes. **Recorded as partly met rather than ticked**, because the compromise is
+      real and has no date attached to it yet.
+      Fails-before proven in all three, and independently re-proven by the managing session in two:
+      neutralising `contrast.ts`'s ancestor walk in `ago-console` failed exactly the two contrast
+      proofs, and neutralising the shadow traversal in `ago-widget` failed exactly the shadow proof.
+- [x] The reported historical defects are specifically covered: a one-character-wide input and a
+      dark-grey-on-dark-blue message would both now fail. Reproduced literally in each repository's
+      `fails-before.spec.ts` rather than approximated.
+- [x] Screenshots for both viewports are produced as CI artifacts on every run, named
+      `<screen>--<width>x<height>.png`, uploaded `if: always()` so a red build still leaves the
+      picture that explains it. Viewport-only rather than `fullPage`: the first batch misled the
+      reviewer, because a full-page capture paints a `position: sticky` header at its scroll offset
+      and invents an overlap that is not there.
+- [x] No step in the run types a password into a form. Auth is a token injected into storage
+      (`ago-console`, `ago-calendar-console`) or absent entirely (`ago-widget`, which has no
+      operator).
+- [ ] The next digest embeds screenshots taken by this run rather than by hand. **Not done** - no
+      digest has been produced since the gate landed. This is the item's remaining obligation and the
+      reason it is not closed.
+- [x] `docs/conventions/testing.md` gains this level, since it is a new one — neither unit nor
+      integration nor the existing e2e shape. Added as a fourth frontend level, with the three rules
+      it earned the hard way (scope to what this repository renders, pierce the Shadow DOM and prove
+      it, measure the target a person can hit) and with `jsdom` having no layout engine stated as the
+      reason it cannot live beside the components.
 
 ## Open questions
 
