@@ -152,9 +152,9 @@ word with no arguments to get wrong.
 **Rolling an image back does nothing at all to the database.** Neither script touches the schema, and
 that is deliberate rather than missing.
 
-It is survivable only because every migration in this project so far has been **additive**: code from
-an earlier commit runs unharmed against a later schema, ignoring columns it does not know about. That
-is a property to keep on purpose, not a run of luck. The rule this ADR adopts:
+It is survivable because migrations here are **additive**: code from an earlier commit runs unharmed
+against a later schema, ignoring columns it does not know about. That is a property to keep on
+purpose, not a run of luck. The rule this ADR adopts:
 
 > A migration must remain compatible with the image immediately before it. Expand now, contract in a
 > later release.
@@ -163,6 +163,26 @@ A destructive change — dropping or renaming a column, narrowing a type — **b
 If one is ever merged, recovery from a bad deploy stops being "roll the image back" and becomes
 "restore from backup" (`15-02`). That has to be said in *that* migration's own review, before it
 merges, because afterwards is too late to find out.
+
+**Amended 2026-09-02 by `adr/0087`.** This section previously claimed that *every migration in this
+project so far has been additive*. That is no longer true, and the sentence has been corrected above
+rather than left to age into a false statement about the deploy that is running.
+
+`20260901213751_Stage15RepartitionMessagesByTenantHash` (`15-09`) rebuilds `messages` outright —
+rename, `CREATE TABLE … PARTITION BY HASH (site_id)`, copy, `DROP TABLE` — changing the primary key to
+`(id, site_id)`, making `site_id` `NOT NULL`, and removing the monthly `RANGE (created_at)` grid
+entirely. It was taken deliberately, with no live clients and no data to lose, which is the cheapest
+that change was ever going to be; `adr/0087` argues the case.
+
+The rule above is unchanged and still binds every future migration. What changes is that the escape
+clause has now been used once, so its consequence is live rather than hypothetical: **an `ago-chat`
+image from before that migration must not be rolled onto this schema.** `SchemaVersionGuard` will not
+catch it — the guard refuses when the database is *behind* the image and says nothing when it is
+*ahead*, which is exactly this direction. The concrete breakage is `PartitionMaintenanceJob`, still
+present in the pre-`15-09` worker, attempting to add a monthly `RANGE` partition to a table that no
+longer has a time dimension. Across that one boundary the recovery is a restore (`15-02`); rolling
+back within the post-`15-09` range is unaffected. `deploy.sh`, `rollback.sh` and `redeploy.sh` each
+say so at the point where somebody would act on it.
 
 The inverse direction is the ordinary one and `redeploy.sh` already gets it right: migrations run
 **before** the restart, so the old code is briefly running against the new schema — which additive
