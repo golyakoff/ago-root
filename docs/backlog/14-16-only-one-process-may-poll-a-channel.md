@@ -1,9 +1,10 @@
 # Only one process may poll a channel, and the Worker is designed to be many
 
 - **Stage**: 14
-- **Status**: ready — **decided by `adr/0089` (2026-09-02)**, which settles the mechanism the Scope
-  section below deliberately left open. Read that ADR first; this item builds what it decided and does
-  not re-open the choice.
+- **Status**: done (`ago-chat#148`, `ago-root#300`, `ago-deploy#108`, `adr/0089`, merged and deployed
+  2026-09-02) — see Outcome below
+- **Decided by**: `adr/0089` (2026-09-02), which settled the mechanism the Scope section below
+  deliberately left open.
 - **Found**: 2026-09-02, in the live demo stand's own logs, while deploying `5f9fe37` (`15-09`).
   Not from reading the code — the symptom appeared first and the cause was traced back to it.
 - **Touches**: `Ago.Chat.Infrastructure.Telegram` (`14-07`), `Ago.Chat.Infrastructure.MaxBot`
@@ -131,22 +132,101 @@ that is discovered at the worst possible moment otherwise.
 - [x] An ADR decides which process may poll a given channel credential, states the mechanism, and
       says plainly what happens when that process dies mid-poll. — `adr/0089`, 2026-09-02, including
       the half-open-connection case, which is bounded rather than eliminated and says so.
-- [ ] Running **two** Worker instances against one active Telegram credential is proven, by test, to
+- [x] Running **two** Worker instances against one active Telegram credential is proven, by test, to
       produce exactly one live poll loop — and proven to fail before the change, since that is the
-      entire guarantee.
-- [ ] **Two instances and two credentials distribute**: both get polled, one per instance, proving the
+      entire guarantee. — `TryAcquireAsync_TwoDistinctSessionsSameCredential_ExactlyOneHolds`, with
+      `NegativeControl_SharedSession_BothAcquireVacuously` beside it: advisory locks are re-entrant
+      within one session, so a two-instance test sharing one connection would pass proving nothing.
+- [x] **Two instances and two credentials distribute**: both get polled, one per instance, proving the
       per-credential key does what `adr/0089` chose it for. A mechanism that serialised every bot onto
-      one process would pass every other box on this list.
-- [ ] The survivor takes over when the holder stops: killing the holding instance leaves the other
+      one process would pass every other box on this list. —
+      `TryAcquireAsync_TwoCredentialsTwoInstances_BothGetPolled_OnePerInstance`.
+- [x] The survivor takes over when the holder stops: killing the holding instance leaves the other
       polling within a bounded, stated time. A guarantee that only works while nothing dies is not
-      one.
-- [ ] A rolling restart of a single-replica Worker produces **no** `409` in the logs — the observed
-      symptom, gone, rather than merely explained.
-- [ ] A genuine provider-side conflict is still logged, and is distinguishable from the topology one.
-- [ ] `concurrency.md` no longer claims without qualification that the Worker scales out, and names
-      what the exception is or that it has been removed.
-- [ ] The same mechanism covers MAX, in the same change — the two services are identical and fixing
-      one is how the other becomes the stale one.
+      one. — both directions tested (`AfterHolderCleanlyReleases_OtherInstanceTakesOverImmediately`,
+      `AfterHolderIsKilled_OtherInstanceTakesOverOnceTheSessionIsReaped`). **The "stated" half was
+      genuinely missing** and was caught during this sweep rather than waved through: the tests proved
+      takeover happens, but no number existed anywhere. `concurrency.md` now states it — one
+      `CredentialRefreshIntervalSeconds` tick, 30 s by default in *both* services (checked, not assumed
+      from Telegram alone), plus PostgreSQL's session reap in the crash case.
+- [x] A rolling restart of a single-replica Worker produces **no** `409` in the logs — the observed
+      symptom, gone, rather than merely explained. — **verified on the live demo stand, 2026-09-02.**
+      Baseline first: the outgoing pod (`5f9fe37`) carried a genuine `getUpdates -> 409` plus its
+      exception from its own startup overlap. After rolling to `a74e79d`: **0** matches for
+      `-> 409`/`409 (Conflict)` across the new pod's whole life. Checked non-vacuously — "no 409" is
+      worthless if nothing is polling, so polling was confirmed live in the same logs
+      (`getUpdates?timeout=30 -> 200 in 30446ms`, and MAX's `/updates -> 200`). A first look at 10 s of
+      pod age showed no poll lines at all and was *not* reported as success; the 30 s long poll simply
+      had not returned yet.
+- [x] A genuine provider-side conflict is still logged, and is distinguishable from the topology one.
+      — a lost lease raises `ChannelPollerLeaseLostException` and is caught and logged on its own
+      branch with its own message; a provider fault still falls to the generic handler. The two can no
+      longer be confused in a log.
+- [x] `concurrency.md` no longer claims without qualification that the Worker scales out, and names
+      what the exception is or that it has been removed. — the section is now the positive claim.
+      Its heading originally read "the one path that is **not** multi-replica by construction", which
+      was true before the change and the opposite of what its own body argued after it; corrected at
+      merge, because headings are what readers scan.
+- [x] The same mechanism covers MAX, in the same change — the two services are identical and fixing
+      one is how the other becomes the stale one. — `MaxLongPollingService` takes the same lease
+      through the same port; both were confirmed polling on the live stand after the roll.
+
+## Outcome
+
+Built, merged and deployed 2026-09-02 (`ago-chat#148`, `ago-root#300`, `ago-deploy#108`, `adr/0089`).
+Independently re-verified by the managing session: `dotnet format` clean, build zero warnings, full
+suite **1895/1895**, all **seven** test assemblies attempted (`Ago.Chat.FakeMax.Tests` discovers 0 —
+pre-existing, unrelated): Domain 424, Application 634, Architecture 40, FakeCrm 21, Concurrency 48,
+Integration 728. CI green. `Architecture.Tests` passing is the independent check that the port in
+`Application/Abstractions` and the adapter in `Infrastructure.Postgres` do not bend the dependency rule.
+
+**The item got better while being decided, and that is the part worth keeping.** The first framing was
+"stop the Worker being scaled, because polling breaks". `adr/0089`'s per-credential key inverted it: a
+global poller-leader lock would have been simpler and would have confined every bot to one process
+forever, whereas keying on the credential makes several replicas *share* the bot fleet. The item ships
+as a capability rather than a restriction, and `ago-deploy`'s `replicas: 1` comment went from a warning
+not to touch it to a note that raising it is now an ordinary throughput decision — still wanting a
+load-test number (rule 7) rather than an assertion.
+
+**Two defects found by review rather than by a failing test**, both reproduced before being fixed and
+both of them the very failure this item exists to prevent, relocated one level down:
+
+- A lease was bound to whatever `_connection` pointed at, not to the session that granted it.
+  `EnsureConnectionAsync` replaces a dead connection on the next acquire from *any* loop, so a lease
+  from the dead session would see the new connection open and wrongly report itself held — two pollers
+  on one bot, indefinitely. Closed by a session generation captured at acquire and compared on every
+  verify and release.
+- Disposing such a stale lease would have run `pg_advisory_unlock` on the **new** session, revoking the
+  lock a fresh lease legitimately held. Found by the implementer while fixing the first.
+
+**Fails-before independently re-proven by the managing session** on the guarantee most likely to be
+subtly wrong — the session generation. Neutralising the check in `VerifyStillHeldAsync` made exactly
+`SessionReplacedUnderALiveLease_MakesTheStaleLeaseDetectable` fail while the other nine poller tests
+still passed, so the test bites on that specific guarantee rather than asserting broadly. Restored
+byte-identical from a copy — never `git checkout --`, which would have deleted the untracked new files
+outright — and the full suite re-run **after** the revert.
+
+**Found live while writing the tests, and worth knowing beyond this item**: `NpgsqlConnection.State`
+can still read `Open` for a connection PostgreSQL has already terminated server-side, so a `State`
+check alone is insufficient. `TryAcquireAsync` retries once on a genuinely fresh connection; a second
+consecutive failure propagates rather than being hidden.
+
+**Live verification refused to be vacuous.** "No `409`" proves nothing if nothing is polling, so the
+absence was only accepted alongside positive evidence of polling in the same logs. An initial look at
+ten seconds of pod age showed no poll lines at all and was not reported as success — the 30-second long
+poll simply had not returned yet.
+
+## Process note, recorded because it cost real time
+
+Two background agents ended up working in the same two worktrees at once. The first reported that it
+had "dispatched a background worker"; the managing session checked for worktrees and branches, saw
+none — too early for them to exist — and concluded nothing had been dispatched, then told that agent to
+do the work itself. Both then edited the same files. The lesson is that the check was wrong, not the
+report: `ListAgents` answers "is something already running", and the absence of a directory does not.
+Of the three problems the second agent then reported, two did not survive checking (a BOM/charset
+complaint — `.editorconfig` mandates `utf-8-bom` and every file in the repository has it; and a
+duplication claim in `concurrency.md` with no duplicate heading or line behind it), which is its own
+reminder that a collision report is evidence, not a finding.
 
 ## Open questions
 
