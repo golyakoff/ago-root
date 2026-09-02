@@ -119,6 +119,39 @@ not round-robin: give a worker tasks in the repository and subsystem it already 
 task shares nothing with what a worker holds, a fresh one is the cheaper choice, and saying so is
 part of the operator's job rather than a defeat.
 
+## 0.8. A worker implements. It does not organise.
+
+**Decided by the author, 2026-09-02**, and now CLAUDE.md rule 12: a worker never spawns another
+agent. If it thinks the task warrants delegation, it says so in its report and stops — the decision
+is the author's.
+
+The reason this needs its own section is that **the brief itself causes the failure**, and it did so
+twice in one day with two different agents. Both were told "implement backlog item `NN-NN`", and both
+read that as *organise the implementation of `NN-NN`*: they did reconnaissance, wrote a plan, spawned
+a child, and reported the plan as their result. Neither wrote a line of code.
+
+So write the brief for an implementer, out loud:
+
+- Open with what the worker will **do**, not what it will manage. "Implement" is ambiguous to an
+  agent that has tools for both; "**Write the code yourself. Do not delegate. Do not spawn anything**"
+  is not.
+- Put the no-spawning rule in the standing block below, in those words.
+- Ask for the fails-before table and the verification counts as the *deliverable*. A brief whose
+  deliverable is a plan will get a plan.
+
+### And when a worker reports that it delegated, check before reacting
+
+The second failure was the managing session's, not the worker's. A worker said it had "dispatched a
+background worker"; the managing session looked for worktrees and branches, found none — too early
+for them to exist — concluded nothing had been dispatched, and told that worker to do the work
+itself. Both then edited the same worktrees at once, and the collision cost real time and produced a
+report full of hazards that were the other agent.
+
+**`ListAgents` answers "is something already running". An absent directory does not.** Check it
+before concluding, and if a child is genuinely running, let it finish: telling the parent to start
+over is what creates the collision. Send the parent an instruction for what to do *when the child
+returns* instead.
+
 ## 1. Standing rules — put every one of these in every brief
 
 These do not vary by item. Restating them from memory is how they drift; copy them.
@@ -135,6 +168,10 @@ it becomes close-the-PR-and-rebuild. See `git-workflow.md`.
 rule 9 delegates those to the *managing session only*, and explicitly not to workers. The worker
 ends with a commit-prep block per repository, each a shell script beginning with an explicit `cd`
 (see the `commit-prep` skill). No `Co-Authored-By` trailer for an AI session.
+
+**No spawning.** A worker never spawns another agent — CLAUDE.md rule 12. Say it in the brief in
+those words, and say what to do instead: *if you think this warrants delegation, say so in your
+report and stop.* See §0.8 for why the brief has to say it out loud.
 
 **The two shared indexes are off limits.** `docs/roadmap.md` and `docs/adr/README.md` collide on
 every concurrent item, because each one appends to the same region of the same table — five
