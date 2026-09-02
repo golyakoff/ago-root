@@ -98,14 +98,16 @@ compares against.
    impossible by construction, not by check. Most operator routes work this way.
 2. **A signed visitor token.** `AuthEndpoints` mints `(visitorId, siteId)` together and signs them,
    so the pairing is not forgeable either. Same property as (1), different issuer.
-3. **The client, in a route segment.** Ten route groups as of this writing —
+3. **The client, in a route segment.** Eleven route groups as of this writing —
    `/api/v1/sites/{siteId}/widget-config`, `/api/v1/sites/{siteId}/webhooks/...`, since `14-04`
    `/api/v1/sites/{siteId}/offline-auto-reply`, and since `13-01`/`13-02`/`14-02`/`16-02`/`16-03`
    `/api/v1/sites/{siteId}/operator-invites`, `/api/v1/sites/{siteId}/billing/checkout-sessions`,
    `/api/v1/sites/{siteId}/channels/max`, `/api/v1/sites/{siteId}/channels/telegram`,
    `/api/v1/sites/{siteId}/erase` and `/api/v1/sites/{siteId}/exports/...`, and since `13-03`
    `/api/v1/sites/{siteId}/billing/subscriptions/{id}/...` (two more routes on the existing billing
-   group) plus a new `/api/v1/sites/{siteId}/operators/...` group (seat toggle, removal, seat-summary).
+   group) plus a new `/api/v1/sites/{siteId}/operators/...` group (seat toggle, removal, seat-summary),
+   and since `10-06` `/api/v1/sites/{siteId}/installation` — a read whose failure mode is unusually
+   quiet, since leaking it returns another tenant's public key with a `200` rather than throwing.
    This is deliberate and documented in the code: an operator's own site claim is not necessarily the
    site being configured. **On these routes the permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
@@ -157,6 +159,7 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `DeleteAttachmentHandler` | operator claim | `attachment:delete` | `attachment.SiteId == command.SiteId` |
 | `GetWidgetConfigHandler` | **route segment** | `site:configure` | n/a — the site *is* the object |
 | `UpdateWidgetConfigHandler` | **route segment** | `site:configure` | n/a — the site *is* the object |
+| `GetSiteInstallationHandler` | **route segment** | `site:configure` | n/a — the site *is* the object |
 | `RegisterWebhookEndpointHandler` | **route segment** | `webhook:manage` | n/a — creates a row for that site |
 | `ListWebhookEndpointsHandler` | **route segment** | `webhook:manage` | n/a — loads by site |
 | `RevokeWebhookEndpointHandler` | **route segment** | `webhook:manage` | `endpoint.SiteId == command.SiteId` |
@@ -353,6 +356,7 @@ is exactly what makes it interesting. See *The guard* below.
 | `GET /api/v1/attachments/{id}` | `EitherTokenKind` | operator claim, or the visitor token |
 | `DELETE /api/v1/attachments/{id}` | `RequireOperatorIdentity` | operator claim |
 | `GET`/`PUT /api/v1/sites/{siteId}/widget-config` | `RequireOperatorIdentity` | **client-supplied** |
+| `GET /api/v1/sites/{siteId}/installation` | `RequireOperatorIdentity` | **client-supplied**; `10-06` |
 | `GET`/`PUT /api/v1/sites/{siteId}/offline-auto-reply` | `RequireOperatorIdentity` | **client-supplied** |
 | `POST`/`GET /api/v1/sites/{siteId}/webhooks` | `RequireOperatorIdentity` | **client-supplied** |
 | `DELETE /api/v1/sites/{siteId}/webhooks/{id}` | `RequireOperatorIdentity` | **client-supplied** |
