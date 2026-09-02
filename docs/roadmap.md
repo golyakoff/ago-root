@@ -455,6 +455,16 @@ Deliverables:
   holder actually sees, and it was missed because it lives in a different repository and belongs to a
   component nobody thought of as ours.
 
+- **Everything is translated, and the gate checks it (`11-15`, raised 2026-09-02)** - a fourth
+  assertion in `15-11`'s gate, with platform-owner screens exempt. Checking the premise found the
+  larger half: `ago-console` is localised (`11-11`-`11-13`), and **`ago-calendar-console` has no
+  localisation at all** - no `i18n` directory, zero references to a string table, every label inline
+  in English, producing `Иванова А. П.'s slots` in the gate's own screenshots. The first tenant is a
+  Russian-speaking single-person business and that is the console she opens daily, so the repair lands
+  before the check; adding the assertion first would only produce a permanently red build there. The
+  design decision worth carrying: seed every fixture in Cyrillic, and any Latin-script run left on the
+  page is *by definition* interface chrome - an exact test for the cost of a fixture edit.
+
 - **Mobile navigation becomes a drawer, in both consoles (`11-14`, raised 2026-09-02)** — a hamburger
   and a left panel with the items in a column, replacing a horizontal bar that does not fit. Measured
   rather than felt: `ago-console` builds **fourteen** navigation items for a tenant with
