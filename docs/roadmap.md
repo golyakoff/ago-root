@@ -639,6 +639,16 @@ Deliverables:
   wasteful or wrong is a per-job question. Delivers an audit and a verdict table in `concurrency.md`,
   including for the ones that are fine; fixes anything unsafe as its own item, not smuggled in. Blocks
   any decision to scale the Worker, without making that decision — which still needs a number (rule 7).
+- **A rendered UX gate, and the screenshots that fall out of it (`15-11`, done 2026-09-02)** — a real
+  browser in all three frontend repositories, at 375x812 and 1280x800: no horizontal overflow, no
+  interactive target under WCAG's 24px, and AA contrast computed from *rendered* styles. It exists
+  because two of the three defects that reached the live deployment and were found by hand are
+  measurements rather than opinions, and because `jsdom` has no layout engine, so neither is catchable
+  where the component tests live. It earned its keep on its first run: all eight `ago-calendar-console`
+  screens overflow at 375px (`#22`). The same run emits the screenshots the delivery digest uses -
+  including three calendar-console screens nothing else can show, because AGO Calendar is not deployed.
+  Its one undelivered part, making that repository's gate blocking, was moved to
+  `ago-calendar-console#26` rather than left as an unticked box.
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a

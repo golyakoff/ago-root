@@ -1,7 +1,10 @@
 # A rendered UX gate, and the screenshots that fall out of it
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (`ago-console#81`+`#84`, `ago-calendar-console#24`, `ago-widget#47`, merged
+  2026-09-02) — see Outcome below. The one part not delivered here was **moved to
+  `ago-calendar-console#26` rather than left as an unticked box**, on the author's own rule: finish
+  the ticket or rewrite it to what was done and carry the remainder into a linked one.
 - **Why here**: this is release quality — the class of defect that ships green and is found by a human
   afterwards. Stage 15 is where "the deployment stops being a thing it would be acceptable to lose"
   lives, and shipping an unusable screen to a paying tenant is the product-facing half of that.
@@ -86,16 +89,17 @@ about a third of the last week's work, currently invisible — **without waiting
 
 ## Done when
 
-- [~] The three assertions run at both viewports in all three frontend repos — done — **and fail the
-      build in two of the three.** `ago-console` and `ago-widget` are blocking; `ago-calendar-console`
-      is `continue-on-error` because the gate's first run there found real, pre-existing defects
-      (`ago-calendar-console#22`, `#23`) and a permanently red build teaches people to ignore red
-      builds. That step carries a dated exit condition in its own comment: when those two issues
-      close, one line goes. **Recorded as partly met rather than ticked**, because the compromise is
-      real and has no date attached to it yet.
+- [x] The three assertions run at both viewports in all three frontend repos, and fail the build when
+      violated — **in two of the three, which is this item's scope as landed.**
+      `ago-calendar-console`'s step is `continue-on-error` because the gate's first run there found
+      real, pre-existing defects (`ago-calendar-console#22`, `#23`) and a permanently red build teaches
+      people to ignore red builds. **That residual is not left hanging on this item**: it is
+      `ago-calendar-console#26`, which depends on those two and whose whole content is deleting one
+      line and proving the result green.
       Fails-before proven in all three, and independently re-proven by the managing session in two:
       neutralising `contrast.ts`'s ancestor walk in `ago-console` failed exactly the two contrast
-      proofs, and neutralising the shadow traversal in `ago-widget` failed exactly the shadow proof.
+      proofs; neutralising the shadow traversal in `ago-widget` failed exactly the shadow proof.
+
 - [x] The reported historical defects are specifically covered: a one-character-wide input and a
       dark-grey-on-dark-blue message would both now fail. Reproduced literally in each repository's
       `fails-before.spec.ts` rather than approximated.
@@ -107,14 +111,59 @@ about a third of the last week's work, currently invisible — **without waiting
 - [x] No step in the run types a password into a form. Auth is a token injected into storage
       (`ago-console`, `ago-calendar-console`) or absent entirely (`ago-widget`, which has no
       operator).
-- [ ] The next digest embeds screenshots taken by this run rather than by hand. **Not done** - no
-      digest has been produced since the gate landed. This is the item's remaining obligation and the
-      reason it is not closed.
+- [x] The next digest embeds screenshots taken by this run rather than by hand. Digest No 2
+      (2026-09-02) carries four, produced by the gate from source rather than photographed off a
+      deployment — three of them the calendar console's workers, slots and re-cut screens, which
+      nothing else can show because AGO Calendar is not deployed.
 - [x] `docs/conventions/testing.md` gains this level, since it is a new one — neither unit nor
       integration nor the existing e2e shape. Added as a fourth frontend level, with the three rules
       it earned the hard way (scope to what this repository renders, pierce the Shadow DOM and prove
       it, measure the target a person can hit) and with `jsdom` having no layout engine stated as the
       reason it cannot live beside the components.
+
+## Outcome
+
+Built and merged 2026-09-02 across three repositories (`ago-console#81` and `#84`,
+`ago-calendar-console#24`, `ago-widget#47`). Independently verified by the managing session in each:
+`typecheck`/`lint` clean, suites green (583 / 61 / 225 tests), and the gate itself run locally.
+
+**It earned its keep on its first run, which is the only evidence that matters for a gate.** In
+`ago-calendar-console` it found all eight screens overflowing at 375px and a handful of controls under
+WCAG's minimum — neither introduced by this item, both filed (`#22`, `#23`), neither fixed here
+because this item measures and does not redesign.
+
+**Fails-before independently re-proven twice**, each on the assertion most likely to be silently
+vacuous in its repository:
+
+- `ago-console`: neutralised `contrast.ts`'s ancestor walk. Exactly the two contrast proofs failed;
+  the other sixteen passed. Without the walk the historical dark-grey-on-dark-blue defect is invisible.
+- `ago-widget`: neutralised the shadow traversal. Exactly the shadow proof failed, at both viewports.
+
+Both restored byte-identical from a copy — never `git checkout --`, which would have deleted untracked
+files — and the suites re-run after the revert.
+
+**Three things the replication taught that the first implementation could not have:**
+
+- **`jsdom` has no layout engine**, so this level cannot live beside the component tests. Written
+  there, an overflow or contrast assertion passes on anything.
+- **A copied check silently stops checking.** In `ago-widget` neither `querySelectorAll` nor a
+  `TreeWalker` enters a shadow root, so the size and contrast checks would have found nothing in the
+  widget and reported clean. Its gate now carries a proof that injects a defect *inside* the shadow
+  root and asserts a non-zero scan count.
+- **Scope matters as much as the check.** `ago-widget`'s demo page is a deliberately hostile
+  neighbour, and the first run dutifully reported the host page's own green-on-white. Colour and size
+  are measured inside the widget; overflow stays document-wide, because not damaging the host page is
+  the widget's promise.
+
+**One false positive caught before it became a filed defect**: two 13x13 checkboxes in
+`ago-calendar-console`, both inside a `<label>` whose text toggles them. `minSize.ts` now measures the
+label's box — measured rather than exempted, so a tiny label is still caught — and the fix was
+backported to `ago-console` (`#84`).
+
+**One thing the item got slightly wrong, found by using it**: screenshots were `fullPage`, which paints
+a `position: sticky` header at its scroll offset and invents an overlap that is not there. The first
+batch misled the reviewer. They are viewport-only now, because these images exist to be looked at by a
+human deciding whether a screen is usable.
 
 ## Open questions
 
