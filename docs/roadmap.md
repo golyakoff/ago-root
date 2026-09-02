@@ -34,39 +34,51 @@ the numbers a queue would have meant re-partitioning items into new stages, whic
 the cost of each stage reading as an argument rather than a bucket. The order lives here instead, and
 a stage number stays a name.
 
-### Now — in this order
+### Now — on the board
 
-Row order is the queue. It is not a dependency chain: nothing here blocks anything below it except
-where the row says so.
+**The queue moved to the board on 2026-09-02**: <https://github.com/users/golyakoff/projects/1>.
+
+Status and order live there and only there. This file keeps the narrative — what each stage is for
+and what landed in it — and `docs/backlog/<item>.md` keeps the reasoning: alternatives, Done-when,
+Outcome. The ordered table that used to sit here is **gone rather than duplicated**: two lists of one
+queue is the staleness problem twice over, and this one went stale three times while it was the only
+one there was.
+
+Issue titles begin with the item number (`20-20 · Make AGO Calendar deployable`), which is what keeps
+an issue traceable to its backlog file, to its stage, and to every ADR and commit that already names
+work that way — `conventions/git-workflow.md` has the rule and why the match is anchored.
+`tools/queue-audit.sh` reads those issues now, and treats an unreachable GitHub as *could not look*
+rather than *nothing to see*.
+
+Two items sit parked off the board, because they cannot be started:
+
+| Item | Why parked |
+|---|---|
+| `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
+| `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are — measured on a workstation, labelled as such — and the run needs a decision that has been pending: the live demo, or a throwaway node paid for by the hour |
+
+#### How this queue got its shape — kept because the reversals are the useful part
 
 **Deepened and reordered 2026-08-25**, on the author's call that the backlog had been circling
-operational work while two whole products sat scoped and unbuilt. Checking that: `20-00`-`20-06` and
-`14-01`-`14-04` are all `ready` — eleven items, fully written, waiting. Nothing needed planning; the
-list needed ordering.
+operational work while two whole products sat scoped and unbuilt. `20-00`-`20-06` and `14-01`-`14-04`
+were all `ready` — eleven items, fully written, waiting. Nothing needed planning; the list needed
+ordering.
 
-**This reverses the ordering argued earlier the same day, and the reason is that the situation
-changed.** That argument was made while the firewall was open, Keycloak was losing users on restart,
-signup could not complete and three live defects were open. All of that is now closed or in progress.
-What remains of the safety work is *insurance*, and insurance has a low marginal return on a
-deployment with no customers — whereas `20-00` is the only item in the entire backlog that tests the
-claim every ADR rests on. The one piece of ops work kept high is `15-06`, and only because Calendar is
-about to double the deploy surface that is already the weak point.
+**That reversed an ordering argued earlier the same day, and the reason is that the situation
+changed.** The earlier argument was made while the firewall was open, Keycloak was losing users on
+restart, signup could not complete and three live defects were open. All of that closed. What remained
+of the safety work was *insurance*, and insurance has a low marginal return on a deployment with no
+customers.
 
-**Five scheduling-tool items inserted above `20-10`/`20-11`, 2026-09-01**, on the reasoning that
-`20-10` and `20-11` harden a booking flow no real tenant can populate yet. AGO Calendar has no way for
-a shop to keep a staff list or describe a shift pattern from the console, so the first live client
-cannot fill a single day of availability - verifying the phone of a booking that cannot be made is
-insurance on an empty building. The ordering is one edit to reverse if that judgement is wrong.
+**Five scheduling-tool items inserted above `20-10`/`20-11`, 2026-09-01**, on the reasoning that those
+two harden a booking flow no real tenant could populate yet: AGO Calendar had no way for a shop to
+keep a staff list or describe a shift pattern, so the first live client could not fill a single day of
+availability — verifying the phone of a booking that cannot be made is insurance on an empty building.
 
-Three items sit parked below the table rather than in it, because they cannot be started.
-
-| # | Item | Why here |
-|---|---|---|
-| 1 | `20-20` make AGO Calendar deployable, and deploy it | **The largest gap between the product as built and the product as usable.** Fifteen Stage 20 items are done and none of them runs anywhere: no Dockerfile for either host, no image-publishing job, no migrator, no manifest ever written in `ago-deploy`. Calendar's schema has no way to come into existence outside a test fixture. Every other Stage 20 item is unverifiable by hand until this lands, which is why it goes above work that is merely unfinished |
-| 2 | `15-11` rendered UX gate, and the screenshots that fall out of it | Two of the three defects that reached the live deployment and were found by hand — an input one character wide on mobile, an error message dark grey on dark blue — are **measurements**, not opinions, and neither is catchable in jsdom because it has no layout engine. The same run produces the screenshots the delivery digest currently lacks, and it can photograph the calendar console **without waiting for `20-20`**, because it renders from source rather than from the stand |
-| 3 | `10-06` the tenant never learns how to install the widget | **Found 2026-09-02 while preparing the `10-03` walkthrough**, by asking what happens *after* signup succeeds. The answer is nothing: the console shows no `<script>` snippet anywhere, never even fetches `publicKey`, and no API endpoint returns a site's key to the operator who owns it — the only occurrences are on the visitor side, where a key is consumed. So a real tenant finishes signup with a working account and no way to connect it to her shop. Both halves are missing, endpoint and screen |
-| — | `10-05` transactional email | **In progress elsewhere.** Server side built and verified, PTR granted, handed to a development session. Listed so nothing is started against it twice |
-| — | `7-10` load run on the provisioned server | **Deprioritized 2026-08-27** by the author, not abandoned. Stage 7's numbers stay honest as they are - measured on a workstation, labelled as such - and the run needs a decision that has been pending for two days: the live demo, or a throwaway node paid for by the hour. Neither the item nor the server has changed; it stopped being the most valuable next thing |
+**Reordered hard on 2026-09-02, once the launch had a date.** Three findings displaced everything
+else: AGO Calendar had never been deployable at all (`20-20`), the tenant has no way to learn how to
+install the widget (`10-06`), and self-service signup turned out to be the *only* path by which a real
+tenant can exist — not the nice-to-have it had been queued as.
 
 ### Soon — folded into the queue above, 2026-08-25
 

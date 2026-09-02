@@ -102,36 +102,49 @@ republishes the old version.
 
 ## 5. Sweep the queue at merge — it is part of merging, not a later batch
 
-`docs/roadmap.md`'s Now queue and `docs/adr/README.md` have **one writer**: whoever merges, at the
-moment they merge. Workers never touch them (`background-worker-brief`).
+**The queue is the project board now** (`https://github.com/users/golyakoff/projects/1`), not a table
+in `docs/roadmap.md` — changed 2026-09-02. `docs/adr/README.md` still has **one writer**: whoever
+merges, at the moment they merge. Workers never touch either (`background-worker-brief`).
 
-In the `ago-root` change that lands the item:
+At merge:
 
-- Remove the item's queue row and renumber. **Anchor the match on the item column** — a loose filter
-  once deleted `5-17`'s row because its reasoning cites `11-08`.
-- Add the ADR index row, using the number pre-assigned in the brief.
-- Record the item as done in its stage section, and fix the item file's own `Status` line.
-- Run `bash tools/queue-audit.sh` and resolve anything it flags.
+- **Close the item's issue.** That is the whole queue edit now; there is no row to remove and nothing
+  to renumber, which is most of what this step used to get wrong.
+- Add the ADR index row in `ago-root`, using the number pre-assigned in the brief.
+- Record the item as done in its stage section of `docs/roadmap.md`, and fix the item file's own
+  `Status` line. The stage sections are narrative and still hand-written.
+- Run `bash tools/queue-audit.sh` and resolve anything it flags. It reads open issues and compares
+  each against its backlog file's Done-when boxes.
 
-That last step is not ceremony. Three rows have outlived their items so far, and each was found by
-accident. `16-01` merged with all five Done-when ticked, kept `Status: ready`, and sat in the Now
-queue for a day as work offered to the next session to pick up and re-do.
+That last step is not ceremony. Three entries have outlived their items so far, and each was found by
+accident. `16-01` merged with all five Done-when ticked, kept `Status: ready`, and sat in the queue
+for a day as work offered to the next session to pick up and re-do.
 
-### One open PR at a time may touch those two files
+**A green audit is not always a clean queue.** If GitHub cannot be reached the script says so
+explicitly rather than reporting zero — read which of the two it said, because "0 checked" and "could
+not look" mean opposite things.
+
+### One open PR at a time may touch the shared index
 
 "One writer" is not enough, and 2026-08-26 proved it four times. The writer was always the same
 session — me — and the conflicts came from **two of my own PRs being open at once**, each cut from a
 `main` that the other was about to change. `#196`, `#202` and two branches before them were rebuilt
 for no other reason.
 
-So the rule is stronger than one writer: **while a PR that edits `docs/roadmap.md` or
-`docs/adr/README.md` is open, do not open a second one.** Land the first, then cut the second from
-the `main` that now contains it.
+So the rule is stronger than one writer: **while a PR that edits `docs/adr/README.md`, or a stage
+section of `docs/roadmap.md`, is open, do not open a second one.** Land the first, then cut the second
+from the `main` that now contains it.
 
 When that would stall real work — a defect worth filing immediately, a worker finishing while a
-sweep is in flight — write the item file and **leave the queue row and the index row out**, then add
-them in the change that lands next. Nothing goes stale in the meantime: a row goes stale when its
-item *merges*, and nothing is merging while a sweep is waiting.
+sweep is in flight — write the item file and **leave the index row out**, then add it in the change
+that lands next. Nothing goes stale in the meantime: an entry goes stale when its item *merges*, and
+nothing is merging while a sweep is waiting.
+
+**This got cheaper on 2026-09-02 and the reason is worth knowing.** Half of what these files used to
+collide over was the ordered queue table, and that is gone — the board holds order now, and closing an
+issue conflicts with nothing. What remains is `docs/adr/README.md`, which is genuinely append-only and
+genuinely collides, plus a stage section in `docs/roadmap.md`. So the one-PR-at-a-time rule still
+holds, and it now bites over a much smaller surface than the four rebuilds that produced it.
 
 The failure this prevents costs a rebuild every time, and rebuilding is close-the-PR-and-recreate
 once the branch is pushed — never a rebase. It is cheaper to wait.
