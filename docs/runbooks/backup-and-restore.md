@@ -16,11 +16,29 @@ node's address is never written in this repository — `<node-ip>` means it, and
 
 | Part | Runs where | What it is for |
 |---|---|---|
-| `ago-deploy/k8s/backup/backup.sh` | node, daily at 02:30 UTC | Dumps both databases and the roles, mirrors the MinIO bucket, includes the overlay `.env`, seals the lot into one gpg-encrypted tar, prunes to the newest 7 |
+| `ago-deploy/k8s/backup/backup.sh` | node, daily at 02:30 UTC | Dumps **every database Postgres reports** (asked for at run time, not a list in the script — see below) plus the roles, mirrors the MinIO bucket, includes the overlay `.env`, seals the lot into one gpg-encrypted tar, prunes to the newest 7 |
 | `ago-deploy/k8s/backup/backup-pull.sh` | the author's machine | Copies new artifacts off the node, verifies their checksums, prunes local copies past 30 days, and fails loudly if the newest is stale. **This is the backup** |
 | `ago-deploy/k8s/backup/backup-watchdog.sh` | node, hourly | Mails `alerts@` when the node has stopped producing artifacts, or when the pull has stopped collecting them |
 | `ago-deploy/k8s/backup/restore.sh` | wherever the private key is | Decrypts one artifact and restores it into a target Postgres and S3 endpoint given entirely by environment variables |
 | `ago-deploy/k8s/backup/docker-compose.restore-drill.yml` | the author's machine | An isolated scratch target: a Postgres, a MinIO, and a Keycloak started **without** `--import-realm` |
+
+### Which databases are covered, and why that is not a list
+
+Until 2026-09-02 both `backup.sh` and `restore.sh` read `for db in ago_chat keycloak`, and the
+manifest recorded row counts for `ago_chat` alone. A written-down list is a backup that stops being
+complete the moment a database is added — **silently**: no error, no warning, just a dump that is not
+there and that nobody misses until a restore. The manifest made it worse, because a database absent
+from the row counts is a database whose loss a restore drill compares as clean.
+
+All three now derive from one question asked at run time: `backup.sh` enumerates
+`pg_database` (excluding templates and the `postgres` maintenance database, which holds no
+application state and is what `restore.sh` connects *to* in order to create the others); the manifest
+loops over that same list and records `databases_dumped=`; and `restore.sh` restores whatever `*.dump`
+files the archive actually contains. An empty enumeration is **fatal** in both scripts rather than
+producing a cheerful, near-empty artifact.
+
+The concrete case this was changed for is AGO Calendar, which brings its own database. Under the old
+form a tenant's schedules would have sat outside every backup taken after it shipped.
 
 ## First-time setup
 
