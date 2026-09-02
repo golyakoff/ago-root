@@ -25,6 +25,38 @@ The current split, which is deliberately not "the agent may write history":
 - A draft commit message never carries a `Co-Authored-By` trailer for an AI session. Whoever the
   local git identity names is the author of record, regardless of who typed the command.
 
+## The queue lives on the board, and an issue title starts with its item number
+
+Since 2026-09-02 the "what is being worked on, and in what order" question is answered by the project
+board (`https://github.com/users/golyakoff/projects/1`), not by a table in `docs/roadmap.md`. Three
+things hold three different jobs and none of them repeats another:
+
+| Where | What it holds |
+|---|---|
+| The board | Status and order — the only place either is authoritative |
+| `docs/backlog/<item>.md` | The reasoning: alternatives, Done-when, Outcome. Never flattened into a ticket |
+| `docs/roadmap.md` stage sections | The narrative — what a stage is for and what landed in it |
+
+**An issue title begins with its item number, then a middot:** `20-20 · Make AGO Calendar deployable`.
+
+That prefix is not decoration. It is what makes an issue traceable in three directions at once — to
+its backlog file (`docs/backlog/20-20-*.md`), to its stage (`20`), and to every ADR, commit message
+and PR body in this project, all of which already refer to work by that same number. An issue titled
+only *"Deploy the calendar"* is a dead end from all three.
+
+**Match the number anchored at the start of the title, never anywhere inside it.** The audit that
+reads these titles learned this the expensive way in its markdown era: `5-17`'s entry cited `11-08` in
+its reasoning, a loose filter matched it, and the wrong row was deleted. An item id appearing in a
+summary is a reference; only the leading token is the issue's own identity.
+
+**An issue with no such prefix is not a queue item** — a bug report, a question, a discussion — and
+`tools/queue-audit.sh` skips it rather than flagging it. Refusing to look at anything else is what
+keeps that report worth reading.
+
+That script now reads open issues instead of the roadmap table, and it **treats an unreachable GitHub
+as "could not look", never as "nothing to see"** — an empty answer and a clean queue are otherwise
+indistinguishable, which would be the same vacuous green this project keeps finding in other guises.
+
 ## Branching
 
 - `main` is always green: it builds, all tests pass, and it is deployable.
