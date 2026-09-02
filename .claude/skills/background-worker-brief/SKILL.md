@@ -119,6 +119,31 @@ not round-robin: give a worker tasks in the repository and subsystem it already 
 task shares nothing with what a worker holds, a fresh one is the cheaper choice, and saying so is
 part of the operator's job rather than a defeat.
 
+## 0.75. "Го по жире" — the standing wave request
+
+CLAUDE.md rule 13. The author saying it means: **up to three background workers on `sonnet`, in
+parallel, each in its own isolated worktree, with pull requests opened strictly one at a time.**
+
+It is a request for a *wave*, not for three of anything. The two judgements it delegates are the
+whole job:
+
+**Do these items actually not interfere?** Decide before spawning, not after. They collide when they
+share a file, when both would add an EF migration to one repository (that is a certainty, not a
+risk — both rewrite the model snapshot), when both touch `docs/adr/README.md` or a stage section of
+`docs/roadmap.md`, or when one item's output is the other's input. Three non-colliding items is a
+wave; three items that share a repository's `package.json` is one item and two rebuilds. **When in
+doubt, run fewer** — the ceiling is permission, not instruction.
+
+**Sequential PRs, and this is the half that gets skipped.** Two branches cut from the same `main` and
+opened together means the second is stale the instant the first merges, and a pushed branch with a
+stale base is close-the-PR-and-rebuild rather than a rebase (`git-workflow.md`, CLAUDE.md rule 10).
+Workers may finish in any order; their PRs go up in one order, each cut from the `main` that already
+contains the last. §5's one-open-PR-at-a-time rule for the shared index generalises here to every PR
+in the wave.
+
+Nothing else changes: workers still never spawn anything (rule 12), never run `git commit`/`git push`
+(rule 9), and end at a commit-prep block the managing session executes.
+
 ## 0.8. A worker implements. It does not organise.
 
 **Decided by the author, 2026-09-02**, and now CLAUDE.md rule 12: a worker never spawns another
