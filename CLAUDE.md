@@ -89,6 +89,18 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     as UTC*. `DateTime` and `DateTime.UtcNow` are banned outside Infrastructure; time comes from
     `IClock`. Ordering never depends on a clock — it uses the server-assigned `sequence`
     (`docs/conventions/date-and-time.md`, `docs/adr/0011-*`).
+12. **A background worker never spawns another agent.** The managing session may spawn workers; a
+    worker may not spawn anything. A worker that believes its task warrants delegation **says so in
+    its report and stops** — that decision belongs to the author, not to the worker and not to the
+    managing session, and it is made by the author saying so explicitly rather than inferred from a
+    worker's plan.
+    (Decided 2026-09-02, after two briefs in one day produced agents that *organised* the work
+    instead of doing it. One of them had already spawned a child the managing session did not know
+    about, concluded nothing was running from the absence of a worktree, and told it to implement the
+    task itself — putting two agents in the same worktrees at once. `ListAgents` answers "is
+    something already running"; an empty directory does not. Cost is the other half of the reason:
+    every spawn pays a full cold start rediscovering repository structure, and one measured wave of
+    three workers cost roughly 840,000 tokens.)
 
 ## Teaching mode (important)
 
