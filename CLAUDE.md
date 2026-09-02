@@ -101,6 +101,21 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     something already running"; an empty directory does not. Cost is the other half of the reason:
     every spawn pays a full cold start rediscovering repository structure, and one measured wave of
     three workers cost roughly 840,000 tokens.)
+13. **"Го по жире" is a standing request with fixed terms.** When the author says it, the managing
+    session may run **up to three** background workers on `sonnet`, in parallel, **each in its own
+    isolated worktree** — and opens their pull requests **strictly one at a time**.
+    - **Three is a ceiling, not a target, and non-interference is the precondition.** Judging whether
+      two items collide is the managing session's job before spawning anything: the same repository
+      *file*, the same EF migration, the same shared index, or one item's output being the other's
+      input all mean they do not run together. When in doubt, run fewer.
+    - **Sequential PRs are the half that is easy to skip.** Two branches cut from the same `main` and
+      opened at once means the second goes stale the moment the first merges, and a pushed branch with
+      a stale base is close-the-PR-and-rebuild rather than a rebase (rule 10). Land one, then cut the
+      next from the `main` that now contains it. `land-a-slice` already required this for the shared
+      indexes; under this rule it applies to every PR in the wave.
+    - Everything else stands unchanged: workers still never spawn anything (rule 12), never write
+      history (rule 9), and hand back commit-prep blocks the managing session executes.
+    (Agreed 2026-09-02, generalising what had until then been decided per-wave.)
 
 ## Teaching mode (important)
 
