@@ -143,6 +143,12 @@ that is discovered at the worst possible moment otherwise.
   what was true of the pollers until this was looked at. Worth one honest pass over every
   `AddHostedService` in `Ago.Chat.Worker`, and worth stating the result even where it is "already
   fine".
-- **Whether `replicas: 1` should be written down as a constraint in the manifest** in the meantime —
-  a comment costs nothing and would have prevented this being invisible, but it is a stopgap for a
-  guarantee the code should carry.
+- ~~**Whether `replicas: 1` should be written down as a constraint in the manifest** in the
+  meantime.~~ **Answered yes by the author, 2026-09-02, and applied** (`ago-deploy`
+  `k8s/base/worker.yaml`): the comment above `replicas: 1` now says it is a constraint rather than a
+  tuning knob, names the two hosted services and why two replicas break them permanently, and states
+  plainly that it contradicts `concurrency.md` on purpose until this item resolves that properly. The
+  rolling-update `409` is recorded there too, so the log line is not mistaken for a provider outage.
+
+  This changes nothing about the item's scope — a comment is not a guarantee, and every Done-when box
+  below stands exactly as written. It buys the item time rather than shrinking it.
