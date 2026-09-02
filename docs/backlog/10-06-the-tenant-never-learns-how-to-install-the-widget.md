@@ -1,7 +1,9 @@
 # The tenant never learns how to install the widget
 
 - **Stage**: 10
-- **Status**: ready — **and it sits directly in the first client's day-one path.**
+- **Status**: done — 2026-09-02, `ago-chat#150` + `ago-console#87`. **One box was not delivered and
+  is not deferred silently**: the snippet itself needs a public URL that serves the widget script, and
+  no such URL exists. That is `#324`, and it carries the remainder. See *What was not delivered* below.
 - **Found**: 2026-09-02, while preparing a walkthrough checklist for `10-03`. Not from a report; from
   asking what the tenant does *after* signup succeeds.
 
@@ -56,14 +58,37 @@ the widget not being installable is the same as the widget not existing.
 
 ## Done when
 
-- [ ] An operator can see their own site's public key and a complete, copyable snippet, without asking
-      anybody.
-- [ ] An operator of one site **cannot** read another site's key — proven by test, since this is a new
+- [x] An operator can see their own site's public key, copyable, without asking anybody.
+- [x] An operator of one site **cannot** read another site's key — proven by test, since this is a new
       read of a tenant-scoped value and the failure mode is silent.
-- [ ] The snippet, pasted onto a page served from the configured origin, produces a working widget —
-      verified end to end rather than by inspecting the string.
-- [ ] The configured origin is visible on the same screen as the snippet.
-- [ ] The copy is comprehensible to someone who has never edited HTML. Judged by the author, not by me.
+- [x] The configured origin is visible on the same screen.
+- [x] The copy is comprehensible to someone who has never edited HTML. Written for a shop owner rather
+      than a developer, and it explains *why* the key is not a secret rather than only asserting it.
+      Still the author's to judge, as this box always said.
+- [ ] **Not delivered — moved to `#324`.** A complete, copyable snippet, and that snippet pasted onto
+      a page served from the configured origin producing a working widget, verified end to end.
+
+## What was not delivered
+
+The original first box asked for "the public key **and a complete, copyable snippet**". The key
+shipped; the snippet did not, and the reason is not that it was hard.
+
+**No public URL serves the widget script.** Checked against the live deployment rather than the code:
+`chat.reserve-me.ru/widget.js` returns 404, as do `/ago-chat.js`, `/embed.js` and `/static/widget.js`.
+`console.reserve-me.ru/widget.js` returns 200, but a control request to a deliberately nonsense path
+returns the identical 3220-byte `text/html` — it is the SPA's catch-all, not a script. The only URL
+that really serves the bundle belongs to a **demo shop**, because each demo image carries its own copy.
+
+`ago-landing`'s copy-me snippet has been pointing at one of those 404s the whole time, so anybody who
+copied it got a script tag that does not load.
+
+The screen therefore prints **no `<script>` tag at all**, and says so in the tenant's own language.
+Composing a URL from `apiBaseUrl` would have handed a tenant a snippet that 404s — worse than having
+no screen, and precisely the kind of green-looking breakage this project keeps finding.
+
+Where the script should live is a decision with real alternatives — most likely the API serves it, but
+a shared URL means one change reaches every embedded site at once, which the demo shops avoid by
+rebuilding. `#324` is where that gets decided, and the two boxes above ride with it.
 
 ## Open questions
 

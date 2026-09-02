@@ -404,6 +404,20 @@ Deliverables:
   `runbooks/local-dev.md`). The account exists, the required action never lifts, the visitor is stuck.
   Email had been deferred by `10-01` and then again by `13-01`, each pointing at the other, with no
   item owning it - the same shape of chain the console's design pass turned out to be in.
+- **The tenant learns how to install the widget (`10-06`, raised and mostly done 2026-09-02).** Found
+  by asking what a tenant does *after* signup succeeds, and the answer was nothing: the console never
+  showed her the site key, and no screen anywhere told her what to put on her page. `/settings/install`
+  now shows her own public key, copyable, and the origin the site is configured for, gated on
+  `site:configure` and proven by a cross-tenant test - a read whose failure mode is unusually quiet,
+  since leaking it returns another tenant's key with a `200` rather than throwing.
+
+  **It deliberately prints no `<script>` tag, and that is the finding worth carrying.** Checking the
+  live deployment rather than the code showed that *nothing serves the widget script at a public URL*
+  - `chat.reserve-me.ru/widget.js` is a 404, and the only origin really serving the bundle belongs to
+  a demo shop, because each demo image carries its own copy. `ago-landing`'s copy-me snippet has been
+  pointing at that 404 all along. Composing a URL from the API origin would have handed a tenant a
+  snippet that does not load, so the box stays open and rides with `#324`, where the hosting decision
+  gets made.
 
 **Done when:** a new account, site, and operator can be created end to end by a real visitor, with
 zero seed-script involvement - and with no admin-API step standing in for a verification mail that
@@ -476,7 +490,7 @@ Deliverables:
 
 - **Mobile navigation becomes a drawer, in both consoles (`11-14`, raised 2026-09-02)** — a hamburger
   and a left panel with the items in a column, replacing a horizontal bar that does not fit. Measured
-  rather than felt: `ago-console` builds **fourteen** navigation items for a tenant with
+  rather than felt: `ago-console` builds **fifteen** navigation items for a tenant with
   `site:configure`, `ago-calendar-console` has six hardcoded ones and **no `@media` rule anywhere**,
   and `15-11`'s gate found all eight of its screens overflowing at 375px with the nav strip visibly
   clipping. Cheap in one console and not the other: `ago-console`'s nav is already a permission-filtered

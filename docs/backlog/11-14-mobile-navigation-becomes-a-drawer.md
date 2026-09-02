@@ -15,11 +15,16 @@ slides in from the left, listing the items in a column.
 
 The horizontal bar does not fit, and this is now measured rather than felt:
 
-- **`ago-console` builds fourteen navigation items** for a tenant holding `site:configure`
-  (`shell/consoleNav.ts`): conversations, all conversations, search, four analytics reports and seven
-  settings screens. Fourteen labels have never fitted a 375px bar, and they do not comfortably fit a
+- **`ago-console` builds fifteen navigation items** for a tenant holding `site:configure`
+  (`shell/consoleNav.ts`): conversations, all conversations, search, four analytics reports and eight
+  settings screens. Fifteen labels have never fitted a 375px bar, and they do not comfortably fit a
   1280px one either — which is the part worth noticing, because it means this is not only a mobile
   fix.
+
+  It was fourteen when this item was written, on 2026-09-02. `10-06` added `/settings/install` the
+  same day. That is the argument for the item rather than against it: the count is not a fixed
+  property being worked around, it grows with every tenant-facing screen, and each one lands in a bar
+  that already does not fit.
 - **`ago-calendar-console` has six**, hardcoded as `<NavLink>`s in `App.tsx`, and **no `@media` rule
   anywhere in its stylesheet**. `15-11`'s gate found all eight of its screens overflowing at 375px
   (`ago-calendar-console#22`); the nav strip is one of the contributors, visible in the gate's own
