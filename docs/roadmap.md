@@ -604,6 +604,15 @@ Deliverables:
   becomes a bounded `DELETE` sweep, with `adr/0031`'s archive-before-removal policy unchanged. Removes
   a monthly-recurring CI failure class structurally rather than patching it, and makes buckets a usable
   shard key. Partition count is now constant against both tenant growth *and* elapsed time.
+- **Audit every hosted service for multi-replica safety (`15-10`, raised 2026-09-02, not yet built)** —
+  `14-16`'s own open question, kept rather than closed. That item found two of the Worker's hosted
+  services silently single-instance inside a host `concurrency.md` documented as multi-replica; the
+  reason nobody had noticed is that nobody had looked, and nobody has looked at the other thirty.
+  `Ago.Chat.Worker` registers 32, of which `adr/0089` settled two. The timer-driven jobs are the group
+  that needs thinking about — a periodic job on N replicas fires N times, and whether that is harmless,
+  wasteful or wrong is a per-job question. Delivers an audit and a verdict table in `concurrency.md`,
+  including for the ones that are fine; fixes anything unsafe as its own item, not smuggled in. Blocks
+  any decision to scale the Worker, without making that decision — which still needs a number (rule 7).
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a

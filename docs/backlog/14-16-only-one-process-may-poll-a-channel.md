@@ -230,11 +230,11 @@ reminder that a collision report is evidence, not a finding.
 
 ## Open questions
 
-- **Does the same reasoning reach `MessagePartitionPruneJob` and the other Worker background jobs?**
-  They appear safe under multiple replicas by their own mechanisms, but "appears safe" is exactly
-  what was true of the pollers until this was looked at. Worth one honest pass over every
-  `AddHostedService` in `Ago.Chat.Worker`, and worth stating the result even where it is "already
-  fine".
+- ~~**Does the same reasoning reach `MessagePartitionPruneJob` and the other Worker background
+  jobs?**~~ **Raised as `15-10` (2026-09-02)** rather than left here to be rediscovered. Counting them
+  was the first thing that item did: `Ago.Chat.Worker` registers **32** hosted services, of which this
+  item settled two — so thirty carry exactly the "appears safe, never checked" status the pollers had.
+  `15-10` audits all thirty and records a verdict for each, including the ones that are fine.
 - ~~**Whether `replicas: 1` should be written down as a constraint in the manifest** in the
   meantime.~~ **Answered yes by the author, 2026-09-02, and applied** (`ago-deploy`
   `k8s/base/worker.yaml`): the comment above `replicas: 1` now says it is a constraint rather than a
