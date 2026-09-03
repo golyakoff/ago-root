@@ -2,7 +2,7 @@
 
 - **Stage**: 22
 - **Status**: ready
-- **Depends on**: `22-05`
+- **Depends on**: `22-05`, `22-10` (the console's hostname settles first, so this merges into a name that is not moving)
 
 ## What changes
 
@@ -32,7 +32,7 @@ in `ago-console`'s equivalents rather than be lost. The six screens carry their 
 Named here because it is easy to discover late:
 
 - **`Operator__ConsoleOrigins`** on `ago-calendar-api` currently lists `https://calendar.reserve-me.ru`.
-  It becomes the chat console's origin. Without this the merged console is refused by CORS, and the
+  It becomes `https://office.reserve-me.ru` (`22-10`). Without this the merged console is refused by CORS, and the
   failure looks like a broken screen rather than a configuration line — `20-20` already lost a
   verification to exactly this class of mistake.
 - **`Operator__Audience`** is `ago-calendar-console`. The merged console presents a token minted for
@@ -42,7 +42,7 @@ Named here because it is easy to discover late:
 
 ## Done when
 
-- [ ] The six screens work at the chat console's origin, signed in with the chat client's token.
+- [ ] The six screens work at `office.reserve-me.ru`, signed in with the `ago-console` client's token.
 - [ ] They are absent — not broken — for a person without the calendar permissions, and absent when
       `calendarApiBaseUrl` is unset. `19-03`'s `permissionGating` tests are the shape to copy.
 - [ ] The i18n catalogue and the blocking ux-gate survive the move, proven by running the gate.
