@@ -66,6 +66,7 @@ tracked `.env` anywhere.
 | `AUTH_JWT_SIGNING_KEY` | Every visitor session token, for every site | same | `Ago.Chat.Api` only | **Draining since `adr/0067`** |
 | `KEYCLOAK_DEMO_PROVISIONER_SECRET` | The `ago-demo-provisioner` confidential client — the one credential here that lets a web-facing process *write* to the identity provider | same, **and** the client's own record inside Keycloak | `Ago.Chat.Api`, `Ago.Chat.Worker` (never `Ago.Chat.Webhooks`) | Coordinated |
 | `KEYCLOAK_SMTP_PASSWORD` | Nothing. Present and **deliberately empty** | — | — | — |
+| `CHATMODULE_SHARED_SECRET` | The chat → module channel (`adr/0094`). Holding it lets a caller mint a call for **any site that module deployment serves** — today exactly one, by configuration; `22-04` is where that stops being true and the secret becomes per-site | same, **and** the `credential` column on each `enabled_modules` row that points at that deployment — the one secret here that lives in the database as well as the environment | `Ago.Calendar.Api`, `Ago.Faq.Api`; minted by `Ago.Chat.Api`/`Worker` | **Three places, one value.** Rotating it means the node's environment, the manifests' reference, and every matching `enabled_modules` row — and a mismatch presents as module calls refused with `401`, not as anything naming a secret |
 
 Notes that change what a reader would otherwise assume:
 
