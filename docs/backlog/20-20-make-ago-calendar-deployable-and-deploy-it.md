@@ -1,8 +1,9 @@
 # Make AGO Calendar deployable, and deploy it
 
 - **Stage**: 20
-- **Status**: ready — **and this is the largest single gap between the product as built and the product
-  as usable.** Nothing else in Stage 20 can be verified by hand until this lands.
+- **Status**: done (2026-09-03) — AGO Calendar runs. Two Done-when boxes below stay open on purpose
+  and are named in the Outcome: an operator has not actually signed in, and the restore drill has not
+  been repeated with the new database. Both need a human, not a session.
 - **Found**: 2026-09-02, by asking where AGO Calendar runs and discovering the answer is nowhere.
 
 ## The gap, counted rather than characterised
@@ -93,22 +94,76 @@ Any of these that turns out to be genuinely contested becomes an ADR; none is as
 
 ## Done when
 
-- [ ] Both calendar hosts and the migrator build into commit-SHA-tagged images published by CI, with
+- [x] Both calendar hosts and the migrator build into commit-SHA-tagged images published by CI, with
       no manual step.
-- [ ] The migrator runs before the hosts and creates the schema on an empty database, proven by doing
-      it rather than by reading the manifest.
+- [x] The migrator runs before the hosts and creates the schema on an empty database, proven by doing
+      it rather than by reading the manifest. — `ago-calendar-migrator` `Complete` in 16s against a
+      Postgres holding only `ago_chat`, `keycloak` and `postgres`; `ago_calendar` present afterwards.
 - [ ] A tenant can reach the calendar console over TLS at its own hostname and sign in against the
-      existing realm.
-- [ ] `smoke.sh` covers the calendar API with the same three checks the other hosts get, and it is
-      green.
-- [ ] One backup taken **after** the calendar database exists is shown to contain it —
-      `databases_dumped=` in the manifest names it. This is the check that proves the 2026-09-02
-      enumeration change did what it was for; it is cheap and it closes the author's own stated worst
-      case.
+      existing realm. — **half met, and the unmet half is the important one.** TLS and the hostname
+      are proven; *signing in* is not, because it needs a browser and credentials. Everything the
+      sign-in depends on is verified individually (below), which is not the same as a sign-in.
+- [~] `smoke.sh` covers the calendar API with the same three checks the other hosts get, and it is
+      green. — green, but **one of the three checks is real and two are skipped**: `Ago.Calendar.Api`
+      reports no commit, so neither "reports its commit" nor "the image tag matches the binary" can be
+      asserted. Split out as `20-24`, because the two missing ones are exactly the pair that catches a
+      stale image.
+- [x] One backup taken **after** the calendar database exists is shown to contain it. — the backup at
+      `20260903T084531Z` dumped `ago_calendar` alongside `ago_chat` and `keycloak`. Shown from the
+      service's own journal, which records the per-database `psql` calls; the `databases_dumped=` line
+      is inside the encrypted artifact and reading it needs the passphrase a human types, so the
+      journal is the strongest evidence available without a restore. **The 2026-09-02 enumeration
+      change did what it was for, on the first real case there had ever been.**
 - [ ] A restore of that backup into the scratch target brings the calendar database back with its rows
-      — the drill, repeated once with the new database present.
-- [ ] `docs/architecture/repositories.md` and the deploy runbooks describe the calendar hosts, because
-      a deployment nobody documented is one the next session rediscovers.
+      — the drill, repeated once with the new database present. — not done: nothing automated in this
+      arrangement decrypts, by design.
+- [x] `docs/architecture/repositories.md` and the deploy runbooks describe the calendar hosts, because
+      a deployment nobody documented is one the next session rediscovers. — including the part that is
+      *missing* rather than only what is present: see `20-25`.
+
+## Outcome
+
+**AGO Calendar runs.** `ago-calendar-api`, `ago-calendar-worker` and `ago-calendar-console` are
+`Running` in the `ago-chat` namespace, `ago_calendar` exists on the shared Postgres, and the full
+smoke suite reports `37 passed, 0 failed` — including the chat side, which was rolling-restarted the
+same hour by `ago-root#354`.
+
+The manifests, images, gateway listeners, routes and the certificate SANs already existed on
+`ago-deploy`'s `main`; what had never happened was applying them. Two defects only a real deploy could
+surface:
+
+**`ago-calendar-api` crash-looped on its first pod.** `Operator__Authority` is
+`http://keycloak:8080/realms/ago-chat` — a ClusterIP address — and `AuthenticationSetup` defaults
+`Operator:RequireHttpsMetadata` to `true`, so JwtBearer refused it and threw on every request reaching
+the authentication middleware. `Ago.Chat.Api` has the identical in-cluster authority and defaults its
+own equivalent to `false`, with the reason stated in `Program.cs`. That asymmetry is why three chat
+hosts have run for weeks and this one died immediately. Fixed in the manifest rather than by changing
+the calendar's default: the code keeps a secure default, the deployment states the fact only the
+deployment knows. **It presented as a startup *probe* failure returning 500** — a broken application
+rather than a missing setting, and correct in every local compose run.
+
+**The smoke check for the calendar API was hitting the console.** `calendar.` is the console;
+`calendar-api.` is the API. The check predated that naming and never moved, so it asserted the API was
+up by fetching a static SPA that answers 200 to everything — **it would have passed during the crash
+loop above.** It now hits `calendar-api.`, asserts the response body, and carries a 404 control, a 401
+check on a guarded route (the one that would have caught the defect), and an assertion that the two
+`/dev/*` endpoints are absent.
+
+**The Keycloak client was created before the console was deployed**, which is the order that matters:
+`ago-calendar-console` is declared in `keycloak-realm-import.json`, and `--import-realm` never re-reads
+that file once the realm exists. A listing of the live realm confirmed its absence first; after
+creation it was read back and its audience mapper compared key-for-key against `ago-console`'s working
+one. Reversed, this fails silently — the console deploys, serves TLS, and nobody can log in.
+
+**Decisions the item asked to be recorded**, all taken as recommended: one Postgres instance with a
+separate `ago_calendar` database; one namespace (`ago-chat`, whose name was already misleading and is
+now more so); the Worker deployed on day one.
+
+### What this deploy revealed as undone
+
+- `20-24` — `Ago.Calendar.Api` reports no commit, so two smoke checks can only be skipped.
+- `20-25` — the calendar hosts have no deploy path and no rollback path; `deploy.sh` and
+  `rollback.sh` do not mention them at all.
 
 ## Open questions
 

@@ -1055,8 +1055,20 @@ Deliverables:
   needed *more* new machinery than the shape it was supposed to be cheaper than. First authorization
   question in this project to span two products, so `authorization.md` gained a section of its own.
 
+- **AGO Calendar runs** (`20-20`, done 2026-09-03, `ago-deploy#125`) — fifteen merged Stage 20 items
+  had never executed anywhere: no manifest, no Dockerfile, no migrator, no database. The manifests and
+  images were built first; **this item was the applying of them**, and what it bought was the two
+  defects only a real deploy can produce. `ago-calendar-api` crash-looped because
+  `Operator:RequireHttpsMetadata` defaults to `true` while its authority is an in-cluster `http://`
+  address — `Ago.Chat.Api` defaults the same knob to `false`, which is why three chat hosts had run for
+  weeks and this one died on its first request. And the smoke check meant to catch that was **hitting
+  the console instead of the API**, so it would have passed throughout the crash loop. Both fixed;
+  `37 passed, 0 failed`. Two things stay open and are named rather than ticked: nobody has actually
+  signed in (`20-24` and a human are what close that honestly), and the calendar has **no rollback
+  path** — `deploy.sh` and `rollback.sh` do not know it exists (`20-25`).
 - **The booking workflow the first tenant actually uses (`20-21`, `20-22`, `20-23`, cut 2026-09-02 from
-  `adr/0090`)** — all three blocked on `20-20`, because none is verifiable by hand until Calendar runs.
+  `adr/0090`)** — all three were blocked on `20-20`, which has now landed, so they are verifiable by
+  hand for the first time.
   `20-21`: an operator creates a customer and a booking, finds an existing customer by a phone typed in
   any of its equivalent forms, and corrects a mistyped number (which clears its verification). This is
   the tenant's primary intake — telephone and walk-in — and it has no implementation at all today.

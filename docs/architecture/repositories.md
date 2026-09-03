@@ -29,8 +29,8 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | `ago-console` | operator console SPA | static bundle | the public API contract |
 | `ago-deploy` | compose, Kustomize, seed | manifests | image tags, chart values |
 | `ago-landing` | the public marketing page at the apex domain | a static page, served from the demo overlay | nothing |
-| `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and its own hosts** (Api, Worker) | Docker images (none published yet — nothing deploys them) | `Ago.Platform.*` packages |
-| `ago-calendar-console` | AGO Calendar's operator console SPA | static bundle | AGO Calendar's public API contract |
+| `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and its own hosts** (Api, Worker, Migrator) | Docker images, published to GHCR by CI under the commit SHA (`adr/0047`) | `Ago.Platform.*` packages |
+| `ago-calendar-console` | AGO Calendar's operator console SPA | static bundle, published as an image the same way | AGO Calendar's public API contract |
 | `ago-root` | docs, ADRs, conventions, skills, backlog, `load/` scenarios and reports | the rules everything else obeys | nothing |
 
 ## Why the platform is a package, not a folder
