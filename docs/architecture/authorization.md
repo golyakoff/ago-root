@@ -533,7 +533,23 @@ What changes for this file:
 action from a subject with no authorization is still refused rather than auto-provisioned, and that
 property is what the projection has to preserve rather than replace.
 
-Until Stage 22 lands, everything below is what is true in the code.
+**Shipped for AGO Calendar in `22-05` (2026-09-03).** The projection exists, the calendar's own
+`operators`/`roles`/`operator_roles` are gone, and `PermissionChecker` reads
+`role_assignment_projections`.
+
+**The staleness this buys is a security property, so it is stated as a number rather than left as
+"eventually".** A revocation takes effect once chat's outbox dispatcher has published it, the broker
+has delivered it and the consumer has committed: **sub-second in the ordinary case, bounded above by
+five seconds** by `OutboxDispatcherOptions.PollInterval`, the fallback for a missed `LISTEN`/`NOTIFY`.
+That is not a new latency source — it is what this path already guaranteed for every other event on
+it — and the permission check itself adds no window of its own: there is no cache in front of it, so
+the request after the projection commits is already refused.
+
+Compare what the rejected alternative would have cost. Permissions carried as token claims would be
+stale for the **whole lifetime of the token**, with no upper bound anyone could shorten without
+reissuing, which is precisely rule 8's "never cache what a write decision depends on".
+
+Until the rest of Stage 22 lands, everything below is what is true in the code.
 
 ## A second product asks this file a question: shipped in `20-08`
 
