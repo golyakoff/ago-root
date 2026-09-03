@@ -48,8 +48,13 @@ whole thing gone* is a separate mechanism against
 `https://chat-api.reserve-me.ru/healthz/ready`, and it is **still an open question**, not done. Do not
 read a quiet inbox as a healthy deployment until it exists.
 
-**The hostname in that sentence changed on 2026-09-03 (`adr/0091`), and getting it wrong would be
-worse than having no external check at all.** `chat.reserve-me.ru` is now the operator console — a
+**The hostname in that sentence changed twice on 2026-09-03, and getting it wrong would be worse
+than having no external check at all.** First `adr/0091` made `chat.reserve-me.ru` the operator
+console; then `adr/0093` removed that scheme's premise — there is no console per product any more —
+and `22-10` moved the console to **`office.reserve-me.ru`** and retired `chat.` outright. It resolves
+to nothing now.
+
+The trap the paragraph below describes is unchanged, only its address is: `office.reserve-me.ru` is a
 single-page app whose server answers **200 with `index.html` for any path it does not recognise**,
 `/healthz/ready` included. An external monitor pointed there would report a healthy deployment while
 the API, the database and the broker were all down: precisely the false negative this mechanism exists
