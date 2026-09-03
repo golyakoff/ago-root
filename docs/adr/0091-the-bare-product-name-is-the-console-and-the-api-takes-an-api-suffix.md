@@ -1,6 +1,8 @@
 # ADR-0091: The bare product name belongs to the console, the API takes an `-api` suffix
 
-- **Status**: Accepted
+- **Status**: Accepted; **partially superseded by ADR-0093** (2026-09-03) - its premise is a
+  console per product, which Stage 22 removes. `office.` becomes the single console and bare
+  product names disappear; the `-api` suffix it introduced survives unchanged.
 - **Date**: 2026-09-02
 - **Amends**: `adr/0026` (its subdomain-to-service map, which named `chat.` as the API and
   `console.` as the console — that mapping is what this reverses)
