@@ -1081,6 +1081,26 @@ Deliverables:
   The stale-image check was proven **by mismatch**, live: the pin was pointed at a tag the binary does
   not carry and the suite went red. What remains is `20-26` — `redeploy.sh`, the build-from-source
   path, still knows nothing about the calendar.
+- **The calendar could not have a first tenant at all** (`20-27`, done 2026-09-03) — found while
+  writing a walkthrough of the console, which could not get past the first screen. `ago_calendar` held
+  eleven migrations and zero rows, and the only code creating a `Tenant` sat behind the `/dev/*` gate
+  `8-11` had just made explicit. Every other write needed an operator that could not exist yet, so
+  authentication succeeded and landed on nothing — which is also why nobody had signed in, and why
+  that would have looked like a broken console rather than a missing account. Closed by widening
+  `RegisterTenantHandler` to take an **owner email** and creating the account owner
+  invited-and-unlinked the way `InviteOperatorHandler` already creates a colleague, so `adr/0088`'s
+  claims transformation links it on first sign-in — an existing mechanism reused rather than a new
+  one. The `adr/0058` service-account shape was rejected **on the code**: that client exists to create
+  Keycloak *users*, and a real owner registers their own. `Ago.Calendar.Provisioner` is headless with
+  no port and no route. **Two Done-when stay open on purpose**: no tenant has been created yet, and
+  the owner's first sign-in — the only proof that matters — is still owed.
+- **`redeploy.sh` learned the calendar** (`20-26`, done 2026-09-03) — the build-from-source path built
+  no calendar image and never ran its migrator, so `8-08`'s coupling was held there by a comment
+  asking a human to remember. Both migrators now run before *either* product's hosts move, which is
+  stronger than the rule requires and means a failure in either leaves both products untouched.
+  Landing it against the node found more than the code did: there was **no calendar checkout on the
+  box at all**, and every other one was badly stale — `ago-chat` 85 commits behind, `ago-console` 71.
+  All brought to their tips. `ago-landing` is the one whose commit is read but never pulled (`15-13`).
 - **The booking workflow the first tenant actually uses (`20-21`, `20-22`, `20-23`, cut 2026-09-02 from
   `adr/0090`)** — all three were blocked on `20-20`, which has now landed, so they are verifiable by
   hand for the first time.

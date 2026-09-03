@@ -79,17 +79,31 @@ tag written there. After a deploy that is meant to stick, update the `newTag` va
 seven now, three hosts and four frontends — and commit. `deploy.sh` prints the exact value;
 `smoke.sh` fails if the running image tag and the commit inside the artifact disagree, for all seven.
 
-### What the calendar still does not have
+### The calendar, on both paths
 
-`20-25` gave it a deploy and rollback path, and `20-24` made `smoke.sh` able to catch a stale
-calendar image — the two former `SKIP`s are real checks now, proven live by pointing the pin at a
-tag the binary does not carry and watching the suite go red.
+`20-25` gave it a deploy and rollback path, `20-24` made `smoke.sh` able to catch a stale calendar
+image, and `20-26` taught `redeploy.sh` to build it from source. All three landed 2026-09-03, the day
+it went live.
 
-**`redeploy.sh` is the remaining gap** (`20-26`). The build-from-source path handles AGO Chat only:
-it builds no calendar image, imports none, and never runs `ago-calendar-migrator`. So on *that*
-path `8-08`'s coupling — the migrator's image moves with the hosts, never independently — is held by
-a comment in `kustomization.yaml` asking a human to remember, rather than by the script. Until it
-closes, do not build the calendar from source on the node; deploy a published build instead.
+On the build-from-source path **both migrators run before either product's hosts move** — stronger
+than `8-08` requires, and deliberately so: a failure in either leaves both products exactly where
+they were rather than half-moved.
+
+**Two things about that path are unproven, and both matter before anybody reaches for it:**
+
+- **It has never been run since it learned the calendar.** Its ordering and its failure behaviour
+  were proven in an instrumented harness, not against this node. The first real run is itself a test.
+- **`redeploy.sh` reads `ago-landing`'s commit from a checkout it does not pull** (`15-13`). Every
+  other component is built from its repository tip; landing is built from whatever the box happens to
+  be sitting on — *and tagged with that stale SHA*, so `smoke.sh`'s tag-versus-binary check would
+  agree with itself while the apex served old content.
+
+**The checkouts on the node drift silently**, because since `15-06` almost every deploy uses a
+published image and never touches them. On 2026-09-03 `ago-chat` had reached **85 commits behind**,
+`ago-console` 71, `ago-widget` 39 and `ago-landing` 14 before anybody looked. They were brought to
+their tips that day and matched the deployed images exactly. Step 1 pulls five of the six on every
+run, which is why only landing's staleness survives a redeploy — but nothing pulls them between runs,
+so anything that reads a checkout without pulling it reads history.
 
 **Apply from the node, with the node's own `.env`.** Rendering the overlay anywhere else produces
 `envFrom` references to a `Secret` whose name carries a hash of whatever placeholder values were used,
