@@ -1,7 +1,7 @@
 # a module registration has no lifecycle — nothing creates one, nothing rotates or revokes it
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04), `adr/0095` — merged, **deliberately not deployed**. See Outcome.
 - **Found**: 2026-09-03
 
 ## The gap
@@ -28,11 +28,48 @@ They are one promise — *a module registration is something that can be created
 
 ## Done when
 
-- [ ] Enabling a module for a site produces a working registration on the module side, with no hand-inserted row anywhere — proven end to end, by a call that succeeds afterwards and failed before.
-- [ ] A credential can be rotated without downtime for other sites, proven by rotating one while another keeps working.
-- [ ] Revoking a site's registration refuses its subsequent calls, proven by trying one.
-- [ ] The two sides cannot silently disagree: a registration that exists on one side only is detectable.
+- [x] Enabling a module for a site produces a working registration on the module side, with no
+      hand-inserted row anywhere — proven end to end, by a call that succeeds afterwards and failed
+      before. — one test asserts the 401 → provision → 200 sequence inline, against real Postgres and
+      a real in-process host. **Not two live processes**: no test can span two repositories, and
+      `ModuleTaskGatewayIntegrationTests` set that ceiling before this item.
+- [x] A credential can be rotated without downtime for other sites, proven by rotating one while
+      another keeps working. — and the window is **per tenant**, proven with two real tenants in both
+      module products.
+- [x] Revoking a site's registration refuses its subsequent calls, proven by trying one.
+- [x] The two sides cannot silently disagree: a registration that exists on one side only is
+      detectable. — **detectable, not repairable**, and the difference is recorded rather than
+      glossed: see Outcome.
 
 ## Context
 
 Found by the `22-04` worker and reported as *"the load-bearing gap in this report, not a footnote"* — correctly. Harmless today only because `enabled_modules` holds zero rows and `ago-faq` is not deployed.
+
+## Outcome
+
+Done 2026-09-04. `ago-calendar#35` and `ago-faq#3` first, then `ago-chat#161`, then `adr/0095`.
+
+**The work corrected itself twice, both times against its own interest, and that is the part worth
+keeping.**
+
+First: it initially described the new provisioning secret's stakes as *lower* than `adr/0094`'s. On
+re-examination it wrote the opposite — **the blast radius is worse.** A holder can register, rotate or
+delete the registration for *any* site the deployment serves: rewriting who the legitimate
+credential-holder is, persistently, rather than forging one call. Accepted because a bootstrap anchor
+cannot be scoped to the per-site row it exists to create, and mTLS does not escape that either.
+
+Second: it reported drift as repairable by re-running an idempotent command, then traced the real code
+paths and found that for the direction module-first ordering makes likeliest — module has the row,
+chat does not — **none of chat's three write commands fixes it.** Register is create-only, rotate and
+revoke both require chat's own row first. The remedy is an out-of-band delete against the module.
+`adr/0095` names the two changes that would close it; neither is built.
+
+**Not deployed, deliberately.** `enabled_modules` holds zero rows and no `ModuleProvisioning:Secret`
+is configured, so every provisioning call is refused — the validator fails closed on an empty secret,
+including against an empty header. `22-18` is the precondition for issuing that secret: it removes the
+exposure by keeping the channel inside the cluster, where it already can be, rather than mitigating
+it.
+
+Built in both module products rather than only the deployed one, and that was the right call: doing
+`ago-calendar` alone would have let a product-shaped seam into a contract that has to stay generic,
+with nothing to catch it. `ago-faq` costs nothing operationally and doubles the proof.
