@@ -1,7 +1,7 @@
 # Give the five rate-limit refusals a `Retry-After`
 
 - **Stage**: 5
-- **Status**: ready
+- **Status**: done (2026-09-03), `ago-chat#158`
 - **Found**: 2026-09-03, while fixing `5-18`/#347 — `ErrorExtensions`' own comment already named it.
 
 ## The gap
@@ -44,11 +44,43 @@ The choice is the work, not the typing:
 
 ## Done when
 
-- [ ] The chosen shape is stated with what it replaced and why the alternatives were rejected.
-- [ ] Each of the five 429s carries a `Retry-After` a client can parse, asserted by a test.
-- [ ] No path checks a rate limiter twice per request — proven, not assumed, since the symptom is a
-      halved limit rather than a failure.
+- [x] The chosen shape is stated with what it replaced and why the alternatives were rejected. —
+      each endpoint derives the wait from the `*RateLimitOptions` its own handler already used.
+      Widening `Error` was rejected as a platform change five call sites in one product do not
+      justify; `#347`'s read-it-back-out-of-the-message shape was rejected as five near-identical
+      parsers of prose.
+- [x] Each of the five 429s carries a `Retry-After` a client can parse, asserted by a test. —
+      delta-seconds, ceiling, clamped to at least 1 because `ago-widget` treats a `0` as "retry now".
+- [x] No path checks a rate limiter twice per request — proven, not assumed, since the symptom is a
+      halved limit rather than a failure. — **and the tests could not have proven it**: a fake
+      limiter does not decrement, so a test passes just as happily against an endpoint that checks
+      twice. What proves it is structural — all sixteen `rateLimiter.CheckAsync(` call sites are
+      still on the same sixteen lines in the same eight files, and the five handlers that own the
+      real check have a zero-line diff.
 
 ## Out of scope
 
 - The four unmapped `demo.*` codes. Separate promise, and done: `5-19`.
+
+## Outcome
+
+Done 2026-09-03, `ago-chat#158`.
+
+**The slowest bucket, not the one that actually denied the call.** `Error` carries no marker for which
+tier refused — by design, since that is precisely the structured detail it does not model — so the
+slowest-refilling bucket's own worst case is the only answer that is never too short. Slightly
+pessimistic, never premature.
+
+**`PhoneVerification.LockedOut` keeps carrying no header**, deliberately: no wait fixes it, only a new
+pending verification. Confirmed untouched rather than overlooked — it is a different handler from the
+one this change edits.
+
+**One edge flagged rather than fixed.** `Conservative` computes `1 / refillRatePerSecond` and none of
+the `*RateLimitOptions` carry a `[Range]`, so a configured `0` would give infinity and turn a 429 into
+a 500. A zero refill rate is an already-broken configuration — the limiter would deny permanently
+after the first burst — but this path previously returned 429 under *any* configuration and now might
+not. Left alone deliberately rather than changed after the suite had run.
+
+**A number that reconciled rather than surprising.** The branch was cut before `22-05` and rebuilt on
+the `main` that contains it: 761 integration tests is `22-05`'s 747 plus this item's 14, checked
+rather than accepted, because the counts either side of the rebase would otherwise look inconsistent.

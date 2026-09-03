@@ -70,7 +70,8 @@ declare as little as it can.
 - Platform packages use SemVer. A breaking change to a platform port is a major bump with a migration
   note in the platform's changelog — the same discipline demanded of integration events.
 - Local development uses a **file-based NuGet feed**: `dotnet pack` into a local folder
-  (`C:\git\ago\.nuget-feed\`, `runbooks/workspace.md`) that `nuget.config` in `ago-chat` lists as a
+  (`C:\git\ago\.nuget-feed\`, `runbooks/workspace.md`) that a **workspace-level `NuGet.Config`
+  beside it** declares as a source and `nuget.config` in `ago-chat` maps `Ago.Platform.*` to as a
   source. No hosted feed is required to work offline.
 - For a change that genuinely spans both repositories, `ago-chat` supports a **dev override**: a
   solution filter / `Directory.Build.props` switch that swaps the `PackageReference` for a
