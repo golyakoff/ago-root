@@ -270,5 +270,8 @@ $env:AgoPlatformDevOverride = 'true'; dotnet build   # PowerShell
 
 **CI** (`.github/workflows/ci.yml` in both backend repos, `adr/0015`): the commands above, run by
 GitHub Actions on every push and PR; `ago-platform` additionally packs and uploads a `.nupkg` on
-`main`, and `ago-chat`'s CI packs `ago-platform`'s current `main` from source into a throwaway local
-feed before restoring — there is no hosted registry yet.
+`main` — to this repository's **GitHub Packages NuGet feed**, which is what `ago-chat` and
+`ago-calendar` restore from in CI via `nuget.ci.config` and a read-only PAT (`adr/0018`,
+`docs/architecture/repositories.md`). This sentence used to say the consuming CI packed `ago-platform`
+from source into a throwaway feed because there was no hosted registry; `adr/0018` replaced that and
+this line did not follow, which is exactly the kind of stale instruction that gets acted on.

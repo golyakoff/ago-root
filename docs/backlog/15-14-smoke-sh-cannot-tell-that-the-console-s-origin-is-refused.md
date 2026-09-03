@@ -1,7 +1,7 @@
 # smoke.sh cannot tell that the console's origin is refused by the API
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-03)
 - **Found**: 2026-09-03
 
 ## The gap
@@ -34,10 +34,25 @@ Both matter. The positive alone would pass against a wildcard; the control is wh
 
 ## Done when
 
-- [ ] `smoke.sh` fails when the console's origin is absent from `sites.allowed_origins`, proven by removing it and watching it go red.
-- [ ] It passes with a control origin refused in the same run.
-- [ ] The 30-second negative cache cannot make it flaky, or its message says that is what happened.
+- [x] `smoke.sh` fails when the console's origin is absent from `sites.allowed_origins`, proven by removing it and watching it go red. — proven against the live deployment by removing the row, not against a local stand-in.
+- [x] It passes with a control origin refused in the same run. — an unknown origin gets no `Access-Control-Allow-Origin`, asserted on the *header* rather than the status, because a refused origin still answers `200`.
+- [x] The 30-second negative cache cannot make it flaky, or its message says that is what happened. — the check documents both cache directions in its own text: a denial is remembered for 30 seconds, an approval for five minutes.
 
 ## Context
 
 Found 2026-09-03. The console moved to `chat.` in the morning and `office.` in the evening; both times the manifest half was updated and verified, the database half was not, and `smoke.sh` was green throughout. The second time, the failure reached the author as `Sign-in failed: Failed to fetch` — see `11-17` for why that wording made it worse.
+
+## Outcome
+
+Done 2026-09-03, `ago-deploy#126`.
+
+**The 30-second cache nearly cost the fix its credit.** Re-running the check immediately after adding
+the console's origin to `sites.allowed_origins` still showed it refused, which reads exactly like a
+fix that did not work. It was the negative cache this item's own text had already warned about —
+documented in the source, and still nearly mistaken for a broken change while writing the check that
+exists to prevent that mistake. The check now says so in its failure text, so nobody has to remember.
+
+**Asserting on the header, not the status, is the part that would have been easy to get wrong.** A
+request from a refused origin still returns `200`; only the absent `Access-Control-Allow-Origin` tells
+the two apart. A status-based check would have been green in exactly the state this item exists to
+catch — which is how the original 43-passed run happened.
