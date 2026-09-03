@@ -79,6 +79,24 @@ tag written there. After a deploy that is meant to stick, update the `newTag` va
 seven now, three hosts and four frontends — and commit. `deploy.sh` prints the exact value;
 `smoke.sh` fails if the running image tag and the commit inside the artifact disagree, for all seven.
 
+**And when you apply that committed record, use `./apply-demo.sh` rather than `kubectl apply -k`**
+(`8-12`). Following the instruction above is what breaks the next apply: `8-08` ties both migrators'
+image tags to their hosts', a `Job`'s `spec.template` is immutable, so `apply -k` refuses with
+`field is immutable` and three kilobytes of serialised pod spec whose last three words are the only
+ones that matter. `kubectl diff -k` fails the same way, which is worse - it reports drift that does
+not exist, so you go looking for it.
+
+`apply-demo.sh` deletes the finished migrator Jobs and then applies, which is what `redeploy.sh` has
+always done internally; it reads `.status.active` first and refuses rather than killing a migration
+that is still running. Both Jobs carry `ttlSecondsAfterFinished: 3600`, so this only bites inside the
+hour after a migration - which is exactly when a tag bump happens. That hour was not shortened on
+purpose: a Job that deletes itself takes a failed migration's logs with it.
+
+**It covers `overlays/demo` only.** The `local` overlay hits the identical refusal, and
+[`k8s-local.md`](k8s-local.md) carries the manual form (`kubectl delete job ago-chat-migrator -n
+ago-chat && kubectl apply -k k8s/overlays/local`) - which is where this knowledge already sat before
+`8-12` noticed it was needed one overlay over. Do not assume the script reaches the local cluster.
+
 ### The calendar, on both paths
 
 `20-25` gave it a deploy and rollback path, `20-24` made `smoke.sh` able to catch a stale calendar
@@ -228,9 +246,13 @@ the detail.
 
 `15-01` is the first change of that shape: Keycloak's move onto a persistent database is entirely
 manifest plus one new `.env` key. `public-deploy.md`'s "Applying `15-01` to this deployment" section is
-the procedure, and it starts with `kubectl apply -k k8s/overlays/demo` for exactly this reason. The
-same applies to any future resource-limit, probe, route or env change. If the fix is in a `.yaml` under
-`k8s/`, `./redeploy.sh` is not the tool.
+the procedure, and it starts with an overlay apply for exactly this reason. The same applies to any
+future resource-limit, probe, route or env change. If the fix is in a `.yaml` under `k8s/`,
+`./redeploy.sh` is not the tool.
+
+**The tool is `./apply-demo.sh`**, not `kubectl apply -k` directly - see the trap above. It is a thin
+wrapper around the same apply, and the only reason it exists is the immutable-`Job` refusal that the
+bare command hits whenever a migrator tag has moved.
 
 `10-05` adds a second shape of the same problem, one step further removed: a change that does not
 reach the node through `kubectl apply -k` either. The realm's `smtpServer` — and every realm-level
