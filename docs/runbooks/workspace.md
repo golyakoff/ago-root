@@ -36,8 +36,35 @@ paths: every documentation link between repositories is relative.
 `C:\git\ago\.nuget-feed\` is a plain folder, sibling to the repositories and outside all of them, so
 it is gitignored by construction rather than by rule and survives any single repository being deleted
 or recloned. `ago-platform` runs `dotnet pack` into it; `ago-chat/nuget.config` and
-`ago-calendar/nuget.config` both list it as a package source (`architecture/repositories.md`). Create
-it once with `mkdir C:\git\ago\.nuget-feed` — nothing else needs to exist inside it beforehand.
+`ago-calendar/nuget.config` both **map** `Ago.Platform.*` to it (`architecture/repositories.md`).
+Create it once with `mkdir C:\git\ago\.nuget-feed` — nothing else needs to exist inside it
+beforehand.
+
+**A second file beside it is required, and a fresh machine will not build without it** (`17-11`).
+`C:\git\ago\NuGet.Config` — same folder, also outside every repository, also untracked:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="ago-local" value="C:\git\ago\.nuget-feed" />
+  </packageSources>
+</configuration>
+```
+
+**Why it is not simply inside each repository's own `nuget.config`, where it used to be.** That is
+where it was until `17-11`, named by this absolute Windows path — and Dependabot's Linux runner read
+that string as *relative*, resolved it under its clone root, and failed with `NU1301`. A NuGet source
+that is **configured and unreachable** is a hard restore error for every project touching the package;
+one that is **simply absent** is not. So the committed files now name only `nuget.org` and map
+`Ago.Platform.*` to source keys they do not declare, and each environment supplies its own: this file
+for local development, a `registries:` block in `dependabot.yml` for Dependabot, and
+`nuget.ci.config`/`nuget.docker.config` unchanged for CI and the image build.
+
+The consequence for this runbook: **both** files are workspace state. Recreate both if the tree moves
+or the machine is new, and note that a missing `NuGet.Config` fails at restore with "unable to find
+package `Ago.Platform.Kernel`" rather than anything mentioning a missing config, which is not an
+obvious message to trace back to this paragraph.
 
 It holds every version ever packed, and NuGet resolves the *lowest* version satisfying a pin, so two
 products pinning different platform versions coexist in it without interfering. What it does **not**

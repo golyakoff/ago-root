@@ -1,7 +1,7 @@
 # the calendar hosts will not start without broker credentials neither manifest has
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-deploy#137`, verified live
 - **Found**: 2026-09-03, verifying `22-05` before merge.
 
 ## What changed under the deployment
@@ -44,15 +44,22 @@ crash-loop, which every check passed straight through.
 
 ## Done when
 
-- [ ] Both calendar hosts carry `Messaging__RabbitMq__*` naming the **same broker and vhost**
-      `ago-chat`'s own Worker publishes to, and both start.
-- [ ] The credential question is answered rather than assumed: the same user, or a reader scoped to
-      that vhost, with the choice stated.
-- [ ] Whatever network policy is needed for the calendar pods to reach the broker exists — `22-05`'s
-      author flagged this as out of their lane and it has not been checked.
-- [ ] Something fails when the keys go missing again. A pod that will not start is loud; a pod that
-      starts and silently never receives a role change is not, and that is the state this item's own
-      fix leaves reachable.
+- [x] Both calendar hosts carry `Messaging__RabbitMq__*` naming the **same broker and vhost**
+      `ago-chat`'s own Worker publishes to, and both start. — they did **not** before: the redeploy
+      carrying `22-05` left `ago-calendar-api` in CrashLoopBackOff and the worker in Error, with
+      `OptionsValidationException` naming all three fields. The prediction was observed.
+- [x] The credential question is answered rather than assumed. — the same user and vhost as
+      `ago-chat`'s Worker, because it must be the same broker the events are published to. A
+      reader-scoped user would be better and needs a RabbitMQ user-provisioning step that does not
+      exist here; recorded rather than quietly treated as fine.
+- [x] Whatever network policy is needed for the calendar pods to reach the broker exists. — it did
+      not: `rabbitmq-ingress` listed only the three chat hosts. **Only the worker was added.** The API
+      loads the same module and therefore carries the same three settings, but resolves no publisher
+      or consumer and never dials — and an ingress allowance added for symmetry is one nobody removes
+      later.
+- [x] Something fails when the keys go missing again. — `smoke.sh` asserts on the **queue and its
+      consumer**, not on pod health, because pod health is exactly what stays green in this failure
+      mode. Its fails-before was taken against the live broker before the fix: zero matches.
 
 ## Out of scope
 
@@ -64,3 +71,29 @@ crash-loop, which every check passed straight through.
 `22-05` deliberately did not touch `ago-deploy` — it was told not to, and it reported the worker half
 of this gap in its own words. The API half is this item's own finding, made while reading the module
 rather than the report.
+
+## Outcome
+
+Done 2026-09-04, `ago-deploy#137`, verified on the live deployment rather than by the manifest.
+
+```
+Calendar role projection
+  PASS  the calendar's role-projection queue exists and has 1 consumer(s) attached
+```
+
+Full smoke afterwards: **45 passed, 0 failed.**
+
+**What this item did not predict, and the deploy taught.** Merging it changed nothing on its own.
+`redeploy.sh` moves images with `kubectl set image` and **applies no manifest at all**, so the new
+environment variables never reached the cluster until `apply-demo.sh` ran. `redeploy.md` documents
+that as a two-part procedure — set the `newTag` values, commit, then apply — and the first half had
+been done without the second.
+
+The failure was safe in the way that matters: the rollout stalled with the previous replica still
+serving, so there was **no outage**, and the migration had already completed.
+
+**And it proved `22-05` end to end, which `22-05`'s own tests could not.** No test anywhere in that
+item exercised a real broker round trip. Two rows appeared in `role_assignment_projections` within
+minutes, each carrying eighteen permissions including `calendar:configure` — written by site
+registrations that went through chat's outbox, the broker, and the calendar's consumer, on real
+infrastructure.
