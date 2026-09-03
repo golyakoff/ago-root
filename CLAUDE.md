@@ -157,6 +157,11 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
         would call finished — are one ticket even when the code is trivially separable.
       - Code-level independence ("different files", "neither calls the other") is about
         implementation coupling and answers a different question. It is not the test.
+      - **The gate check is a veto, not a permission.** A split that fails it is wrong; a split that
+        passes it is not thereby right. Where no gate would go red either way, the promise still
+        decides — `#342` (rename the widget bundle to `widget.js`; its lazily-loaded chunk is named
+        by a literal, so renaming one without the other reddens nothing) is one ticket because the
+        promise is one: the widget's public files are named for what a person recognises.
     - **Why it costs**: a ticket with two halves cannot be closed honestly when one is done, so it
       either sits open with delivered work invisible inside it, or gets closed with the other half
       buried. Both are how work goes missing. It also forces one review to carry two arguments, and
