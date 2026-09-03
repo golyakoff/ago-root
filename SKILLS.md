@@ -19,6 +19,7 @@ and in `docs/`.
 | `embeddable-widget` | Any change to the script that runs on third-party sites. |
 | `commit-prep` | A slice of work is finished and ready for commit and push. |
 | `land-a-slice` | The managing session is turning finished work into merged commits: verify, base check, PR order, queue sweep. |
+| `take-a-backup` | Taking an encrypted backup of the live databases on demand - before a migration, a new database, or whenever one is asked for. |
 | `background-worker-brief` | About to delegate a backlog item to a background worker — including deciding whether it deserves one. |
 | `rebase-cleanup` | A branch looks wrong after a GitHub rebase-merge, or before deleting any branch. |
 | `context-resume` | The start of a session continuing after a `/compact` context refresh. |
