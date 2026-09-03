@@ -58,6 +58,34 @@ tag written there. After a deploy that is meant to stick, update the `newTag` va
 seven now, three hosts and four frontends — and commit. `deploy.sh` prints the exact value;
 `smoke.sh` fails if the running image tag and the commit inside the artifact disagree, for all seven.
 
+### AGO Calendar is deployed, and none of the above covers it
+
+**`deploy.sh` and `rollback.sh` do not mention the calendar at all.** Their `HOSTS` array is the three
+`ago-chat-*` hosts and their `FRONTENDS` array is the four chat-side frontends. As of `20-20`
+(2026-09-03) the cluster also runs `ago-calendar-api`, `ago-calendar-worker`, the
+`ago-calendar-migrator` Job and `ago-calendar-console` — four workloads and three image pins that
+neither script knows exist.
+
+So, until `20-25` closes:
+
+- **Moving the calendar to a new build** means editing the three `newTag` values in
+  `k8s/overlays/demo/kustomization.yaml` by hand and running `kubectl apply -k k8s/overlays/demo`.
+  The migrator's tag moves with the hosts and never on its own (`8-08`).
+- **There is no rollback path.** `./rollback.sh` will not touch the calendar, and its no-argument form
+  deliberately means the three chat hosts. Going back is `kubectl rollout undo` per Deployment, by
+  hand, with the same migrator coupling to respect in reverse.
+
+`smoke.sh` does cover the calendar, but with two of its checks skipped rather than passing: the
+calendar API reports no commit, so "reports its commit" and "the image tag matches the binary" cannot
+be asserted for it (`20-24`). Those are precisely the two that catch a stale image, which is the
+failure this whole document exists for — so treat a calendar deploy as *unverified in that respect*
+rather than as covered.
+
+**Apply from the node, with the node's own `.env`.** Rendering the overlay anywhere else produces
+`envFrom` references to a `Secret` whose name carries a hash of whatever placeholder values were used,
+and that Secret does not exist on the node — three Deployments went to `CreateContainerConfigError`
+this way on 2026-09-02.
+
 ## Building from source on the node
 
 ```bash
