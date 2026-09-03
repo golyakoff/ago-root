@@ -1,7 +1,7 @@
 # RabbitMqConnection.DisposeAsync throws on a slow broker, and leaks its lock when it does
 
 - **Stage**: 17
-- **Status**: ready
+- **Status**: done (2026-09-03)
 - **Found**: 2026-09-03
 
 ## Found by CI, on a change that could not have caused it
@@ -53,10 +53,44 @@ Treating this as "rerun and move on" is the failure mode worth naming: the rerun
 
 ## Done when
 
-- [ ] Disposing a connection whose broker is gone completes without throwing — proven by making the broker gone, not by reading the code.
-- [ ] The lock is disposed on the failure path, proven the same way.
-- [ ] `resilience.md` says what disposal guarantees, since it currently says nothing about shutdown at all.
+- [x] Disposing a connection whose broker is gone completes without throwing — proven by making the broker gone, not by reading the code. — against a paused Testcontainers broker, and shown failing first with this item's own stack trace verbatim.
+- [x] The lock is disposed on the failure path, proven the same way. — a `SemaphoreSlim` exposes no "am I disposed"; a `WaitAsync()` throwing `ObjectDisposedException` is the only observable proof, and it was shown absent before the fix.
+- [x] `resilience.md` says what disposal guarantees, since it currently says nothing about shutdown at all. — a new **Shutdown** section, added with this item.
 
 ## Context
 
 `ago-platform`, `Ago.Platform.Messaging.RabbitMq`. Found 2026-09-03 by CI on `ago-chat#155`; that PR is doc-only and its rerun is unrelated to this fix.
+
+## Outcome
+
+Done 2026-09-03, `ago-platform#43`, released as `0.19.0`.
+
+**This item's own diagnosis was half wrong, and finding that out is most of what the work was.** The
+text above says the client performs a *graceful* close and that nothing uses the `abort` flag. Reading
+RabbitMQ.Client 7.2.2 rather than assuming: `Connection.DisposeAsync` already takes the abort path. The
+real defect is one await inside that path — `MainSession.SetSessionClosingAsync`, reached via
+`Connection.CloseAsync` — which sits **outside every try/catch in the client itself**, so a timeout
+escapes regardless of the flag. The client's own guarantee is incomplete, which is why the adapter
+absorbs it at the boundary the platform owns rather than switching a flag that was already set.
+
+**"Pause the broker, then dispose" does not reproduce it.** An idle connection, an idle channel, a
+connection with an idle consumer, concurrent racing calls — all completed cleanly, repeatedly. What
+reproduces it is this item's own named scenario taken literally: a competing consumer with deliveries
+genuinely in flight, blocked inside its handler, when the broker stops answering. The client then has
+dispatch work to reconcile while the close handshake goes nowhere. Anyone tempted to call the original
+CI failure a flake would have had to build that scenario to disprove it.
+
+**Two things deliberately not done here.** `RabbitMqEventPublisher.DisposeAsync` had the identical
+six-line shape around an `IChannel` and gets the same fix, but on code shape and the same documented
+client mechanism — not an independently reproduced failure. The `CHANGELOG` says so rather than
+implying it was proven. And a pre-existing race was found and left: disposing a `SemaphoreSlim` while
+another thread is blocked in `WaitAsync()` neither unblocks nor faults that waiter, it hangs. Different
+promise, so it does not get folded in here.
+
+`ILogger<T>` became a required constructor parameter, matching every other adapter in the solution
+rather than being the one exception with an optional `NullLogger` default. Source-breaking for a direct
+`new`, which only this repository's own tests do — recorded under `### Changed` in the `CHANGELOG`.
+
+**Not yet delivered to the products.** `ago-chat` and `ago-calendar` still pin `0.18.0`; a merged
+package is not a delivered one until those pins move, and that waits for `22-05` to stop holding
+`Directory.Packages.props` in `ago-calendar`.

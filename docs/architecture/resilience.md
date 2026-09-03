@@ -90,6 +90,28 @@ Inside the dispatcher:
 - **Delivery attempts are recorded** and visible to the tenant. A webhook system without a delivery
   log is unsupportable.
 
+## Shutdown: disposal is best-effort and never throws
+
+Added `17-09`, because this document had said nothing about shutdown at all while `concurrency.md`
+treats it as a first-class concern.
+
+**The messaging adapters' `DisposeAsync` never throws.** `RabbitMqConnection` and
+`RabbitMqEventPublisher` catch whatever the client's own disposal does, log a warning with the
+exception attached, and release their lock in a `finally`. A host that is stopping finishes stopping
+whatever the broker is doing, and an operator debugging a wedged shutdown has something to read.
+
+**Why the adapter has to do this rather than trusting the client.** RabbitMQ.Client's own
+`DisposeAsync` already prefers a forced abort over a negotiated close — but one await inside that
+path, `MainSession.SetSessionClosingAsync` via `Connection.CloseAsync`, sits outside every try/catch
+in the client, so a `TaskCanceledException` escapes anyway when the broker is gone or unresponsive
+with consumer work still in flight. The client's guarantee is incomplete; the adapter is where the
+platform can complete it, which is the same argument the table above already makes for the
+broker-is-down case.
+
+**An exception during shutdown is worse than it looks**, which is why this is a guarantee rather than
+a nicety: it hides the reason the process was stopping in the first place, and it arrives at the one
+moment when nothing is left running to report it properly.
+
 ## Patterns we deliberately do not use
 
 - **Retrying non-idempotent operations blindly.** Retry is safe here because delivery carries an

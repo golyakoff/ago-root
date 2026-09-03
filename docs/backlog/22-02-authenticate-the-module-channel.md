@@ -1,8 +1,7 @@
 # Authenticate the chat → module channel
 
 - **Stage**: 22
-- **Status**: done in code (2026-09-03), `adr/0094` — **not yet deployed**, and one Done-when
-  stays open until it is. See Outcome.
+- **Status**: done (2026-09-03), `adr/0094` — deployed, and the last Done-when closed with it.
 - **Found**: 2026-09-03. Probed from outside the cluster while measuring the consolidation.
 
 ## The gap, and it is live
@@ -45,9 +44,10 @@ more authority.
 - [x] A call carrying one site's credential cannot act for another site — proven by trying it. — and
       proven **failing before the check existed**, in both products: `200 OK` where the refusal was
       expected. This was the case the brief called easiest to leave untested.
-- [ ] `smoke.sh` asserts the refusal, so it cannot silently regress. — **not met.** It needs the new
-      images deployed, and the deployment needs a secret that does not exist yet. Carried into the
-      deployment work below rather than ticked on the strength of the unit tests.
+- [x] `smoke.sh` asserts the refusal, so it cannot silently regress. — met once the images were
+      deployed: the check expects **401**, not 404, so it fails both when the guard disappears and
+      when the route does. Confirmed against the live deployment on 2026-09-03, anonymously, from the
+      node.
 - [x] No shared code between the two products beyond the contract itself. — two independent
       validators, each naming its twin in a comment. `adr/0094` records why that duplication was
       chosen over a package.

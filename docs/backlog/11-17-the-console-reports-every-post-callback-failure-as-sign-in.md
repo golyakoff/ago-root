@@ -1,7 +1,7 @@
 # the console reports every post-callback failure as "Sign-in failed"
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done (2026-09-03)
 - **Found**: 2026-09-03
 
 ## What happened
@@ -46,11 +46,39 @@ So at least three unrelated failures render identically:
 
 ## Done when
 
-- [ ] A CORS-blocked or unreachable API after a successful sign-in reads as something other than "Sign-in failed", and names the API.
-- [ ] Reloading the callback URL, or opening a stale one, does not render an error box — proven by doing it.
-- [ ] A genuine identity-provider refusal still reads as a sign-in failure.
-- [ ] Each of the three is covered by a test; `CallbackPage.test.tsx` already asserts on this text, so it is the file that has to grow rather than a new one.
+- [x] A CORS-blocked or unreachable API after a successful sign-in reads as something other than "Sign-in failed", and names the API. — it reads *"Signed in, but couldn't load your account"*, names `GET /api/v1/operators/me`, and says in as many words that this is not an identity-provider problem.
+- [x] Reloading the callback URL, or opening a stale one, does not render an error box — proven by doing it. — nothing renders; `RequireAuth`'s existing no-session redirect takes it back to sign-in, reusing the redirect rather than adding OIDC logic to the callback page.
+- [x] A genuine identity-provider refusal still reads as a sign-in failure. — unchanged wording, still `role="alert"` (`11-05`), and guarded in the safe direction by `instanceof ErrorResponse` so a real refusal can never be mistaken for a reload.
+- [x] Each of the three is covered by a test; `CallbackPage.test.tsx` already asserts on this text, so it is the file that has to grow rather than a new one. — it did grow, plus `src/auth/replayedCallback.test.ts` for the predicate.
 
 ## Context
 
 Found 2026-09-03, moving the console to `office.reserve-me.ru` (`22-10`). The CORS half was a real defect and is fixed; this is the half that made it expensive to find.
+
+## Outcome
+
+Done 2026-09-03, `ago-console#96`.
+
+**The hinge is a library's literal strings, and that is now a test rather than a comment.**
+`oidc-client-ts` has no error type for an already-consumed authorization code — `readSigninResponseState`
+throws a plain `Error` carrying `"No matching state found in storage"` or `"No state in response"`.
+Recognising a replay therefore means matching on those strings, which a library reword would silently
+break: the suite would stay green while the console went back to blaming Keycloak for a page reload.
+
+The first pass documented that fragility honestly and left every test constructing the error by hand,
+which is a doc comment doing a test's job. It was sent back for one addition: `replayedCallback.test.ts`
+now constructs a real `OidcClient` and calls `readSigninResponseState` itself, asserting the library
+still throws exactly the strings production matches on. Its failure message names the set, the file and
+the pinned `^3.3.0` range, so the next person updates the set instead of chasing a mystery.
+
+**One narrower variant is knowingly left as it was.** If a double-submit race reaches the token
+endpoint, Keycloak answers `invalid_grant` as an `ErrorResponse`, which still reads as a sign-in
+failure. The dominant, reproducible case — a full-page reload after the exchange already completed —
+is the one covered.
+
+The extraction into `src/auth/` is not tidying: exporting the predicate from a page file trips
+`react-refresh/only-export-components`, and `registrationUrl.ts` set that precedent. The rule was
+resolved rather than suppressed.
+
+Verified independently before merge: typecheck and lint clean, 623 tests in 65 files, ux-gate 25
+passed / 5 skipped.
