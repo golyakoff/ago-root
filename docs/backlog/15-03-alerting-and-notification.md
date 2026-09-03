@@ -164,8 +164,15 @@ dashboards nobody watches and no idea when it went down.
   deployment cannot alert on its own unreachability, and Grafana in particular runs *inside* the thing
   it watches.
 
-**The external check targets `https://chat.reserve-me.ru/healthz/ready`**, not the landing page and not
-the console bundle. `Ago.Chat.Api` registers that endpoint with `ready`-tagged checks for Postgres,
+**The external check targets `https://chat-api.reserve-me.ru/healthz/ready`**, not the landing page and
+not the console bundle.
+
+*(Hostname corrected 2026-09-03, `adr/0091`. It said `chat.reserve-me.ru`, which was the API when this
+was written and is **the console bundle** now — so this paragraph had come to prescribe the exact
+mistake its next sentence warns against. An external monitor pointed there gets 200 from the SPA's
+catch-all for any path, `/healthz/ready` included, while the API and all three dependencies are down.
+Whatever is eventually built should assert the body or content type as well as the status, since a
+status code alone cannot tell a health endpoint from a fallback page.)* `Ago.Chat.Api` registers that endpoint with `ready`-tagged checks for Postgres,
 RabbitMQ and Redis, so a 200 there means the API is up *and* its three dependencies are reachable.
 Checking a static page instead proves only that nginx served a file, which is green while the API is
 dead — the classic mistake that makes monitoring reassuring rather than useful. Verified reachable and

@@ -9,6 +9,21 @@
 > against a schema three migrations behind. Every page still returned 200 while every query loading a
 > `Site` failed. This file stays as it is — it is a good record, and rewriting it into a procedure
 > would lose what it records — and `redeploy.md` carries the repeatable sequence instead.
+>
+> **The hostnames below are the ones this bring-up used, and three of them have since changed
+> (`adr/0091`, 2026-09-03).** They are left as written for the same reason the rest of the file is:
+> this records what was actually run, and a transcript with today's names in it would be a
+> transcript of something that never happened. What the names mean *now*:
+>
+> | in this file | today |
+> |---|---|
+> | `chat.reserve-me.ru` — the API | the **operator console** |
+> | — | `chat-api.reserve-me.ru` is the API |
+> | `console.reserve-me.ru` — the console | **retired**; DNS, certificate, route and Keycloak client all cleaned up |
+> | `grafana.reserve-me.ru` | **retired** — never publicly served since 2026-08-25, DNS deleted 2026-09-03 |
+>
+> Anything you intend to *run* from this file needs those substitutions. `redeploy.md` and
+> `k8s/smoke.sh` already use the current names.
 
 > **Status: fully live and verified end to end** (2026-08-24) — every step below, including step 12
 > and step 13, has actually run against the real VPS. This runbook was originally written by a
