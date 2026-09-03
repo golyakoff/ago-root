@@ -144,11 +144,19 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     - **Treat the conjunction as the signal.** A title or scope joined by "and", or a scope that reads
       as a list, is the common shape of two tickets wearing one number. Split first and ask whether
       that was unnecessary afterwards — the reverse is much more expensive.
-    - **The test is independence, not topic.** Two things can be closely related, share a repository,
-      even share a motivation, and still be separate tickets: what matters is whether one can be
-      finished, reviewed and closed without the other. If it can, it should be its own ticket. This
-      is the ordinary case, not the exception — related-but-separable is exactly the pair that gets
-      wrongly fused.
+    - **The test is one promise that lands green — not whether the code is separable.** A ticket is
+      one thing when it makes a single promise that is true or false as a whole, *and* closing it
+      leaves the system passing its quality gates. Two things belong apart when they make **different
+      promises**, not merely when they touch different files.
+      - **A split that produces "the first breaks it, the second fixes it" is a bad split.** Every
+        ticket must be able to close with the build, the suites and the gates green. If closing A
+        leaves a gate red until B lands, then A and B are one ticket — that is the sharp, checkable
+        form of this rule, and it catches over-splitting and dependent-splitting alike.
+      - **Over-splitting is a real failure, not a safe direction to err in.** Two changes that are
+        the *same* promise in different places — one symptom, one verification, one thing a reader
+        would call finished — are one ticket even when the code is trivially separable.
+      - Code-level independence ("different files", "neither calls the other") is about
+        implementation coupling and answers a different question. It is not the test.
     - **Why it costs**: a ticket with two halves cannot be closed honestly when one is done, so it
       either sits open with delivered work invisible inside it, or gets closed with the other half
       buried. Both are how work goes missing. It also forces one review to carry two arguments, and
@@ -158,7 +166,13 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
       one half, file the other, and keep the two changes separable so each closes its own ticket.
     (Decided 2026-09-03, from `#339` — filed as "the calendar hosts have no schema guard **and** the
     migrator no database wait". Two mechanisms, two layers, two proofs, nothing shared but the
-    repository and the reason they were both noticed at once.)
+    repository and the reason they were both noticed at once: two promises, each landing green.
+    Amended the same day by the opposite mistake. `#343`/`#344` — a hardcoded `en-GB` in
+    `time/format.ts`, and one screen bypassing that file with a bare `toLocaleString()` — were split
+    on the code-level test and should not have been. They are one promise, "the console shows dates
+    correctly", and it shows: `#343` alone leaves `11-16`'s gate **red** on `admin-conversations`,
+    so it cannot close green. That is what replaced "can they be finished separately" with "does each
+    land green" as the test.)
 
 ## Teaching mode (important)
 
