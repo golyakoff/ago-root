@@ -1195,23 +1195,29 @@ already cost this project something specific.
    merged console ships. A frontend bundle carries its origins from build time — the reason
    `adr/0091`'s hostname move needed three steps — so a single-value switch leaves no overlap to
    verify in.
-4. **Deploy in dependency order, verifying each against the live system rather than its manifest.**
+4. **The console's hostname settles before its contents change** (`22-10`). It moves to
+   `office.reserve-me.ru` — a name that is not a product, because there is no console per product any
+   more, which supersedes `adr/0091`'s scheme rather than adjusting it. Doing the move and the screen
+   merge together means not knowing which one broke. A new name goes into the certificate SAN only
+   **after it resolves**, since adding one needs HTTP-01 to pass for it; the A-record was created
+   2026-09-03, early and deliberately, for exactly that reason.
+5. **Deploy in dependency order, verifying each against the live system rather than its manifest.**
    Calendar API, then chat, then the merged console. `20-20` shipped a check that fetched a static SPA
    while the API behind it was crash-looping; a 200 proves routing and nothing else.
-5. **A real sign-in reaching a calendar screen** is the gate for everything after it. Every layer
+6. **A real sign-in reaching a calendar screen** is the gate for everything after it. Every layer
    beneath it can be green while it fails, which 2026-09-03 demonstrated three times in one day.
-6. **Then `22-09`, in its own strict order**: route and listener, then the certificate SAN, then the
+7. **Then `22-09`, in its own strict order**: route and listener, then the certificate SAN, then the
    A-record, then the Keycloak client. Deleting DNS while the name is still in the SAN fails the next
    HTTP-01 renewal, and **one failed authorization fails the whole certificate** — every other
    hostname loses TLS with it.
-7. **Contract last.** Drop the calendar's `operators`, `roles` and `role_assignments` only once the
+8. **Contract last.** Drop the calendar's `operators`, `roles` and `role_assignments` only once the
    projection has been serving real traffic, so the rollback target still exists while it matters.
-8. **Take a backup before each schema step**, and read `databases_dumped=` afterwards rather than the
+9. **Take a backup before each schema step**, and read `databases_dumped=` afterwards rather than the
    exit code (`take-a-backup`).
 
 **Done when:** a tenant registers, switches on the calendar for N masters, adds a master with a
-schedule, and confirms a booking — one login, one console, one role catalogue, and `calendar.` no
-longer exists.
+schedule, and confirms a booking — one login, one console at `office.`, one role catalogue, and
+neither `calendar.` nor `chat.` still exists.
 
 ---
 
