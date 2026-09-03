@@ -140,6 +140,26 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     undone work, and reopening `15-11` would have re-widened an item that had been *correctly*
     narrowed to what it delivered. What was missing was a number, which became `15-12`.)
 
+15. **One ticket, one thing. An "and" in a ticket is almost always a seam to cut along.**
+    - **Treat the conjunction as the signal.** A title or scope joined by "and", or a scope that reads
+      as a list, is the common shape of two tickets wearing one number. Split first and ask whether
+      that was unnecessary afterwards — the reverse is much more expensive.
+    - **The test is independence, not topic.** Two things can be closely related, share a repository,
+      even share a motivation, and still be separate tickets: what matters is whether one can be
+      finished, reviewed and closed without the other. If it can, it should be its own ticket. This
+      is the ordinary case, not the exception — related-but-separable is exactly the pair that gets
+      wrongly fused.
+    - **Why it costs**: a ticket with two halves cannot be closed honestly when one is done, so it
+      either sits open with delivered work invisible inside it, or gets closed with the other half
+      buried. Both are how work goes missing. It also forces one review to carry two arguments, and
+      the author's review capacity is this project's actual bottleneck. Rule 14's third clause exists
+      to clean up after exactly this; splitting up front is cheaper than splitting at close.
+    - **When a ticket is already in flight and turns out to be two**, split it anyway: rewrite it to
+      one half, file the other, and keep the two changes separable so each closes its own ticket.
+    (Decided 2026-09-03, from `#339` — filed as "the calendar hosts have no schema guard **and** the
+    migrator no database wait". Two mechanisms, two layers, two proofs, nothing shared but the
+    repository and the reason they were both noticed at once.)
+
 ## Teaching mode (important)
 
 The author is deliberately learning Clean Architecture. Whenever you place a file, introduce an
