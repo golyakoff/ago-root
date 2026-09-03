@@ -1,6 +1,8 @@
 # ADR-0027: Operator identity across products — separate per-product entities, unified only through Keycloak
 
-- **Status**: Accepted
+- **Status**: Accepted; **partially superseded by ADR-0093** (2026-09-03) - its tenancy and
+  identity half is replaced, its domain-separation half stands. The text below is unchanged,
+  because editing accepted reasoning destroys the only thing a record like this is for.
 - **Date**: 2026-08-24
 - **Stage**: 14/20 (decided ahead of both, since it shapes how each is built)
 

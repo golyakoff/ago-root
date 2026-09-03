@@ -505,6 +505,36 @@ with no new token issued — is refused `403` on its very next request, exactly 
 `KeycloakUserWithNoMatchingOperatorRow_IsRejected` already proves for an identity with no `operators`
 row at all.
 
+## Where this is going: one role catalogue, decided in `adr/0093`
+
+**The section below is the record of how the two-product answer worked, and it is being superseded
+rather than corrected.** `adr/0093` (2026-09-03, Stage 22) decided that tenancy, identity and the role
+catalogue unify across products while the domains stay apart. So the shape `20-08` built - a real
+Calendar `Operator` row, invited by email, linked on first authentication - is the *last* thing built
+on the per-product identity model, not the pattern to copy.
+
+What changes for this file:
+
+- **One role catalogue, on the account side.** The two permission vocabularies are disjoint by prefix
+  (`booking:*`, `calendar:*`, `customer:*` against `conversation:*`, `site:*`), so one catalogue
+  carries both without renaming anything. `adr/0027`'s "two RBAC vocabularies from day one" is the
+  clause that goes.
+- **A product holds no `operators` table.** `ago-faq` (`19-03`) already has none - it scopes by the
+  chat `SiteId` and gates its console screens on chat's own permissions. AGO Calendar is the outlier.
+- **A product reads permissions from a projection in its own database**, replicated over the outbox -
+  never from a token claim. Rule 8 forbids a write decision reading a cache, and a revoked permission
+  carried in a claim would outlive its revocation. This is the same shape `adr/0016` already uses on
+  the chat side, applied a second time.
+- **The open item this file has carried** - "the management surface for custom per-tenant roles" - is
+  now one surface for every product rather than one per product.
+
+**What does not change**: `adr/0016`'s RBAC model, `adr/0032`'s platform-owner boundary,
+`adr/0022`'s claims-transformation shape, and both refusals stated at the end of the next section. An
+action from a subject with no authorization is still refused rather than auto-provisioned, and that
+property is what the projection has to preserve rather than replace.
+
+Until Stage 22 lands, everything below is what is true in the code.
+
 ## A second product asks this file a question: shipped in `20-08`
 
 **The first time an authorization question here spanned two products.** `adr/0065` promises a chat
