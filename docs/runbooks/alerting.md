@@ -45,8 +45,16 @@ being nothing to keep secret. Nothing was added to `overlays/demo/.env` or `.env
 is full enough to stop Postfix, no alert is sent — and the silence looks exactly like "nothing is
 wrong". `15-03`'s "Two mechanisms, not one" says this plainly: an external check that answers *is the
 whole thing gone* is a separate mechanism against
-`https://chat.reserve-me.ru/healthz/ready`, and it is **still an open question**, not done. Do not read
-a quiet inbox as a healthy deployment until it exists.
+`https://chat-api.reserve-me.ru/healthz/ready`, and it is **still an open question**, not done. Do not
+read a quiet inbox as a healthy deployment until it exists.
+
+**The hostname in that sentence changed on 2026-09-03 (`adr/0091`), and getting it wrong would be
+worse than having no external check at all.** `chat.reserve-me.ru` is now the operator console — a
+single-page app whose server answers **200 with `index.html` for any path it does not recognise**,
+`/healthz/ready` included. An external monitor pointed there would report a healthy deployment while
+the API, the database and the broker were all down: precisely the false negative this mechanism exists
+to prevent, dressed as a pass. The API's readiness probe lives at `chat-api.reserve-me.ru`, and
+whatever check is eventually built must assert the *body or content type*, not just the status.
 
 ## Looking at the current state
 
