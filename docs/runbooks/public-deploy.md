@@ -4,6 +4,14 @@
 > marked with the date it was done, because each was done once. To redeploy, use
 > [`redeploy.md`](redeploy.md) and the script it points at.
 >
+> **Every `chat.reserve-me.ru` below is stale, in two generations, and none of them is a typo.** When
+> this was written that name was the API. `adr/0091` made it the operator console on 2026-09-03 and
+> moved the API to `chat-api.`; `adr/0093` then removed that scheme's premise and `22-10` moved the
+> console to `office.` and retired `chat.` the same day — it resolves to nothing now. So read every
+> `chat.reserve-me.ru` here as `chat-api.` where it is an API call, and as `office.` where it is the
+> console. The URLs are left as written because this is a record of what was done, and correcting
+> them would make it a record of something that did not happen.
+>
 > The distinction is not pedantry: on 2026-08-25 a redeploy followed this file, skipped step 9
 > (migrations) because a step marked "done" does not read like a step, and left the API running
 > against a schema three migrations behind. Every page still returned 200 while every query loading a
