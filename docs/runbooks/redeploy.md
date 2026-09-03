@@ -28,20 +28,41 @@ CI — but one at a time, because they come out of **three** repositories that m
 single tag cannot honestly name images built from more than one of them:
 
 ```bash
-./deploy.sh console     <sha>   # from ago-console
-./deploy.sh demo-shop1  <sha>   # from ago-widget
-./deploy.sh demo-shop2  <sha>   # from ago-widget, same commit as demo-shop1
-./deploy.sh landing     <sha>   # from ago-landing
+./deploy.sh console          <sha>   # from ago-console
+./deploy.sh demo-shop1       <sha>   # from ago-widget
+./deploy.sh demo-shop2       <sha>   # from ago-widget, same commit as demo-shop1
+./deploy.sh landing          <sha>   # from ago-landing
+./deploy.sh calendar-console <sha>   # from ago-calendar-console
+```
+
+`20-25` added AGO Calendar. Its two hosts move together under one name, because they are one
+product built from one commit:
+
+```bash
+./deploy.sh calendar    <sha>   # ago-calendar-api + ago-calendar-worker, from ago-calendar
 ```
 
 ```bash
-./deploy.sh --current              # all seven, tag beside the commit each pod reports about itself
-./rollback.sh                      # undo one revision on all three hosts
-./rollback.sh <sha>                # go to a specific published build of the three hosts
-./rollback.sh <frontend>           # undo one revision on one frontend
-./rollback.sh <frontend> <sha>     # go to a specific published build of that frontend
-./rollback.sh --history            # what there is to go back to, by image, all seven
+./deploy.sh --current              # everything, tag beside the commit each pod reports about itself
+./rollback.sh                      # undo one revision on the three chat hosts
+./rollback.sh <sha>                # go to a specific published build of the three chat hosts
+./rollback.sh calendar [<sha>]     # the calendar hosts, on their own
+./rollback.sh <frontend> [<sha>]   # one frontend
+./rollback.sh --history            # what there is to go back to, by image
 ```
+
+**The bare `./rollback.sh` still means the three chat hosts and nothing else**, and calendar is
+reachable only by naming it. That is a decision, not an omission: the two products fail
+independently, so rolling AGO Chat back because AGO Calendar broke is a bad trade in both
+directions — and the no-argument path has to stay the one thing with no decision in it during an
+incident.
+
+**One boundary worth knowing before naming an old calendar SHA.** Neither migrator offers a `--down`
+(`adr/0056`), so rollback rests entirely on migrations being additive. AGO Calendar already has a
+destructive one — `20-14` drops `calendars.buffer_minutes`. It is harmless today only because it is
+baked into `ee3b38a`, the first calendar image this cluster ever ran, so nothing in revision history
+predates it. Naming an explicit pre-`ee3b38a` tag crosses that line; the bare
+`./rollback.sh calendar`, which only moves within recorded revisions, cannot.
 
 A frontend reports its commit from `/version.json`, written into the image at build time — a browser
 bundle has no process to ask, so the artifact carries a file instead. The widget bundle additionally
@@ -58,28 +79,17 @@ tag written there. After a deploy that is meant to stick, update the `newTag` va
 seven now, three hosts and four frontends — and commit. `deploy.sh` prints the exact value;
 `smoke.sh` fails if the running image tag and the commit inside the artifact disagree, for all seven.
 
-### AGO Calendar is deployed, and none of the above covers it
+### What the calendar still does not have
 
-**`deploy.sh` and `rollback.sh` do not mention the calendar at all.** Their `HOSTS` array is the three
-`ago-chat-*` hosts and their `FRONTENDS` array is the four chat-side frontends. As of `20-20`
-(2026-09-03) the cluster also runs `ago-calendar-api`, `ago-calendar-worker`, the
-`ago-calendar-migrator` Job and `ago-calendar-console` — four workloads and three image pins that
-neither script knows exist.
+`20-25` gave it a deploy and rollback path, and `20-24` made `smoke.sh` able to catch a stale
+calendar image — the two former `SKIP`s are real checks now, proven live by pointing the pin at a
+tag the binary does not carry and watching the suite go red.
 
-So, until `20-25` closes:
-
-- **Moving the calendar to a new build** means editing the three `newTag` values in
-  `k8s/overlays/demo/kustomization.yaml` by hand and running `kubectl apply -k k8s/overlays/demo`.
-  The migrator's tag moves with the hosts and never on its own (`8-08`).
-- **There is no rollback path.** `./rollback.sh` will not touch the calendar, and its no-argument form
-  deliberately means the three chat hosts. Going back is `kubectl rollout undo` per Deployment, by
-  hand, with the same migrator coupling to respect in reverse.
-
-`smoke.sh` does cover the calendar, but with two of its checks skipped rather than passing: the
-calendar API reports no commit, so "reports its commit" and "the image tag matches the binary" cannot
-be asserted for it (`20-24`). Those are precisely the two that catch a stale image, which is the
-failure this whole document exists for — so treat a calendar deploy as *unverified in that respect*
-rather than as covered.
+**`redeploy.sh` is the remaining gap** (`20-26`). The build-from-source path handles AGO Chat only:
+it builds no calendar image, imports none, and never runs `ago-calendar-migrator`. So on *that*
+path `8-08`'s coupling — the migrator's image moves with the hosts, never independently — is held by
+a comment in `kustomization.yaml` asking a human to remember, rather than by the script. Until it
+closes, do not build the calendar from source on the node; deploy a published build instead.
 
 **Apply from the node, with the node's own `.env`.** Rendering the overlay anywhere else produces
 `envFrom` references to a `Secret` whose name carries a hash of whatever placeholder values were used,

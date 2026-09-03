@@ -1,7 +1,8 @@
 # Give the calendar hosts a deploy path and a rollback path
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: done (2026-09-03) — with its third Done-when honestly unmet: no rollback has been
+  performed, because there is not yet a second calendar image to move between.
 - **Found**: 2026-09-03, landing `20-20`. The runbook was being updated to describe the newly deployed
   calendar hosts, and the scripts turned out not to know they exist.
 
@@ -48,10 +49,41 @@ State the choice and what it replaced.
 
 ## Done when
 
-- [ ] `deploy.sh` can move the calendar hosts and console to a named commit, as it does the chat ones.
-- [ ] `rollback.sh` has a defined, documented behaviour for the calendar — "included", "separate
-      scope" or "deliberately excluded, here is why" are all acceptable; silence is not.
+- [x] `deploy.sh` can move the calendar hosts and console to a named commit, as it does the chat ones.
+      — `./deploy.sh calendar <sha>` moves the api and worker together; `calendar-console` is one more
+      `FRONTENDS` entry, because one static bundle addressed by name is exactly what that mechanism
+      already models.
+- [x] `rollback.sh` has a defined, documented behaviour for the calendar. — **separate scope.** The
+      two products fail independently, so rolling one back for the other's incident is a bad trade in
+      both directions. The bare no-argument form still means the three chat hosts and nothing else,
+      verified rather than assumed: `TARGETS` defaults to the chat deployments and calendar is
+      reachable only by name.
 - [ ] The migrator's coupling holds in both directions, proven by performing a rollback rather than by
-      reading the script.
-- [ ] `docs/runbooks/redeploy.md` stops saying "three hosts" and "four frontends" where it now means
-      five and five. (Its calendar section, added by `20-20`, describes the gap in the meantime.)
+      reading the script. — **not met, and it cannot be yet.** There is no second calendar image to
+      move between in recorded revision history. What was verified instead: every refusal path (a
+      non-SHA tag, an unknown component, a bad tag under the new scope) exits before any `kubectl`
+      call, and every dispatch shape selects the right deployments.
+- [x] `docs/runbooks/redeploy.md` stops saying "three hosts" and "four frontends" where it now means
+      five and five.
+
+## Outcome
+
+Closed 2026-09-03, the day AGO Calendar went live.
+
+**The decision was the work.** `rollback.sh`'s narrow no-argument scope is deliberate — during an
+incident it must stay the one thing with no decision in it — so the choice was between widening it
+and giving calendar a name of its own. A separate scope won because the products share nothing that
+would make a joint rollback correct: separate databases, separate deployments, no shared failure
+domain beyond one Postgres instance and one Keycloak realm.
+
+**Checking the migrator instead of assuming turned up something.** `Ago.Calendar.Migrator` has no
+`--down`, matching `adr/0056` — but `20-14` already merged a destructive migration dropping
+`calendars.buffer_minutes`. That is harmless today only because it is baked into `ee3b38a`, the first
+calendar image this cluster ever ran, so nothing in revision history predates it. Both scripts now
+say so, including where it stops being true: naming an explicit pre-`ee3b38a` tag.
+
+### What this revealed as undone
+
+- `20-26` — `redeploy.sh`, the build-from-source path, knows nothing about the calendar. It builds no
+  calendar image and never runs `ago-calendar-migrator`, so `8-08`'s coupling is held there by a
+  comment asking a human to remember.

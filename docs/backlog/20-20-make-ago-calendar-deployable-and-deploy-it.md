@@ -107,7 +107,8 @@ Any of these that turns out to be genuinely contested becomes an ADR; none is as
       green. — green, but **one of the three checks is real and two are skipped**: `Ago.Calendar.Api`
       reports no commit, so neither "reports its commit" nor "the image tag matches the binary" can be
       asserted. Split out as `20-24`, because the two missing ones are exactly the pair that catches a
-      stale image.
+      stale image. **`20-24` closed the same day**, so all three checks are real now and the suite
+      reports `40 passed, 0 failed`.
 - [x] One backup taken **after** the calendar database exists is shown to contain it. — the backup at
       `20260903T084531Z` dumped `ago_calendar` alongside `ago_chat` and `keycloak`. Shown from the
       service's own journal, which records the per-database `psql` calls; the `databases_dumped=` line
