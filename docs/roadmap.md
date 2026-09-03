@@ -1145,6 +1145,76 @@ ships end to end against the local cluster.
 
 ---
 
+## Stage 22 — One tenant, two domains: the calendar stops being a second product to the customer
+
+**Goal:** a person paying for AGO Chat can switch on a master calendar in the same settings list they
+switch on a Telegram bot, and administer it in the same console with the same login and the same
+roles. The domains stay apart; the tenancy, the identity, the role catalogue and the console unify.
+
+**Why this exists, and why it is not a reversal of `adr/0027`.** That ADR bought the seam knowingly
+and said so — *"provisioning an operator for both products is two actions, not one"*, and a unified
+queue is *"more expensive than it would have been under Variant A."* What changed is its closing
+argument, which is about proving an architecture, and the project is now selling a product.
+
+**And the target shape already ships.** `19-03` (done 2026-08-31, a week after `adr/0027`) built
+`ago-faq` with **no `tenants`, no `operators`, no `roles`** — it scopes by the chat `SiteId` directly,
+and its console screens live in `ago-console` gated by chat's own `usePermissions()`, reading their own
+backend through an optional second origin. **AGO Calendar is the outlier, not the pattern**: it was
+built first and never caught up. Stage 22 is largely "make the calendar look like the FAQ module".
+
+**What makes it cheap, measured 2026-09-03 rather than assumed:**
+
+- `ago_calendar` holds eleven migrations and **zero rows**. No data migration, no customer to disturb
+  — true only until the first tenant exists, which is the whole argument for doing it now.
+- The two permission vocabularies are **disjoint by prefix** (`booking:*`/`calendar:*`/`customer:*`
+  against `conversation:*`/`site:*`), so one catalogue carries both with no renaming.
+- `TenantId` is a `record struct(Guid)`. It is in 123 of 313 calendar files and **none of them
+  change** — only its provenance does.
+- Only `role_assignments` references the calendar `Operator`; `calendar_memberships` hangs off
+  `WorkerId`. Three identity tables drop, one projection appears.
+- `ago-console` already carries a second product's backend origin and permission-gated panel.
+
+**What stays expensive:** `22-05` (46 application files touch a permission), `22-06` (an entire SPA
+changes repository, with its i18n catalogue and blocking ux-gate) and `22-08` (lifecycle across two
+databases, where erasure is an obligation rather than tidiness).
+
+### The order of migration and rollout
+
+Stated here because getting it wrong is how a live system breaks, and three of these steps have
+already cost this project something specific.
+
+1. **Additive migrations only, both sides.** The projection table, the quota column, the `active`
+   flag, the module registry row. Nothing dropped yet: `ago-chat` carries live rows (17 sites, 20
+   operators), so its half is expand-contract, and the calendar's emptiness does not license
+   destructive changes on the other side of the wire.
+2. **`22-02` before `22-04`, without exception.** Today the pinned deployment key is what stops an
+   anonymous caller choosing a tenant. Per-site resolution replaces that pin with a value from the
+   request body, so shipping it against an anonymous channel hands tenant selection to the internet.
+3. **Widen before narrowing, at every boundary that a bundle bakes in.** `Operator__Audience` accepts
+   both Keycloak clients and `Operator__ConsoleOrigins` accepts both console origins *before* the
+   merged console ships. A frontend bundle carries its origins from build time — the reason
+   `adr/0091`'s hostname move needed three steps — so a single-value switch leaves no overlap to
+   verify in.
+4. **Deploy in dependency order, verifying each against the live system rather than its manifest.**
+   Calendar API, then chat, then the merged console. `20-20` shipped a check that fetched a static SPA
+   while the API behind it was crash-looping; a 200 proves routing and nothing else.
+5. **A real sign-in reaching a calendar screen** is the gate for everything after it. Every layer
+   beneath it can be green while it fails, which 2026-09-03 demonstrated three times in one day.
+6. **Then `22-09`, in its own strict order**: route and listener, then the certificate SAN, then the
+   A-record, then the Keycloak client. Deleting DNS while the name is still in the SAN fails the next
+   HTTP-01 renewal, and **one failed authorization fails the whole certificate** — every other
+   hostname loses TLS with it.
+7. **Contract last.** Drop the calendar's `operators`, `roles` and `role_assignments` only once the
+   projection has been serving real traffic, so the rollback target still exists while it matters.
+8. **Take a backup before each schema step**, and read `databases_dumped=` afterwards rather than the
+   exit code (`take-a-backup`).
+
+**Done when:** a tenant registers, switches on the calendar for N masters, adds a master with a
+schedule, and confirms a booking — one login, one console, one role catalogue, and `calendar.` no
+longer exists.
+
+---
+
 ## Guardrails for all stages
 
 - No stage is "done" with a red arch test, a skipped concurrency test, or a doc the code contradicts.
