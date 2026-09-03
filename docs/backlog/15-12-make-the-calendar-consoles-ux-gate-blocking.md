@@ -1,7 +1,7 @@
 # Make `ago-calendar-console`'s UX gate blocking
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done — 2026-09-03, `ago-calendar-console#35`
 - **Split from**: `15-11`, whose Done-when asked for the three assertions to **fail the build** in all
   three frontend repositories. They do in `ago-console` and `ago-widget`. In `ago-calendar-console` the
   CI step is `continue-on-error: true`, and `15-11` was rewritten to *"in two of the three, which is
@@ -45,11 +45,11 @@ quality checks mean anything in this repository.
 
 ## Done when
 
-- [ ] `ago-calendar-console#22` and `#23` are closed — fixed, or quarantined by a named, auditable
+- [x] `ago-calendar-console#22` and `#23` are closed — fixed, or quarantined by a named, auditable
       exemption rather than by loosening the assertion for everything.
-- [ ] `continue-on-error: true` is gone from the `Rendered UX gate` step.
-- [ ] A run on `main` is green with the flag gone, linked from the issue.
-- [ ] The gate is proven to still **fail** when it should: the repository's own `fails-before.spec.ts`
+- [x] `continue-on-error: true` is gone from the `Rendered UX gate` step.
+- [x] A run on `main` is green with the flag gone, linked from the issue.
+- [x] The gate is proven to still **fail** when it should: the repository's own `fails-before.spec.ts`
       still bites, so "green" means "no violations", not "no longer checking".
 
 ## Open question
