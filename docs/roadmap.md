@@ -1066,6 +1066,21 @@ Deliverables:
   `37 passed, 0 failed`. Two things stay open and are named rather than ticked: nobody has actually
   signed in (`20-24` and a human are what close that honestly), and the calendar has **no rollback
   path** — `deploy.sh` and `rollback.sh` do not know it exists (`20-25`).
+- **The calendar became deployable *and* verifiable, the same day it went live** (`20-24`, `20-25`,
+  done 2026-09-03) — `20-20` shipped it with two holes it named rather than hid. `Ago.Calendar.Api`
+  reported no commit, so the two smoke checks that catch a stale image could only be `SKIP`; and
+  `deploy.sh`/`rollback.sh` did not mention the calendar at all, leaving a live product with no way
+  back. `20-24` ported `Ago.Chat.Api`'s three health routes and **answered the question the item
+  raised rather than assumed**: the probes hit `GET /`, which checks neither Postgres nor Redis, so
+  `/healthz/ready` was implemented too — with liveness kept separate, because a liveness probe wired
+  to readiness restarts the pod every time Postgres blinks. `20-25` gave calendar its own rollback
+  scope rather than widening the no-argument one, on the reasoning that the two products fail
+  independently. Checking the migrator instead of assuming turned up a destructive migration already
+  merged (`20-14` drops `calendars.buffer_minutes`), harmless only because it is baked into the first
+  image this cluster ever ran — now documented in both scripts, including where that stops being true.
+  The stale-image check was proven **by mismatch**, live: the pin was pointed at a tag the binary does
+  not carry and the suite went red. What remains is `20-26` — `redeploy.sh`, the build-from-source
+  path, still knows nothing about the calendar.
 - **The booking workflow the first tenant actually uses (`20-21`, `20-22`, `20-23`, cut 2026-09-02 from
   `adr/0090`)** — all three were blocked on `20-20`, which has now landed, so they are verifiable by
   hand for the first time.
