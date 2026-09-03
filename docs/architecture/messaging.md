@@ -152,6 +152,38 @@ directly, bypassing the broken path entirely) - `RabbitMqPublishConsumeTests.Com
 reproduces the bug against a real broker and is the regression test that should have caught this
 originally.
 
+**`Competing`'s queue lifetime is a separate, explicit choice, shipped in `15-15` (`adr/0097`).**
+Before it, every `Competing` queue was `durable: true, autoDelete: false` unconditionally - correct
+for a genuinely durable subscription, which is every consumer in the table above, and never a
+*decision* for one whose consumer name already names something with no life beyond a single process.
+`IEventConsumer.SubscribeAsync` gained a `QueueLifetime` (`Durable`, the default and the only prior
+shape, or `ProcessScoped`) through a second overload rather than a default parameter, so every
+existing subscription compiles unedited and keeps today's guarantee.
+
+`NodeDeliveryConsumer`'s node-delivery queue (`deliver-to-connections.<pod>`) is the one caller that
+opts in. Measured on the live broker before the fix: **72 such queues, 71 belonging to pods that no
+longer existed**, each still bound to the fanout exchange and routed into on every publish. A
+`ProcessScoped` queue and its retry queue are `exclusive: true, autoDelete: true` and gone the instant
+the declaring connection closes, proven against a real broker.
+
+**The dead-letter queue is the one exception, and it was found rather than reasoned out.** A DLQ is
+never subscription-owned - it can legitimately be shared by name across independent subscriptions, as
+`RabbitMqPublishConsumeTests.Broadcast_TwoConsumers_BothReceiveEveryMessage` already relied on - so it
+stays `durable: true, exclusive: false, autoDelete: false` regardless of `QueueLifetime`. A first
+draft that tied it in broke that pre-existing test against a real broker with `RESOURCE_LOCKED`.
+`NodeDeliveryConsumer`'s own DLQ is instead renamed from per-node to one shared name, safe **only**
+because that handler never actually dead-letters (`MaxAttempts: 1`, and it acks even on failure); a
+future `ProcessScoped` consumer that does dead-letter for real needs its own design.
+
+**Do not generalise `ProcessScoped` to `Competing` by default.** That would silently drop messages
+published while a genuinely durable subscription's only replica happened to be disconnected - lost
+work, not an error, and the exact failure this fix was written not to introduce.
+
+**One operational difference worth knowing before debugging one**: a `ProcessScoped` queue is invisible
+to any *other* connection's passive inspection while its owner is alive. RabbitMQ answers
+`RESOURCE_LOCKED` (405), not `NOT_FOUND` (404), so a checker that treats both as "absent" reports the
+queue missing when it is merely owned.
+
 **Shipped in `5-04`**: named `AttachmentConfirmed`, not the `AttachmentUploaded` this table originally
 planned - it fires from `Attachment.ConfirmReady` (the confirm step, after HEAD-verification), not
 from the client's own unverified "uploaded" claim, and the domain-event/contract naming split needed
