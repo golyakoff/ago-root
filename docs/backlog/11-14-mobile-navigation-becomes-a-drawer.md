@@ -1,7 +1,9 @@
 # Mobile navigation becomes a drawer, in both consoles
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: half done — `ago-console` shipped 2026-09-03 (`ago-console#90`). `ago-calendar-console`
+  has **not** got a drawer; `15-12` closed its overflow with two CSS rules instead, so its nav wraps
+  onto a second row rather than collapsing. `ago-calendar-console#25` carries that half.
 - **Raised by**: the author, 2026-09-02, after `15-11`'s gate made the current state measurable.
 - **Touches**: `ago-console`, `ago-calendar-console`. Deliberately **not** a shared component — see
   Open questions.
@@ -72,17 +74,42 @@ than one change.
 ## Done when
 
 - [ ] Both consoles show a hamburger and a left drawer at 375px, with items in a column and the
-      current one marked.
-- [ ] The drawer is dismissable three ways — backdrop, `Escape`, choosing an item — each proven by a
+      current one marked. — **`ago-console` only.** The calendar console's nav wraps instead.
+- [x] The drawer is dismissable three ways — backdrop, `Escape`, choosing an item — each proven by a
       test rather than by eye.
-- [ ] Focus enters the drawer on open, is trapped while open, and returns to the hamburger on close.
-      This is the half that gets skipped, so it is a Done-when and not a note.
-- [ ] `ago-console`'s `15-11` gate is still green at both viewports.
-- [ ] `ago-calendar-console`'s nav no longer contributes to horizontal overflow — demonstrated by the
+- [x] Focus enters the drawer on open, is trapped while open, and returns to the hamburger on close.
+      This is the half that gets skipped, so it is a Done-when and not a note. Proven in a real
+      Chromium rather than jsdom, whose `<dialog>` shim has no focus semantics to assert against —
+      the existing precedent was to accept that gap, and `ago-console#90` closed it instead.
+- [x] `ago-console`'s `15-11` gate is still green at both viewports — 23 passed, 5 skipped, exit 0.
+      The skips are the new drawer tests' desktop counterparts, which correctly skip because above
+      40rem the hamburger has no rendered box.
+- [x] `ago-calendar-console`'s nav no longer contributes to horizontal overflow — demonstrated by the
       gate's own measurement, with the remaining overflow (if any) attributed to something else.
+      Closed by `15-12` **without** a drawer: `flex-wrap` on the nav row. That run also found the
+      overflow was *two* independent causes, the second being a seven-column table wider than its
+      panel, which a nav-only fix would have left failing on five screens.
 - [ ] `ago-calendar-console`'s navigation is a data list, not inline markup.
 - [ ] No screen becomes unreachable on a narrow viewport — including the analytics and settings items
-      that are hardest to reach today.
+      that are hardest to reach today. — true in `ago-console`; unverified in the calendar console,
+      where a wrapped two-row nav is reachable but was not tested for it.
+
+## What shipped, and what the split means
+
+`ago-console`'s nav was already a permission-filtered `AppShellNavItem[]`, which is why this repository
+was always the cheap one: the drawer is a **second renderer over the same array**, not a second source
+of navigation. The property worth having is that the bar and the drawer cannot disagree about what a
+tenant may see — a disagreement there is a permission bug wearing a layout costume — and it is proven
+by making the drawer render one item the bar does not and watching two tests fail.
+
+It reuses `Dialog`'s native `<dialog>`/`showModal()` through a `variant="drawer"` prop rather than
+adding a twelfth component to `adr/0030`'s closed set, so focus trapping, focus restoration and
+`Escape` come from the browser instead of from new code.
+
+**The calendar console did not need a drawer to stop overflowing**, which is the honest reason its
+half is still open rather than an oversight: `15-12` had to fix that overflow anyway, and two CSS
+rules did it. Its nav is still six inline `<NavLink>`s, so the data-list box stands, and a wrapped
+two-row bar on a phone is a worse answer than a drawer — just no longer a *broken* one.
 
 ## Open questions
 

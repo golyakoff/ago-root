@@ -497,7 +497,7 @@ Deliverables:
   warn** - which makes `ago-calendar-console#26` (a gate whose exit code anything reads) a
   prerequisite rather than a neighbour.
 
-- **Mobile navigation becomes a drawer, in both consoles (`11-14`, raised 2026-09-02)** — a hamburger
+- **Mobile navigation becomes a drawer (`11-14`, raised 2026-09-02, `ago-console` half done 2026-09-03)** — a hamburger
   and a left panel with the items in a column, replacing a horizontal bar that does not fit. Measured
   rather than felt: `ago-console` builds **fifteen** navigation items for a tenant with
   `site:configure`, `ago-calendar-console` has six hardcoded ones and **no `@media` rule anywhere**,
@@ -691,7 +691,7 @@ Deliverables:
   including three calendar-console screens nothing else can show, because AGO Calendar is not deployed.
   Its one undelivered part, making that repository's gate blocking, was moved out rather than left as
   an unticked box — and is now `15-12` in its own right.
-- **Make `ago-calendar-console`'s UX gate blocking (`15-12`, split out of `15-11` 2026-09-02)** — delete
+- **Make `ago-calendar-console`'s UX gate blocking (`15-12`, split out of `15-11` 2026-09-02, done 2026-09-03)** — delete
   one `continue-on-error: true`, and prove the result green by a run. Not blocking today because the
   gate's first run there found real pre-existing defects (`#22`, `#23`); turning it red for a defect it
   did not introduce is how people learn to ignore a red build. It had been tracked only as
@@ -700,6 +700,17 @@ Deliverables:
   its first real run**, which is exactly the check that tool was extended to make. `11-16` now names
   this a prerequisite rather than a neighbour: a failing assertion in a gate whose exit code nothing
   reads changes nothing.
+
+  **Done.** `#22` turned out to be two independent causes, not one: six inline `<NavLink>`s in a flex
+  row with no `flex-wrap`, and - separately - a seven-column table wider than its panel on
+  `worker-slots`, which a nav-only fix would have left failing on five screens. Panels now scroll
+  rather than clip, since `overflow-x: hidden` would have made the gate green by discarding content,
+  which is the exact failure it exists to catch. `#23` was the checkbox `<label>`s rather than the
+  checkboxes - the label is the real target under WCAG 2.5.8 and the gate already measures it. No
+  threshold was loosened and no exemption added. The check that mattered was re-proved by hand:
+  reintroducing the defect makes the gate exit 1, restoring it returns exit 0, so green means "no
+  violations" rather than "no longer checking". It also **did not** need `11-14`'s drawer, which is
+  why that item's calendar half is still open rather than quietly absorbed.
 - Two open defects re-homed here rather than left belonging to no stage: `5-13` (a presigned upload's
   size ceiling is never enforced by storage — the one path by which a stranger can write unbounded
   bytes to a shared 2Gi volume) and ~~`6-09`~~ (operator capacity is released only on disconnect, so a
