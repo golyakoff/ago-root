@@ -611,6 +611,49 @@ properties and this is the file that collects them:
   `external_subject_id IS NULL`). A `sub` once bound can never be re-bound, because the direct subject
   lookup always runs first.
 
+## A caller may now name a tenant, and it is an ordinary operator who does it: shipped in `22-14`
+
+`adr/0100`. Until this item, every `tenant_id` on an `Ago.Calendar.Api` principal was server-derived
+in the strongest sense: `OperatorIdentityClaimsTransformation` read the projection `22-05`/`adr/0093`
+replicates and the caller had no way to influence the answer. That property held because a subject
+resolved to exactly one tenant or to none.
+
+**`22-05` made "one subject, two tenants" ordinary, and the refusal it produced was
+indistinguishable from having no grant at all.** Two projection rows means no honest answer to "which
+one", so no claim was added, so `calendar-operator` refused — and the console renders "refused" and
+"never granted" identically (`19-03`). A real person with a real grant saw an empty product.
+
+**The answer is the one this file's own `13-07`/`adr/0068` precedent already established for
+`ago-chat`, applied a second time rather than reinvented**: the console names the tenant in the
+`X-Ago-Active-Site` header, and the same read that establishes the grant is the one that verifies the
+name — `IRoleAssignmentProjectionStore.ResolveTenantAsync` returns a requested tenant only when
+`(operator_id, tenant_id)` is in its own `WHERE` clause. The claim is still something the database
+said; what the caller chose is *which* of several server-known tenants, never *whether*.
+
+**Three refusals worth stating here rather than only in the ADR**, in the same spirit as `20-08`'s two
+above:
+
+- **A named tenant this operator holds nothing in is refused, and never fallen back to one they do
+  hold.** "You asked for A, here is B" would be a cross-tenant misdirection dressed as helpfulness.
+  The refusal is the policy's bare `403`, before any handler runs — asserted on the empty response
+  body, because `IPermissionChecker` would independently refuse a moment later and a status-only
+  assertion could not tell the two apart.
+- **A malformed header names nothing, so it selects nothing** and the ordinary single-tenancy
+  resolution applies. Deliberately different from the previous bullet, and deliberately different from
+  `ago-chat`, whose own transformation treats *any* unrecognised signal as "not asked" — there,
+  ignoring it can only fail to narrow; here it would fall through to a tenancy the caller did not ask
+  for.
+- **One route in this product is answerable with no tenant resolved**: `GET /api/v1/me/tenancies`,
+  under a new `calendar-identity` policy that requires authentication and nothing else. It exists
+  because a two-tenancy identity cannot satisfy `calendar-operator` until it names one, so the
+  stricter gate would refuse the very read that says what there is to name. It takes no tenant from
+  the caller at all — the operator id comes from the token's own `sub`.
+
+**What this costs, recorded here because it is an authorization property and not an implementation
+detail**: `Ago.Calendar.Api` now belongs in `tenant-isolation.md`'s caller-chosen-tenant category,
+whose previous four members were all the platform owner's. One method carries a property the rest of
+the product got by construction.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

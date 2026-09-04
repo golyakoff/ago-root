@@ -156,6 +156,24 @@ compares against.
    unlink, `22-17`'s module grant and revoke) take one the caller names, gated only by
    `RequirePlatformOwner`. See *The cross-tenant surfaces the platform owner reaches* below.
 
+5. **A request header the caller sets — and, since `22-14`, not only the platform owner.**
+   `Ago.Calendar.Api`'s `X-Ago-Active-Site` (`adr/0100`). This page is scoped to `ago-chat`, so this is
+   a pointer rather than a row — but the *category* belongs here, because it is the first time an
+   **ordinary operator**, not the platform owner, names the tenant a request acts in.
+
+   `ago-chat` has carried the same header since `13-07`/`adr/0068` and does not appear in (1)–(4)
+   above, because there it only ever *selects among* `operators` rows the query already proved belong
+   to the caller's `sub` — so the resulting `site_id` claim stays server-derived. `22-14` gives
+   `ago-calendar` the same property by construction: `ResolveTenantAsync` returns a requested tenant
+   only when `(operator_id, tenant_id)` is that one query's own `WHERE` clause, and returns `null`
+   otherwise — **never a fallback to a tenancy the caller does hold.** The refusal is the policy's
+   bare `403`, before any handler runs.
+
+   **Why it is listed at all.** Category (1)'s guarantee was "the caller cannot name a site", and that
+   sentence is now false in both products. What holds instead is weaker and checkable: *a named tenant
+   is answered only out of rows the same read proved belong to this caller*. It lives in one method per
+   product, and a reader auditing provenance needs to know which. `adr/0100` carries the trade.
+
 ## The three kinds of gate
 
 - **Permission check** — `IPermissionChecker.HasPermissionAsync(operatorId, siteId, permission)`,
