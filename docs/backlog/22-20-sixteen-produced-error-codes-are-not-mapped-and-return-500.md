@@ -1,7 +1,8 @@
 # sixteen produced error codes are not mapped, and return 500
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-calendar#40`. Includes the set-mismatch guard the third Done-when
+  left open as a decision — built, and shown to fail with an arm removed
 - **Found**: 2026-09-04, while doing `22-15` — which swept the *other* direction.
 
 ## The gap
