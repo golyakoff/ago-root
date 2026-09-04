@@ -1221,6 +1221,60 @@ neither `calendar.` nor `chat.` still exists.
 
 ---
 
+## Stage 23 — The design pass, turned into work
+
+**Goal:** the console tells the truth. Stage 22 made one console out of two products; this stage
+makes it say whether the widget arrived, who is holding which conversation and under what load,
+which numbers may be printed and which may not, and who may see a customer's phone number.
+
+**Where the work comes from — not from a feature list.** `docs/design/ui-inventory.md` recorded every
+screen that exists with its states; `docs/design/flows.md` wrote the twenty-two stories those screens
+are meant to serve; checking one against the other produced nine questions that needed the author
+before they needed a branch. `docs/design/decisions.md` is the record of all nine being answered —
+then **re-read as a set and corrected where they collided in eight places**, three of those
+corrections reversing what the decision first said. Every item names the decision or story it serves,
+and one that contradicts that file is wrong until the file changes.
+
+**Nothing here is a redesign.** `flows.md`'s closing rule holds for the whole stage: it names what a
+person must not be put in, never the arrangement of pixels that avoids it. The design pass proper is
+separate work, and these items are what it needs to be true first. The thirty-seven gaps the design
+system marks are sorted in `docs/design/gaps.md` — three deletions, about twenty that close as a side
+effect of this stage, and ten questions that are amendments to `adr/0030` rather than backlog items.
+
+**Four threads, not equally urgent:**
+
+- **The tenant's first day.** `flows.md` calls 4.1 the weakest flow in the product: a new tenant
+  cannot tell *not installed* from *installed and quiet* from *every request refused* — and must not
+  be told "your script never arrived" while their customers arrive by channel. This is the activation
+  funnel, and it is where a first client is lost.
+- **The operator's day, and the record of it.** Waiting conversations are visible in three places and
+  actionable in none. `Conversation` holds one operator id, so a transfer erases the past and no fair
+  measure of an operator's work can be computed afterwards. One append-only interval per assignment
+  fixes it; everything else is a query.
+- **Whose number is it.** Two products hold customer phone numbers in two stores under two
+  permissions. The visibility rung a tenant is sold is one property of the account, read by each
+  product and applied to its own store — or it is a promise kept in one place and broken in the other.
+- **What a report may claim.** A rate is printed with the figures it came from, a figure is shown
+  against the period before it, and nothing is ranked on a thin one. A dashboard that only ever shows
+  good news is read as marketing, and then none of its numbers are believed.
+
+**The order that matters.** `23-03` (the interval store) precedes everything that reports on
+operators. `23-11` precedes `23-12`, because the calendar consumes a contract chat publishes.
+`23-08` — the contact's register entry and its erasure path — precedes every item that adds a new way
+to create a contact. `23-01` is already merged.
+
+**Two things this stage deliberately does not contain**, both recorded rather than forgotten: chat
+asking a module a question, which needs a third *sibling* port on the `IModuleRegistrationGateway`
+precedent; and outbound sending as a platform port, which today would have one caller and no channel
+behind it. Reminders wait on the second.
+
+**Done when:** a tenant who signs up can see their widget working or be told exactly why not; an
+operator can take a waiting conversation, say they are away, and read their own numbers before their
+manager does; a tenant can put contact details on the middle rung and read who revealed what; and no
+screen in either product prints a rate a reader cannot judge.
+
+---
+
 ## Guardrails for all stages
 
 - No stage is "done" with a red arch test, a skipped concurrency test, or a doc the code contradicts.
