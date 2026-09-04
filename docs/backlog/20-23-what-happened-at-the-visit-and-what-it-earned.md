@@ -2,7 +2,7 @@
 
 - **Stage**: 20
 - **Status**: ready
-- **Depends on**: `20-20`. Related to `20-21` (the same card is where this is entered).
+- **Depends on**: `20-20`. Related to `20-28` (the same card is where this is entered).
 - **Decided by the author, 2026-09-02**: the revenue figure is **accounting**, not a private note.
   That answer is what shapes this item; it was asked three times before it was answered, and the
   design was held rather than guessed.
@@ -105,6 +105,6 @@ Two consequences, and the first is urgent independently of the second:
 - **Whose money is it** — gross taken from the client, or her earnings after materials? For a
   one-person business they may be the same, and if they ever diverge the answer must be decided before
   a year of history is recorded under the wrong meaning.
-- **Does a moved appointment (`20-22`) carry its outcome across the chain**, or does the outcome belong
+- **Does a moved appointment (`20-29`) carry its outcome across the chain**, or does the outcome belong
   to the appointment that actually happened? The latter is almost certainly right and should be stated
   rather than assumed.

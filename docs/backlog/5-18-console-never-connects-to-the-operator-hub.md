@@ -3,6 +3,12 @@
 - **Stage**: 5
 - **Status**: **fixed, not deployed** (2026-08-26). Cause found and corrected, a check that fails on it added and seen to fail. The end-to-end demonstration needs a deploy.
 - **Depends on**: nothing.
+- **This number also names something else, and neither side can move** (`22-21`). `ago-root#347`,
+  *the demo-credential rate limit answers 500, not 429*, was filed as `5-18` too and shipped as
+  `fix(5-18)` in `ago-chat`; this item shipped as `fix(5-18)` in `ago-console`. Both are in merged
+  history, so renumbering either would make a commit message untrue. Recorded rather than
+  resolved — a reader meeting a `fix(5-18)` commit about rate limits is not looking at this item.
+  `tools/queue-audit.sh` reports it until this file reaches `done`, which the pending deploy does.
 
 ## What is broken
 

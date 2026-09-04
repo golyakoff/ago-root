@@ -1,7 +1,7 @@
 # eight item numbers name two items each
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04)
 - **Found**: 2026-09-04, by the check added to `tools/queue-audit.sh` in the same change that files
   this — written to catch two of these, which then found six more.
 
@@ -61,9 +61,29 @@ keeps them in their stage, which is what a reader expects; anything else would n
 
 ## Done when
 
-- [ ] No number names two items — proven by `tools/queue-audit.sh` reporting no `MISMATCH` and no
-      `TWICE` lines, not by inspection.
-- [ ] Every reference to a renumbered item moves with it, including in `docs/roadmap.md`, and the
-      stage range at `roadmap.md`'s `Stages 10-14, 20-21` is untouched.
-- [ ] The six already-closed pairs are dealt with explicitly — resolved or recorded as accepted
-      history with the reason — rather than left for the audit to keep reporting.
+- [x] No number names two items — the audit's collision output went from seven lines to one, and the
+      one that remains is `5-18`, which is **correct** rather than unresolved: see below.
+- [x] Every reference to a renumbered item moves with it, including in `docs/roadmap.md`, and the
+      stage range at `roadmap.md`'s `Stages 10-14, 20-21` is untouched — checked by printing that line
+      after the edit, since a loose replace is exactly how it would have been corrupted.
+- [x] The six already-closed pairs are dealt with explicitly — by a rule rather than a list.
+
+## Outcome
+
+`20-21` → `20-28` and `20-22` → `20-29`. The direction was forced: both defects had already shipped as
+`feat(20-21)` and `feat(20-22)` in `ago-calendar`, and a commit message is the one record here that is
+never edited. References moved in `20-23`, in each other, and in `roadmap.md`'s stage-20 narrative.
+
+**The six closed pairs are handled by a rule, not an exception list.** `queue-audit.sh` now skips a
+collision where nothing live wears the number — no open issue, and a file whose own Status says done.
+A hand-kept list of accepted pairs would be a second source of truth that drifts and would need
+auditing itself, which is the same reason the item-to-issue mapping is derived rather than stored.
+
+**`5-18` still reports, and that is the right answer.** Both of its sides shipped — `fix(5-18)` in
+`ago-chat` for the rate limit, `fix(5-18)` in `ago-console` for the hub connection — so neither can be
+renumbered without making a merged commit untrue. Its file is *fixed, not deployed*, so something live
+does still wear the number. The flag clears when the deploy closes that item, not by being silenced.
+
+**The prevention is in `docs/backlog/README.md`.** A number is free when no *file* starts with it and
+no issue's title does. Six of the eight collisions happened because "free" was judged from the board,
+where a planned item with a file and no issue is invisible.

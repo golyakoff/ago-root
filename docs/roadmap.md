@@ -1101,13 +1101,13 @@ Deliverables:
   Landing it against the node found more than the code did: there was **no calendar checkout on the
   box at all**, and every other one was badly stale — `ago-chat` 85 commits behind, `ago-console` 71.
   All brought to their tips. `ago-landing` is the one whose commit is read but never pulled (`15-13`).
-- **The booking workflow the first tenant actually uses (`20-21`, `20-22`, `20-23`, cut 2026-09-02 from
+- **The booking workflow the first tenant actually uses (`20-28`, `20-29`, `20-23`, cut 2026-09-02 from
   `adr/0090`)** — all three were blocked on `20-20`, which has now landed, so they are verifiable by
   hand for the first time.
-  `20-21`: an operator creates a customer and a booking, finds an existing customer by a phone typed in
+  `20-28`: an operator creates a customer and a booking, finds an existing customer by a phone typed in
   any of its equivalent forms, and corrects a mistyped number (which clears its verification). This is
   the tenant's primary intake — telephone and walk-in — and it has no implementation at all today.
-  `20-22`: moving a booking as a chain, preserving `adr/0086`'s anchor identity, delivering the
+  `20-29`: moving a booking as a chain, preserving `adr/0086`'s anchor identity, delivering the
   mechanism `20-17` was deferred waiting for. `20-23`: attendance, revenue as **accounting** rather
   than a note, and — urgent independently of any policy — recording *when* and *at whose initiative* a
   cancellation happened, which today survives only in a domain event and is unrecoverable afterwards.
