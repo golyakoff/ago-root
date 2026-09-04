@@ -672,6 +672,42 @@ detail**: `Ago.Calendar.Api` now belongs in `tenant-isolation.md`'s caller-chose
 whose previous four members were all the platform owner's. One method carries a property the rest of
 the product got by construction.
 
+## A caller learns what their own tenant has, not only what they hold: shipped in `23-21`
+
+Everything above answers "may this operator do X" or "may they do X to that tenant's data". This
+item answers a third, narrower question the console needed and had no honest way to answer:
+*does my own tenant have X at all* - a fact independent of whether the caller personally holds the
+permission for it.
+
+**The defect this closes, restated from `flows.md` 4.3**: the console drew a permission-gated nav
+item when `hasPermission(...)` was true and drew nothing when it was false, so *not entitled* and
+*does not exist for this tenant* rendered identically - the same shape `22-14` found for the
+calendar tenancy switcher, generalised. A person who cannot tell which of the two they are in has no
+next action: they cannot ask for a grant they do not know exists.
+
+**The fix is one widened response, never a merged one.** `GET /api/v1/operators/me`
+(`OperatorPermissionsResponse`) now carries a second, separate list - `EnabledModules`, the raw
+`ModuleKey` values `20-07`'s registry has enabled for the caller's own site - beside `Permissions`,
+never folded into it. Read through the identical `IEnabledModuleReadStore.GetForSiteAsync` port
+`23-01`'s `ListEnabledModulesForSiteHandler` already uses for the site-scoped `/sites/{siteId}/modules`
+route, but reached with no permission check of its own: `GetMyPermissionsHandler` is never handed a
+caller-chosen `siteId` to check in the first place, only the operator claim already resolved onto the
+request, so there is nothing to gate that is not already gated by `RequireOperatorIdentity`. This is
+deliberate, not an oversight parallel to `23-01`'s own fix: the entire reason this list needed a home
+outside the `site:configure`-gated route is that the audience it exists for - an operator who lacks
+`site:configure`, possibly lacks every permission on the calendar module too - could never reach that
+route to find out. `tenant-isolation.md`'s own row for this handler has the detail.
+
+**`ago-console` renders the difference, not merely receives it.** `consoleNav.ts`'s calendar block
+now checks `EnabledModules` before deciding whether to show a nav entry at all when the caller lacks
+`calendar:configure`: nothing, when the tenant itself has no calendar module (the entry would be a
+capability no colleague at that tenant could ever grant - showing it anyway is the over-disclosure
+`flows.md` 4.3 warns against, a price list of another tenant's plan); one entry, leading to a refusal
+that says which colleague can grant it, when the tenant does have the module and this operator simply
+does not hold it yet. The page-level refusal itself is a shared function
+(`src/calendar/calendarAccess.tsx`) rather than the seven hand-copied blocks that existed before -
+built from the console's existing eleven-component set (`adr/0030`), no new component added.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

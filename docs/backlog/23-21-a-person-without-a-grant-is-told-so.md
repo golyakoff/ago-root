@@ -1,7 +1,9 @@
 # a person without a grant is told so, instead of seeing nothing
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). The rule applied: a nav entry is drawn only for a capability
+  a colleague at *this* tenant could plausibly grant — so a tenant that never enabled the
+  module still sees nothing, which is deliberate rather than the old defect surviving.
 - **Depends on**: nothing
 - **Decision**: none — the need is `docs/design/flows.md` 4.3 and its *absent and forbidden look
   identical* rule
@@ -65,17 +67,17 @@ and what this caller holds — and the console renders the difference.
 
 ## Done when
 
-- [ ] An operator lacking `calendar:configure` on a tenant that **has** the calendar sees the entry
+- [x] An operator lacking `calendar:configure` on a tenant that **has** the calendar sees the entry
       and is told they do not hold it.
-- [ ] An operator on a tenant that does **not** have the calendar sees a different thing, and the two
+- [x] An operator on a tenant that does **not** have the calendar sees a different thing, and the two
       are distinguishable in a test asserting the rendered state rather than the pixels.
-- [ ] A deployment with `VITE_CALENDAR_API_BASE_URL` unset still shows the existing third state.
-- [ ] `GET /api/v1/operators/me` cannot report another tenant's enabled modules — a tenant-isolation
+- [x] A deployment with `VITE_CALENDAR_API_BASE_URL` unset still shows the existing third state.
+- [x] `GET /api/v1/operators/me` cannot report another tenant's enabled modules — a tenant-isolation
       test.
-- [ ] A failure of that call is still distinguishable from an empty answer (`ui-inventory.md` §13.11
+- [x] A failure of that call is still distinguishable from an empty answer (`ui-inventory.md` §13.11
       records that it currently is not; this item must not make that worse, and says whether it fixes
       it).
-- [ ] `authorization.md` and `tenant-isolation.md` carry the widened response;
+- [x] `authorization.md` and `tenant-isolation.md` carry the widened response;
       `design-system/states.html` carries the new state.
 
 ## Open questions

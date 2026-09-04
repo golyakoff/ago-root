@@ -39,7 +39,7 @@ and it is marked precisely so the designer meets it rather than inventing around
 **Closed by stage 23's items:**
 
 - **Absent and forbidden look identical** — a permission-gated nav item is simply not there. This is
-  `23-17`, and it is the same defect `22-14` was found through.
+  `23-21`, and it is the same defect `22-14` was found through.
 - **No delivery state on a message** — decision 9 records channel outcomes; the widget half is
   deliberately deferred, so the block half-closes and the remainder is a stated limit rather than a
   gap.
