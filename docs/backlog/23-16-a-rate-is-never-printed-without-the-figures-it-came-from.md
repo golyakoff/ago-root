@@ -1,7 +1,9 @@
 # a rate is never printed without the figures it came from, and nothing is ranked on a thin one
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#174`, `ago-console#104`, `adr/0103`. The item's own
+  correction stands: `/analytics/conversion` already rendered absolutes; what was missing was the
+  pairing, the threshold, the comparison period and the ordering.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §7, including the *show the absolute numbers instead of
   refusing to print the rate* amendment (2026-09-04)
@@ -94,16 +96,16 @@ rather than discovering it:
 
 ## Done when
 
-- [ ] Every rendered rate on `/analytics/conversion` and `/analytics/tags` shows its numerator and
+- [x] Every rendered rate on `/analytics/conversion` and `/analytics/tags` shows its numerator and
       denominator in the same cell, including a rate of `100% (1 of 1)`.
-- [ ] A rate whose denominator is zero still renders as it does today, not as `0%`.
-- [ ] Each report returns the preceding equal-length period, and the console shows the change in
+- [x] A rate whose denominator is zero still renders as it does today, not as `0%`.
+- [x] Each report returns the preceding equal-length period, and the console shows the change in
       absolute and relative terms together.
-- [ ] Row order is deterministic and stated, and no ordering uses a rate below the threshold — a
+- [x] Row order is deterministic and stated, and no ordering uses a rate below the threshold — a
       test, not a convention.
-- [ ] A tenant-isolation test covers the comparison window's own query, the same way every sibling
+- [x] A tenant-isolation test covers the comparison window's own query, the same way every sibling
       report proves it.
-- [ ] `nfr.md` or `data-model.md` — whichever owns it — records the threshold and that it is
+- [x] `nfr.md` or `data-model.md` — whichever owns it — records the threshold and that it is
       configuration, not a constant.
 
 ## Open questions
