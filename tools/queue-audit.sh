@@ -194,6 +194,16 @@ if [ -n "$closed" ]; then
   duplicates=$(printf '%s
 ' "$closed" "$open_raw"     | grep -oE '\|[0-9]+-[0-9]+ ·' | tr -d '|·' | tr -d ' ' | sort | uniq -d || true)
   for item in $duplicates; do
+    # Same "finished on every side is history" rule the MISMATCH pass below states in full: skip when
+    # no issue with this number is open and its backlog file, if any, says done.
+    if ! printf '%s
+' "$open_raw" | grep -qE "\|$item · "; then
+      dup_file=$(find docs/backlog -maxdepth 1 -name "$item-*.md" | head -1)
+      if [ -z "$dup_file" ] || grep -qE '^- \*\*Status\*\*: done' "$dup_file"; then
+        continue
+      fi
+    fi
+
     echo "TWICE    $item  is claimed by more than one ago-root issue:"
     printf '%s
 ' "$closed" "$open_raw" | grep -E "\|$item · " | while IFS= read -r row; do
@@ -227,6 +237,19 @@ if [ -n "$closed" ]; then
     issue_row=$(printf '%s
 ' "$open_raw" "$closed" | grep -E "\|$item · " | head -1 || true)
     [ -n "$issue_row" ] || continue
+
+    # **A collision both of whose sides have finished is history, not a defect.** Nothing live is
+    # wearing the wrong number: no open issue, and a file whose own Status says done. Reporting it
+    # for ever would train people to read past this check's output, which is the only thing it has.
+    # The alternative - a hand-kept list of accepted pairs - is a second source of truth that drifts
+    # and would itself need auditing, the same reason the item-to-issue mapping here is derived
+    # rather than stored. `22-21` resolved the two live pairs and left six closed ones behind.
+    if printf '%s
+' "$open_raw" | grep -qE "\|$item · "; then
+      :
+    elif grep -qE '^- \*\*Status\*\*: (done|.*— done)' "$file"          || grep -qE '^- \*\*Status\*\*: done' "$file"; then
+      continue
+    fi
 
     file_title=$(head -1 "$file" | sed 's/^# *//')
     issue_title=${issue_row##*· }

@@ -1,11 +1,10 @@
 # Move a booking, as a chain
 
 - **Stage**: 20
-- **Status**: ready — genuinely unstarted, despite what its number now suggests.
-- **Its number is claimed by something else.** `ago-root#340` (the calendar migrator does not wait for the database, shipped 2026-09-03)
-  also carries `20-22`, and shipped with commits that say so. A number names one item, so one of
-  the two has to move; it cannot be the one already written into merged history. `22-21` holds
-  that renumbering, along with six more pairs the same audit found.
+- **Status**: ready
+- **Renumbered from `20-22` on 2026-09-04** (`22-21`). That number had also been given to a calendar
+  defect, which shipped with `feat(20-22)` commits in `ago-calendar` — so the number moved on this
+  side, the one not yet written into merged history. Nothing about the work below changed.
 - **Decided by**: `adr/0090` — the chain shape, and why `adr/0086` is preserved rather than replaced.
 - **Delivers the mechanism `20-17` needs.** That item is the same operation with a different trigger:
   moving a booking when the *tenant re-cuts the horizon* (`20-16`), rather than because a client asked.
