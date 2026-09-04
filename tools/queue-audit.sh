@@ -281,6 +281,45 @@ if [ "$unread" != "0" ]; then
   echo "This is NOT a clean queue - it is a partly unread one. Re-run when GitHub answers."
 fi
 
+# --- Uncommitted work sitting in a primary checkout ------------------------------------------------
+#
+# Every worktree rule in this project says work happens in a worktree named for its item, never in the
+# repository's own checkout. Twice on 2026-09-04 a background worker wrote its `ago-root` changes into
+# `C:/git/ago/ago-root` instead, because its own commit-prep block began `cd C:/git/ago/ago-root`. The
+# first time it was caught by accident - a `git pull` refused. The second time the changes were
+# genuinely lost: the primary checkout had advanced three times while the work sat there uncommitted.
+#
+# Prevention was considered and rejected. Making the primary checkouts bare would remove the working
+# tree a stray edit can land in - but `ago-root`'s tree is what everything reads: `CLAUDE.md`, the
+# docs every brief cites, `tools/` including this script, and `.claude/skills/commit-guard/hooks`,
+# which `core.hooksPath` names by absolute path. Making it bare would delete the reference, the commit
+# gate and the audit at once.
+#
+# So this is detection instead, and it lives here because this is the script that actually gets run at
+# every merge. It reports rather than fails, for the same reason the flagged entries above do.
+echo
+# This script is usually run from a worktree, so the primary checkouts cannot be derived from $0.
+# `--git-common-dir` always resolves to the *primary* repository's `.git`, from any worktree of it -
+# which is the same property that makes `core.hooksPath` work, and the same one whose absence made the
+# per-worktree `info/exclude` silently do nothing.
+primary_root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+workspace="$(dirname "$primary_root")"
+
+primary_dirty=0
+for dir in "$primary_root" $(printf '%s\n' $MIRROR_REPOS | sed "s|^|$workspace/|"); do
+  [ -e "$dir/.git" ] || continue
+  # Tracked changes only. Untracked files in a primary checkout are ordinary scratch and are not the
+  # failure this looks for - the failure is *edits to tracked files* that no branch will ever carry.
+  dirty="$(git -C "$dir" status --porcelain --untracked-files=no 2>/dev/null)" || continue
+  if [ -n "$dirty" ]; then
+    primary_dirty=$((primary_dirty + 1))
+    echo "UNCOMMITTED  $dir (on $(git -C "$dir" rev-parse --abbrev-ref HEAD)) carries tracked changes:"
+    printf '%s\n' "$dirty" | sed 's/^/             /'
+    echo "             This belongs in a worktree. It is on no branch, and the next pull or checkout here destroys it."
+  fi
+done
+[ "$primary_dirty" = "0" ] && echo "No primary checkout carries uncommitted tracked changes."
+
 # Flagged entries are for a human to resolve, so this is not an error exit - it is a report. A CI job
 # that failed on this would train people to close issues to make it green, which is the opposite of
 # the point.
