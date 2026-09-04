@@ -69,6 +69,36 @@ now; unrecoverable later.
 evaluating somebody is the author's own formula and is not the product's business. The product
 counts.
 
+**Store ownership intervals, not counters.** Added 2026-09-04, after the counter version of this
+decision turned out to be the wrong shape.
+
+The reasoning that changed it: an operator who takes work beyond capacity trades a better
+*concurrency* figure for a worse *response-time* one, and over the two the trade roughly balances —
+so being forced or choosing to overload is not a punishment, provided both sides are visible. But a
+daily average cannot show the trade: *slow because they were running seven at once* and *slow for no
+reason* look identical in it. The author's own constraint — that the cost must be **proportionate**,
+one more chat costing seconds rather than a quarter of an hour — is uncheckable without the load at
+the moment.
+
+So the product stores the raw fact and derives the rest:
+
+- **An append-only interval per assignment**: which operator held which conversation, from when to
+  when, and **how it came about** (assigned / taken / forced). One or two rows per conversation
+  against dozens of messages.
+- **Everything else is a query.** Concurrency at any instant is an interval-overlap; average times,
+  longest pauses and the distribution of pauses by length all come from message timestamps, which
+  **already exist** — `Message.CreatedAt` and `Sequence`, `Conversation.CreatedAt` and `ClosedAt`.
+  This is not a data-collection project; the only missing piece is the assignment timeline, because
+  `Conversation` holds one `OperatorId` — the current one — and a transfer erases the past.
+- **No aggregates until they are needed.** Interval overlap gets expensive at scale, but that is a
+  read concern: no write decision depends on it, so rule 8 is untouched, and a read model can be
+  added when a report is measurably slow rather than in anticipation.
+
+**A consequence worth stating, because it protects the tenant's reports**: timestamps are not personal
+data, message *content* is. Build the statistics on times rather than text and an erasure request
+takes the conversation without taking last month's numbers with it. `personal-data.md` gains that
+distinction rather than discovering it at the first deletion.
+
 ---
 
 ## 3. The tenant is told whether their widget is working, and why not
