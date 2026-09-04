@@ -1,7 +1,13 @@
 # the calendar says what is still missing before it can take a booking
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05), `ago-calendar#42`, `ago-console#108`. The six preconditions are
+  derived from the booking path's own refusal points and computed as a funnel, so a tenant with
+  one idle worker and one configured worker reads as ready — the real question is whether
+  anybody bookable exists. `ux-gate` caught a defect the three usual commands could not: the
+  readiness call sat in the same `Promise.all` as the workers list, so an outage of the
+  independently deployed calendar service would have hidden a tenant's own workers. Fixed on
+  both screens, including the one the gate never opens.
 - **Depends on**: nothing
 - **Decision**: none — the need is `docs/design/flows.md` 3.1
 
@@ -67,14 +73,14 @@ why this is one server-side read rather than six pieces of client-side clevernes
 
 ## Done when
 
-- [ ] A tenant with nothing set up gets every precondition unmet, in a stable order.
-- [ ] A tenant with a published calendar, an active worker on it, a service that worker performs,
+- [x] A tenant with nothing set up gets every precondition unmet, in a stable order.
+- [x] A tenant with a published calendar, an active worker on it, a service that worker performs,
       working hours and a saved schedule, but a horizon that has produced no slots, is reported
       **not bookable**, and the unmet precondition is the slots one.
-- [ ] A fully set-up tenant is reported bookable, **and a public booking against it succeeds in the
+- [x] A fully set-up tenant is reported bookable, **and a public booking against it succeeds in the
       same test** — the two must agree, or the read is decoration.
-- [ ] Another tenant's readiness cannot be read.
-- [ ] The console renders the state on both screens and links each unmet precondition to its form.
+- [x] Another tenant's readiness cannot be read.
+- [x] The console renders the state on both screens and links each unmet precondition to its form.
 
 ## Open questions
 
