@@ -14,21 +14,39 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **76**, across 69 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **48** |
-| Deliberately not RBAC-gated, each with a stated reason | **28** |
-| HTTP routes and hub methods that carry tenant data | **64** |
-| Routes taking a **client-supplied** `siteId` | **26** — eleven route groups, all permission-gated |
-| Read-model queries | **7**, in three read stores |
+| Use-case entry points in `Ago.Chat.Application` | **111**, across 103 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **75** |
+| Deliberately not RBAC-gated, each with a stated reason | **36** |
+| HTTP routes and hub methods that carry tenant data | **108** |
+| Routes taking a **client-supplied** `siteId` | **44** — nineteen route groups, all permission-gated |
+| Read-model queries | **12**, in eight read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
 | Genuinely cross-tenant **writes** | **3** — `14-12`'s owner unlink, and `22-17`'s owner module grant and revoke |
 
-**The first three rows have not been re-derived since `14-04` and are known to be low.** There are
-**103** `*Handler.cs` files under `Ago.Chat.Application/UseCases` on `main` as of 2026-09-04 against
-the 69 classes recorded here; every stage since added entry points without re-running the scan. The
-cross-tenant rows below them are maintained by hand and are current — they are short enough to be,
-which is exactly why the long rows drifted and these did not. Only a re-scan fixes the top three,
-and `22-19` is filed for it; until then read them as a floor, not a count.
+**Re-derived in `22-19`, from a full scan of every mechanical row rather than a further delta.** The
+first three rows had not been re-derived since `14-04`; `Ago.Chat.Application.UseCases` had grown
+from 69 handler classes to 103 `*Handler.cs` files across ten stages without the scan being re-run,
+and the routes/read-model rows below them had never been scanned at all, only hand-extended one
+route at a time. `tools/tenant-isolation-scan/` in this repository now holds the two scripts that
+did the counting — `scan_entry_points.py` for the first three rows, `scan_routes.py` for the routes
+and client-supplied-`siteId` rows — run against `ago-chat`'s `main` at `713635b` (2026-09-04), each
+run twice with byte-identical output before being trusted (see that directory's own `README.md` for
+the exact command sequence and what neither script covers). `scan_entry_points.py` approximates
+`TenantScopeRule.Scan`'s own IL walk (`ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeRule.cs`)
+at the source-text level — every public method of every `*Handler` class is an entry point, gated if
+it both takes a `SiteId` and calls `IPermissionChecker` — and cross-checks every entry point's key
+against `TenantScopeExemptions.cs` directly rather than against a hand list: the scan found *zero*
+entry points that were neither gated nor exempt-listed, and *zero* exempt entries the scan also
+thinks are gated — the same two properties `TenantScopeTests` itself asserts, reproduced
+independently from source rather than from the build. `scan_routes.py` resolves every route in
+`Ago.Chat.Api` (including nested `MapGroup` prefixes) plus every `OperatorHub`/`VisitorHub` method,
+and flags a route as client-supplied when its resolved path contains a literal `{siteId...}`
+segment. The read-model row is still hand-counted — eight `NpgsqlDataSource`-backed read-store
+classes under `Ago.Chat.Infrastructure.Postgres` (`adr/0004`'s Dapper read side), one query method
+each except `ConversationReadStore`'s five, small enough to verify by eye — see
+`tools/tenant-isolation-scan/README.md` for why it wasn't worth scripting at this size. The
+cross-tenant rows below are untouched: they were already current, corrected the same day this item
+was filed, and this rescan changes neither of them.
 
 **Re-derived in `14-04`**, from the scan itself rather than by adding a delta: the first three rows
 had drifted (they read 37/21/16 across 31 handler classes, a count from before `12-04`/`12-05`/`14-06`
@@ -106,7 +124,7 @@ compares against.
    impossible by construction, not by check. Most operator routes work this way.
 2. **A signed visitor token.** `AuthEndpoints` mints `(visitorId, siteId)` together and signs them,
    so the pairing is not forgeable either. Same property as (1), different issuer.
-3. **The client, in a route segment.** Eleven route groups as of this writing —
+3. **The client, in a route segment.** Nineteen route groups as of `22-19`'s rescan (2026-09-04) —
    `/api/v1/sites/{siteId}/widget-config`, `/api/v1/sites/{siteId}/webhooks/...`, since `14-04`
    `/api/v1/sites/{siteId}/offline-auto-reply`, and since `13-01`/`13-02`/`14-02`/`16-02`/`16-03`
    `/api/v1/sites/{siteId}/operator-invites`, `/api/v1/sites/{siteId}/billing/checkout-sessions`,
@@ -116,8 +134,21 @@ compares against.
    group) plus a new `/api/v1/sites/{siteId}/operators/...` group (seat toggle, removal, seat-summary),
    and since `10-06` `/api/v1/sites/{siteId}/installation` — a read whose failure mode is unusually
    quiet, since leaking it returns another tenant's public key with a `200` rather than throwing.
-   This is deliberate and documented in the code: an operator's own site claim is not necessarily the
-   site being configured. **On these routes the permission check is the entire defence**, which is why
+   Also missing from this bullet despite being named in the `18-04` delta's own paragraph above: since
+   `18-04` `/api/v1/sites/{siteId}/tags/...`, the tag-vocabulary group, twelfth rather than eleventh —
+   this bullet's own count had already drifted from the history paragraph beside it before `22-19`
+   touched either. Seven more groups turned up in `22-19`'s route scan on top of that, none previously
+   folded into this list despite several predating it: since `13-06`
+   `/api/v1/sites/{siteId}/message-archives/...`, since `18-03`
+   `/api/v1/sites/{siteId}/canned-responses`, since `14-12`
+   `/api/v1/sites/{siteId}/channel-identities/{id}/unlink`, since `20-07`/`22-11`
+   `/api/v1/sites/{siteId}/modules/...`, and three more one-provider-per-group siblings of
+   `/channels/max` and `/channels/telegram` — since `14-08` `/api/v1/sites/{siteId}/channels/vk`, since
+   `14-10` `/api/v1/sites/{siteId}/channels/whatsapp`, and since `14-11`
+   `/api/v1/sites/{siteId}/channels/avito` (`/api/v1/sites/{siteId}/billing/status`, since `13-04`, is a
+   route on the existing billing group, not a new one). This is deliberate and documented in the code:
+   an operator's own site claim is not necessarily the site being configured. **On these routes the
+   permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
    real `PermissionChecker`, rather than at the handler level with a fake.
 4. **Nowhere, or from a route the caller chose — the platform owner's four.**
@@ -147,7 +178,7 @@ Grouped by gate. The full machine-checked list lives in
 `ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs`; this table is the same
 information organised for a reader.
 
-### RBAC-gated (48)
+### RBAC-gated (75)
 
 Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything else.
 
@@ -203,10 +234,36 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `TagConversationHandler` | operator claim | `conversation:tag` | conversation *and* tag both resolved by `SiteId`, so a cross-site tag cannot be attached; `18-04` |
 | `UntagConversationHandler` | operator claim | `conversation:tag` | same double scoping as the apply side; `18-04` |
 | *(the two `GetConversationHistory` operator entry points are counted separately above)* | | | |
+| `SearchConversationsHandler` | operator claim | `site:configure` | n/a — the read store filters `site_id`, not the caller's own queue; `18-01`; `22-19` |
+| `GetOperatorAnalyticsForSiteHandler` | operator claim | `site:configure` | n/a — every operator's analytics for the site, not the caller's own; `18-08`; `22-19` |
+| `GetCannedResponsesHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `18-03`; `22-19` |
+| `UpdateCannedResponsesHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `18-03`; `22-19` |
+| `GetConversionReportForSiteHandler` | operator claim | `site:configure` | n/a — the report is scoped by site; `18-10`; `22-19` |
+| `GetConversationOutcomeHandler` | operator claim | `conversation:read` | `readStore.GetByIdAsync` is scoped by `query.SiteId`; `18-10`; `22-19` |
+| `SetConversationOutcomeHandler` | operator claim | `conversation:close` | `conversation.SiteId == command.SiteId`, re-checked after a concurrency retry; `18-10`; `22-19` |
+| `GetTagBreakdownReportForSiteHandler` | operator claim | `site:configure` | n/a — the report is scoped by site; `18-11`; `22-19` |
+| `GetModuleFlowReportForSiteHandler` | operator claim | `site:configure` | n/a — the report is scoped by site; `18-14`; `22-19` |
+| `GenerateReplyDraftHandler` | operator claim | `conversation:send` | `conversation.OperatorId == caller`; `19-01`; `22-19` |
+| `ListChannelIdentitiesForVisitorHandler` | operator claim | `conversation:read` | `conversation.OperatorId == caller`; `14-12`; `22-19` |
+| `RequestChannelLinkFromConsoleHandler` | operator claim | `conversation:send` | `conversation.SiteId == command.SiteId`; `14-12`; `22-19` |
+| `UnlinkChannelIdentityHandler` | **route segment** | `channel_identity:unlink` | `identity.SiteId == command.SiteId`; `14-12`; `22-19` |
+| `SetPreferredChannelIdentityHandler` | operator claim | `conversation:send` | `conversation.OperatorId == caller`; `14-13`; `22-19` |
+| `ListVisitorContactDetailsHandler` | operator claim | `conversation:read` | conversation lookup scoped by `SiteId` — deliberately not the narrower assigned-operator check, so a detail stays visible after a transfer; `14-14`; `22-19` |
+| `RecordVisitorContactDetailHandler` | operator claim | `conversation:send` | `conversation.SiteId == command.SiteId`; `14-14`; `22-19` |
+| `DeleteVisitorContactDetailHandler` | operator claim | `conversation:send` | `conversation.SiteId == command.SiteId`; `14-14`; `22-19` |
+| `GetMessageArchiveDownloadUrlHandler` | **route segment** | `site:export` | `archives.GetAsync` is scoped by `query.SiteId`, the same shape `GetSiteExportStatusHandler` uses; `13-06`; `22-19` |
+| `ListMessageArchivesHandler` | **route segment** | `site:export` | n/a — the site *is* the object; `13-06`; `22-19` |
+| `GetBillingStatusHandler` | **route segment** | `site:configure` | n/a — the site *is* the object; `13-04`; `22-19` |
+| `EnableModuleForSiteHandler` | **route segment** | `site:configure` | n/a — creates a row for that site; `20-07`; `22-19` |
+| `ListModuleTaskChannelPriorityListHandler` | operator claim | `conversation:read` | `conversation.OperatorId == caller`; `20-11`; `22-19` |
+| `SetModuleTaskChannelPriorityListHandler` | operator claim | `conversation:send` | `conversation.OperatorId == caller`; `20-11`; `22-19` |
+| `RevokeModuleForSiteHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — the (site, module) pair is the row's own key; `22-11`; `22-19` |
+| `RotateModuleCredentialHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — same key-scoped lookup; `22-11`; `22-19` |
+| `VerifyModuleRegistrationHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — same key-scoped lookup; `22-11`; `22-19` |
 
-### Not RBAC-gated, with the reason (28)
+### Not RBAC-gated, with the reason (36)
 
-**Visitor paths (7).** A visitor is outside the role system entirely (`adr/0016`), so there is nothing
+**Visitor paths (9).** A visitor is outside the role system entirely (`adr/0016`), so there is nothing
 to ask `IPermissionChecker`. What replaces it is *narrower* than a site check: the handler compares
 the caller's `VisitorId` — from the signed token, never from the request — against
 `conversation.VisitorId`. Being the visitor of a conversation implies being on its site; the converse
@@ -216,7 +273,12 @@ does not hold, which is why the participant comparison is the stronger of the tw
 `GetAttachmentDownloadUrlHandler.HandleAsVisitorAsync`,
 `GetConversationHistoryHandler.HandleAsVisitorAsync`,
 `GetConversationHistoryHandler.HandleDeltaAsVisitorAsync`, `SendVisitorMessageHandler`,
-`StartConversationHandler`.
+`StartConversationHandler`, and since `14-15`
+`InitiatePhoneVerificationHandler.HandleAsVisitorAsync`/`ConfirmPhoneVerificationHandler.HandleAsVisitorAsync`
+(`22-19`) — the identical shape, `conversation.VisitorId == command.RequestedBy` from the signed
+visitor token; `ConfirmPhoneVerificationHandler` additionally cross-checks the pending verification's
+own `SiteId`/`VisitorId` against that same conversation, so a caller cannot confirm a code issued to a
+different visitor's request even within one site.
 
 `StartConversationHandler` is the special one: it is where the pairing every other visitor check
 relies on is *created*, from a token that already carries both ids. There is no prior object to check
@@ -247,12 +309,21 @@ leak and, in most cases, no principal yet to check anything for.
   presented invite code's own `code_hash` lookup resolves the site the write lands on, never a value
   this caller supplies.
 
-**Consumer and worker side (11).** No external caller reaches most of these: the input is an
+**Consumer and worker side (14).** No external caller reaches most of these: the input is an
 integration event this system itself published, so the site is a fact already established by the
-write that raised it. Four of the eleven (`ReceiveChannelMessageHandler`, `AutoCloseConversationHandler`,
-`ListMyTenanciesHandler`, `ProcessSubscriptionRenewalHandler`) are not broker-triggered and are called
-out individually below — they sit here because, like the broker-fed ones, none of them has a
-caller-supplied `SiteId` to check.
+write that raised it. Four of the eleven pre-`22-19` entries (`ReceiveChannelMessageHandler`,
+`AutoCloseConversationHandler`, `ListMyTenanciesHandler`, `ProcessSubscriptionRenewalHandler`) are not
+broker-triggered and are called out individually below — they sit here because, like the broker-fed
+ones, none of them has a caller-supplied `SiteId` to check. Three more joined this category in
+`22-19`'s rescan, all with the identical broker-fed shape `SendOfflineAutoReplyHandler` already has —
+`SiteId` off a `MessageAccepted` envelope this system itself published, no principal to check a
+permission for: `CategorizeConversationHandler` (`19-02`, worker side — keyed instead by a
+`(ConversationId, SiteId)` pair `ConversationCategorizationJob`'s own candidate scan already
+restricted, the same "scan established it, not a claim" shape `AutoCloseConversationHandler` has),
+`RouteConversationToModuleHandler` (`20-07`, consumer side — resolves which modules the site has
+enabled, read-only), and `HandleLinkIdentityCommandHandler` (`14-12`, consumer side — stamps the
+`SiteId` onto a new pending-link-request row so a later confirmation can only ever match messages on
+that same site).
 
 `DispatchWebhooksForEventHandler`, `RecordUnreadMessageHandler`, `SendOfflineAutoReplyHandler`,
 `ResolveConversationAssignmentTargetsHandler`, `ResolveMessageDeliveryTargetsHandler`,
@@ -373,7 +444,26 @@ is exactly what makes it interesting. See *The guard* below.
 | `POST /api/v1/conversations/{id}/erase` | `RequireOperatorIdentity` | operator claim; `16-02` |
 | `GET /api/v1/conversations/{id}` | `RequireOperatorIdentity` | operator claim; `16-02`, the erasure completion poll |
 | `GET /api/v1/conversations/{id}/visitor-history` | `RequireOperatorIdentity` | operator claim; `18-07` |
+| `POST /api/v1/conversations/{id}/transfer` | `RequireOperatorIdentity` | operator claim; `18-02` — added to the table by `22-19`, previously described only in the history narrative below |
 | `GET /api/v1/operators/me` | `RequireOperatorIdentity` | operator claim |
+| `GET /api/v1/conversations/analytics` | `RequireOperatorIdentity` | operator claim; `18-08`; `22-19` |
+| `GET /api/v1/conversations/conversion-report` | `RequireOperatorIdentity` | operator claim; `18-10`; `22-19` |
+| `GET /api/v1/conversations/module-flow-report` | `RequireOperatorIdentity` | operator claim; `18-14`; `22-19` |
+| `GET /api/v1/conversations/search` | `RequireOperatorIdentity` | operator claim; `18-01`; `22-19` |
+| `GET /api/v1/conversations/tag-breakdown-report` | `RequireOperatorIdentity` | operator claim; `18-11`; `22-19` |
+| `GET`/`PUT /api/v1/conversations/{id}/outcome` | `RequireOperatorIdentity` | operator claim; `18-10`; `22-19` |
+| `POST /api/v1/conversations/{id}/reply-draft` | `RequireOperatorIdentity` | operator claim; `19-01`; `22-19` |
+| `GET /api/v1/conversations/{id}/channel-identities` | `RequireOperatorIdentity` | operator claim; `14-12`; `22-19` |
+| `POST /api/v1/conversations/{id}/channel-identities/link-requests` | `RequireOperatorIdentity` | operator claim; `14-12`; `22-19` |
+| `PUT /api/v1/conversations/{id}/channel-identities/preference` | `RequireOperatorIdentity` | operator claim; `14-13`; `22-19` |
+| `GET`/`POST /api/v1/conversations/{id}/contact-details` | `RequireOperatorIdentity` | operator claim; `14-14`; `22-19` |
+| `DELETE /api/v1/conversations/{id}/contact-details/{contactDetailId}` | `RequireOperatorIdentity` | operator claim; `14-14`; `22-19` |
+| `GET`/`PUT /api/v1/conversations/{id}/module-task-channel-priority` | `RequireOperatorIdentity` | operator claim; `20-11`; `22-19` |
+| `GET`/`POST /api/v1/conversations/{id}/notes` | `RequireOperatorIdentity` | operator claim; `18-04`; `22-19` — described in the `18-04` history paragraph below, never previously added to this table |
+| `POST`/`DELETE /api/v1/conversations/{id}/tags/{tagId}` | `RequireOperatorIdentity` | operator claim; `18-04`; `22-19` — same gap as `/notes` above |
+| `GET /api/v1/conversations/{id}/tags` | `RequireOperatorIdentity` | operator claim; `18-04`; `22-19` — same gap |
+| `POST /api/v1/conversations/{id}/phone-verifications` | `EitherTokenKind` | operator claim, or the visitor token; `14-15`; `22-19` |
+| `POST /api/v1/conversations/{id}/phone-verifications/{id}/confirm` | `EitherTokenKind` | operator claim, or the visitor token; `14-15`; `22-19` |
 | `POST /api/v1/conversations/{id}/attachments` | `EitherTokenKind` | operator claim, or the visitor token |
 | `POST /api/v1/attachments/{id}/confirm` | `EitherTokenKind` | operator claim, or the visitor token |
 | `GET /api/v1/attachments/{id}` | `EitherTokenKind` | operator claim, or the visitor token |
@@ -395,8 +485,37 @@ is exactly what makes it interesting. See *The guard* below.
 | `POST /api/v1/sites/{siteId}/erase` | `RequireOperatorIdentity` | **client-supplied**; `16-02` |
 | `POST /api/v1/sites/{siteId}/exports` | `RequireOperatorIdentity` | **client-supplied**; `16-03` |
 | `GET /api/v1/sites/{siteId}/exports/{exportId}` | `RequireOperatorIdentity` | **client-supplied**; `16-03` |
+| `GET /api/v1/sites/{siteId}/billing/status` | `RequireOperatorIdentity` | **client-supplied**; `13-04`; `22-19` |
+| `POST /api/v1/sites/{siteId}/billing/subscriptions/{id}/cancel` | `RequireOperatorIdentity` | **client-supplied**; `13-03`; `22-19` — described in the `13-03` history paragraph below, never previously added to this table |
+| `POST /api/v1/sites/{siteId}/billing/subscriptions/{id}/seats` | `RequireOperatorIdentity` | **client-supplied**; `13-03`; `22-19` — same gap |
+| `GET`/`PUT /api/v1/sites/{siteId}/canned-responses` | `RequireOperatorIdentity` | **client-supplied**; `18-03`; `22-19` |
+| `POST /api/v1/sites/{siteId}/channel-identities/{id}/unlink` | `RequireOperatorIdentity` | **client-supplied**; `14-12`; `22-19` |
+| `POST /api/v1/sites/{siteId}/channels/avito` | `RequireOperatorIdentity` | **client-supplied**; `14-11`; `22-19` |
+| `DELETE /api/v1/sites/{siteId}/channels/avito/{id}` | `RequireOperatorIdentity` | **client-supplied**; `14-11`; `22-19` |
+| `POST /webhooks/avito/{credentialId}` | anonymous, signature-verified | n/a — resolved from the credential id, not the caller; `14-11`; `22-19` |
+| `POST /api/v1/sites/{siteId}/channels/vk` | `RequireOperatorIdentity` | **client-supplied**; `14-08`; `22-19` |
+| `DELETE /api/v1/sites/{siteId}/channels/vk/{id}` | `RequireOperatorIdentity` | **client-supplied**; `14-08`; `22-19` |
+| `POST /webhooks/vk/{credentialId}` | anonymous, signature-verified | n/a — resolved from the credential id, not the caller; `14-08`; `22-19` |
+| `POST /api/v1/sites/{siteId}/channels/whatsapp` | `RequireOperatorIdentity` | **client-supplied**; `14-10`; `22-19` |
+| `DELETE /api/v1/sites/{siteId}/channels/whatsapp/{id}` | `RequireOperatorIdentity` | **client-supplied**; `14-10`; `22-19` |
+| `GET`/`POST /webhooks/whatsapp` | anonymous — `GET` is the provider's own challenge-verification handshake, `POST` is signature-verified | n/a; `14-10`; `22-19` |
+| `POST /webhooks/email` | anonymous, provider-verified | n/a; `22-19` |
+| `GET /api/v1/sites/{siteId}/message-archives` | `RequireOperatorIdentity` | **client-supplied**; `13-06`; `22-19` |
+| `GET /api/v1/sites/{siteId}/message-archives/{retentionClass}/{period}/download` | `RequireOperatorIdentity` | **client-supplied**; `13-06`; `22-19` |
+| `GET`/`PUT /api/v1/sites/{siteId}/modules` | `RequireOperatorIdentity` | **client-supplied**; `20-07`; `22-19` |
+| `DELETE /api/v1/sites/{siteId}/modules/{moduleKey}` | `RequireOperatorIdentity` | **client-supplied**; `22-11`; `22-19` |
+| `POST /api/v1/sites/{siteId}/modules/{moduleKey}/rotate` | `RequireOperatorIdentity` | **client-supplied**; `22-11`; `22-19` |
+| `POST /api/v1/sites/{siteId}/modules/{moduleKey}/verify` | `RequireOperatorIdentity` | **client-supplied**; `22-11`; `22-19` |
+| `GET /api/v1/sites/{siteId}/operators/seat-assignment-summary` | `RequireOperatorIdentity` | **client-supplied**; `13-03`; `22-19` — same gap as the billing/subscriptions rows above |
+| `POST /api/v1/sites/{siteId}/operators/{operatorId}/remove` | `RequireOperatorIdentity` | **client-supplied**; `13-03`; `22-19` — same gap |
+| `POST /api/v1/sites/{siteId}/operators/{operatorId}/seat` | `RequireOperatorIdentity` | **client-supplied**; `13-03`; `22-19` — same gap |
+| `GET`/`POST /api/v1/sites/{siteId}/tags` | `RequireOperatorIdentity` | **client-supplied**; `18-04`; `22-19` — the tag-vocabulary group the `18-04` history paragraph below already calls the eleventh, never previously added to this table |
+| `PUT`/`DELETE /api/v1/sites/{siteId}/tags/{tagId}` | `RequireOperatorIdentity` | **client-supplied**; `18-04`; `22-19` — same gap |
 | `GET /api/v1/owner/sites` | `RequirePlatformOwner` | none, deliberately |
-| `/hubs/visitor` — `JoinAsync`, `SendMessageAsync`, `SendStructuredMessageAsync`, `GetHistoryAsync` | Visitor scheme | signed visitor token |
+| `POST /api/v1/owner/sites/{siteId}/channel-identities/{id}/unlink` | `RequirePlatformOwner` | the caller names it — not permission-gated, see *The cross-tenant surfaces the platform owner reaches* above; `14-12`; `22-19` |
+| `PUT /api/v1/owner/sites/{siteId}/modules` | `RequirePlatformOwner` | the caller names it — not permission-gated; `22-17`; `22-19` |
+| `DELETE /api/v1/owner/sites/{siteId}/modules/{moduleKey}` | `RequirePlatformOwner` | the caller names it — not permission-gated; `22-17`; `22-19` |
+| `/hubs/visitor` — `JoinAsync`, `JoinWithTrafficSourceAsync`, `SendMessageAsync`, `SendStructuredMessageAsync`, `GetHistoryAsync` | Visitor scheme | signed visitor token; `JoinWithTrafficSourceAsync` added since the last full table refresh, folded in by `22-19` |
 | `/hubs/operator` — `JoinConversationAsync`, `SendMessageAsync`, `SendStructuredMessageAsync`, `GetHistoryAsync`, `GetVisitorHistoryConversationAsync`, `GetVisitorPresenceAsync` | `RequireOperatorIdentity` | operator claim |
 
 Note the shape of the hub methods: they take a **conversation id**, not a site. That is why
@@ -416,6 +535,11 @@ visible. Every query, and what scopes it:
 | `ConversationReadStore.GetVisitorHistoryAsync` | `conversation_id` (excluded) via `visitor_id` | `18-07`. `visitor_id` is not itself a `site_id`, but `GetVisitorHistoryHandler` has already proved the caller is assigned to a live conversation with this visitor before this query runs. |
 | `WebhookDeliveryReadStore.GetForEndpointAsync` | `endpoint_id` | `webhook_deliveries` has no `site_id` either. `GetWebhookDeliveriesHandler`'s `endpoint.SiteId != query.SiteId` branch is the whole of the isolation here — which is why `17-01` gave that branch a test that fails when it is removed. |
 | `PlatformOverviewReadStore.ListSitesAsync` | **none, deliberately** | `12-02`. The `RequirePlatformOwner` policy, and nothing else. |
+| `ConversionReportReadStore.GetConversionReportAsync` | **`site_id`** | `18-10`; `22-19`. `where c.site_id = @SiteId` directly; `GetConversionReportForSiteHandler` gates it on `site:configure`. |
+| `EnabledModuleReadStore.GetForSiteAsync` | **`site_id`** | `20-07`; `22-19`. `where site_id = @SiteId and (expires_at is null or expires_at > @Now)`; read by `RouteConversationToModuleHandler` (exempt, envelope-derived `SiteId`) and by the gated module endpoints. |
+| `ModuleFlowReadStore.GetSiteModuleFlowReportAsync` | **`site_id`** | `18-14`; `22-19`. `where c.site_id = @SiteId`; `GetModuleFlowReportForSiteHandler` gates it on `site:configure`. |
+| `OperatorAnalyticsReadStore.GetSiteAnalyticsAsync` | **`site_id`** | `18-08`; `22-19`. `where c.site_id = @SiteId`, joined out to messages/channel-identity rows via that same site; `GetOperatorAnalyticsForSiteHandler` gates it on `site:configure`. |
+| `TagBreakdownReadStore.GetTagBreakdownAsync` | **`site_id`** | `18-11`; `22-19`. `where c.site_id = @SiteId` in both of its two queries; `GetTagBreakdownReportForSiteHandler` gates it on `site:configure`. |
 
 Each of these notes also lives in the read store's own remarks, so a reader who arrives at the SQL
 rather than at this file finds the same answer.

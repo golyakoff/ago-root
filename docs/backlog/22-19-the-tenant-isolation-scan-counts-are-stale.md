@@ -1,7 +1,7 @@
 # the tenant-isolation scan counts have not been re-derived since `14-04`
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04)
 - **Found**: 2026-09-04, while correcting `tenant-isolation.md` for `22-17`.
 
 ## The finding
@@ -40,8 +40,10 @@ current; they are short enough to be, which is why they did not drift and the lo
 
 ## Done when
 
-- [ ] The first five rows of the table are re-derived from a scan of `main`, with the method recorded
-      so the next re-derivation is mechanical rather than archaeological.
-- [ ] Every handler the scan newly reveals is placed in one of the existing categories, or the finding
-      that it fits none is filed as its own item.
-- [ ] The dated staleness note is removed, because it is no longer true.
+- [x] The first five rows of the table are re-derived from a scan of `main`, with the method recorded
+      so the next re-derivation is mechanical rather than archaeological — `tools/tenant-isolation-scan/`,
+      two scripts, pinned to `ago-chat@713635b`.
+- [x] Every handler the scan newly reveals is placed in one of the existing categories. **Zero
+      unaccounted**: every one of the 111 entry points is either RBAC-gated or carries a stated reason
+      in `TenantScopeExemptions.cs`. Nothing was filed as an orphan because nothing was orphaned.
+- [x] The dated staleness note is removed, because it is no longer true.
