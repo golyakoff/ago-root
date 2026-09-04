@@ -49,6 +49,63 @@ Carry these forward rather than re-deriving them, and extend them when the autho
 
 ---
 
+## 0.5. Whose interest wins — the optic
+
+**Stand in the role's shoes and argue for them. But their interest is served only as far as it
+coincides with the tenant's, because the tenant is the one paying. And the tenant's is served only as
+far as it stays commercially viable for the platform owner.**
+
+Nested, and stated in that order deliberately:
+
+```
+visitor / operator interest  ⊂  tenant interest  ⊂  platform-owner commercial viability
+```
+
+This is a **tie-breaker for genuine conflicts**, not a licence, and the difference decides whether it
+makes the product better or worse. Two things bound it.
+
+### The floor does not move
+
+Section 1's rules — honesty, and persuasion-not-manipulation — are **not** subject to this ordering.
+"The tenant wants more conversions" never authorises invented scarcity, and "the platform needs the
+revenue" never authorises flattering a tenant's numbers. The hierarchy decides *whose interest wins
+when they genuinely conflict*; it does not decide whether to be truthful, because a product that
+resolves that question by hierarchy has no floor at all.
+
+### Measure the interest over the relationship, not the session
+
+**Most apparent conflicts dissolve at the right horizon, and this is the part worth being rigorous
+about.** A visitor pushed into a booking they regret cancels, tells somebody, and does not come back
+— the tenant loses twice. An operator squeezed by a metric games it, and the tenant's conversion
+numbers stop meaning anything. A tenant charged for something that does not pay off churns, and the
+platform owner loses the account.
+
+So before invoking the hierarchy, **check whether the conflict survives a longer horizon.** Usually
+it does not, and the story is simply better for everyone. When it *does* survive — those are real,
+and they are exactly what the ordering exists for.
+
+The ones that genuinely survive tend to look like this, and a story should say so plainly rather than
+pretend the interests align:
+
+- The visitor would prefer to book without leaving a phone number. The tenant cannot run a business
+  on unreachable bookings. **Tenant wins**, and the story's job is to make the cost worth it to the
+  visitor rather than to hide it.
+- The operator would prefer their slowest days not to be visible. The tenant is buying visibility of
+  exactly that. **Tenant wins**, and the story's job is to make the measure fair and the operator the
+  first to see it.
+- A tenant wants a capability that costs more to run than their plan brings in. **Platform owner
+  wins**, and the honest form is to say so and price it, not to build it and absorb the loss quietly.
+
+### What this asks of every story
+
+Name the conflict, or state that there is none. **Silence is a claim** — that the interests align —
+and it will be checked. Where a conflict exists, say which layer won and what was done to soften the
+cost to the layer that lost. A story in which the visitor always wins is not advocacy, it is a story
+that has not been thought through commercially; one in which they never do is a product nobody
+returns to.
+
+---
+
 ## 1. The two hard rules
 
 ### Honesty is not negotiable, and it is also the strategy
@@ -143,6 +200,7 @@ than none.
 **Role**: visitor | chat operator | calendar operator | tenant | platform owner
 **Status**: built | partial | planned      ← from `ui-inventory.md`, not from memory
 **Objective served**: which numbered objective from section 0, and whose
+**Interest conflict**: none found | <layer that won, and what softened the cost to the layer that lost>
 
 **As** <role>, **I want** <what they are actually trying to do — in their words>,
 **so that** <the outcome they get, not the feature they use>.
