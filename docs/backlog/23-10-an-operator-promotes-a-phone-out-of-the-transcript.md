@@ -1,7 +1,8 @@
 # an operator turns a phone number in the transcript into a contact, in one act
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-console#106`. Console only — no server change was needed,
+  and that was confirmed rather than assumed: `ago-chat` carried zero tracked changes.
 - **Depends on**: `23-08` — the register entry, so a new way of creating these rows does not land
   before the store is accounted for
 - **Decision**: `docs/design/decisions.md` §4, the *and the operator can promote a phone out of the
@@ -67,14 +68,14 @@ migration, a widget change and an ADR for no reason.
 
 ## Done when
 
-- [ ] An operator selects a number in a message, triggers the act, and the contact panel is
+- [x] An operator selects a number in a message, triggers the act, and the contact panel is
       pre-filled with a kind and that value, unwritten.
-- [ ] Confirming records exactly one row, with source `Operator`.
-- [ ] Nothing is recorded without a confirmation — asserted on the request, not on the rendering.
-- [ ] No code path reads `messages.body` looking for a pattern, in either repository — asserted by a
+- [x] Confirming records exactly one row, with source `Operator`.
+- [x] Nothing is recorded without a confirmation — asserted on the request, not on the rendering.
+- [x] No code path reads `messages.body` looking for a pattern, in either repository — asserted by a
       test or, failing that, stated in the PR with the grep that shows it.
-- [ ] The panel's caption is consistent with `23-09`'s ADR.
-- [ ] `ago-console`'s ux-gate passes, including its no-untranslated-string assertion.
+- [x] The panel's caption is consistent with `23-09`'s ADR.
+- [x] `ago-console`'s ux-gate passes, including its no-untranslated-string assertion.
 
 ## Open questions
 
