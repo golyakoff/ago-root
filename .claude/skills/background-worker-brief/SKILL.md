@@ -212,6 +212,23 @@ green — format, build with zero warnings, full suite with zero failures — an
 per test project. **Once is enough.** A worker that runs the full suite five times has spent four
 suites proving nothing; the managing session re-verifies independently anyway.
 
+**Tell the worker to read its own background run out of the file, never to wait for it.** A completion
+notification goes to the *managing session*, not to the worker, so a worker that ends its turn saying
+"I'll resume when the suite finishes" has **stopped**, not paused — it waits for a message that will
+never arrive, and the managing session has to spend a turn waking it. This happened four times in one
+day (2026-09-04) across four different workers, so it is the default behaviour rather than an
+individual's mistake. The brief has to say: the tool result that started the run gave you its output
+path; read that path, and if the run produced no summary, run it again in the foreground.
+
+**And say what a truncated run looks like**, because it is indistinguishable from a clean one unless
+the worker is told what to check. Three specific traps have each cost this project a false green:
+`dotnet test` can abort part way, print a pass line for every assembly it *did* finish, and still exit
+0 — so read which assemblies are **missing**, not the failure count. A pipeline like
+`dotnet build … | tail -3 && dotnet test` takes its exit status from `tail`, so a failed build is
+stepped straight over. And **report only what you have watched finish**: two workers in one day
+reported a clean format check that was not clean, having written the report before their own run
+completed.
+
 **Fails-before is not optional.** Every new test must be shown to fail against the code without its
 own check: delete or invert that production code, rebuild, capture the failure, restore. Report it
 as a table. A test that passes against the unfixed code proves nothing, and the managing session
