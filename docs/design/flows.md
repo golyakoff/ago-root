@@ -499,7 +499,12 @@ planned. An owner can grant it without payment (`22-17`) — API only.
 
 ## 4.3 Giving a colleague access
 
-**Status**: built · **Objective**: tenant · **Interest conflict**: none found
+**Status**: **planned** — corrected 2026-09-04. This said `built`, from memory rather than from
+`ui-inventory.md`, which is precisely the mistake the skill's own rule exists to prevent. The backend
+shipped in `13-01`; **the console has no route, no nav entry and no screen** for inviting, listing,
+removing or re-roling an operator, and never checks `site:manage-operators` at all
+(`ui-inventory.md` §13.4). This is the same shape as 5.2, which was labelled honestly. ·
+**Objective**: tenant · **Interest conflict**: none found
 
 **As** a tenant, **I want** to give somebody the access their job needs, **so that** they can work and
 I have not handed over everything.
