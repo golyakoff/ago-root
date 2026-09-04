@@ -237,7 +237,7 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `GetVisitorPresenceHandler` | operator claim | `conversation:read` | `conversation.OperatorId == caller` |
 | `GetOperatorQueueHandler` | operator claim | `conversation:read` | n/a — reads are keyed by site and by the caller's own id |
 | `GetAllConversationsForSiteHandler` | operator claim | `site:configure` | n/a — the read store filters `site_id` |
-| `GetMyPermissionsHandler` | operator claim | *(reads the granted set for the caller's own pair)* | n/a — answers only about the caller |
+| `GetMyPermissionsHandler` | operator claim | *(reads the granted set for the caller's own pair)* | n/a — answers only about the caller. `23-21`: also reads `IEnabledModuleReadStore.GetForSiteAsync(query.SiteId, ...)` — the same query `23-01`'s `ListEnabledModulesForSiteHandler` gates on `site:configure` for the site-scoped `/sites/{siteId}/modules` route, reached here with **no** permission check of its own because `query.SiteId` is the operator claim, never a route segment or a body value — there is nothing for a caller to name. This is what lets an operator holding no `site:configure` learn whether their own tenant has a module enabled at all, which the gated route cannot answer for them |
 | `CreateAttachmentHandler.HandleAsOperatorAsync` | operator claim | `conversation:send` | `conversation.OperatorId == caller` |
 | `ConfirmAttachmentHandler.HandleAsOperatorAsync` | operator claim | `conversation:send` | `conversation.OperatorId == caller` |
 | `GetAttachmentDownloadUrlHandler.HandleAsOperatorAsync` | operator claim | `conversation:read` | `conversation.OperatorId == caller` |

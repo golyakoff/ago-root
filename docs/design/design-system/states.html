@@ -954,8 +954,10 @@ textarea {
         <tr><td>Empty</td><td><code>&lt;p class=&quot;ago-empty&quot;&gt;</code></td><td><b>no</b> &mdash; a class</td></tr>
         <tr><td>Error</td><td><code>Alert tone=&quot;danger&quot;</code></td><td>yes</td></tr>
         <tr><td>Success</td><td><code>Alert tone=&quot;success&quot;</code></td><td>yes</td></tr>
-        <tr><td>Permission denied</td><td><code>PageHead</code> with no description + <code>Alert tone=&quot;danger&quot;</code> + a &ldquo;Back to queue&rdquo; link</td><td><b>no</b> &mdash; a hand-repeated three-element pattern</td></tr>
+        <tr><td>Permission denied</td><td><code>PageHead</code> with no description + <code>Alert tone=&quot;danger&quot;</code> + a &ldquo;Back to queue&rdquo; link</td><td><b>no</b> &mdash; a hand-repeated three-element pattern, still true of the fourteen chat screens</td></tr>
         <tr><td>Not configured</td><td><code>Alert tone=&quot;info&quot;</code></td><td>yes, but only the calendar and FAQ screens have it</td></tr>
+        <tr><td>Not entitled &mdash; tenant has it, you do not <span class="dsp-label" style="display:inline">(<code>23-21</code>)</span></td><td><code>PageHead</code> with no description + <code>Alert tone=&quot;info&quot;</code> naming who can grant it + a &ldquo;Back to queue&rdquo; link</td><td><b>no</b> &mdash; a shared function (<code>CalendarAccessRefusal</code>), built from the same three components as &ldquo;Permission denied&rdquo; above, not a twelfth on <code>adr/0030</code>&rsquo;s list</td></tr>
+        <tr><td>Not entitled &mdash; tenant does not have it at all <span class="dsp-label" style="display:inline">(<code>23-21</code>)</span></td><td><code>PageHead</code> with no description + <code>Alert tone=&quot;info&quot;</code> naming where the capability comes from + a &ldquo;Back to queue&rdquo; link</td><td><b>no</b> &mdash; the same shared function, its other branch</td></tr>
       </tbody>
     </table>
   </section>
@@ -997,10 +999,12 @@ textarea {
 
   <section class="dsp-section">
     <h2 class="dsp-h">Permission denied, which is a pattern rather than a component</h2>
-    <p class="dsp-note">Repeated by hand on <b>twenty-one</b> screens &mdash; fourteen chat, seven calendar (counted by
-      occurrences of the <code>siteConfigBackToQueue</code> string). Note the <code>PageHead</code> carries the title
-      <b>without</b> its usual description &mdash; the sentence that explains what the screen is for is exactly what a
-      refused reader does not get.</p>
+    <p class="dsp-note">Still repeated by hand on the fourteen chat screens. <code>23-21</code> collapsed the seven
+      calendar screens' own copies into the one shared function below &mdash; before it, this note said
+      &ldquo;twenty-one screens, fourteen chat, seven calendar,&rdquo; counted by occurrences of the
+      <code>siteConfigBackToQueue</code> string; the calendar seven no longer count that way. Note the
+      <code>PageHead</code> carries the title <b>without</b> its usual description &mdash; the sentence that
+      explains what the screen is for is exactly what a refused reader does not get.</p>
     <div class="dsp-specimen dsp-specimen--wide" style="max-width: 44rem;">
       <div class="ago-page-head"><div><h1 class="ago-page-head__title">All conversations</h1></div></div>
       <div class="ago-alert ago-alert--danger" role="alert"><span class="ago-alert__glyph" aria-hidden="true">!</span><div class="ago-alert__body"><span>You do not have permission to view every conversation for this site.</span></div></div>
@@ -1009,11 +1013,33 @@ textarea {
   </section>
 
   <section class="dsp-section">
+    <h2 class="dsp-h">Not entitled, split in two &mdash; <code>23-21</code></h2>
+    <p class="dsp-note">Closes the hole this page used to list first: a permission-gated <i>nav item</i> used to be
+      simply not drawn, so a person who lacked a grant saw exactly what a person for whom the capability does not
+      exist at all saw &mdash; <code>flows.md</code> 4.3&rsquo;s own must-never-happen, the same defect <code>22-14</code>
+      was found through. <code>GET /api/v1/operators/me</code> now carries a second, separate fact
+      (&ldquo;<code>enabledModules</code>&rdquo;) beside the permission list, and the calendar screens are the first
+      to render the difference &mdash; <code>consoleNav.ts</code> draws one nav entry rather than zero when the
+      tenant has the module and this operator merely lacks the permission, and each screen&rsquo;s own refusal says
+      which of the two states it is in. Both specimens below are deliberately <code>tone=&quot;info&quot;</code>,
+      never <code>&quot;danger&quot;</code> &mdash; neither is a fault, and the &ldquo;forbidden&rdquo; one in
+      particular is an ordinary, expected state for a new hire.</p>
+    <div class="dsp-specimen dsp-specimen--wide" style="max-width: 44rem;">
+      <div class="ago-page-head"><div><h1 class="ago-page-head__title">Queue</h1></div></div>
+      <div class="ago-alert ago-alert--info" role="status"><span class="ago-alert__glyph" aria-hidden="true">i</span><div class="ago-alert__body"><span>You do not have permission to view the calendar&rsquo;s booking queue. Ask an owner or admin at this workspace to grant it to you.</span></div></div>
+      <p><a href="#">Back to queue</a></p>
+      <span class="dsp-label">&ldquo;forbidden&rdquo; &mdash; this tenant has the calendar; this operator does not hold it yet</span>
+    </div>
+    <div class="dsp-specimen dsp-specimen--wide" style="max-width: 44rem;">
+      <div class="ago-page-head"><div><h1 class="ago-page-head__title">Queue</h1></div></div>
+      <div class="ago-alert ago-alert--info" role="status"><span class="ago-alert__glyph" aria-hidden="true">i</span><div class="ago-alert__body"><span>This workspace does not have the calendar. It is switched on per workspace, not by any operator here &mdash; ask AGO about enabling it.</span></div></div>
+      <p><a href="#">Back to queue</a></p>
+      <span class="dsp-label">&ldquo;absent&rdquo; &mdash; this tenant has never enabled the calendar at all</span>
+    </div>
+  </section>
+
+  <section class="dsp-section">
     <h2 class="dsp-h">The holes this vocabulary has</h2>
-    <div class="dsp-hole"><b>Absent and forbidden look identical.</b> A permission-gated <i>nav item</i> is simply not
-      drawn, so a person who lacks a grant sees exactly what a person for whom the feature does not exist sees. The
-      denied pattern above only ever appears to someone who reached the URL directly. There is no state in this system
-      for &ldquo;this exists and you may not use it&rdquo;.</div>
     <div class="dsp-hole"><b>Three screens have no empty state at all.</b> The install screen&rsquo;s &ldquo;Your
       website address&rdquo; panel renders a titled panel with a description and <i>nothing in the body</i> when the
       origin list is empty. <code>/calendar/setup</code>&rsquo;s Calendars and Services lists are bare
