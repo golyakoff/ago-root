@@ -1,7 +1,9 @@
 # a person with calendar permissions on two tenants gets no calendar at all
 
 - **Stage**: 22
-- **Status**: in review (2026-09-04), `adr/0100`. The product question below was answered on
+- **Status**: done (2026-09-05), `ago-calendar#41`, `ago-console#103`, `adr/0100`. Deployed
+  2026-09-04; the projection backfill that day showed two people holding two tenants each, which
+  is this item's own case, live. The product question below was answered on
   2026-09-04: **build the switcher**. The second alternative — one person, one tenant, refuse to
   create the second grant — is not in scope; see Outcome.
 - **Found**: 2026-09-03, reading `22-05` before merging it.
