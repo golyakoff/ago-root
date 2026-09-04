@@ -1,7 +1,8 @@
 # ago-calendar still maps four `access.*` error codes nothing can produce
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-calendar#39`. The mirror-image gap the same sweep found — codes
+  produced but unmapped — is `22-20`
 - **Found**: 2026-09-04, checking `22-06`'s API calls against what `22-05` left standing.
 
 ## The gap

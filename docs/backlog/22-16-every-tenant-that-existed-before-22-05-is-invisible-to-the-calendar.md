@@ -1,7 +1,8 @@
 # every tenant that existed before `22-05` is invisible to the calendar, permanently
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#162`. Its reference guard was blind and is fixed in `17-12`'s
+  second half; the backfill still has to be *run* on the node, which is part of the next deploy
 - **Found**: 2026-09-04, immediately after `22-05` was deployed and verified — by the author trying
   to open a calendar screen with their own account and finding nothing there.
 

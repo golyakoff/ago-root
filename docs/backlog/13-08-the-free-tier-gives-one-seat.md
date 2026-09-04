@@ -1,7 +1,7 @@
 # The free tier gives one seat where the market gives two, and retention has no per-tier window
 
 - **Stage**: 13
-- **Status**: ready
+- **Status**: done (2026-09-03), `ago-root#378`
 - **Decided**: 2026-09-03 — the free tier is **two operators with two months of history**, matching
   Jivo's published free plan. The numbers are settled; only the implementation is open.
 

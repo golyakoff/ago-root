@@ -1,7 +1,11 @@
 # An operator creates a customer and a booking
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: ready — genuinely unstarted, despite what its number now suggests.
+- **Its number is claimed by something else.** `ago-root#339` (the calendar hosts have no schema guard, shipped 2026-09-03)
+  also carries `20-21`, and shipped with commits that say so. A number names one item, so one of
+  the two has to move; it cannot be the one already written into merged history. `22-21` holds
+  that renumbering, along with six more pairs the same audit found.
 - **Decided by**: `adr/0090` — read it first. This item builds what it decided and does not re-open it.
 - **Depends on**: `20-20` (nothing here is verifiable by hand until AGO Calendar runs somewhere).
 

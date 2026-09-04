@@ -1,7 +1,7 @@
 # The gate checks that everything is translated
 
 - **Stage**: 11
-- **Status**: ready
+- **Status**: done (2026-09-03), `ago-root#326`
 - **Raised by**: the author, 2026-09-02 — *"в аудит по фронту надо добавить ещё что всё переводится
   на русский (кроме страниц доступных ТОЛЬКО platform owner)"*.
 - **Split from**: `11-15`, which delivered the repair this check protects but not the check itself.
