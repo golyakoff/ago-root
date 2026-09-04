@@ -1,7 +1,7 @@
 # the platform owner cannot grant a product to a tenant
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done — merged 2026-09-04 (`ago-calendar#38`, `ago-chat#166`); `adr/0098`
 - **Found**: 2026-09-04, raised by the author after finding they could not reach a calendar screen
   with their own account and that the only workaround on offer was *register a new site*.
 
@@ -51,9 +51,35 @@ ladder, no tier interaction — and it is what lets a first client be given the 
 
 ## Done when
 
-- [ ] A platform owner can enable a product for a named tenant, and that tenant can then use it —
+- [x] A platform owner can enable a product for a named tenant, and that tenant can then use it —
       proven end to end, by a call that failed before and succeeds after.
-- [ ] The grant is distinguishable from a purchase wherever either is recorded.
-- [ ] Revoking it works and is proven by trying it, not asserted — an entitlement that cannot be taken
+- [x] The grant is distinguishable from a purchase wherever either is recorded.
+- [x] Revoking it works and is proven by trying it, not asserted — an entitlement that cannot be taken
       back is not an entitlement.
-- [ ] Chat still does not learn the word "calendar" (`adr/0093`): it grants a **module**.
+- [x] Chat still does not learn the word "calendar" (`adr/0093`): it grants a **module**.
+
+## Outcome
+
+`PUT`/`DELETE /api/v1/owner/sites/{siteId}/modules`, gated by `RequirePlatformOwner` and nothing else,
+reaching the identical `EnabledModule` aggregate and the identical `22-11` registration mechanism the
+tenant's own self-service route uses — **a second caller, not a second mechanism**. `GrantedByOwner`
+and `ExpiresAt` sit on the entitlement row itself, so a grant and a purchase are the same record with
+different values rather than two records free to disagree. `ExpiresAt` is `required` and nullable: a
+perpetual grant is allowed and must be stated. `adr/0098` carries the reasoning.
+
+**Three things this delivered that the item did not ask for, and one it asked for and did not get.**
+
+The calendar had no way to hold a tenant it had never seen, so `RegisterChatModuleHandler` now
+auto-provisions one. That **widened the provisioning secret's blast radius past the enumeration
+`adr/0095` had made checkable** — a holder can now create accounts, unbounded — which is amended into
+that ADR rather than absorbed, and marked in the data by `Tenant.AutoProvisioned` and a separate
+factory. `22-18` remains what ends the exposure.
+
+Two documents were false and are corrected here: `authorization.md` and `tenant-isolation.md` both
+said no platform-owner write surface existed anywhere, which had been untrue since `14-12`'s owner
+unlink and is now untrue three times over.
+
+**"Revoking it works" is true only on the granting side.** Chat stops offering an expired module
+immediately; the calendar is never told a grant lapsed and will still serve a call whose assertion it
+can verify. An explicit revoke reaches both sides; an expiry does not. Stated in `adr/0098` rather
+than left to be found.

@@ -21,6 +21,14 @@ tenant's data**".
 | Routes taking a **client-supplied** `siteId` | **26** — eleven route groups, all permission-gated |
 | Read-model queries | **7**, in three read stores |
 | Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
+| Genuinely cross-tenant **writes** | **3** — `14-12`'s owner unlink, and `22-17`'s owner module grant and revoke |
+
+**The first three rows have not been re-derived since `14-04` and are known to be low.** There are
+**103** `*Handler.cs` files under `Ago.Chat.Application/UseCases` on `main` as of 2026-09-04 against
+the 69 classes recorded here; every stage since added entry points without re-running the scan. The
+cross-tenant rows below them are maintained by hand and are current — they are short enough to be,
+which is exactly why the long rows drifted and these did not. Only a re-scan fixes the top three,
+and `22-19` is filed for it; until then read them as a floor, not a count.
 
 **Re-derived in `14-04`**, from the scan itself rather than by adding a delta: the first three rows
 had drifted (they read 37/21/16 across 31 handler classes, a count from before `12-04`/`12-05`/`14-06`
@@ -112,8 +120,10 @@ compares against.
    site being configured. **On these routes the permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
    real `PermissionChecker`, rather than at the handler level with a fake.
-4. **Nowhere — deliberately.** `GET /api/v1/owner/sites` (`12-02`) has no `site_id` at all. See
-   *The one cross-tenant read* below.
+4. **Nowhere, or from a route the caller chose — the platform owner's four.**
+   `GET /api/v1/owner/sites` (`12-02`) has no `site_id` at all; the three owner writes (`14-12`'s
+   unlink, `22-17`'s module grant and revoke) take one the caller names, gated only by
+   `RequirePlatformOwner`. See *The cross-tenant surfaces the platform owner reaches* below.
 
 ## The three kinds of gate
 
@@ -314,15 +324,28 @@ surface is narrower still: the endpoint rejects a missing or invalid `Webhook-Si
 this handler is ever constructed, so every payment id it ever sees is one ЮKassa itself signed with a
 key only this deployment and ЮKassa hold.
 
-**The one cross-tenant read (1).** `ListSitesForOwnerHandler`, `12-02`'s platform-owner overview. It
-carries no `SiteId` **because** it is cross-tenant. The whole access-control story is `12-01`'s
-`RequirePlatformOwner` policy on `GET /api/v1/owner/sites`: the authorizing fact is a Keycloak realm
-role (`adr/0032`), and `Ago.Chat.Application` has no port that sees claims — re-checking in the
-handler would be a second, weaker copy of the same rule, free to drift from the first. Read-only; no
-owner write surface exists anywhere.
+**The cross-tenant surfaces the platform owner reaches (4).** `ListSitesForOwnerHandler`, `12-02`'s
+platform-owner overview, is the read. It carries no `SiteId` **because** it is cross-tenant. The whole
+access-control story is `12-01`'s `RequirePlatformOwner` policy on `GET /api/v1/owner/sites`: the
+authorizing fact is a Keycloak realm role (`adr/0032`), and `Ago.Chat.Application` has no port that
+sees claims — re-checking in the handler would be a second, weaker copy of the same rule, free to
+drift from the first.
 
-Since `12-05` this is the **one place in the codebase where a caller's own `site_id` must be
-ignored**, and the reason is worth stating where the rule lives. The platform owner may now hold an
+**Three cross-tenant *writes* sit beside it, and this section claimed until 2026-09-04 that none
+existed anywhere.** `UnlinkChannelIdentityAsOwnerHandler` (`14-12`, `adr/0079`) was the first, and the
+claim was already false before `22-17` added `EnableModuleForSiteAsOwnerHandler` and
+`RevokeModuleForSiteAsOwnerHandler` (`adr/0098`). All three take a `SiteId` **the caller chooses**,
+which is both the point and the risk: they are the only handlers here where an operator-shaped token
+names a tenant it holds no `operators` row in and is obeyed. None carries an `OperatorId` or calls
+`IPermissionChecker`, for the same reason the read does not — so the route's policy is the entire gate
+in all four cases. **That the "no owner write surface exists anywhere" sentence survived one
+counter-example until a second arrived is the argument for these four being listed in one place
+rather than described where each was built.**
+
+Since `12-05` the read is the **one place in the codebase where a caller's own `site_id` must be
+ignored rather than merely unused**, and the reason is worth stating where the rule lives. (The three
+writes above never see it either, but each is handed the tenant it acts on in the route, so there is
+nothing to ignore — the danger there is the opposite one, of trusting a `SiteId` the caller chose.) The platform owner may now hold an
 `operators` row of their own, so their token resolves an `operator_id`/`site_id` like anybody's, and
 every request they make — this one included — arrives carrying one. Scoping this read to it would not
 error; it would return a **shorter list of tenants**, which reads exactly like a platform with fewer
@@ -484,4 +507,5 @@ Stated plainly, because a document like this is most dangerous when it is truste
 | Belongs-to-site branches fail when removed | `GetWebhookDeliveriesHandlerTests`, `RevokeWebhookEndpointHandlerTests`, `DeleteAttachmentHandlerTests`, `AssignConversationHandlerTests` |
 | The two token schemes cannot be substituted | `TokenSchemeSeparationTests` (`17-06`) |
 | Only the platform owner reaches the cross-tenant read | `OwnerSitesEndpointTests` (`12-02`) |
+| Only the platform owner reaches the cross-tenant writes | `OwnerModuleEndpointsTests` (`22-17`) — an ordinary operator **and** a `site:configure`-holding admin both refused, and the owner token refused on the tenant's own self-service route |
 | Every use case is gated or argued | `TenantScopeTests` |

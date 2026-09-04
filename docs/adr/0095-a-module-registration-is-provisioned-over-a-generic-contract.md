@@ -5,6 +5,9 @@
 - **Stage**: 22
 - **Extends**: `adr/0065` (the module contract this adds a second, provisioning-shaped route family to)
   and `adr/0094` (the per-call credential this mechanism installs on both sides). Amends neither.
+- **Amended**: 2026-09-04 by `22-17` (see Consequences) — the provisioning secret can now create
+  tenants, so this ADR's enumerated blast radius is wider than it was written. The decision stands;
+  the limit does not.
 
 ## Context
 
@@ -125,6 +128,21 @@ the operation is for.
   deployment's client certificate can act on any site it serves; it changes the credential's shape and
   its revocation story, not the blast radius. The only way to avoid a deployment-wide bootstrap secret
   is not to automate provisioning at all, which is the state this item exists to leave.
+
+- **Amended 2026-09-04 by `22-17`: the blast radius above grew, and the enumeration that made it
+  checkable no longer holds.** As written, this bullet's list — register, rotate, delete a
+  registration — was exhaustive because **no route reachable in production could create a tenant at
+  all**; a secret-holder could only act on sites the deployment already served. `22-17` needed a grant
+  to complete for a tenant the calendar had never seen, and `RegisterChatModuleHandler` now
+  auto-provisions that tenant. A holder can therefore **bring accounts into existence**, without limit
+  and without anyone asking.
+
+  Accepted on the same argument as the original, and no further: the anchor cannot be scoped to a row
+  whose creation is the act being authorized. It is recorded rather than absorbed, in three ways —
+  `Tenant.AutoProvisionForChatModule` is a separate factory, `Tenant.AutoProvisioned` marks every row
+  it wrote, and the call is logged. **There is no bound on how many such tenants can be created**, and
+  none of the three protections is one. `22-18`, which removes the module channel from the internet
+  entirely, remains the item that ends the exposure rather than annotating it.
 
 - **What does not protect these routes today**, named rather than implied: no IP allowlisting, no
   audit log of provisioning calls, no rate limiting, no alerting on repeated refusals. `22-18`

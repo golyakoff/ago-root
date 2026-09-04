@@ -33,7 +33,7 @@ JWKS is the signature source there, no local key involved at all.
 | **Visitor** | Signed token (localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`); **7-day lifetime, renewed at the point of use** (`POST /api/v1/visitor-sessions/renew`), still no revocation - each a decision, not an accident: `17-06`/`adr/0034` for revocation, `17-07`+`17-08`/`adr/0048` for the lifetime and the renewal path | None beyond the token's `site_id` claim |
 | **Operator** | `/hubs/operator` expects a JWT (`realtime.md`) - **issued by Keycloak** (`5-05`, `adr/0022`), validated directly against its JWKS; `OperatorId`/`site_id` are resolved from the token's `sub` via `OperatorIdentityClaimsTransformation`, not read from the token directly | `adr/0016`'s RBAC, resolved per request from `OperatorId`/`site_id` regardless of how they were resolved |
 | **Webhook/API integrations** | Outbound only today: deliveries to a tenant's endpoint are HMAC-signed (`adr/0013`) so *they* can verify *us*. There is no inbound integration API yet, so "how does a third party authenticate to AGO Chat" is entirely unplanned | N/A - does not exist |
-| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants exactly one thing as of `12-02`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview. No write or action surface for this actor exists. **`12-04`: and one thing it is explicitly refused** - `10-02`'s `POST /api/v1/sites` registration bootstrap, which would otherwise turn this identity into an ordinary tenant operator permanently (`adr/0063`) |
+| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants four things as of `22-17`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview (`12-02`); the channel-identity unlink (`14-12`, `adr/0079`); and the module grant and revoke (`22-17`, `adr/0098`). The last three are **cross-tenant writes** - this cell said none existed until 2026-09-04, which had been wrong since `14-12` **`12-04`: and one thing it is explicitly refused** - `10-02`'s `POST /api/v1/sites` registration bootstrap, which would otherwise turn this identity into an ordinary tenant operator permanently (`adr/0063`) |
 
 `site_id` scoping is the one piece already load-bearing everywhere (`vision.md`: "multi-tenant from
 day one") - **and "everywhere" is now a checked claim rather than an assumption**: every use case,
@@ -300,16 +300,43 @@ persist, adding the role to the import file does not create it either.
 cross-tenant query is `12-02`, the console view is `12-03`, and any write access an owner might have
 is not designed. Nothing about the role's presence widens any existing policy.
 
-**`12-02` gave it its first and only route**: `GET /api/v1/owner/sites`, the cross-tenant operations
+**`12-02` gave it its first route**: `GET /api/v1/owner/sites`, the cross-tenant operations
 read (`OwnerSitesEndpoints`, `backlog/12-02`). Three things about it matter here. The path says
 `/owner/`, never `/admin/`, so a URL in a log or a screenshot cannot blur this actor back together with
 `5-08`'s site-scoped `"Admin"` role. The policy is the *entire* access-control story behind it: the
 handler makes no second check and structurally cannot, since the fact that authorizes the call is a
 claim, and `Ago.Chat.Application` has no port that sees claims - re-checking there would be a second,
-weaker copy of the same rule, free to drift from the first. And it is read-only: still no owner *write*
-or action surface anywhere, by design (`12-02`'s Out of scope). Proven with real tokens, not asserted:
-an ordinary operator and a `site:configure`-holding `demo-admin` both get `403`, an anonymous caller
-`401` (`OwnerSitesEndpointTests`).
+weaker copy of the same rule, free to drift from the first. And it is read-only, which `12-02`'s Out of scope
+intended to be the state of the whole actor. Proven with real tokens, not asserted: an ordinary
+operator and a `site:configure`-holding `demo-admin` both get `403`, an anonymous caller `401`
+(`OwnerSitesEndpointTests`).
+
+## The owner acquired a write surface, twice, and this file did not notice the first time
+
+**`14-12` was the first** (`adr/0079`): `POST /api/v1/owner/sites/{siteId}/channel-identities/{id}/unlink`.
+It arrived as one clause of a larger item about verified channel linking, and the sentence above - "no
+owner write or action surface anywhere, by design" - stayed in this file for three weeks after it
+stopped being true. Recording that is the point of this section: the claim did not survive contact
+with the second write either, and a rule stated in one place is what would have caught the first.
+
+**`22-17` added the other two** (`adr/0098`): `PUT` and `DELETE
+/api/v1/owner/sites/{siteId}/modules[/{moduleKey}]`, the platform owner granting or revoking a module
+for a named tenant with no payment - a trial, or the repair of a payment that provisioned nothing.
+
+All three share the shape `12-02` established for the read, and it is the shape that matters here:
+**`RequirePlatformOwner` on the route is the entire access-control story, and the handlers make no
+second check.** They carry no `OperatorId`, call no `IPermissionChecker`, and structurally cannot -
+the authorizing fact is a realm-role claim and `Ago.Chat.Application` has no port that sees claims
+(`adr/0032`). A route mapped with a weaker policy is therefore not a degraded check but no check.
+
+Two consequences worth stating where the model lives rather than only in the ADRs:
+
+- **The `SiteId` these three act on is chosen by the caller**, not resolved from the token. That is
+  the definition of the actor and the whole of its risk; `tenant-isolation.md` lists all four in one
+  place for that reason.
+- **The module grant additionally requires the deployment-wide provisioning secret** in its body
+  (`adr/0095`). So the realm role alone is not sufficient authority in practice, though the role's
+  name reads as though it were.
 
 ## The tokens themselves: reviewed once, deliberately, in `17-06`
 
