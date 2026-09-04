@@ -708,6 +708,19 @@ does not hold it yet. The page-level refusal itself is a shared function
 (`src/calendar/calendarAccess.tsx`) rather than the seven hand-copied blocks that existed before -
 built from the console's existing eleven-component set (`adr/0030`), no new component added.
 
+**Generalised to the other two gates by `23-24`** (`docs/design/decisions.md` §10). `site:configure`
+and `site:erase` never have the third, "the tenant does not have this at all" state
+`EnabledModules` exists to distinguish - every tenant's own owner already holds both, by
+construction - so their nav entries are simply always drawn, muted (not absent, not `disabled`) when
+the caller lacks the permission. The calendar's one grantable-but-lacking entry is muted the same
+way, so all three gates read as one visual treatment rather than the calendar looking different from
+the rest. `src/shell/accessRefusal.tsx`'s `AccessRefusal` is the same consolidation
+`calendarAccess.tsx` did for the calendar's seven screens, now shared by the fourteen screens gated
+on `site:configure`/`site:erase`, and `calendarAccess.tsx`'s own "forbidden" branch delegates to it
+rather than carrying a second copy. `adr/0030` gained a second amendment for the one glyph this
+needed - a lock, inline SVG, beside a muted entry - and `docs/design/gaps.md` records the icon
+question it answers as answered narrowly, not closed to a general position.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.

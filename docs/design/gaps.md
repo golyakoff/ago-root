@@ -78,9 +78,13 @@ ADR, not an addition to a backlog.
 2. **No warning tone.** `Alert` has danger and success; anything in between is one or the other today.
    The re-cut screen and the lapsed-grant screen both want *"this is fine but look"*.
 
-3. **No icon set, and no icon-only button.** A closed set with no icons is a real position — text is
-   unambiguous and translatable, and `11-13` made translation a gate. But the nav has 21 items and no
-   visual anchor.
+3. ~~**No icon set, and no icon-only button.**~~ **Answered narrowly by `23-24`, 2026-09-05** — not
+   closed to a general position either way. A closed set with no icons was a real position, and stays
+   the position for everything except the one case `23-24` needed: a muted nav entry now carries one
+   inline-SVG lock glyph beside its label (`src/shell/AppShell.tsx`'s `NavLockGlyph`, `adr/0030`'s
+   second amendment), translated hidden label and all. No icon-only button exists anywhere in the
+   console, and this glyph is not one — it sits beside text, never instead of it. The next screen that
+   wants a real icon set is still a fresh decision, not a precedent this one already spent.
 
 4. **No tooltip and no popover.** Every explanation in the console is inline prose today. That is a
    defensible stance and an expensive one on dense screens.
@@ -112,10 +116,14 @@ ADR, not an addition to a backlog.
 ## What this changes about the number
 
 Thirty-seven sounds like a backlog. It is three deletions, roughly twenty that close as a
-side-effect of work already sliced or already coming, and **ten questions**.
+side-effect of work already sliced or already coming, and **ten questions** — nine still open, one
+(item 3, the icon question) answered narrowly by `23-24` on 2026-09-05, in the course of building the
+muted-navigation treatment stage 23 itself needed, not in a separate design pass.
 
-Ten is a conversation, and it is the same shape as the nine that produced `decisions.md`: options,
-a recommendation, an answer recorded so the next item cannot quietly contradict it.
+Ten was a conversation, and it is the same shape as the nine that produced `decisions.md`: options,
+a recommendation, an answer recorded so the next item cannot quietly contradict it. Nine remain that
+shape; item 3 was answered by necessity rather than by the pass, which is why it reads differently
+above — narrow enough that it did not need the author's own conversation the other nine still do.
 
 **None of the ten blocks stage 23.** They shape how its screens look, not whether its mechanisms can
-be built — so the slice can land while the ten are still open.
+be built — so the slice can land while the (now nine) rest are still open.
