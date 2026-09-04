@@ -55,6 +55,25 @@ Not ceremony. A message passed inline goes through the shell, where backticks be
 substitution and `\n` becomes a real newline — both have already cost this project a rebuilt branch
 and a broken script in one day. Git reads a file verbatim.
 
+## The hook is what makes it unavoidable
+
+The scripts protect the path that remembers to call them - which is the same discipline that already
+failed twice. `hooks/commit-msg` runs for **every** commit: `-m`, `-F`, an editor, another script, a
+background worker. Past it there is only `--no-verify`, which is a decision rather than a lapse.
+
+Install once per machine: `bash install-hooks.sh`.
+
+**It points `core.hooksPath` at this directory by absolute path, and that detail is the whole thing.**
+The obvious install - copy the hook into each repository's `.githooks` and set
+`core.hooksPath = .githooks` - fails here, and fails silently: **a relative `core.hooksPath` resolves
+against the current working tree**, so a worktree looks for `<worktree>/.githooks`, finds nothing, and
+commits with no hook at all. Nearly all work in this workspace happens in worktrees, so that version
+protects almost nothing while reporting ten repositories installed. Found by testing it - a
+`git commit -m` carrying the trailer went straight through.
+
+Verified after the fix, from two different repositories' worktrees: a trailered commit exits 1, a
+clean one exits 0.
+
 ## In commit-prep blocks
 
 A worker's commit-prep block calls `commit.sh`, not `git commit`. Then the managing session cannot
