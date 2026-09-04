@@ -254,6 +254,40 @@ denial.
   run together, and the reason they run at all is that the pre-`6-09` leak is already baked into every
   deployed database - shipping the fix alone would leave every existing environment exactly as jammed
   as it is, because nothing in the new code path ever revisits a conversation that was already closed.
+- `conversation_assignments` (**added in `23-03`**) - `id`, `site_id`, `conversation_id`,
+  `operator_id`, `started_at`, `ended_at?`, `source`. `decisions.md` §2's "store ownership intervals,
+  not counters" amendment, in a table: an append-only interval per assignment, open (`ended_at is
+  null`) while the operator holds the conversation, stamped once when they stop. Nothing else ever
+  updates a row - not even `Conversation`'s own `operator_id` overwriting on a transfer erases this
+  table's memory of who held it before, which is the whole reason it exists: `Conversation.OperatorId`
+  gives at most the *current* holder with no start time, and a transfer used to erase the rest.
+  `source` is `Assigned` (either `IAssignmentClaimer`, and - see that enum's own remarks - a manual
+  claim through `AssignConversationHandler`, indistinguishable from an automatic one until `23-04`
+  gives the manual path its own reachable act and its own `Taken` value) or `Transferred`
+  (`TransferConversationHandler`, closing one interval and opening another in the same transaction);
+  `23-04`/`23-05` add `Taken`/`Additional`. **Six writers, one invariant**: the two claimers,
+  `AssignConversationHandler`, `TransferConversationHandler`, `CloseConversationHandler` and
+  `OperatorConversationReleaser` (`4-04`) between them open or close every interval, and the interval
+  write always lands in the identical transaction as the assignment state change it records (CLAUDE.md
+  rule 4) - either the aggregate's own `SaveChangesAsync` (`IConversationAssignmentLog`, EF
+  change-tracked, no `SaveChangesAsync` of its own - see that port's own remarks) or, for the two
+  `Ago.Chat.Worker` claimers, raw SQL issued on the same connection and transaction as the capacity
+  claim it accompanies (`ConversationAssignmentIntervalSql`), deliberately not through the port -
+  splitting the two would let a claim commit without its interval.
+  **No foreign key on `conversation_id`** - deliberate, and the answer to the question this item's own
+  Scope left open ("does `16-02`'s erasure drain this table"). `ConversationErasureQuery.DeleteConversationAsync`
+  removes the whole `conversations` row on a personal-data erasure request, and `decisions.md` §2 is
+  explicit that erasing a conversation must not take last month's numbers with it - a cascading FK
+  would silently reverse that the moment erasure ran, for a row that names an operator and a
+  conversation and holds no content of its own. `site_id`/`operator_id` cascade normally; neither a
+  site nor an operator is ever hard-deleted in this codebase. See **Personal data** below.
+  **No aggregates, no read model** - `decisions.md` §2 again: interval overlap gets expensive at scale,
+  but nothing writes against it (rule 8), so that is a read concern for whenever a report is measurably
+  slow, not before. The one exception is `ConversationAssignmentOverlapQuery.CountHeldAtAsync` - "how
+  many did this operator hold at instant T" - written and tested (a fixture with a known answer) with
+  no real caller yet, the same "no caller, tested standalone" shape `WaitingConversationClaimQuery`
+  already established; it stays a directly-tested Infrastructure query rather than a port method, since
+  a port is shaped by its real callers and this one has none until `23-17`/`23-18`.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
   `created_at`, `delivered_at?`, `read_at?`, and - added by `14-06` - `content_kind?`,
   `content?`, `actions?`. See **Structured message content** below for why those three are
@@ -331,6 +365,15 @@ denial.
   actually skipping each other's locked rows, not just asserted from the SQL text.
 - `outbox` partial index on `(id) WHERE published_at IS NULL` - the dispatcher must never scan
   already-published rows.
+- `conversation_assignments` **unique** partial index on `(conversation_id) WHERE ended_at IS NULL`
+  (`ix_conversation_assignments_open`, `23-03`) - a conversation has at most one operator at a time, so
+  it has at most one open interval, and this enforces that at the storage level rather than trusting
+  every writer to check first: a bug that opened a second interval for an already-held conversation
+  fails the insert instead of silently doubling the row count. It is also the one query every closing
+  writer needs ("the interval currently open for this conversation"). A second index,
+  `(operator_id, started_at)`, serves the overlap query's own leading predicates - unmeasured beyond
+  that, since nothing calls it yet (CLAUDE.md rule 7). Deliberately no plain index on `conversation_id`
+  alone: an index arrives with its first real reader, and the only one today wants the open row.
 - **Every table holding a tenant's data cascades from `sites`** - EF's default for a required
   relationship, which is what all of them are. `8-07` is the first thing to depend on that rather than
   merely benefit from it: `DemoTenantRepository.DeleteSiteAsync` is one `DELETE FROM sites`, and what it

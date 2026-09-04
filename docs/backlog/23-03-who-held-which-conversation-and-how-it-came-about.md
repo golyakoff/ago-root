@@ -1,7 +1,9 @@
 # who held which conversation, from when to when, and how it came about
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#176`, `adr/0101`. `Taken`/`Additional` are
+  deliberately not in the enum yet — they belong to `23-04`, which is where the distinction
+  between an engine assignment and a human claim is born.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §2, the *store ownership intervals, not counters*
   amendment (2026-09-04)
@@ -105,19 +107,19 @@ vocabulary. `23-17` is where it is rendered.
 
 ## Done when
 
-- [ ] Each of the six writers opens or closes exactly the interval it should, asserted per path —
+- [x] Each of the six writers opens or closes exactly the interval it should, asserted per path —
       including that `CloseConversationHandler` and `OperatorConversationReleaser` close without
       opening.
-- [ ] A transfer leaves two rows: the first with an `ended_at`, the second open, and they do not
+- [x] A transfer leaves two rows: the first with an `ended_at`, the second open, and they do not
       overlap beyond the transaction's own instant.
-- [ ] A hub reconnect by the same operator adds no row.
-- [ ] Two `Worker` replicas racing one conversation produce exactly one assignment **and** exactly
+- [x] A hub reconnect by the same operator adds no row.
+- [x] Two `Worker` replicas racing one conversation produce exactly one assignment **and** exactly
       one interval — the concurrency test `4-02` already has, extended.
-- [ ] A conversation closed while held leaves no open interval.
-- [ ] An overlap query answers "how many did this operator hold at instant T" against a fixture with
+- [x] A conversation closed while held leaves no open interval.
+- [x] An overlap query answers "how many did this operator hold at instant T" against a fixture with
       a known answer. It is written in this item even though no screen calls it yet, because it is
       the only proof the rows are shaped for their purpose.
-- [ ] `data-model.md` carries the table; `personal-data.md` carries the timestamps-versus-content
+- [x] `data-model.md` carries the table; `personal-data.md` carries the timestamps-versus-content
       distinction and this table's own erasure answer.
 
 ## Open questions
