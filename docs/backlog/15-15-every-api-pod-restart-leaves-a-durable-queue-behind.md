@@ -1,8 +1,9 @@
 # every API pod restart leaves a durable queue behind, for ever
 
 - **Stage**: 15
-- **Status**: done in code (2026-09-04), `ago-platform#45`, `adr/0097` — **two Done-when open**:
-  the pin move and the removal of the 71 existing orphans. See Outcome.
+- **Status**: done (2026-09-04), `ago-platform#45`, `adr/0097`. The pin moved (`ago-chat@8afcd58`,
+  `0.20.0`) and `messaging.md` now carries the guarantee change rather than only the ADR. The removal
+  of the 71 existing orphans is carried out to **`15-19`** — it needs a deploy this item does not.
 - **Found**: 2026-09-03, on the live broker, while proving a different check bites.
 
 ## The measurement
@@ -60,10 +61,17 @@ delivery-guarantee change and `messaging.md` should carry it.
       retry queue are gone. The durable case is proven the other way in the same run, which is the
       half that would have been easy to skip.
 - [x] Whatever changed about delivery guarantees is written down in `messaging.md`, not just in code.
-      — with `adr/0097`, including the instruction *not* to generalise `ProcessScoped` to `Competing`.
-- [ ] The seventy-one existing orphans are gone, and the removal is something a runbook can repeat.
-      — **not done, and the order matters**: they were declared by the old code, so cleaning them
-      before the fix is deployed only lets new pods recreate them. Deploy first.
+      — `adr/0097` carried it from the start, including the instruction *not* to generalise
+      `ProcessScoped` to `Competing`; `messaging.md` itself was **not** updated until 2026-09-04, and
+      until then that page still described `Competing` durability as unconditional. An ADR the
+      architecture doc contradicts is the failure this box was written to prevent, so the box was
+      half-true when it was ticked.
+- [→] The seventy-one existing orphans are gone, and the removal is something a runbook can repeat.
+      — **carried out to `15-19`**, not abandoned. The order matters and is the reason for the split:
+      they were declared by the old code, so cleaning them before the fix is deployed only lets new
+      pods recreate them. This item's promise — *a pod restart stops leaving a queue behind* — is
+      complete and lands green; removing what the old code already left is a different promise,
+      needs a deploy, and cannot be verified anywhere but the live cluster.
 
 ## Context
 
@@ -88,7 +96,13 @@ broker with `RESOURCE_LOCKED` the moment a second subscription declared the same
 legitimately shared by name across independent subscriptions. That is the argument for running the
 whole suite rather than the new tests.
 
-**Two things remain, in this order.** The consumers' pin must move to `0.20.0` — cheap this time,
-since the six-argument overload is unchanged and no consumer source breaks. Then the deploy. Only
-after that do the 71 orphans get removed, because until the new code is running, new pods recreate
-them.
+**Two things remained, in this order, and one is now done.** The consumers' pin moved to `0.20.0`
+(`ago-chat@8afcd58`) — cheap, as expected, since the six-argument overload is unchanged and no
+consumer source breaks. The deploy and the removal of the 71 orphans are `15-19`.
+
+**A third thing was missed and is fixed here.** This item's own Done-when asked for the guarantee
+change to be in `messaging.md`, "not just in code" — and it went into `adr/0097` and stopped there.
+The `Competing` section of `messaging.md` went on describing durability as unconditional for a day
+after it was not. Caught while sweeping `22-17`, by grepping that page for `ProcessScoped` and finding
+nothing. Ticking a box against the ADR that motivated it, rather than against the document it named,
+is a small and repeatable way to lose a doc change.

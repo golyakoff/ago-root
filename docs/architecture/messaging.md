@@ -184,6 +184,32 @@ to any *other* connection's passive inspection while its owner is alive. RabbitM
 `RESOURCE_LOCKED` (405), not `NOT_FOUND` (404), so a checker that treats both as "absent" reports the
 queue missing when it is merely owned.
 
+**A `Competing` subscription's queue lifetime is explicit, shipped in `15-15`** (`adr/0097`). Until
+then `Competing` had exactly one shape - `durable: true, autoDelete: false` - and this page described
+it as unconditional. That is right for a genuinely durable subscription and wrong for one whose
+*consumer name already names something with no life beyond one process*. `NodeDeliveryConsumer` names
+its queue after the pod, which is what "deliver to the node holding this connection" has to mean, so
+every pod restart left a durable queue behind for ever: measured on the live broker as **72
+`deliver-to-connections.<pod>` queues, 71 belonging to pods that no longer existed**, each still bound
+to the fanout exchange and routed into on every publish.
+
+`SubscribeAsync` now takes a `QueueLifetime`. `Durable` is the default and the previous behaviour;
+`ProcessScoped` declares the main queue and its retry queue `exclusive: true, autoDelete: true`, so
+they are gone the instant the declaring connection closes. **This is a delivery-guarantee change and
+is stated here rather than only in code**: a `ProcessScoped` subscription keeps nothing while its
+process is down, because there is nothing left to keep - the messages were addressed to a node that no
+longer exists. Every other `Competing` consumer is unchanged and still durable.
+
+**One carve-out, and it was found by a test rather than reasoned out**: the dead-letter queue stays
+durable. Tying its lifetime to the subscription's would make a dead-lettered message vanish with the
+process that failed to handle it, which is the opposite of what a dead-letter queue is for, and the
+attempt broke a pre-existing test against a real broker with `RESOURCE_LOCKED` - a code that means
+"exists but owned elsewhere", not "absent". `NodeDeliveryConsumer`'s dead-letter queue is additionally
+shared across nodes rather than per-node, so the fix does not reintroduce the identical orphan one
+queue over; that is safe only because this consumer never dead-letters at all (`MaxAttempts: 1`, and
+its handler acks even on failure). `adr/0097` carries the rejected alternatives - a periodic janitor
+sweeping consumer-less queues, and inferring lifetime from the queue's name.
+
 **Shipped in `5-04`**: named `AttachmentConfirmed`, not the `AttachmentUploaded` this table originally
 planned - it fires from `Attachment.ConfirmReady` (the confirm step, after HEAD-verification), not
 from the client's own unverified "uploaded" claim, and the domain-event/contract naming split needed
