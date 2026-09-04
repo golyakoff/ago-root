@@ -9,6 +9,34 @@ bash C:/git/ago/ago-root/.claude/skills/commit-guard/commit.sh  <message-file> [
 bash C:/git/ago/ago-root/.claude/skills/commit-guard/open-pr.sh <title> <body-file> [gh args...]
 ```
 
+## Opening a PR from the desktop app: two steps, not one
+
+**The one-line form above hides the PR from the app's own display**, and that is not cosmetic. The
+Claude desktop app renders its pull-request card - the green status a person actually reads - by
+recognising `gh pr create` in the command it is handed. Called through the script, that string is one
+level down, so the card never appears and a PR lands invisibly. Losing a check the author reads at a
+glance costs more than the keystroke saved.
+
+So from a session in the app, run the guard and the creation as two commands:
+
+```bash
+cd <the worktree>
+bash C:/git/ago/ago-root/.claude/skills/commit-guard/open-pr.sh --check-only
+gh pr create --title "<title>" --body-file <body-file>
+```
+
+`--check-only` runs **every** refusal below and prints the `gh` line to follow it with. The guard
+still gates the PR - it just stops being the thing that types the final command.
+
+**This is deliberately the weaker arrangement of the two**, and it is worth being clear about why it
+is acceptable. The refusal that mattered most - the trailer - is enforced by the `commit-msg` hook at
+the moment the commit is written, which no PR-time check can be a substitute for and which nothing
+here can skip. What `--check-only` gives up is only that a session could, in principle, skip step one
+and open the PR anyway. That is a lapse a person can see in the transcript, rather than a silent one.
+
+The single-call form stays supported and is the right one anywhere the card is not being rendered -
+a worker's commit-prep block, a terminal, CI.
+
 They live in `ago-root` and are called from wherever the work is, because the rule is the workspace's
 rather than one repository's.
 

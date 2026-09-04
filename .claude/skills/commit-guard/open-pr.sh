@@ -4,6 +4,16 @@
 # Usage, from the branch's worktree:
 #   bash <path-to-ago-root>/.claude/skills/commit-guard/open-pr.sh <title> <body-file> [gh pr create args...]
 #
+# Or, in two steps, which is what a session in the desktop app should use:
+#   bash <...>/open-pr.sh --check-only
+#   gh pr create --title "..." --body-file <body-file>
+#
+# The two-step form exists because the app renders its pull-request card by recognising
+# `gh pr create` in the command it is given. Run through this script, the call is one level down and
+# the card never appears - so the PR lands with no visible status, which is a real loss of a check
+# the author reads. `--check-only` runs every refusal below and then prints the exact `gh` line to
+# run next, so the guard still gates the PR and the card still renders.
+#
 # What it checks before calling `gh`, in this order, because each one has actually gone wrong here:
 #
 #   1. No commit on this branch carries a Co-Authored-By trailer. Checked over the whole branch, not
@@ -22,13 +32,21 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/guard.sh"
 
-TITLE="${1:-}"
-BODY="${2:-}"
-[ -n "$TITLE" ] && [ -n "$BODY" ] \
-  || { echo "usage: open-pr.sh <title> <body-file> [gh pr create args...]" >&2; exit 2; }
-shift 2
-
-[ -f "$BODY" ] || { echo "guard: no such body file: $BODY" >&2; exit 2; }
+CHECK_ONLY=0
+if [ "${1:-}" = "--check-only" ]; then
+  CHECK_ONLY=1
+  shift
+  TITLE=""
+  BODY=""
+else
+  TITLE="${1:-}"
+  BODY="${2:-}"
+  [ -n "$TITLE" ] && [ -n "$BODY" ] \
+    || { echo "usage: open-pr.sh <title> <body-file> [gh pr create args...]" >&2
+         echo "       open-pr.sh --check-only" >&2; exit 2; }
+  shift 2
+  [ -f "$BODY" ] || { echo "guard: no such body file: $BODY" >&2; exit 2; }
+fi
 
 git fetch origin --quiet
 
@@ -78,4 +96,10 @@ fi
 echo "   remote tip matches local"
 
 echo
+if [ "$CHECK_ONLY" = "1" ]; then
+  echo "== checks passed. Now open the PR with a bare gh call, so the app renders its card:"
+  echo
+  echo "   gh pr create --title \"<title>\" --body-file <body-file>"
+  exit 0
+fi
 gh pr create --title "$TITLE" --body-file "$BODY" "$@"
