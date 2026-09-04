@@ -14,13 +14,13 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **111**, across 103 `*Handler` classes |
+| Use-case entry points in `Ago.Chat.Application` | **112**, across 104 `*Handler` classes |
 | RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **75** |
-| Deliberately not RBAC-gated, each with a stated reason | **36** |
-| HTTP routes and hub methods that carry tenant data | **108** |
+| Deliberately not RBAC-gated, each with a stated reason | **37** |
+| HTTP routes and hub methods that carry tenant data | **109** |
 | Routes taking a **client-supplied** `siteId` | **44** — nineteen route groups, all permission-gated |
-| Read-model queries | **12**, in eight read stores |
-| Genuinely cross-tenant reads in the whole codebase | **1** (`12-02`'s owner overview) |
+| Read-model queries | **14**, in eight read stores |
+| Genuinely cross-tenant reads in the whole codebase | **2** (`12-02`'s owner overview and `23-14`'s per-tenant detail read) |
 | Genuinely cross-tenant **writes** | **3** — `14-12`'s owner unlink, and `22-17`'s owner module grant and revoke |
 
 **Re-derived in `22-19`, from a full scan of every mechanical row rather than a further delta.** The
@@ -109,6 +109,30 @@ sub-resource shape (`siteId` from the operator claim, not client-supplied) and t
 client-supplied `siteId`, across eleven route groups). Read-model queries and the cross-tenant-read
 count are unaffected — `18-04` added no new read store.
 
+**A fourth same-day delta, landing after the `22-19` rescan above rather than folded into it** (that
+rescan is what this document treats as current; this happened afterwards, on the same day). `23-14`
+(the owner's per-tenant search and detail read) added one entry point in one new handler class,
+exempt rather than gated: `GetSiteForOwnerHandler.HandleAsync` — the read-side sibling of
+`EnableModuleForSiteAsOwnerHandler`/`RevokeModuleForSiteAsOwnerHandler` above, not a fourth write. It
+takes a `SiteId` the platform owner names directly and calls no `IPermissionChecker`, gated solely by
+`RequirePlatformOwner` at the new `GET /api/v1/owner/sites/{siteId}` route (mapped in the existing
+`OwnerSitesEndpoints`, not a new file). That route is **not** counted among the 44 client-supplied-
+`siteId` routes: that count is specifically the permission-gated routes of category 3 below; this one
+is category 4, the platform owner's own — see that section, now "five" rather than "four". Two new
+read-model queries join the eight read stores' existing twelve:
+`PlatformOverviewReadStore.GetSiteAsync` (the per-site sibling of `ListSitesAsync`, still exempt from
+scoping to the caller's own tenant, for the identical reason `ListSitesAsync` is) and
+`EnabledModuleReadStore.GetAllForSiteAsync` (the diagnostic, expiry-inclusive sibling of
+`GetForSiteAsync` — `20-07`'s own hot-path method is unchanged and still excludes expired rows;
+`23-14`'s method exists because a support agent repairing a tenant needs to see a lapsed grant, not
+just its absence). `ListSitesForOwnerHandler`'s own query also gained an optional name/id search
+predicate, applied and counted (`MatchingSites`/`TotalSites`) before paging — no new entry point,
+since it is the same handler and the same route, just a wider query record. Folded straight in: 112
+entry points across 104 handler classes (75 gated, 37 exempt), 109 routes and hub methods (44
+client-supplied `siteId`, unchanged — the new route is not one of them), 14 read-model queries, and
+the cross-tenant-read count becomes **2** for the first time since `12-02` — `12-02`'s own list and
+`23-14`'s per-tenant detail, both behind `PlatformOverviewReadStore`.
+
 The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
 `TenantScopeExemptions` with a reason. The counts above are what that scan reports.
@@ -151,10 +175,12 @@ compares against.
    permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
    real `PermissionChecker`, rather than at the handler level with a fake.
-4. **Nowhere, or from a route the caller chose — the platform owner's four.**
-   `GET /api/v1/owner/sites` (`12-02`) has no `site_id` at all; the three owner writes (`14-12`'s
-   unlink, `22-17`'s module grant and revoke) take one the caller names, gated only by
-   `RequirePlatformOwner`. See *The cross-tenant surfaces the platform owner reaches* below.
+4. **Nowhere, or from a route the caller chose — the platform owner's five.**
+   `GET /api/v1/owner/sites` (`12-02`) has no `site_id` at all; since `23-14`,
+   `GET /api/v1/owner/sites/{siteId}` (the per-tenant detail read) takes one the caller names, gated
+   only by `RequirePlatformOwner` — the read-side counterpart of the three owner writes (`14-12`'s
+   unlink, `22-17`'s module grant and revoke), which take one the caller names the same way. See *The
+   cross-tenant surfaces the platform owner reaches* below.
 
 5. **A request header the caller sets — and, since `22-14`, not only the platform owner.**
    `Ago.Calendar.Api`'s `X-Ago-Active-Site` (`adr/0100`). This page is scoped to `ago-chat`, so this is
@@ -279,7 +305,7 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `RotateModuleCredentialHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — same key-scoped lookup; `22-11`; `22-19` |
 | `VerifyModuleRegistrationHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — same key-scoped lookup; `22-11`; `22-19` |
 
-### Not RBAC-gated, with the reason (36)
+### Not RBAC-gated, with the reason (37)
 
 **Visitor paths (9).** A visitor is outside the role system entirely (`adr/0016`), so there is nothing
 to ask `IPermissionChecker`. What replaces it is *narrower* than a site check: the handler compares
@@ -413,27 +439,40 @@ surface is narrower still: the endpoint rejects a missing or invalid `Webhook-Si
 this handler is ever constructed, so every payment id it ever sees is one ЮKassa itself signed with a
 key only this deployment and ЮKassa hold.
 
-**The cross-tenant surfaces the platform owner reaches (4).** `ListSitesForOwnerHandler`, `12-02`'s
-platform-owner overview, is the read. It carries no `SiteId` **because** it is cross-tenant. The whole
-access-control story is `12-01`'s `RequirePlatformOwner` policy on `GET /api/v1/owner/sites`: the
+**The cross-tenant surfaces the platform owner reaches (5).** `ListSitesForOwnerHandler`, `12-02`'s
+platform-owner overview, is the first read. It carries no `SiteId` **because** it is cross-tenant. The
+whole access-control story is `12-01`'s `RequirePlatformOwner` policy on `GET /api/v1/owner/sites`: the
 authorizing fact is a Keycloak realm role (`adr/0032`), and `Ago.Chat.Application` has no port that
 sees claims — re-checking in the handler would be a second, weaker copy of the same rule, free to
 drift from the first.
 
-**Three cross-tenant *writes* sit beside it, and this section claimed until 2026-09-04 that none
-existed anywhere.** `UnlinkChannelIdentityAsOwnerHandler` (`14-12`, `adr/0079`) was the first, and the
-claim was already false before `22-17` added `EnableModuleForSiteAsOwnerHandler` and
+**`GetSiteForOwnerHandler` (`23-14`) is the second read, and the first cross-tenant surface here that
+DOES carry a `SiteId`.** Unlike its sibling above, it is the per-tenant detail behind
+`GET /api/v1/owner/sites/{siteId}` — the platform owner names the tenant, exactly as the three writes
+below do, but reads it rather than acting on it. The `SiteId` is used only to load one row
+(`IPlatformOverviewReadStore.GetSiteAsync`) and that row's own modules
+(`IEnabledModuleReadStore.GetAllForSiteAsync`); nothing is written. It carries no `OperatorId` and
+calls no `IPermissionChecker`, for the identical reason `ListSitesForOwnerHandler` does not — the
+route's `RequirePlatformOwner` policy is the entire gate. Do not confuse it with `23-01`'s
+`ListEnabledModulesForSiteHandler`, which also takes a `SiteId` but *is* RBAC-gated: that read is a
+tenant's own operator looking at their own site (`RequestedBy` checked through `IPermissionChecker`);
+this one is the platform owner looking at any site they name, with no requester at all.
+
+**Three cross-tenant *writes* sit beside the two reads, and this section claimed until 2026-09-04 that
+none existed anywhere.** `UnlinkChannelIdentityAsOwnerHandler` (`14-12`, `adr/0079`) was the first, and
+the claim was already false before `22-17` added `EnableModuleForSiteAsOwnerHandler` and
 `RevokeModuleForSiteAsOwnerHandler` (`adr/0098`). All three take a `SiteId` **the caller chooses**,
 which is both the point and the risk: they are the only handlers here where an operator-shaped token
-names a tenant it holds no `operators` row in and is obeyed. None carries an `OperatorId` or calls
-`IPermissionChecker`, for the same reason the read does not — so the route's policy is the entire gate
-in all four cases. **That the "no owner write surface exists anywhere" sentence survived one
-counter-example until a second arrived is the argument for these four being listed in one place
-rather than described where each was built.**
+names a tenant it holds no `operators` row in and is obeyed — the same property `GetSiteForOwnerHandler`
+now has on the read side. None carries an `OperatorId` or calls `IPermissionChecker`, for the same
+reason the reads do not — so the route's policy is the entire gate in all five cases. **That the "no
+owner write surface exists anywhere" sentence survived one counter-example until a second arrived is
+the argument for these five being listed in one place rather than described where each was built.**
 
-Since `12-05` the read is the **one place in the codebase where a caller's own `site_id` must be
-ignored rather than merely unused**, and the reason is worth stating where the rule lives. (The three
-writes above never see it either, but each is handed the tenant it acts on in the route, so there is
+Since `12-05` `ListSitesForOwnerHandler`'s own read is the **one place in the codebase where a
+caller's own `site_id` must be ignored rather than merely unused**, and the reason is worth stating
+where the rule lives. (The three writes above, and `GetSiteForOwnerHandler`'s own read, never see the
+caller's own `site_id` either, but each is handed the tenant it acts on in the route, so there is
 nothing to ignore — the danger there is the opposite one, of trusting a `SiteId` the caller chose.) The platform owner may now hold an
 `operators` row of their own, so their token resolves an `operator_id`/`site_id` like anybody's, and
 every request they make — this one included — arrives carrying one. Scoping this read to it would not
@@ -530,6 +569,7 @@ is exactly what makes it interesting. See *The guard* below.
 | `GET`/`POST /api/v1/sites/{siteId}/tags` | `RequireOperatorIdentity` | **client-supplied**; `18-04`; `22-19` — the tag-vocabulary group the `18-04` history paragraph below already calls the eleventh, never previously added to this table |
 | `PUT`/`DELETE /api/v1/sites/{siteId}/tags/{tagId}` | `RequireOperatorIdentity` | **client-supplied**; `18-04`; `22-19` — same gap |
 | `GET /api/v1/owner/sites` | `RequirePlatformOwner` | none, deliberately |
+| `GET /api/v1/owner/sites/{siteId}` | `RequirePlatformOwner` | the caller names it — not permission-gated, the read-side counterpart of the three writes below; `23-14` |
 | `POST /api/v1/owner/sites/{siteId}/channel-identities/{id}/unlink` | `RequirePlatformOwner` | the caller names it — not permission-gated, see *The cross-tenant surfaces the platform owner reaches* above; `14-12`; `22-19` |
 | `PUT /api/v1/owner/sites/{siteId}/modules` | `RequirePlatformOwner` | the caller names it — not permission-gated; `22-17`; `22-19` |
 | `DELETE /api/v1/owner/sites/{siteId}/modules/{moduleKey}` | `RequirePlatformOwner` | the caller names it — not permission-gated; `22-17`; `22-19` |
@@ -552,9 +592,11 @@ visible. Every query, and what scopes it:
 | `ConversationReadStore.GetByIdAsync` | `conversation_id` **and** `site_id` | `16-02`. Returns `null` for a different site's conversation, indistinguishable from a nonexistent one; `GetConversationByIdHandler` gates the call on `conversation:erase`. |
 | `ConversationReadStore.GetVisitorHistoryAsync` | `conversation_id` (excluded) via `visitor_id` | `18-07`. `visitor_id` is not itself a `site_id`, but `GetVisitorHistoryHandler` has already proved the caller is assigned to a live conversation with this visitor before this query runs. |
 | `WebhookDeliveryReadStore.GetForEndpointAsync` | `endpoint_id` | `webhook_deliveries` has no `site_id` either. `GetWebhookDeliveriesHandler`'s `endpoint.SiteId != query.SiteId` branch is the whole of the isolation here — which is why `17-01` gave that branch a test that fails when it is removed. |
-| `PlatformOverviewReadStore.ListSitesAsync` | **none, deliberately** | `12-02`. The `RequirePlatformOwner` policy, and nothing else. |
+| `PlatformOverviewReadStore.ListSitesAsync` | **none, deliberately** | `12-02`. The `RequirePlatformOwner` policy, and nothing else. `23-14` added an optional name/id search predicate, applied and counted before paging — still no `site_id` predicate. |
+| `PlatformOverviewReadStore.GetSiteAsync` | **none, deliberately** | `23-14`. The identical `RequirePlatformOwner` policy on `GET /api/v1/owner/sites/{siteId}`; the `SiteId` in the route names the tenant, it is not compared against anything the caller's own token carries. |
 | `ConversionReportReadStore.GetConversionReportAsync` | **`site_id`** | `18-10`; `22-19`. `where c.site_id = @SiteId` directly; `GetConversionReportForSiteHandler` gates it on `site:configure`. |
 | `EnabledModuleReadStore.GetForSiteAsync` | **`site_id`** | `20-07`; `22-19`. `where site_id = @SiteId and (expires_at is null or expires_at > @Now)`; read by `RouteConversationToModuleHandler` (exempt, envelope-derived `SiteId`) and by the gated module endpoints. |
+| `EnabledModuleReadStore.GetAllForSiteAsync` | **none, deliberately** | `23-14`. Same `RequirePlatformOwner` policy as `PlatformOverviewReadStore.GetSiteAsync` right above — the two are only ever called together, by `GetSiteForOwnerHandler`. No `expires_at` filter at all (unlike `GetForSiteAsync` right above it): the owner's detail read needs a lapsed grant, not just its absence. |
 | `ModuleFlowReadStore.GetSiteModuleFlowReportAsync` | **`site_id`** | `18-14`; `22-19`. `where c.site_id = @SiteId`; `GetModuleFlowReportForSiteHandler` gates it on `site:configure`. |
 | `OperatorAnalyticsReadStore.GetSiteAnalyticsAsync` | **`site_id`** | `18-08`; `22-19`. `where c.site_id = @SiteId`, joined out to messages/channel-identity rows via that same site; `GetOperatorAnalyticsForSiteHandler` gates it on `site:configure`. |
 | `TagBreakdownReadStore.GetTagBreakdownAsync` | **`site_id`** | `18-11`; `22-19`. `where c.site_id = @SiteId` in both of its two queries; `GetTagBreakdownReportForSiteHandler` gates it on `site:configure`. |
@@ -649,5 +691,7 @@ Stated plainly, because a document like this is most dangerous when it is truste
 | Belongs-to-site branches fail when removed | `GetWebhookDeliveriesHandlerTests`, `RevokeWebhookEndpointHandlerTests`, `DeleteAttachmentHandlerTests`, `AssignConversationHandlerTests` |
 | The two token schemes cannot be substituted | `TokenSchemeSeparationTests` (`17-06`) |
 | Only the platform owner reaches the cross-tenant read | `OwnerSitesEndpointTests` (`12-02`) |
+| Only the platform owner reaches the cross-tenant per-tenant detail read | `OwnerSiteDetailEndpointTests` (`23-14`) — an ordinary operator **and** a `site:configure`-holding admin both refused, no body leaked on the refusal |
 | Only the platform owner reaches the cross-tenant writes | `OwnerModuleEndpointsTests` (`22-17`) — an ordinary operator **and** a `site:configure`-holding admin both refused, and the owner token refused on the tenant's own self-service route |
+| A search never narrows the reported total silently | `PlatformOverviewReadStoreTests`/`OwnerSitesEndpointTests` (`23-14`) — `TotalSites` on a filtered call equals `TotalSites` on the unfiltered one |
 | Every use case is gated or argued | `TenantScopeTests` |

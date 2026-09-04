@@ -848,12 +848,15 @@ realtime connection.
 **Nav.** If this identity *also* holds an operator seat, the full tenant nav is rendered plus a
 "Platform sites" entry; otherwise the nav is just "Platform sites".
 
-**On it.** `PageHead` "Platform sites" and a description that names the reporting window, then one
-`Table` with eight columns:
+**On it.** `PageHead` "Platform sites" and a description that names the reporting window. Since
+`23-14`, a search form sits above the table — one text field ("Find a site by name or id"), a
+**Search** button, and a **Clear** button once a search is active — submitted on click, never per
+keystroke (the same form-submit shape `SearchConversationsPage` already uses). Then one `Table` with
+eight columns:
 
 | Column | Content |
 |---|---|
-| Site | the site name in bold (or the meta "Unnamed") plus a mono badge with the first 8 hex of the site id |
+| Site | the site name in bold (or the meta "Unnamed") plus a mono badge with the first 8 hex of the site id, the whole cell a link into `8.1a`'s per-tenant detail (`23-14`) |
 | Tier | neutral badge, raw server value |
 | Seats | count, right-aligned |
 | Conversations | count, right-aligned (all time) |
@@ -862,22 +865,49 @@ realtime connection.
 | Created | date, or "Not recorded" with a tooltip explaining the platform did not record creation dates then |
 | Last activity | date, or a "no recent activity" phrase with a tooltip explaining the window |
 
-Below: a "Showing N sites" / "so far." line and a **Load more** button.
+While a search is active, a line above the table states "N of M sites match." — built from the
+server's own `matchingSites`/`totalSites`, never from the table's own row count, so a search can never
+read like the platform has fewer tenants than it does (`23-14`). Below the table: a "Showing N sites"
+/ "so far." line and a **Load more** button, unaffected by the search field's own presence.
 
 **States.** *Unknown* (a `Spinner` "Opening the platform operations view…") · *refused* (a
 `PageHead "Platform operations"` + a danger alert "Not authorized … The server refused the request,
 so no site data was loaded.") · *granted, loading* (`Skeleton lines={4}`) · *granted, empty*
-(`.ago-empty` "No sites yet.") · *error* (a danger alert; a `PageHead` is only added if access is
-still unknown).
+(`.ago-empty` "No sites yet.", or, once a search has been submitted, "No sites match "…"." plus the
+same match-summary line) · *error* (a danger alert; a `PageHead` is only added if access is still
+unknown).
 
-**Dead end.** There is no per-site drill-down — no row link, no detail route. The description says so
-in words: "Read-only - this screen shows numbers, it changes nothing." There is no action to grant a
-product to a tenant, despite the API for it having shipped (see section 14).
+**No longer a dead end.** `23-14` gave the Site column's cell a row link into `8.1a` below — the
+per-site drill-down this section used to record as absent. There is still no action to grant a
+product to a tenant on this screen, despite the API for it having shipped (see section 14) — `23-14`
+is a search and a read, decisions.md §6 keeps `/owner` read-only, and `23-15`'s revoke procedure is
+what eventually reaches the runbook, not this page.
 
 **Language.** Deliberately hardcoded English — `OwnerSitesPage` passes the built-in `en` table rather
 than calling `useStrings()`, on the reasoning that `/owner` is not scoped to one tenant so it cannot
 follow one tenant's language. The i18n assertion in `ux-gate/gate.spec.ts` is skipped for this screen
-by name.
+by name. `23-14`'s own `OwnerSiteDetailPage` (`8.1a`) keeps the identical convention.
+
+### 8.1a `/owner/sites/:siteId` — the per-tenant detail
+
+**Who.** The same gate as `8.1` above — mounted the identical way, outside the operator layout,
+rendering whatever `GET /api/v1/owner/sites/{siteId}` answers. Reached from `8.1`'s own row link, or
+directly by URL.
+
+**On it.** `PageHead` titled with the site's own name (or "Unnamed site"), then an eight-fact grid —
+the identical facts `8.1`'s table columns show for a row, for exactly this one tenant — followed by an
+"Entitlements" section: an `Alert tone="info"` stating in words what `ExpiresAt` does and does not do
+(chat stops offering a lapsed module the instant it expires; the module itself is never told), then a
+table of every module this tenant has ever had enabled, expired ones included — Module, Trigger words,
+Granted by (**Platform owner** or **Tenant**, never left to a tooltip alone), Expires ("No end date"
+for a `null`, never a blank cell, or the date), and Status (**Active**/**Expired**, read directly from
+the server's own live decision, never recomputed from `Expires` against the browser's own clock).
+
+**States.** The same *unknown*/*refused*/*error* shape `8.1` uses, plus a fourth: *not-found* (a real
+404 — the platform owner may legitimately name a site that does not exist — "No such site." and a
+link back to the list), distinguishable from *refused* rather than collapsed into it.
+
+**Read-only, like `8.1`.** No grant, no revoke, no edit — the same `decisions.md` §6 boundary.
 
 ---
 
@@ -1261,8 +1291,10 @@ There is no transfer button on the conversation header, in the visitor panel, or
 
 **13.7 The platform owner cannot grant a product to a tenant from the console.**
 `docs/backlog/22-17-…md` is marked **done — merged 2026-09-04**, adding the capability to
-`/api/v1/owner/`. `ago-console/src/api/ownerApi.ts` contains exactly two functions, both hitting
-`GET /api/v1/owner/sites`. `/owner` remains read-only.
+`/api/v1/owner/`. `ago-console/src/api/ownerApi.ts` now also carries `23-14`'s
+`fetchOwnerSiteDetail` (`GET /api/v1/owner/sites/{siteId}`), which surfaces exactly what `22-17`
+granted — `GrantedByOwner`/`ExpiresAt` per module — as a **read**, on the new `8.1a` detail screen.
+`/owner` remains entirely read-only: `23-14` is a search and a drill-down, never a form that writes.
 
 **13.8 The Calendar "Access" screen was designed, then deleted, and the gap is recorded.**
 `App.tsx` and `consoleNav.ts` both explain that the move from `ago-calendar-console` was to have
@@ -1399,6 +1431,7 @@ and is complete as a *field* list; I did not confirm their visual grouping.
 | `/calendar/availability` | Availability | `calendar:configure` | 7.6 |
 | `/calendar/contacts` | Contacts | `calendar:configure` | 7.7 |
 | `/owner` | Platform sites | server-side platform owner | 8.1 |
+| `/owner/sites/:siteId` | Platform sites (detail) | server-side platform owner | 8.1a |
 | `*` | — | — | redirects to `/` |
 
 The widget has no routes; its states are listed in 9.5.
