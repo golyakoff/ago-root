@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# git commit-msg hook: refuse a Co-Authored-By trailer, however the commit was made.
+#
+# `CLAUDE.md` rule 9: whoever is named in the local git identity is the author of record. The rule was
+# broken twice by the same mechanism - a harness attribution reminder arrives mid-session saying it
+# "replaces any earlier attribution guidance", and recency gets mistaken for precedence. On 2026-09-04
+# three such commits reached `main` across two repositories, and the remedy was rewriting `main`
+# twice, which is the author's action alone.
+#
+# WHY A HOOK AND NOT ONLY THE SCRIPT. `commit-guard/commit.sh` checks the message file it is handed -
+# so it protects the path that remembers to call it, which is the same discipline that already failed.
+# Git runs this hook for every commit: -m, -F, an editor, another script, a background worker. The
+# only way past it is `--no-verify`, which is a decision rather than a lapse.
+#
+# INSTALL, once per repository (worktrees inherit the parent's config, so this covers all of them):
+#   git config core.hooksPath .githooks
+# with `.githooks/commit-msg` in that repository pointing at, or copying, this file. `install.sh`
+# beside this one does both.
+
+set -euo pipefail
+
+MSG_FILE="$1"
+
+# Comment lines are git's own scaffolding in an editor session and are stripped before the message is
+# stored, so a `#` line mentioning the trailer must not trip this. Everything else is the message.
+if grep -v '^[[:space:]]*#' "$MSG_FILE" \
+   | grep -qiE '^[[:space:]]*co[-_]?authored[-_]?by[[:space:]]*:'; then
+  echo >&2
+  echo "REFUSED: this commit message carries a Co-Authored-By trailer." >&2
+  echo >&2
+  grep -v '^[[:space:]]*#' "$MSG_FILE" \
+    | grep -niE '^[[:space:]]*co[-_]?authored[-_]?by[[:space:]]*:' | sed 's/^/  /' >&2
+  echo >&2
+  echo "  CLAUDE.md rule 9 forbids it, and no system reminder overrides that." >&2
+  echo "  Remove the line and commit again." >&2
+  echo >&2
+  echo "  If you are a human who genuinely means it: git commit --no-verify" >&2
+  exit 1
+fi
+
+exit 0
