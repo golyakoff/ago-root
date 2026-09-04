@@ -1,0 +1,1883 @@
+<!-- @dsCard group="Workspace" name="Operator workspace" source="ago-console@a64fcac7f50a3cecec4ea9f217575978bcbaadc8" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operator workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Everything between here and the PREVIEW CHROME banner is copied verbatim from
+   ago-console @ a64fcac7f50a3cecec4ea9f217575978bcbaadc8. Do not edit it here; edit it there.
+   ========================================================================== */
+
+/* ===========================================================================================
+   AGO Console design tokens - the single source. Nothing in `src/` hard-codes a colour, a radius,
+   a shadow or a type size; everything reads a custom property declared here.
+
+   `11-05`. Every value below is traceable to `ago-landing/index.html` (this project's existing
+   visual identity and this item's stated source of truth for colour and type) or is derived from
+   one of its values by a rule stated in the comment next to it. Two kinds of entry exist, and the
+   difference is deliberate rather than sloppy:
+
+     - CARRIED OVER unchanged - the palette, per the author's 2026-08-24 decision that "the palette
+       comes across whole". A tenant who sees the landing page and then the console should recognise
+       the same product.
+     - RECOMPUTED - spacing, type sizes, radii and shadow distances. The landing page sells: it can
+       afford 76px section padding, 28px radii and clamp(34px,6.4vw,58px) display type. The console
+       is a tool an operator sits in for a whole shift, so the same identity is re-expressed at
+       working density. The rule used is written next to each block, so the next person can check
+       the arithmetic rather than guess at taste.
+
+   `adr/0030` point 4 shipped this console LIGHT ONLY, on the record that a dark theme "means
+   building both properly, contrast checks included" - reversed here, properly, per that same
+   sentence (author's decision, addendum dated below). What made the original `color-scheme: light
+   dark` a bug rather than a theme was that ONE property changed while nothing else responded, so
+   the browser painted native form controls dark on an otherwise-light page. This addendum is the
+   opposite shape: every colour token below gets a real, measured dark value, or an explicit note
+   for why it deliberately does not change.
+
+   Activation is three-state - system / light / dark - not a bare `color-scheme` toggle: `<html>`
+   defaults to `prefers-color-scheme`, and `data-theme="light"|"dark"` on the same element (written
+   by `useTheme`/`ThemeToggle`, `src/design/theme.ts`, persisted to `localStorage`) overrides it in
+   either direction. The cascade shape is the standard one for this pattern:
+
+     :root                                          { ...light values, the source of truth... }
+     @media (prefers-color-scheme: dark) {
+       :root:not([data-theme="light"])               { ...dark overrides... }
+     }
+     :root[data-theme="dark"]                        { ...the same dark overrides, repeated... }
+
+   The repetition in the last two blocks is deliberate, not an oversight - CSS custom properties
+   have no mixin/include mechanism, and this is the ordinary shape every `prefers-color-scheme` +
+   manual-override implementation takes. Keep the two dark blocks in sync by hand; a token added to
+   one and not the other is a defect the same way an un-measured colour is.
+
+   Contrast: every foreground/background pair this file is meant to produce was measured (WCAG 2.1
+   relative luminance) rather than eyeballed, and the measured ratio is recorded inline - light and
+   dark alike, computed by the same throwaway script (relative-luminance + contrast-ratio, no
+   library) for both palettes. Text pairs clear 4.5:1; non-text boundaries that a user has to
+   perceive to operate a control (1.4.11) clear 3:1. Where a landing colour could not clear the bar
+   at console sizes, the derived value that does is declared alongside it and the original is
+   demoted to decoration - see `--ago-lavender-ink` (light) and `--ago-lavender-ink`'s dark override
+   below (same role, different value).
+
+   `ago-deploy/k8s/check-theme-tokens.sh` vendors this file's tokens into the Keycloak login theme,
+   which stays light-only on purpose (`adr/0030`'s 2026-08-26 amendment - a public, unauthenticated,
+   first-touch page is not where to spend a dark theme). It now harvests only from the bare `:root`
+   selector, ignoring anything declared inside a `@media` block or under `:root[data-theme=...]`, so
+   the dark values below cannot leak into that stylesheet even though the token *names* repeat.
+   =========================================================================================== */
+
+:root {
+  /* --- Type families -------------------------------------------------------------------------
+     Carried over from `ago-landing`'s own three families, with the same division of labour the
+     item asks for: Manrope carries the interface, Unbounded is confined to the shell's identity
+     (the wordmark and nothing else - display type in a dense tool is noise), JetBrains Mono is for
+     values that are literally identifiers: conversation/visitor ids, sequence numbers, hex colours.
+     Every stack ends in a real system fallback, because the console must stay fully usable when the
+     webfont does not load (see `index.html` for how the fonts are fetched, and `adr/0030` for the
+     trade-off that choice carries). */
+  --ago-font-sans: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ago-font-display: "Unbounded", "Manrope", system-ui, sans-serif;
+  --ago-font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", "Consolas", monospace;
+
+  /* --- Ink (text) ----------------------------------------------------------------------------
+     Carried over: `--ink`, `--ink-soft` from the landing's `:root`; `--ink-deep` is the base of its
+     dark demo card (`linear-gradient(160deg,#132321,#0c1a19 70%)`). */
+  --ago-ink: #14141f;              /* 17.50:1 on --ago-paper, 18.27:1 on --ago-surface */
+  --ago-ink-soft: #57546f;         /*  6.93:1 on --ago-paper,  7.23:1 on --ago-surface */
+  /* Not redeclared in either dark block, deliberately: its one consumer (`.ago-dialog::backdrop`'s
+     hard-coded `rgba(12, 26, 25, 0.45)`) is a page-dimming scrim that has to stay a literal colour
+     regardless of theme anyway - `::backdrop` does not inherit custom properties from the document
+     at all, the same limitation `--ago-paper-rgb`'s comment above works around for an ordinary
+     element. A scrim that darkens whatever is behind it needs no theme-specific value to do its job. */
+  --ago-ink-deep: #0c1a19;         /* 17.15:1 on --ago-mint - the landing's own dark/mint pairing, inverted */
+  /* Derived: `--ago-ink-soft` lightened until it still clears 4.5:1 on white, for placeholder text
+     that must read as "not a value" without becoming unreadable. Measured 5.42:1 on --ago-surface. */
+  --ago-ink-faint: #6b6780;
+
+  /* --- Paper (backgrounds) -------------------------------------------------------------------
+     Carried over: `--paper`, `--paper-alt` from the landing's `:root`; `#fdfcfa` is its
+     `.demo-card.light`; `#ffffff` is what every one of its raised surfaces already uses
+     (`.step-card`, `.widget-window`, `.bubble-op`). */
+  --ago-paper: #fbfaf7;            /* the application background */
+  --ago-surface: #ffffff;          /* panels, table bodies, form controls */
+  --ago-surface-raised: #fdfcfa;   /* a panel that sits on another panel */
+  --ago-surface-sunken: #f1efe9;   /* table headers, the shell's own inset areas, disabled controls */
+  /* `--ago-paper`'s own R,G,B, for the one place (`shell.css`'s sticky header) that needs the paper
+     colour *with* alpha - `rgba()` cannot take a custom property as its whole colour argument, only
+     as channels inside it, which is the same constraint `--ago-ink-deep`'s comment below notes for
+     `::backdrop`. Redeclared alongside `--ago-paper` in both dark blocks, and nowhere else. */
+  --ago-paper-rgb: 251, 250, 247;
+
+  /* --- Lines ---------------------------------------------------------------------------------
+     `--ago-line` is the landing's `--line`, carried over unchanged - it is a decorative separator
+     and 1.24:1 is fine for that. It is NOT usable as the edge of a control: WCAG 1.4.11 wants 3:1
+     for a boundary a user must perceive to know where an input is. `--ago-line-strong` is the same
+     warm-grey ramp pushed down until it clears that bar on all three console surfaces
+     (measured 3.62:1 on --ago-surface, 3.47:1 on --ago-paper, 3.15:1 on --ago-surface-sunken). */
+  --ago-line: #e5e2da;
+  --ago-line-strong: #8d8675;
+
+  /* --- Brand -------------------------------------------------------------------------------
+     Carried over whole from the landing's `--brand` / `--brand-deep` / `--brand-tint`, plus the two
+     lavenders it uses on dark (`.code-chip` text `#d9d6ff`, its tag colour `#8f8ac9`). Accent
+     restraint is the recomputation here, and it is a usage rule rather than a token: the landing
+     paints whole sections in `--brand`; the console spends it on exactly one primary action per
+     screen, the active navigation item, links, and the focus ring. */
+  --ago-brand: #4b3aff;            /* 6.27:1 against white, both directions - safe as a fill and as text */
+  --ago-brand-deep: #3324c9;       /* 9.39:1 on --ago-surface - hover, and link text */
+  /* `--ago-brand-hover` didn't need to exist in light mode - `--ago-brand-deep` covered the button's
+     hover fill AND the link/active-nav text colour, because "darker" satisfies both a white-text
+     fill and body text on a light surface at once. The dark palette below is where the two jobs
+     split (see that block's own comment) - the token is declared here, aliased to `--ago-brand-deep`,
+     purely so light mode has zero behavioural change and `components.css` can read one name
+     regardless of theme. */
+  --ago-brand-hover: var(--ago-brand-deep);
+  --ago-brand-tint: #ecebff;       /* 8.00:1 with --ago-brand-deep on top */
+  --ago-lavender: #d9d6ff;         /* decoration only - halos, dividers inside tinted areas */
+  /* The landing's `#8f8ac9` is 3.16:1 on white: fine as syntax colouring on its near-black code
+     chip, not fine as console text. Kept for borders/dots, and darkened along its own hue into
+     `--ago-lavender-ink` for anything with a glyph in it (7.04:1 on --ago-surface, 5.03:1 on
+     --ago-lavender, 6.00:1 on --ago-brand-tint). */
+  --ago-lavender-dim: #8f8ac9;
+  --ago-lavender-ink: #565096;
+
+  /* --- Status ------------------------------------------------------------------------------
+     Mint and the live green are the landing's (`#eafffb`, `--live: #33d17a`). The landing never has
+     to report a failure, so it has no danger colour at all; the console does, and inventing one is
+     unavoidable. `--ago-danger` is placed in the same darkness band as `--ago-brand-deep` so it
+     reads as a sibling of the palette rather than a bootstrap red, and its tint carries the same
+     warmth the paper family has. `--ago-success` is `--live` darkened until it is readable as text
+     on its own tint - `--live` itself is 1.99:1 on white and stays a dot, never a glyph. */
+  --ago-live: #33d17a;             /* decorative dot only, always beside a real text label */
+  --ago-mint: #eafffb;
+  --ago-success: #12684a;          /* 6.76:1 on --ago-surface, 6.50:1 on --ago-mint */
+  --ago-danger: #9f1d17;           /* 7.89:1 on --ago-surface, 7.56:1 on --ago-paper */
+  --ago-danger-tint: #fdecea;      /* 6.90:1 with --ago-danger on top */
+
+  /* --- Spacing -------------------------------------------------------------------------------
+     RECOMPUTED. The landing's spacing is ad-hoc (8/10/12/14/16/18/20/26/28/32/40/44/76px, chosen
+     per-section by eye). A tool needs a scale, not a vocabulary, so this is a plain 4px ramp: the
+     landing's own most-used values (8/12/16/20/32/40) survive as steps 2/3/4/5/8/10, and its
+     section-scale values (44px, 76px) simply have no console equivalent - nothing in an operator
+     screen is 76px away from anything else. */
+  --ago-space-1: 0.25rem;   /*  4px */
+  --ago-space-2: 0.5rem;    /*  8px */
+  --ago-space-3: 0.75rem;   /* 12px */
+  --ago-space-4: 1rem;      /* 16px */
+  --ago-space-5: 1.25rem;   /* 20px */
+  --ago-space-6: 1.5rem;    /* 24px */
+  --ago-space-8: 2rem;      /* 32px */
+  --ago-space-10: 2.5rem;   /* 40px */
+  --ago-space-12: 3rem;     /* 48px */
+
+  /* --- Type scale ----------------------------------------------------------------------------
+     RECOMPUTED. The landing runs 16px body with fluid display type up to 58px. The console drops
+     body to 15px and caps the largest thing on any screen at 22px: an operator reads a queue, not a
+     pitch, and every pixel of leading spent on a headline is a row of the queue that fell off the
+     fold. Nothing here goes below 12px, and 12px is only ever used with `--ago-ink` or a tint pair
+     measured above, never with `--ago-ink-soft` on a tinted background. */
+  --ago-text-xs: 0.75rem;      /* 12px - badges, meta, mono ids */
+  --ago-text-sm: 0.8125rem;    /* 13px - field labels, table headers, secondary lines */
+  --ago-text-base: 0.9375rem;  /* 15px - body text and every form control */
+  --ago-text-lg: 1.0625rem;    /* 17px - panel and section headings (landing's own 17px lede) */
+  --ago-text-xl: 1.25rem;      /* 20px - the page title, one per screen */
+  --ago-text-display: 1.375rem;/* 22px - the shell wordmark, the only Unbounded on the screen */
+
+  --ago-leading-tight: 1.2;    /* headings - the landing's 1.12 loosened, because these are small */
+  --ago-leading-base: 1.5;     /* the landing's 1.55, tightened one notch for density */
+
+  /* --- Radii ---------------------------------------------------------------------------------
+     RECOMPUTED. The landing's `--r-lg: 28px` / `--r-md: 18px` are sized for cards that are 300px
+     tall; on a 32px-tall console button the same curve eats the label. Both halve. The pill carries
+     over unchanged, but its use narrows to badges - a pill-shaped button at this size reads as a
+     tag, not a control. */
+  --ago-radius-sm: 0.5rem;   /*  8px - inputs, badges' square variant, small chips */
+  --ago-radius-md: 0.75rem;  /* 12px - buttons, alerts (landing's 18px, halved and rounded) */
+  --ago-radius-lg: 1rem;     /* 16px - panels, dialogs, tables (landing's 28px, halved) */
+  --ago-radius-pill: 999px;  /* badges only */
+
+  /* --- Elevation -----------------------------------------------------------------------------
+     RECOMPUTED. Same two-layer recipe as the landing's `--shadow-soft`/`--shadow-card` (a 1px
+     contact shadow plus a wide, heavily-offset ambient one), with the ambient blur/offset roughly
+     halved: the landing's cards float off a page you scroll past, console panels sit on a surface
+     you work in. `--ago-shadow-lg` is the landing's `--shadow-card` unchanged, and is spent on
+     exactly one thing - the Dialog, which genuinely is above everything else. */
+  --ago-shadow-sm: 0 1px 2px rgba(20, 20, 31, 0.05), 0 6px 16px -12px rgba(20, 20, 31, 0.35);
+  --ago-shadow-md: 0 1px 2px rgba(20, 20, 31, 0.05), 0 12px 28px -18px rgba(20, 20, 31, 0.4);
+  --ago-shadow-lg: 0 1px 1px rgba(20, 20, 31, 0.05), 0 20px 44px -24px rgba(20, 20, 31, 0.45);
+
+  /* --- Focus ---------------------------------------------------------------------------------
+     The landing has no focus styling at all - it is a page you read, and it is a real gap there
+     too. The console cannot inherit a gap, so this is the one token group with no source to carry
+     over. The shape is borrowed from the landing's own halo idiom (`.eyebrow .dot`'s
+     `box-shadow: 0 0 0 3px rgba(...)`): a solid brand outline with a lavender-tinted halo behind
+     it. `--ago-brand` measures 6.27:1 on white, 6.01:1 on paper, 5.45:1 on sunken and 5.34:1 on
+     brand-tint, so the ring clears 1.4.11's 3:1 on every surface the console actually paints. */
+  --ago-focus-width: 2px;
+  --ago-focus-offset: 2px;
+  --ago-focus-color: var(--ago-brand);
+  --ago-focus-halo: 0 0 0 3px var(--ago-brand-tint);
+
+  /* --- Motion --------------------------------------------------------------------------------
+     The landing's transitions run .16s-.25s; the console keeps the fast end only. See `base.css`
+     for the `prefers-reduced-motion` opt-out that turns all of this off. */
+  --ago-transition: 0.16s ease;
+
+  /* --- Layout --------------------------------------------------------------------------------
+     The landing's `.wrap` is 1180px with 20px gutters. The shell header keeps that width so the
+     identity row lines up with the page it introduces; page content caps narrower, because a
+     1180px-wide line of 15px text is past the readable measure. */
+  --ago-shell-max: 1180px;
+  --ago-content-max: 68rem;   /* 1088px */
+  --ago-gutter: var(--ago-space-5);
+
+  --ago-z-header: 40;   /* the landing's own sticky nav z-index */
+  --ago-z-dialog: 100;
+}
+
+/* ===========================================================================================
+   DARK THEME - reverses `adr/0030` point 4 (this header's own addendum, above, has the full
+   reasoning and the activation shape). Only colour and elevation change; every spacing, radius,
+   type-scale, motion and layout token above is unchanged, because none of them encodes a colour.
+
+   Design of the palette, stated once here rather than per token: dark backgrounds carry the same
+   cool indigo undertone `--ago-ink` already has (hue ~248, so the identity survives the inversion -
+   "ink" and "paper" trade roles rather than the whole system going neutral grey); dark text carries
+   the same warm undertone the light `--ago-paper` family has, for the same reason in reverse. The
+   four background tokens keep the light palette's own relative order rather than being re-invented -
+   light theme's four are, darkest to lightest, `--ago-surface-sunken` < `--ago-paper` <
+   `--ago-surface-raised` < `--ago-surface` (all four are close, off-white variations); the dark
+   values below preserve that exact ordering, just recomputed at low lightness instead of high, so
+   "sunken reads as recessed" and "raised sits above a panel" mean the same thing in both themes.
+
+   `--ago-brand` and `--ago-brand-deep` needed real rework, not just relighting, and it is worth
+   being explicit about why: each one used to do two jobs at once - a white-text fill (button,
+   skip-link, glyph for `--ago-brand`; the button's hover fill for `--ago-brand-deep`) *and* a
+   colour that sits directly on the page as a ring or as text (`--ago-brand`'s focus ring;
+   `--ago-brand-deep`'s link/active-nav text). On a light page both jobs want the same thing - dark
+   enough to read against white/paper - so one token covered both without tension. On a near-black
+   page they want opposite things: a fill needs to stay dark enough that white text on it still
+   clears 4.5:1 (relative luminance <= ~0.18), while text/a ring sitting *on* the dark page needs to
+   be light enough to be seen at all (>= ~0.20 luminance against this palette's `--ago-paper`) - two
+   luminance ranges that do not overlap, not a tuning problem. `--ago-brand-deep` keeps the text job;
+   a new `--ago-brand-hover` (declared in the light `:root` above too, aliased there to
+   `--ago-brand-deep` so light mode's behaviour is byte-for-byte unchanged) takes the fill job.
+   `--ago-brand` itself keeps both its jobs, because its ring use only has to clear 3:1, not 4.5:1,
+   and one hue-245 lightness clears both bars with real margin - measured below.
+
+   Every pair is measured the same way the light palette states it is (WCAG 2.1 relative luminance,
+   a throwaway Node script, no library - not eyeballed), against every background it actually
+   appears on in `src/components/components.css` / `src/shell/shell.css` / `src/workspace/workspace.css`. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* Ink */
+    --ago-ink: #f5f4ef;              /* 16.86:1 on --ago-paper, 14.49:1 on --ago-surface */
+    --ago-ink-soft: #b0b0bf;         /*  8.67:1 on --ago-paper,  7.46:1 on --ago-surface */
+    --ago-ink-faint: #9191a1;        /*  5.14:1 on --ago-surface - placeholder text */
+
+    /* Paper - relative order preserved from light: sunken < paper < raised < surface (see block
+       comment above). */
+    --ago-paper: #13121c;
+    --ago-paper-rgb: 19, 18, 28;
+    --ago-surface: #22202f;
+    --ago-surface-raised: #1c1b28;
+    --ago-surface-sunken: #0e0d14;
+
+    /* Lines */
+    --ago-line: #323040;             /* decorative separator, no bar to clear */
+    --ago-line-strong: #787396;      /* 3.57:1 on --ago-surface, 4.15:1 on --ago-paper, 4.32:1 on --ago-surface-sunken, 3.79:1 on --ago-surface-raised */
+
+    /* Brand - see the block comment above for why `--ago-brand-hover` exists at all here. */
+    --ago-brand: #6052ff;            /* fill+ring, dual role: 5.06:1 with #fff on top (fill), 3.67:1 on --ago-paper / 3.15:1 on --ago-surface / 3.30:1 on --ago-brand-tint / 3.82:1 on --ago-surface-sunken (ring, 1.4.11) */
+    --ago-brand-deep: #c3beff;       /* text-only now: 9.22:1 on --ago-surface, 10.73:1 on --ago-paper, 9.65:1 on --ago-brand-tint */
+    --ago-brand-hover: #1400f5;      /* fill-only: 8.94:1 with #fff on top - darker than resting --ago-brand, same "hover deepens" direction light mode uses */
+    --ago-brand-tint: #1d1a38;
+    --ago-lavender: #413a72;         /* decoration only, mirrors light's --ago-lavender role */
+    --ago-lavender-dim: #9089c9;     /* 5.02:1 on --ago-surface, 5.26:1 on --ago-brand-tint - borders/dots, non-text */
+    --ago-lavender-ink: #c9c5f2;     /* 9.69:1 on --ago-surface, 6.15:1 on --ago-lavender, 10.14:1 on --ago-brand-tint - anything with a glyph */
+
+    /* Status - --ago-live is unchanged: it is a decorative dot beside a real text label in both
+       themes (the light palette's own comment already exempts it from a text bar on the same
+       grounds), and its halo (`components.css`'s `rgba(51, 209, 122, 0.22)`) is unaffected. */
+    --ago-mint: #0f2b22;
+    --ago-success: #7fe0af;          /* 10.02:1 on --ago-surface, 9.49:1 on --ago-mint */
+    --ago-danger-tint: #3a1613;
+    --ago-danger: #ff8a80;           /* 6.99:1 on --ago-surface, 7.05:1 on --ago-danger-tint */
+
+    /* Elevation - a shadow's darkening reads far less on a page that is already near-black, so
+       elevation here is carried mainly by the surface-lightness ramp above; these stay dark
+       (matching the surrounding page rather than fighting it) with opacity raised so the 1px
+       contact edge is still visible against a panel that is itself dark. Not a WCAG-checked pair -
+       box-shadow is decorative, not a text/boundary colour. */
+    --ago-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px -12px rgba(0, 0, 0, 0.6);
+    --ago-shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -18px rgba(0, 0, 0, 0.65);
+    --ago-shadow-lg: 0 1px 1px rgba(0, 0, 0, 0.4), 0 20px 44px -24px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* The manual override - `data-theme="dark"` wins over `prefers-color-scheme` in either direction.
+   Same values as the block above; see this file's header comment for why the repetition is
+   deliberate rather than a mistake. */
+:root[data-theme="dark"] {
+  --ago-ink: #f5f4ef;
+  --ago-ink-soft: #b0b0bf;
+  --ago-ink-faint: #9191a1;
+
+  --ago-paper: #13121c;
+  --ago-paper-rgb: 19, 18, 28;
+  --ago-surface: #22202f;
+  --ago-surface-raised: #1c1b28;
+  --ago-surface-sunken: #0e0d14;
+
+  --ago-line: #323040;
+  --ago-line-strong: #787396;
+
+  --ago-brand: #6052ff;
+  --ago-brand-deep: #c3beff;
+  --ago-brand-hover: #1400f5;
+  --ago-brand-tint: #1d1a38;
+  --ago-lavender: #413a72;
+  --ago-lavender-dim: #9089c9;
+  --ago-lavender-ink: #c9c5f2;
+
+  --ago-mint: #0f2b22;
+  --ago-success: #7fe0af;
+  --ago-danger-tint: #3a1613;
+  --ago-danger: #ff8a80;
+
+  --ago-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px -12px rgba(0, 0, 0, 0.6);
+  --ago-shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -18px rgba(0, 0, 0, 0.65);
+  --ago-shadow-lg: 0 1px 1px rgba(0, 0, 0, 0.4), 0 20px 44px -24px rgba(0, 0, 0, 0.7);
+}
+
+/* Element-level defaults. Everything visual reads a token from `tokens.css`; nothing here invents a
+   value. `11-05`. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ago-paper);
+  color: var(--ago-ink);
+  font-family: var(--ago-font-sans);
+  font-size: var(--ago-text-base);
+  line-height: var(--ago-leading-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--ago-font-sans);
+  font-weight: 800;
+  line-height: var(--ago-leading-tight);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--ago-text-xl);
+}
+
+h2 {
+  font-size: var(--ago-text-lg);
+}
+
+h3 {
+  font-size: var(--ago-text-base);
+}
+
+p {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: var(--ago-brand-deep);
+  text-decoration-color: var(--ago-lavender-dim);
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-color: currentcolor;
+}
+
+/* One focus rule for the whole application rather than per-component overrides, so a control added
+   later cannot silently ship without a visible ring. `:focus-visible` (not `:focus`) is what keeps
+   the ring off a mouse click on a button while keeping it on for keyboard and for any control where
+   the browser judges it warranted. Contrast for the ring colour is measured in `tokens.css`. */
+:focus-visible {
+  outline: var(--ago-focus-width) solid var(--ago-focus-color);
+  outline-offset: var(--ago-focus-offset);
+  border-radius: var(--ago-radius-sm);
+}
+
+/* Form controls do not inherit typography from `body` in any browser - stated once here so no
+   individual component has to remember it. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+::placeholder {
+  color: var(--ago-ink-faint);
+  opacity: 1; /* Firefox dims placeholders by default, which would undo the measured contrast. */
+}
+
+/* A keyboard-only escape hatch into the page content, because the shell puts a header with several
+   navigation links in front of every screen. Hidden until focused. */
+.ago-skip-link {
+  position: absolute;
+  left: var(--ago-space-3);
+  top: var(--ago-space-3);
+  z-index: calc(var(--ago-z-header) + 1);
+  padding: var(--ago-space-2) var(--ago-space-4);
+  border-radius: var(--ago-radius-md);
+  background: var(--ago-brand);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.ago-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Visible to a screen reader, not on screen. Used where a control's accessible name has to be
+   richer than its visible glyph, rather than reaching for a bare `aria-label` that then has no
+   visible counterpart at all. */
+.ago-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- The frame ---------------------------------------------------------------------------------
+   `.ago-shell--fixed` (AppShell's `fixed`, passed only for this layout - see its own doc comment for
+   why `wide` stopped being the same flag) is what bounds the height: without it the chain of
+   `min-height` never resolves to a real number and `overflow: auto` on a child does nothing, so the
+   page scrolls as a whole and the composer walks off the bottom of the screen. */
+
+.ago-workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: var(--ago-space-4);
+  /* 21rem is the narrowest the rail can be while a visitor id badge, an unread badge and "Waiting
+     14m" still sit on two comfortable lines; 18rem is the aside's own equivalent for a full uuid at
+     12px mono. The middle takes what is left, and `minmax(0, 1fr)` rather than `1fr` because a grid
+     track's default `min-width: auto` would let a long unbroken message body push the whole layout
+     wider than the viewport. */
+  grid-template-columns: 21rem minmax(0, 1fr) 18rem;
+  grid-template-areas: "rail main aside";
+}
+
+.ago-workspace__rail {
+  grid-area: rail;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-3);
+  padding: var(--ago-space-4);
+  background: var(--ago-surface);
+  border: 1px solid var(--ago-line);
+  border-radius: var(--ago-radius-lg);
+  box-shadow: var(--ago-shadow-sm);
+}
+
+.ago-workspace__rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ago-space-3);
+  flex-wrap: wrap;
+}
+
+.ago-workspace__rail-title {
+  font-size: var(--ago-text-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ago-ink-soft);
+}
+
+/* The list scrolls, the connection state and any alert above it do not - a reconnect warning that
+   scrolls out of view is a warning nobody sees. */
+.ago-workspace__rail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-5);
+  margin: 0 calc(var(--ago-space-2) * -1);
+  padding: 0 var(--ago-space-2);
+}
+
+.ago-workspace__main {
+  grid-area: main;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-3);
+  padding: var(--ago-space-4);
+  background: var(--ago-surface);
+  border: 1px solid var(--ago-line);
+  border-radius: var(--ago-radius-lg);
+  box-shadow: var(--ago-shadow-sm);
+}
+
+/* With no conversation open there is no visitor panel, so the empty state takes both columns rather
+   than leaving an 18rem hole where a panel about nobody would go. */
+.ago-workspace__main--empty {
+  grid-area: main / main / aside / aside;
+  align-items: center;
+  justify-content: center;
+}
+
+.ago-workspace__main-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ago-space-3);
+  flex-wrap: wrap;
+  padding-bottom: var(--ago-space-3);
+  border-bottom: 1px solid var(--ago-line);
+}
+
+.ago-workspace__main-title {
+  font-size: var(--ago-text-lg);
+}
+
+/* `11-09`: the close action sits at the far end of the conversation header, pushed there rather
+   than ordered there - `margin-inline-start: auto` in a wrapping flex row keeps it last on a wide
+   screen and lets it drop onto its own line when the header wraps, without a media query and
+   without a second grid. The header's `align-items: baseline` is what keeps it sitting on the
+   title's baseline rather than floating above it. */
+.ago-workspace__main-head > .ago-btn {
+  margin-inline-start: auto;
+}
+
+.ago-workspace__main-note {
+  margin: 0;
+}
+
+/* Hidden until the single-column breakpoint, where the rail is off screen and this is the only way
+   back to it. */
+.ago-workspace__back {
+  display: none;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ago-workspace__aside {
+  grid-area: aside;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-3);
+  padding: var(--ago-space-4);
+  background: var(--ago-surface-raised);
+  border: 1px solid var(--ago-line);
+  border-radius: var(--ago-radius-lg);
+}
+
+/* --- The conversation list --------------------------------------------------------------------- */
+
+.ago-list-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-2);
+}
+
+.ago-list-group__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ago-list-group__title {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  font-size: var(--ago-text-base);
+}
+
+.ago-list-group__count {
+  font-family: var(--ago-font-mono);
+  font-size: var(--ago-text-xs);
+  font-weight: 600;
+  color: var(--ago-ink-soft);
+}
+
+.ago-list-group__note {
+  font-size: var(--ago-text-xs);
+  color: var(--ago-ink-soft);
+}
+
+.ago-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-2);
+}
+
+.ago-list__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-1);
+  padding: var(--ago-space-3);
+  border: 1px solid var(--ago-line);
+  border-radius: var(--ago-radius-md);
+  background: var(--ago-surface);
+  transition:
+    border-color var(--ago-transition),
+    background var(--ago-transition);
+}
+
+/* An assigned row is a link, and the whole row is the target, so what looks clickable is what is
+   clickable. */
+a.ago-list__row {
+  text-decoration: none;
+  color: inherit;
+}
+
+a.ago-list__row:hover {
+  border-color: var(--ago-brand);
+  background: var(--ago-brand-tint);
+}
+
+/* The conversation currently open. Marked by a left edge and a tint, never by colour alone - it is
+   also the `NavLink` that carries `aria-current="page"`. */
+a.ago-list__row--active,
+a.ago-list__row--active:hover {
+  border-color: var(--ago-brand);
+  background: var(--ago-brand-tint);
+  box-shadow: inset 3px 0 0 var(--ago-brand);
+}
+
+/* A waiting row is read-only by design (`ConversationList`'s own doc comment on why there is no
+   claim action). It is visibly not a control: no anchor, no hover response, no pointer, a flat
+   sunken surface and a dashed edge that reads as "information", not "target". */
+.ago-list__row--static {
+  background: var(--ago-surface-sunken);
+  border-style: dashed;
+  cursor: default;
+}
+
+.ago-list__row-top {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  flex-wrap: wrap;
+}
+
+.ago-list__row-bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  font-size: var(--ago-text-xs);
+}
+
+/* --- The thread ---------------------------------------------------------------------------------
+   Two-tone by author, following the landing page's own widget mock (`.bubble-op` on white with a
+   hairline, `.bubble-visitor` on brand) - the same conversation seen from the other end. */
+
+.ago-thread-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--ago-space-2) var(--ago-space-1);
+}
+
+.ago-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-1);
+}
+
+.ago-thread__older {
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--ago-space-3);
+}
+
+/* A day separator is a horizontal rule with the day sitting in it - drawn with borders on the
+   pseudo-elements rather than a background image so it inherits the surface behind it. */
+.ago-thread__day {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-3);
+  margin: var(--ago-space-4) 0 var(--ago-space-2);
+  font-size: var(--ago-text-xs);
+  font-weight: 700;
+  color: var(--ago-ink-soft);
+}
+
+.ago-thread__day::before,
+.ago-thread__day::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ago-line);
+}
+
+.ago-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-1);
+  max-width: min(46rem, 82%);
+}
+
+.ago-message--group-start {
+  margin-top: var(--ago-space-3);
+}
+
+.ago-message--operator {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.ago-message--visitor {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+/* The author in words on the first message of every run. Side and colour never carry it alone
+   (WCAG 1.4.1), and this is also what a screen reader reads before the run. */
+.ago-message__author {
+  font-size: var(--ago-text-xs);
+  font-weight: 700;
+  color: var(--ago-ink-soft);
+  padding: 0 var(--ago-space-2);
+}
+
+.ago-message__bubble {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-2);
+  padding: var(--ago-space-3) var(--ago-space-4);
+  border-radius: var(--ago-radius-lg);
+  border: 1px solid var(--ago-line);
+  background: var(--ago-surface);
+}
+
+.ago-message--operator .ago-message__bubble {
+  background: var(--ago-brand-tint);
+  border-color: var(--ago-lavender);
+}
+
+/* The corner that points at its own side is squared off on the group's first message only, so a run
+   reads as one utterance broken across lines rather than as several separate ones. */
+.ago-message--operator.ago-message--group-start .ago-message__bubble {
+  border-top-right-radius: var(--ago-radius-sm);
+}
+
+.ago-message--visitor.ago-message--group-start .ago-message__bubble {
+  border-top-left-radius: var(--ago-radius-sm);
+}
+
+.ago-message__body {
+  font-size: var(--ago-text-base);
+  overflow-wrap: anywhere;
+  /* Newlines are now real - the composer produces them, so the thread has to render them. */
+  white-space: pre-wrap;
+}
+
+.ago-message__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  align-self: flex-end;
+  font-size: var(--ago-text-xs);
+  color: var(--ago-ink-soft);
+}
+
+/* Development builds only (`Thread` gates it on `import.meta.env.DEV`) - the sequence number is
+   genuinely useful when debugging the protocol and genuinely not for operators. In production it
+   survives in the bubble's `title`. */
+.ago-message__sequence {
+  font-family: var(--ago-font-mono);
+}
+
+/* `18-01`: a search hit `ConversationPage` successfully re-opened at (`?at=<sequence>`) - a brief
+   ring around the matched bubble so the operator can find it in an otherwise ordinary thread. A
+   `box-shadow`, not `background`, because the bubble's own background already differs by side
+   (`.ago-message--operator .ago-message__bubble` above) and a shadow composites over either without
+   needing to know which one. No `forwards`: the animation's own end state (a transparent ring) is
+   already indistinguishable from "no ring at all", so nothing has to hold or later remove a class. */
+.ago-message--highlighted .ago-message__bubble {
+  animation: ago-message-highlight 2.4s ease-out;
+}
+
+@keyframes ago-message-highlight {
+  0% {
+    box-shadow: 0 0 0 3px var(--ago-brand);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+.ago-message__attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-3);
+  flex-wrap: wrap;
+  font-size: var(--ago-text-sm);
+}
+
+.ago-message__thumb {
+  max-width: 7.5rem;
+  max-height: 7.5rem;
+  border-radius: var(--ago-radius-sm);
+  border: 1px solid var(--ago-line);
+}
+
+/* --- The composer ------------------------------------------------------------------------------- */
+
+.ago-workspace__composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-2);
+}
+
+.ago-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-2);
+  padding: var(--ago-space-3);
+  border: 1px solid var(--ago-line);
+  border-radius: var(--ago-radius-lg);
+  background: var(--ago-surface-raised);
+  transition:
+    border-color var(--ago-transition),
+    background var(--ago-transition);
+}
+
+/* The drop target has to be visible while a file is over it, or drag-and-drop is a feature nobody
+   discovers. Dashed, brand-tinted, and the whole composer - not a separate drop zone that would be
+   one more thing on screen. */
+.ago-composer--dragging {
+  border-color: var(--ago-brand);
+  border-style: dashed;
+  background: var(--ago-brand-tint);
+}
+
+.ago-composer__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ago-space-3);
+}
+
+.ago-composer__input {
+  flex: 1;
+  min-width: 0;
+  /* Height is set by `Composer`'s auto-grow effect from the element's own `scrollHeight`; `resize:
+     none` stops the manual grabber from fighting it, and `min-height` keeps a single-line draft the
+     same height as the Send button beside it. */
+  resize: none;
+  min-height: 2.75rem;
+  max-height: 12.5rem;
+}
+
+.ago-composer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+}
+
+.ago-composer__attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  flex-wrap: wrap;
+  font-size: var(--ago-text-sm);
+}
+
+.ago-composer__attachment-name {
+  font-family: var(--ago-font-mono);
+  font-size: var(--ago-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.ago-composer__hint {
+  font-size: var(--ago-text-xs);
+  color: var(--ago-ink-soft);
+}
+
+/* `18-03`: the canned-response picker. In normal flow rather than floating/absolutely positioned -
+   the composer already sits at the bottom of its column with nothing below it but this hint, so a
+   floating popup would buy overlap-avoidance this layout does not need at the cost of the positioning
+   logic every floating element carries. */
+.ago-composer__picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-1);
+  padding: var(--ago-space-2);
+  border: 1px solid var(--ago-line);
+  border-radius: var(--ago-radius-md);
+  background: var(--ago-surface);
+}
+
+.ago-composer__picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-1);
+  max-height: 12.5rem;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ago-composer__picker-option {
+  padding: var(--ago-space-1) var(--ago-space-2);
+  border-radius: var(--ago-radius-sm);
+  cursor: pointer;
+}
+
+/* The keyboard highlight and the pointer `:hover` state share this rule on purpose: `↑`/`↓` and
+   moving the mouse are two ways to reach the same "this one is about to be inserted" fact, and two
+   different treatments would suggest they mean different things. */
+.ago-composer__picker-option--active,
+.ago-composer__picker-option:hover {
+  background: var(--ago-brand-tint);
+}
+
+.ago-composer__picker-hint {
+  font-size: var(--ago-text-xs);
+  color: var(--ago-ink-soft);
+  margin: 0;
+}
+
+/* --- The visitor panel -------------------------------------------------------------------------- */
+
+.ago-aside__title {
+  font-size: var(--ago-text-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ago-ink-soft);
+}
+
+.ago-aside__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  flex-wrap: wrap;
+}
+
+.ago-aside__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-1);
+  margin: 0;
+  font-size: var(--ago-text-sm);
+}
+
+.ago-aside__facts dt {
+  font-size: var(--ago-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ago-ink-faint);
+  margin-top: var(--ago-space-3);
+}
+
+.ago-aside__facts dd {
+  margin: 0;
+}
+
+/* A full identifier, wrapped rather than truncated - the panel exists partly so an id can be copied
+   whole into a ticket or a log query. */
+.ago-aside__id {
+  font-size: var(--ago-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.ago-aside__note {
+  margin-top: auto;
+  padding-top: var(--ago-space-4);
+  font-size: var(--ago-text-xs);
+  color: var(--ago-ink-soft);
+}
+
+/* --- The visitor-history panel (`18-07`) --------------------------------------------------------- */
+
+.ago-aside__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-2);
+  padding-top: var(--ago-space-4);
+  border-top: 1px solid var(--ago-line);
+}
+
+.ago-aside__subtitle {
+  font-size: var(--ago-text-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ago-ink-soft);
+}
+
+/* A real <button>, unlike ago-list__row's usual <a>/<li> shapes - this list opens a dialog rather
+   than navigating, so it resets the platform button chrome onto the same row look ConversationList
+   already established, rather than inventing a second row style for one more list. */
+.ago-list__row--history {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ago-list__row--history:hover {
+  border-color: var(--ago-brand);
+  background: var(--ago-brand-tint);
+}
+
+.ago-list__preview {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- The empty state ---------------------------------------------------------------------------- */
+
+.ago-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ago-space-3);
+  max-width: 32rem;
+  text-align: center;
+  color: var(--ago-ink-soft);
+}
+
+.ago-empty-state__glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--ago-radius-md);
+  background: var(--ago-brand-tint);
+  color: var(--ago-brand-deep);
+  font-size: var(--ago-text-xl);
+}
+
+.ago-empty-state__title {
+  color: var(--ago-ink);
+}
+
+.ago-empty-state__body {
+  font-size: var(--ago-text-sm);
+}
+
+/* --- The responsive floor -----------------------------------------------------------------------
+   Two breakpoints, both stated in `rem` so they follow the user's own text size rather than a device
+   category. This is a laptop tool that degrades honestly, not a mobile app: the goal at the narrow
+   end is "usable and not broken", not "designed for a phone". */
+
+/* Below ~1180px: the visitor panel loses its own column and becomes a strip above the thread. Both
+   remaining columns keep their scrolling behaviour. */
+@media (max-width: 74rem) {
+  .ago-workspace {
+    grid-template-columns: 19rem minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "rail aside"
+      "rail main";
+  }
+
+  .ago-workspace__main--empty {
+    grid-area: rail-start / main-start / main-end / main-end;
+  }
+
+  .ago-workspace__aside {
+    overflow-y: visible;
+  }
+
+  .ago-aside__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    column-gap: var(--ago-space-4);
+  }
+
+  .ago-aside__facts dt {
+    margin-top: 0;
+  }
+
+  .ago-aside__note {
+    display: none;
+  }
+}
+
+/* Below ~840px: one column. The list and the open conversation become alternating full-width views
+   rather than shrinking both into uselessness, and the back link appears because the rail it points
+   at is no longer on screen. The shell stops being viewport-height here too - on a short, narrow
+   screen a fixed frame leaves nothing usable, and ordinary page scrolling is the better failure. */
+@media (max-width: 52.5rem) {
+  .ago-shell--fixed {
+    height: auto;
+  }
+
+  .ago-shell__main--wide {
+    overflow: visible;
+  }
+
+  .ago-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      "rail"
+      "aside"
+      "main";
+  }
+
+  .ago-workspace__main--empty {
+    grid-area: main;
+  }
+
+  .ago-workspace--conversation .ago-workspace__rail {
+    display: none;
+  }
+
+  .ago-workspace__back {
+    display: inline;
+  }
+
+  .ago-workspace__rail-scroll,
+  .ago-thread-scroll {
+    overflow-y: visible;
+  }
+
+  .ago-thread-scroll {
+    /* Without a bounded height the thread would grow to any length and push the composer off the
+       bottom of the document; a viewport-relative cap keeps the reply box reachable. */
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .ago-message {
+    max-width: 92%;
+  }
+}
+
+/* Below 40rem (`shell.css`'s own narrow-phone threshold, reused rather than a second number for the
+   same class of screen): `.ago-composer__row`'s fixed-width actions column (Attach + Send, ~235px)
+   leaves the textarea too little room to be usable - measured 28.5px wide at a 375px viewport,
+   wrapping text one character per line. Stacking the row turns the actions into their own row below
+   the textarea, which gets the full width instead. 52.5rem's single-column switch is not narrow
+   enough on its own: the composer stays usable in a one-column *tablet* layout (294px wide at 640px,
+   407px at 768px, both measured directly against the live console) - this is a second, narrower
+   threshold for the one element that breaks earlier than the rest of the workspace does. */
+@media (max-width: 40rem) {
+  .ago-composer__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ago-composer__actions {
+    justify-content: flex-end;
+  }
+}
+
+/* `18-05`: the rail's own two buttons, the shortcut list and the alert switches.
+
+   All of it lives in this file rather than in `components.css` for the same reason `18-05` added no
+   twelfth shared component: a checkbox row and a `<kbd>` are this screen's markup, and `adr/0030`
+   closes the shared set at eleven. */
+
+.ago-workspace__rail-tools {
+  display: flex;
+  gap: var(--ago-space-2);
+  flex-wrap: wrap;
+}
+
+.ago-shortcuts {
+  margin: var(--ago-space-4) 0;
+  display: grid;
+  gap: var(--ago-space-2);
+
+}
+
+.ago-shortcuts__row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: baseline;
+  gap: var(--ago-space-3);
+}
+
+.ago-shortcuts__row dd {
+  margin: 0;
+}
+
+.ago-kbd {
+  display: inline-block;
+  min-width: 1.75rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--ago-line-strong);
+  /* A key looks pressed in from below, which is the one bit of skeuomorphism worth keeping here: it
+     is how every operating system draws a key, so it reads as "press this" with no label. */
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  background: var(--ago-surface-sunken);
+  font-family: var(--ago-font-mono);
+  font-size: var(--ago-text-sm);
+  text-align: center;
+}
+
+.ago-alert-settings {
+  display: grid;
+  gap: var(--ago-space-4);
+  margin-top: var(--ago-space-3);
+}
+
+.ago-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ago-space-3);
+  cursor: pointer;
+}
+
+/* The native checkbox, at a size a finger and a cursor can both hit. Not repainted as a styled
+   `<span>`: a real checkbox is what a screen reader announces as one and what Space toggles, and
+   restyling it would cost both to gain a shape. */
+.ago-switch input[type="checkbox"] {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--ago-brand-deep);
+  flex: none;
+}
+
+.ago-switch__text {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.ago-switch__label {
+  font-weight: 600;
+}
+
+.ago-alert-settings__blocked {
+  margin: 0;
+  padding: var(--ago-space-3);
+  border-radius: var(--ago-radius-sm);
+  background: var(--ago-danger-tint);
+  color: var(--ago-danger);
+  font-size: var(--ago-text-sm);
+}
+
+/* `18-04`: the small "×" that removes a tag from `ConversationTagsPanel`'s own applied-tag badges -
+   inline with the badge text, not a full `Button`, since a full button's padding would visually break
+   the badge shape a whole row of these is meant to keep compact. */
+.ago-badge__remove {
+  margin-left: 0.35rem;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9em;
+  line-height: 1;
+  padding: 0;
+}
+
+.ago-badge__remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ============================================================================ Badge */
+
+.ago-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ago-space-2);
+  border-radius: var(--ago-radius-pill);
+  padding: var(--ago-space-1) var(--ago-space-3);
+  font-size: var(--ago-text-xs);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.ago-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+  flex: none;
+}
+
+.ago-badge--neutral {
+  background: var(--ago-surface-sunken);
+  color: var(--ago-ink);
+}
+
+.ago-badge--brand {
+  background: var(--ago-brand-tint);
+  color: var(--ago-brand-deep);
+}
+
+.ago-badge--accent {
+  background: var(--ago-lavender);
+  color: var(--ago-lavender-ink);
+}
+
+.ago-badge--success {
+  background: var(--ago-mint);
+  color: var(--ago-success);
+}
+
+.ago-badge--success .ago-badge__dot {
+  /* The landing's own live-dot, halo included - the one place `--ago-live` appears, and it is never
+     alone: the badge always carries a real word beside it. */
+  background: var(--ago-live);
+  box-shadow: 0 0 0 3px rgba(51, 209, 122, 0.22);
+}
+
+.ago-badge--danger {
+  background: var(--ago-danger-tint);
+  color: var(--ago-danger);
+}
+
+.ago-badge--mono {
+  font-family: var(--ago-font-mono);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* `19-02`: the AI-applied-tag marker inside ConversationTagsPanel's own badge - a real word, not
+   colour alone (`ago-badge--accent` above is the colour half of the same distinction; `adr/0078`'s
+   kind 2 Done-when asks for "visibly distinguishable", which colour-blind-safely means the word does
+   the actual work). Sized down from the badge's own text so "AI" reads as a qualifier on the tag name
+   beside it, never as a second, equally-weighted word. */
+.ago-badge__ai-marker {
+  font-size: 0.85em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+/* ============================================================================ Button */
+
+.ago-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ago-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ago-radius-md);
+  font-family: var(--ago-font-sans);
+  font-weight: 700;
+  font-size: var(--ago-text-base);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--ago-transition),
+    border-color var(--ago-transition),
+    color var(--ago-transition);
+}
+
+.ago-btn--md {
+  padding: var(--ago-space-3) var(--ago-space-5);
+  min-height: 2.5rem; /* 40px - matches the control height in `--ago-input` below */
+}
+
+.ago-btn--sm {
+  padding: var(--ago-space-2) var(--ago-space-3);
+  min-height: 2rem;
+  font-size: var(--ago-text-sm);
+}
+
+.ago-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ago-btn--primary {
+  background: var(--ago-brand);
+  color: #fff;
+}
+
+.ago-btn--primary:hover:not(:disabled) {
+  /* `--ago-brand-hover`, not `--ago-brand-deep` - the fill and the link/active-nav text colour are
+     the same token in light mode but split in dark, see `tokens.css`'s dark-block comment for why. */
+  background: var(--ago-brand-hover);
+}
+
+.ago-btn--secondary {
+  background: var(--ago-surface);
+  color: var(--ago-ink);
+  border-color: var(--ago-line-strong);
+}
+
+.ago-btn--secondary:hover:not(:disabled) {
+  background: var(--ago-brand-tint);
+  border-color: var(--ago-brand);
+  color: var(--ago-brand-deep);
+}
+
+/* A ghost button has no border of its own, so 1.4.11's 3:1 boundary rule does not apply to it - its
+   affordance is the label, which is brand-coloured text at 9.39:1. Used only where a bordered
+   button beside it already establishes the row as a control strip. */
+.ago-btn--ghost {
+  background: transparent;
+  color: var(--ago-brand-deep);
+}
+
+.ago-btn--ghost:hover:not(:disabled) {
+  background: var(--ago-brand-tint);
+}
+
+.ago-btn--danger {
+  background: var(--ago-surface);
+  color: var(--ago-danger);
+  border-color: var(--ago-danger);
+}
+
+.ago-btn--danger:hover:not(:disabled) {
+  background: var(--ago-danger-tint);
+}
+
+/* ============================================================================ Input / Textarea / Select */
+
+.ago-control {
+  width: 100%;
+  background: var(--ago-surface);
+  color: var(--ago-ink);
+  border: 1px solid var(--ago-line-strong);
+  border-radius: var(--ago-radius-sm);
+  padding: var(--ago-space-2) var(--ago-space-3);
+  font-size: var(--ago-text-base);
+  transition:
+    border-color var(--ago-transition),
+    box-shadow var(--ago-transition);
+}
+
+.ago-control:not(textarea) {
+  min-height: 2.5rem;
+}
+
+.ago-control:hover:not(:disabled) {
+  border-color: var(--ago-ink-soft);
+}
+
+.ago-control:focus-visible {
+  border-color: var(--ago-brand);
+  box-shadow: var(--ago-focus-halo);
+}
+
+.ago-control:disabled {
+  background: var(--ago-surface-sunken);
+  color: var(--ago-ink-soft);
+  cursor: not-allowed;
+}
+
+/* Colour alone never carries "this is wrong" (1.4.1): the invalid border is always accompanied by
+   the Field's own error text, which is what `aria-describedby` points a screen reader at. */
+.ago-control[aria-invalid="true"] {
+  border-color: var(--ago-danger);
+}
+
+.ago-control--textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.ago-control--select {
+  appearance: none;
+  padding-right: var(--ago-space-8);
+  background-image: linear-gradient(45deg, transparent 50%, var(--ago-ink-soft) 50%),
+    linear-gradient(135deg, var(--ago-ink-soft) 50%, transparent 50%);
+  background-position:
+    right calc(var(--ago-space-4) + 4px) center,
+    right var(--ago-space-4) center;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+/* A file input cannot be restyled through its own box in every browser, so it is styled as the
+   control strip around the native button rather than fought with. */
+.ago-control--file {
+  padding: var(--ago-space-2);
+  cursor: pointer;
+}
+
+.ago-control--file::file-selector-button {
+  margin-right: var(--ago-space-3);
+  padding: var(--ago-space-2) var(--ago-space-3);
+  border: 1px solid var(--ago-line-strong);
+  border-radius: var(--ago-radius-sm);
+  background: var(--ago-surface-sunken);
+  color: var(--ago-ink);
+  font-family: var(--ago-font-sans);
+  font-size: var(--ago-text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ============================================================================ States
+
+   Loading, empty and error, as the item asks - first-class and named, rather than an ad-hoc
+   `<p>Loading…</p>` per page. These are shared styles, not components: `Spinner`/`Skeleton` and
+   `Alert` are the components that carry loading and error, and an empty list is a sentence in a
+   Panel, not a widget. Adding an `EmptyState` component would have put a twelfth entry on a list the
+   backlog item deliberately closed at eleven. */
+
+.ago-empty {
+  padding: var(--ago-space-6) var(--ago-space-4);
+  border: 1px dashed var(--ago-line-strong);
+  border-radius: var(--ago-radius-md);
+  background: var(--ago-surface-raised);
+  color: var(--ago-ink-soft);
+  text-align: center;
+  font-size: var(--ago-text-base);
+}
+
+.ago-meta {
+  font-size: var(--ago-text-sm);
+  color: var(--ago-ink-soft);
+}
+
+.ago-mono {
+  font-family: var(--ago-font-mono);
+  font-size: var(--ago-text-xs);
+  color: var(--ago-ink-soft);
+}
+
+/* `18-14`: BookingFlowConversionPage's own two-number stat block - a plain `<dl>`, not a `Table`, the
+   same "the honest shape for two numbers" call that page's own doc comment makes. Sits beside an
+   `Alert tone="info"` for the report's honesty caveat, so this block itself carries no warning
+   styling of its own - the caveat is a separate, deliberately distinct element. */
+.ago-booking-flow-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ago-space-6);
+  margin: 0 0 var(--ago-space-4);
+}
+
+.ago-booking-flow-stats dt {
+  font-size: var(--ago-text-sm);
+  color: var(--ago-ink-soft);
+}
+
+.ago-booking-flow-stats dd {
+  margin: 0;
+  font-size: var(--ago-text-xl);
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   PREVIEW CHROME - not part of the design system. Namespaced `dsp-`.
+   It reads system tokens so the frame does not fight the specimens; no rule
+   below is a component and none of it ships in the console.
+   ========================================================================== */
+
+.dsp-page {
+  max-width: var(--ago-shell-max);
+  margin: 0 auto;
+  padding: var(--ago-space-8) var(--ago-gutter) var(--ago-space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ago-space-8);
+}
+.dsp-head { display: flex; flex-direction: column; gap: var(--ago-space-2); }
+.dsp-kicker {
+  font-size: var(--ago-text-xs); font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ago-ink-soft);
+}
+.dsp-title { font-size: var(--ago-text-xl); font-weight: 800; line-height: var(--ago-leading-tight); }
+.dsp-lede { font-size: var(--ago-text-sm); color: var(--ago-ink-soft); max-width: 72ch; }
+.dsp-src {
+  font-family: var(--ago-font-mono); font-size: var(--ago-text-xs);
+  color: var(--ago-ink-faint); overflow-wrap: anywhere;
+}
+.dsp-section { display: flex; flex-direction: column; gap: var(--ago-space-4); }
+.dsp-h { font-size: var(--ago-text-lg); font-weight: 800; }
+.dsp-note { font-size: var(--ago-text-sm); color: var(--ago-ink-soft); max-width: 72ch; }
+.dsp-specimens { display: flex; flex-wrap: wrap; gap: var(--ago-space-4); align-items: flex-start; }
+.dsp-specimen {
+  display: flex; flex-direction: column; gap: var(--ago-space-2);
+  padding: var(--ago-space-4); border: 1px dashed var(--ago-line-strong);
+  border-radius: var(--ago-radius-md); background: var(--ago-paper);
+}
+.dsp-specimen--wide { width: 100%; }
+.dsp-label {
+  font-family: var(--ago-font-mono); font-size: var(--ago-text-xs);
+  color: var(--ago-ink-faint); overflow-wrap: anywhere;
+}
+.dsp-gap { display: flex; flex-wrap: wrap; gap: var(--ago-space-3); align-items: center; }
+.dsp-stack { display: flex; flex-direction: column; gap: var(--ago-space-3); }
+.dsp-hole {
+  border: 1px solid var(--ago-danger); background: var(--ago-danger-tint);
+  color: var(--ago-danger); border-radius: var(--ago-radius-md);
+  padding: var(--ago-space-3) var(--ago-space-4); font-size: var(--ago-text-sm);
+  max-width: 72ch;
+}
+.dsp-hole b { font-weight: 800; }
+.dsp-grid { display: grid; gap: var(--ago-space-3); grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.dsp-swatch { display: flex; flex-direction: column; gap: var(--ago-space-1); }
+.dsp-chip {
+  height: 3rem; border-radius: var(--ago-radius-sm); border: 1px solid var(--ago-line-strong);
+}
+.dsp-name { font-family: var(--ago-font-mono); font-size: var(--ago-text-xs); font-weight: 600; }
+.dsp-meta { font-size: var(--ago-text-xs); color: var(--ago-ink-soft); }
+.dsp-theme { display: flex; align-items: center; gap: var(--ago-space-2); }
+.dsp-theme select {
+  font: inherit; font-size: var(--ago-text-sm); padding: var(--ago-space-1) var(--ago-space-2);
+  border: 1px solid var(--ago-line-strong); border-radius: var(--ago-radius-sm);
+  background: var(--ago-surface); color: var(--ago-ink);
+}
+.dsp-rule { border: 0; border-top: 1px solid var(--ago-line); width: 100%; }
+.dsp-table { width: 100%; border-collapse: collapse; font-size: var(--ago-text-sm); }
+.dsp-table th, .dsp-table td {
+  text-align: left; padding: var(--ago-space-2) var(--ago-space-3);
+  border-bottom: 1px solid var(--ago-line); vertical-align: top;
+}
+.dsp-table th { color: var(--ago-ink-soft); font-weight: 700; }
+.dsp-table code { font-family: var(--ago-font-mono); font-size: var(--ago-text-xs); }
+
+</style>
+</head>
+<body>
+<div class="dsp-page">
+  <header class="dsp-head">
+    <span class="dsp-kicker">Workspace</span>
+    <h1 class="dsp-title">Operator workspace</h1>
+    <p class="dsp-lede">The three-region grid, its breakpoints, the queue rows, the thread, the composer and the aside.</p>
+<p class="dsp-src">src/workspace/*.tsx &middot; src/workspace/workspace.css</p>
+    <label class="dsp-theme">
+      <span class="dsp-meta">Theme</span>
+      <select id="dsp-theme">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+  </header>
+  <section class="dsp-section">
+    <h2 class="dsp-h">Three regions, two of which are fixed tracks</h2>
+    <p class="dsp-note"><code>grid-template-columns: 21rem minmax(0, 1fr) 18rem</code>. 21rem is the narrowest the rail
+      can be while a visitor id badge, an unread badge and &ldquo;Waiting 14m&rdquo; still sit on two comfortable lines;
+      18rem is the aside&rsquo;s equivalent for a full uuid at 12px mono. The middle is
+      <code>minmax(0, 1fr)</code> rather than <code>1fr</code>, because a grid track&rsquo;s default
+      <code>min-width: auto</code> would let one long unbroken message push the layout wider than the viewport.</p>
+    <p class="dsp-note">The stylesheet states its own posture, and it is worth quoting because it is a product decision
+      rather than a style one: <i>&ldquo;This is a laptop tool that degrades honestly, not a mobile app: the goal at the
+      narrow end is &lsquo;usable and not broken&rsquo;, not &lsquo;designed for a phone&rsquo;.&rdquo;</i></p>
+    <table class="dsp-table">
+      <thead><tr><th>Width</th><th>Layout</th></tr></thead>
+      <tbody>
+        <tr><td>above 74rem (~1180px)</td><td><code>rail | main | aside</code>, each scrolling internally, page does not scroll</td></tr>
+        <tr><td>&le; 74rem</td><td>two columns; the aside loses its column and becomes a strip <b>above</b> the thread; its closing note is hidden</td></tr>
+        <tr><td>&le; 52.5rem (~840px)</td><td>one column; the shell stops being viewport-height; <b>the rail is hidden whenever a conversation is open</b> and a &ldquo;&larr; Conversations&rdquo; link appears. The thread gets <code>max-height: 60vh</code> so the composer stays reachable</td></tr>
+        <tr><td>&le; 40rem</td><td>additionally, the composer&rsquo;s action row stacks below the textarea</td></tr>
+      </tbody>
+    </table>
+    <p class="dsp-note">The 52.5rem step is <b>the only place in the console where the navigation model changes</b> rather
+      than the column widths: list and conversation become alternating full-width views joined by one back link.</p>
+  </section>
+
+  <section class="dsp-section">
+    <h2 class="dsp-h">Queue rows &mdash; and the difference between a link and a fact</h2>
+    <p class="dsp-note">An assigned row is a whole-row link and looks like one. A waiting row is read-only by design, so
+      it is visibly not a control: no anchor, no hover response, no pointer, a flat sunken surface and a dashed edge that
+      reads as &ldquo;information&rdquo;, not &ldquo;target&rdquo;.</p>
+    <div class="dsp-specimen dsp-specimen--wide" style="max-width: 24rem; background: var(--ago-surface);">
+      <ul class="ago-list">
+        <li><a class="ago-list__row ago-list__row--active" href="#" aria-current="page">
+          <span class="ago-list__row-top"><span class="ago-badge ago-badge--brand ago-badge--mono">a1b2c3d4</span><span class="ago-badge ago-badge--accent">New</span><span class="ago-badge ago-badge--danger">2</span></span>
+          <span class="ago-list__row-bottom"><span class="ago-meta">Open 14m</span></span></a></li>
+        <li><a class="ago-list__row" href="#">
+          <span class="ago-list__row-top"><span class="ago-badge ago-badge--brand ago-badge--mono">7e21aa04</span></span>
+          <span class="ago-list__row-bottom"><span class="ago-meta">Open 3m</span></span></a></li>
+        <li class="ago-list__row ago-list__row--static">
+          <span class="ago-list__row-top"><span class="ago-badge ago-badge--neutral ago-badge--mono">88888888</span></span>
+          <span class="ago-list__row-bottom"><span class="ago-meta">Waiting 4m</span></span></li>
+      </ul>
+      <span class="dsp-label">active (inset 3px left edge + tint) &middot; assigned &middot; waiting (--static)</span>
+    </div>
+    <div class="dsp-hole"><b>The waiting row&rsquo;s appearance is load-bearing and reflects a product fact:</b> there is
+      no claim or assign action anywhere in the product. Waiting conversations appear in three places and are actionable
+      in none.</div>
+  </section>
+
+  <section class="dsp-section">
+    <h2 class="dsp-h">The thread</h2>
+    <div class="dsp-specimen dsp-specimen--wide" style="background: var(--ago-surface);">
+      <div class="ago-thread-scroll" style="max-height: none;">
+        <ol class="ago-thread" aria-label="Message thread">
+          <li class="ago-thread__day"><span>Today</span></li>
+          <li class="ago-message ago-message--visitor ago-message--group-start">
+            <span class="ago-message__author">Visitor</span>
+            <div class="ago-message__bubble"><span class="ago-message__body">Hello, do you have oat milk for a flat white?</span>
+              <span class="ago-message__meta"><time datetime="2026-09-01T08:46:00Z">08:46</time></span></div></li>
+          <li class="ago-message ago-message--operator ago-message--group-start">
+            <span class="ago-message__author">Operator</span>
+            <div class="ago-message__bubble"><span class="ago-message__body">Yes - oat, almond and soy are all available at no extra charge.</span>
+              <span class="ago-message__meta"><time datetime="2026-09-01T08:47:00Z">08:47</time></span></div></li>
+          <li class="ago-message ago-message--operator ago-message--grouped">
+            <div class="ago-message__bubble"><span class="ago-message__body">Anything else I can help with?</span>
+              <span class="ago-message__meta"><time datetime="2026-09-01T08:47:00Z">08:47</time></span></div></li>
+        </ol>
+      </div>
+      <span class="dsp-label">day separator &middot; author named in words on the first message of a run &middot; the corner pointing at its own side is squared off on that message only</span>
+    </div>
+    <p class="dsp-note">Two-tone by author, and the side is never the only signal: the author is stated in words on the
+      first message of every run, which is also what a screen reader reads before it. Bubbles cap at
+      <code>min(46rem, 82%)</code>, 92% below 52.5rem.</p>
+    <div class="dsp-hole"><b>There is no delivery state on a message.</b> An operator bubble carries a timestamp and
+      nothing else &mdash; no sent, delivered, read or failed marker. Failure is reported once, for the whole composer,
+      as an Alert above it.</div>
+    <div class="dsp-hole"><b>The thread has no empty state.</b> A conversation with no messages renders an empty
+      <code>&lt;ol&gt;</code>.</div>
+    <div class="dsp-hole"><b>The visitor&rsquo;s end of the same conversation is timestamped differently.</b> The widget
+      shows no timestamps, no day separators and no author labels at all.</div>
+  </section>
+
+  <section class="dsp-section">
+    <h2 class="dsp-h">The composer</h2>
+    <div class="dsp-specimen dsp-specimen--wide" style="max-width: 40rem; background: var(--ago-surface);">
+      <div class="ago-workspace__composer">
+        <div class="ago-composer">
+          <div class="ago-composer__row">
+            <textarea class="ago-control ago-control--textarea ago-composer__input" rows="1" placeholder="Write a reply — Enter to send, Shift+Enter for a new line"></textarea>
+            <div class="ago-composer__actions">
+              <button type="button" class="ago-btn ago-btn--ghost ago-btn--sm">Attach</button>
+              <button type="button" class="ago-btn ago-btn--ghost ago-btn--sm">Suggest a reply</button>
+              <button type="button" class="ago-btn ago-btn--primary ago-btn--md">Send</button>
+            </div>
+          </div>
+          <p class="ago-composer__hint">Enter sends &middot; Shift+Enter starts a new line &middot; Escape clears &middot; drop or paste a file to attach &middot; Type / to insert a canned response</p>
+        </div>
+      </div>
+      <span class="dsp-label">resting. Narrow this window below 40rem to see the actions stack below the textarea.</span>
+    </div>
+    <div class="dsp-specimen dsp-specimen--wide" style="max-width: 40rem; background: var(--ago-surface);">
+      <div class="ago-composer ago-composer--dragging">
+        <div class="ago-composer__row">
+          <textarea class="ago-control ago-control--textarea ago-composer__input" rows="1" placeholder="Drop the file"></textarea>
+          <div class="ago-composer__actions"><button type="button" class="ago-btn ago-btn--primary ago-btn--md">Send</button></div>
+        </div>
+      </div>
+      <span class="dsp-label">--dragging &mdash; the whole composer is the drop target, not a separate zone</span>
+    </div>
+    <div class="dsp-specimen dsp-specimen--wide" style="max-width: 40rem; background: var(--ago-surface);">
+      <div class="ago-composer">
+        <div class="ago-composer__picker">
+          <ul class="ago-composer__picker-list" role="listbox" aria-label="Canned responses">
+            <li class="ago-composer__picker-option ago-composer__picker-option--active" role="option" aria-selected="true">Refund policy</li>
+            <li class="ago-composer__picker-option" role="option" aria-selected="false">Opening hours</li>
+          </ul>
+          <p class="ago-composer__picker-hint">&uarr;&darr; to choose &middot; Enter to insert &middot; Esc to cancel</p>
+        </div>
+      </div>
+      <span class="dsp-label">the canned-response picker &mdash; deliberately <b>in normal flow</b>, not floating. Nothing in this system positions an overlay against a control.</span>
+    </div>
+    <p class="dsp-note">The 40rem stacking rule exists because of a measurement, not a feeling: the fixed-width action
+      column left the textarea <b>28.5px wide at a 375px viewport</b>, wrapping text one character per line.</p>
+  </section>
+
+  <section class="dsp-section">
+    <h2 class="dsp-h">The aside&rsquo;s section shape, repeated six times</h2>
+    <div class="dsp-specimen" style="max-width: 20rem; background: var(--ago-surface-raised);">
+      <section class="ago-aside__section">
+        <h3 class="ago-aside__subtitle">Tags</h3>
+        <div class="ago-aside__row">
+          <span class="ago-badge ago-badge--neutral">VIP<button type="button" class="ago-badge__remove" aria-label="Remove tag VIP">&times;</button></span>
+          <span class="ago-badge ago-badge--accent"><span class="ago-badge__ai-marker" aria-hidden="true">AI</span>Refund</span>
+        </div>
+      </section>
+      <span class="dsp-label">.ago-aside__section &mdash; a top border, an uppercase subtitle, then content</span>
+    </div>
+    <p class="dsp-note">Six sections share this shape: previous conversations, tags, notes, outcome, linked channels,
+      unverified contact details. All six are gated on <code>conversation:read</code> and render <b>nothing at all</b>
+      without it &mdash; an operator lacking that grant sees the facts block, then a silent gap, then the closing note.</p>
+  </section>
+
+  <section class="dsp-section">
+    <h2 class="dsp-h">Two more patterns that live only here</h2>
+    <div class="dsp-specimens">
+      <div class="dsp-specimen"><dl class="ago-shortcuts" style="margin:0;"><div class="ago-shortcuts__row"><dt><kbd class="ago-kbd">J</kbd></dt><dd>Move to the next conversation assigned to you</dd></div><div class="ago-shortcuts__row"><dt><kbd class="ago-kbd">?</kbd></dt><dd>Show this list</dd></div></dl><span class="dsp-label">.ago-kbd &mdash; the one bit of skeuomorphism kept, because it is how every OS draws a key</span></div>
+      <div class="dsp-specimen" style="max-width: 22rem;"><label class="ago-switch"><input type="checkbox" checked><span class="ago-switch__text"><span class="ago-switch__label">Desktop notifications</span><span class="ago-meta">A card when a conversation needs you. Never the message text.</span></span></label><span class="dsp-label">.ago-switch &mdash; a <b>real native checkbox</b> at a size a finger and a cursor can both hit, not a repainted span</span></div>
+    </div>
+    <p class="dsp-note">Both live in <code>workspace.css</code> rather than <code>components.css</code>, on the stated
+      reasoning that a checkbox row and a <code>&lt;kbd&gt;</code> are this screen&rsquo;s markup and the shared set is
+      closed at eleven. A design tool should treat them as screen-local, not as system components.</p>
+  </section>
+
+</div>
+<script>
+/* Preview chrome only. Mirrors `src/design/theme.ts` exactly - it writes the same `data-theme`
+   attribute on <html> that ThemeToggle writes, and "System" removes it, which is the console's
+   own three-state mechanism. It deliberately does NOT write localStorage: a preview page must
+   not leave state behind in a reader's browser. */
+(function () {
+  var sel = document.getElementById("dsp-theme");
+  if (!sel) { return; }
+  sel.addEventListener("change", function () {
+    if (sel.value === "system") { document.documentElement.removeAttribute("data-theme"); }
+    else { document.documentElement.setAttribute("data-theme", sel.value); }
+  });
+})();
+</script>
+</body>
+</html>

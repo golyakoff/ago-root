@@ -1215,7 +1215,9 @@ one-to-one.
 ## 13. What is stubbed, half-built, or dead
 
 **13.1 The calendar's embed snippet is a placeholder, and would not work if pasted.**
-`CalendarSetupPage.tsx`, `embedSnippet()`, renders literally:
+**— corrected 2026-09-04; fixed in code, see the corrections section at the end of this document.**
+`CalendarSetupPage.tsx`, `embedSnippet()`, rendered literally, at the commit this document was
+written against:
 
 ```
 <script src="https://…/ago-chat.js"
@@ -1400,3 +1402,27 @@ and is complete as a *field* list; I did not confirm their visual grouping.
 | `*` | — | — | redirects to `/` |
 
 The widget has no routes; its states are listed in 9.5.
+
+---
+
+## Corrections since publication
+
+This document was written against `ago-console` `1eba8d3` and `ago-widget` `5e09304`. Findings it
+records are dated; the code moves. Corrections are appended here rather than edited into the body, so
+a reader can still see what was true when, and the marker at the affected finding points here.
+
+**2026-09-04 — §13.1, the calendar embed snippet, is fixed.** The finding was filed as `22-22` and
+landed in `ago-console` at `a64fcac7f50a3cecec4ea9f217575978bcbaadc8`. `embedSnippet()` now composes
+its `src` from `apiBaseUrl` (`…/widget/widget.js`, the same way `InstallSnippetPage` does), emits
+`data-booking="true"`, and no longer emits `data-booking-api` — which the widget never read. Three of
+the four faults are gone.
+
+The fourth is now deliberate and documented in the code: `data-site` stays the literal placeholder
+`YOUR-CHAT-SITE-KEY`, because reading the real chat site key needs `site:configure`
+(`GET /api/v1/sites/{siteId}/installation`) and this screen only requires `calendar:configure`.
+Fetching it would either fail for a calendar-only operator or widen the screen's own gate. The screen
+now carries a hint naming where to get the key, with a link to `/settings/install`.
+
+`22-22` records, and does not answer, the information-architecture question that follows: whether a
+tenant should meet two embed snippets at all (§6.1 and §7.2 each show one). The backlog item was
+still marked *in review* when this correction was written.
