@@ -1,7 +1,8 @@
 # a ninth integration test publishes after a fixed sleep
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#169`. Its shape-based search found two more instances of the
+  same defect, which are `15-20`
 - **Found**: 2026-09-03, by `15-17`'s own author while fixing the eight that ticket named —
   and deliberately **not** folded into it (rule 15).
 
