@@ -33,7 +33,7 @@ JWKS is the signature source there, no local key involved at all.
 | **Visitor** | Signed token (localStorage), scoped to one `site_id`, issued by `Ago.Chat.Api` on first contact (`vision.md`, `realtime.md`); **7-day lifetime, renewed at the point of use** (`POST /api/v1/visitor-sessions/renew`), still no revocation - each a decision, not an accident: `17-06`/`adr/0034` for revocation, `17-07`+`17-08`/`adr/0048` for the lifetime and the renewal path | None beyond the token's `site_id` claim |
 | **Operator** | `/hubs/operator` expects a JWT (`realtime.md`) - **issued by Keycloak** (`5-05`, `adr/0022`), validated directly against its JWKS; `OperatorId`/`site_id` are resolved from the token's `sub` via `OperatorIdentityClaimsTransformation`, not read from the token directly | `adr/0016`'s RBAC, resolved per request from `OperatorId`/`site_id` regardless of how they were resolved |
 | **Webhook/API integrations** | Outbound only today: deliveries to a tenant's endpoint are HMAC-signed (`adr/0013`) so *they* can verify *us*. There is no inbound integration API yet, so "how does a third party authenticate to AGO Chat" is entirely unplanned | N/A - does not exist |
-| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants four things as of `22-17`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview (`12-02`); the channel-identity unlink (`14-12`, `adr/0079`); and the module grant and revoke (`22-17`, `adr/0098`). The last three are **cross-tenant writes** - this cell said none existed until 2026-09-04, which had been wrong since `14-12` **`12-04`: and one thing it is explicitly refused** - `10-02`'s `POST /api/v1/sites` registration bootstrap, which would otherwise turn this identity into an ordinary tenant operator permanently (`adr/0063`) |
+| **Platform owner** | The same Keycloak realm, the same console login page, the same `JwtSchemes.Operator` token every operator already presents (`5-05`, `adr/0022`) - distinguished only by a `platform-owner` **realm role** in the token's `realm_access.roles` claim (`12-01`, `adr/0032`). No `operators` row, no `external_subject_id` link, no `OperatorId`/`SiteId` claims - `OperatorIdentityClaimsTransformation` resolves nothing for this identity and is not consulted | The `RequirePlatformOwner` policy, and nothing else. Entirely outside `adr/0016`'s RBAC: no `site_id` to anchor a check to, `IPermissionChecker` never called. Grants five things as of `23-14`: `GET /api/v1/owner/sites`, a read-only cross-tenant overview with an optional name/id search (`12-02`, `23-14`); `GET /api/v1/owner/sites/{siteId}`, the per-tenant detail behind it - the same eight facts plus entitlements (`23-14`); the channel-identity unlink (`14-12`, `adr/0079`); and the module grant and revoke (`22-17`, `adr/0098`). The last three are **cross-tenant writes** - this cell said none existed until 2026-09-04, which had been wrong since `14-12` **`12-04`: and one thing it is explicitly refused** - `10-02`'s `POST /api/v1/sites` registration bootstrap, which would otherwise turn this identity into an ordinary tenant operator permanently (`adr/0063`) |
 
 `site_id` scoping is the one piece already load-bearing everywhere (`vision.md`: "multi-tenant from
 day one") - **and "everywhere" is now a checked claim rather than an assumption**: every use case,
@@ -311,6 +311,22 @@ intended to be the state of the whole actor. Proven with real tokens, not assert
 operator and a `site:configure`-holding `demo-admin` both get `403`, an anonymous caller `401`
 (`OwnerSitesEndpointTests`).
 
+**`23-14` gave the read a per-tenant companion**: `GET /api/v1/owner/sites/{siteId}`, mapped in the
+same `OwnerSitesEndpoints` file and gated by the identical `RequirePlatformOwner` policy - the eight
+aggregate facts `12-02`'s list already computes, for exactly one tenant, plus that tenant's enabled
+modules (`GrantedByOwner`, `ExpiresAt`, and whether each is active right now). `GetSiteForOwnerHandler`
+makes the same "no second check" argument `ListSitesForOwnerHandler` does, for the same reason: the
+authorizing fact is a claim, and `Ago.Chat.Application` has no port that sees one. Unlike its sibling,
+this handler *does* take a `SiteId` - chosen by the caller, never checked against anything - which is
+the read-side instance of the shape the three writes below already have, and is why
+`tenant-isolation.md`'s "the cross-tenant surfaces the platform owner reaches" grew from four to five
+rather than gaining a sixth, separately-argued category. `12-02`'s own list also gained an optional
+name/id search in the same change: the predicate narrows the *page*, never the reported total
+(`OwnerSitesResponse.MatchingSites`/`TotalSites`, both present on every response) - the one place this
+document's "the list is complete" claim (`flows.md` 5.1) could have quietly stopped being true, and
+the reason `23-14`'s own tests assert the total explicitly rather than trusting a shorter page to speak
+for itself.
+
 ## The owner acquired a write surface, twice, and this file did not notice the first time
 
 **`14-12` was the first** (`adr/0079`): `POST /api/v1/owner/sites/{siteId}/channel-identities/{id}/unlink`.
@@ -457,11 +473,13 @@ how long a token outlives the key that signed it.
 Everything above answers "may this operator do X". This section is about the question next to it -
 "may they do X **to that tenant's data**" - and it is the one this document previously left implicit.
 
-**The classification is `tenant-isolation.md`**, a sibling file, and it is where to go for detail:
-all 37 use-case entry points, all 21 tenant-carrying routes and hub methods, and all 5 read-model
-queries, each with the provenance of its `site_id` and the gate that protects it. Only the headline
-belongs here: 21 entry points are RBAC-gated, 16 are deliberately not and each says why, and exactly
-one query in the codebase (`12-02`'s owner overview) reads across tenants at all.
+**The classification is `tenant-isolation.md`**, a sibling file, and it is where to go for detail and
+for the current counts - this paragraph's own entry-point/route/read-model figures have drifted from
+that file's headline table before (`tenant-isolation.md`'s own repeated "re-derived" notes are the
+record of that), so treat the numbers there as authoritative over anything restated here. What is
+still worth stating in this document specifically: since `23-14`, **two** queries in the codebase read
+across tenants - `12-02`'s owner overview and `23-14`'s per-tenant detail behind it - not one; both are
+reached only through `12-01`'s `RequirePlatformOwner` policy, never through `IPermissionChecker`.
 
 **`17-01` found a real cross-tenant hole, and it is worth recording as a correction to what this
 document used to imply.** The sentence "`site_id` scoping is the one piece already load-bearing

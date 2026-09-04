@@ -1,7 +1,10 @@
 # the owner can find one tenant and see what it holds
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#175`, `ago-console#105`. No ADR: this composes
+  existing columns and existing patterns, and the one judgment worth recording — why the
+  exemption differs from `23-01`'s — is written where it is enforced, in
+  `TenantScopeExemptions`.
 - **Depends on**: nothing. `23-13` is not a dependency, but this read is what verifies its override
   afterwards, so landing it first makes `23-15`'s procedure writable.
 - **Decision**: `docs/design/decisions.md` §6, which keeps `/owner` read-only for now
@@ -84,16 +87,16 @@ explicit in the response, never implicit in the query.**
 
 ## Done when
 
-- [ ] Searching by part of a site's name returns it, and the response states how many of how many.
-- [ ] An empty search returns the unfiltered list, unchanged, and `PlatformOwnerAsTenantTests` passes
+- [x] Searching by part of a site's name returns it, and the response states how many of how many.
+- [x] An empty search returns the unfiltered list, unchanged, and `PlatformOwnerAsTenantTests` passes
       untouched.
-- [ ] The detail read shows a module the owner granted, with its expiry.
-- [ ] A module the *tenant* enabled is distinguishable from one the owner granted.
-- [ ] A grant with no expiry renders as an explicit *no end date*, never as a blank cell.
-- [ ] An expired grant is shown as expired, matching what the live read-store query already decides
+- [x] The detail read shows a module the owner granted, with its expiry.
+- [x] A module the *tenant* enabled is distinguishable from one the owner granted.
+- [x] A grant with no expiry renders as an explicit *no end date*, never as a blank cell.
+- [x] An expired grant is shown as expired, matching what the live read-store query already decides
       rather than re-deriving it in the console.
-- [ ] A non-owner gets the same refusal the list gives, and no site data is loaded.
-- [ ] `tenant-isolation.md` and `authorization.md` carry the route.
+- [x] A non-owner gets the same refusal the list gives, and no site data is loaded.
+- [x] `tenant-isolation.md` and `authorization.md` carry the route.
 
 ## Open questions
 
