@@ -1,7 +1,9 @@
 # a person with calendar permissions on two tenants gets no calendar at all
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: in review (2026-09-04), `adr/0100`. The product question below was answered on
+  2026-09-04: **build the switcher**. The second alternative — one person, one tenant, refuse to
+  create the second grant — is not in scope; see Outcome.
 - **Found**: 2026-09-03, reading `22-05` before merging it.
 
 ## The gap
@@ -47,11 +49,43 @@ Either answer is defensible. Silently resolving to nothing is not, because nothi
 
 ## Done when
 
-- [ ] A subject with calendar permissions on two tenants either chooses, or is prevented from
-      reaching that state at all — chosen deliberately, with the reasoning recorded.
-- [ ] Whichever it is, it is covered by a test, since the shape has none today.
-- [ ] If it stays a refusal, the person is told something, and an operator can find out why from a
-      log rather than from reading this file.
+- [x] A subject with calendar permissions on two tenants either chooses, or is prevented from
+      reaching that state at all — chosen deliberately, with the reasoning recorded. **Chooses**;
+      `adr/0100`.
+- [x] Whichever it is, it is covered by a test, since the shape has none today. `TenantSwitchingTests`
+      (real Postgres, real HTTP, real `PermissionChecker`), `CalendarElsewhereNotice.test.tsx`, and two
+      new cases in `calendarApi.test.ts`.
+- [x] If it stays a refusal, the person is told something, and an operator can find out why from a
+      log rather than from reading this file. **It did not stay a refusal**, so this clause is met the
+      other way: the only refusal left is naming a tenant you hold nothing in, and the console's
+      `/calendar` screen now names the shops where your calendar actually is instead of showing the
+      same sentence a never-granted person sees.
+
+## Outcome
+
+**The switcher, and the tenant travels in a request header** (`adr/0100`). Two repositories, one
+promise.
+
+`ago-calendar`: `IRoleAssignmentProjectionStore.FindTenantIdAsync` became `ResolveTenantAsync`,
+taking the tenant the caller named. Its requested-tenant branch is one query whose `WHERE` carries
+both the operator id and the named tenant, so the verification *is* the authorizing read rather than
+a check beside it — a tenant this operator holds nothing in returns `null`, never a fallback to one
+they do hold. `OperatorIdentityClaimsTransformation` reads the name from `X-Ago-Active-Site`,
+`adr/0068`'s existing header, because a calendar `TenantId` and a chat `SiteId` are the same value
+(`RoleAssignmentsChangedConsumer`). New: `GET /api/v1/me/tenancies` behind a `calendar-identity`
+policy — the enumeration the console cannot offer a choice without. No migration.
+
+`ago-console`: `calendarApi.ts`'s single `send()` chokepoint now carries the header, so the shop
+picker `13-07` already shipped steers both products rather than a second switcher being built. The
+`/calendar` refusal additionally names the shops that *do* have a calendar for this person, which is
+what makes "you have none" and "you have one, elsewhere" distinguishable — the item's own defect.
+
+**A one-tenancy operator is unaffected**: with the header, it resolves to their single tenancy; with
+none, the pre-`22-14` single-row branch runs unchanged. No URL, route or screen changed for them.
+
+**What it cost**: an ordinary operator can now name a tenant, which adds `Ago.Calendar.Api` to
+`tenant-isolation.md`'s caller-chosen category — previously the platform owner's four handlers alone.
+`adr/0100`'s Consequences states that plainly, and `authorization.md` records the three refusals.
 
 ## Context
 
