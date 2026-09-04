@@ -67,16 +67,22 @@ at invite redemption and **rewritten at every sign-in**, and the reports render 
 
 ## Done when
 
-- [ ] An operator redeeming an invite ends with `display_name` and `email` on their row, asserted by
-      an integration test against a token carrying `name`/`email` claims.
-- [ ] Changing the name in the IdP and signing in again updates the row — a test calling
+- [x] An operator redeeming an invite ends with `display_name` and `email` on their row, asserted by
+      an integration test against a token carrying `name`/`email` claims —
+      `OperatorInviteEndpointTests.Redeem_ARealTokenCarryingNameAndEmailClaims_EndsWithBothOnTheOperatorRow`.
+- [x] Changing the name in the IdP and signing in again updates the row — a test calling
       `GET /api/v1/operators/me` twice with two different `name` claims, asserting one row and two
-      values.
-- [ ] A second call with unchanged claims writes no row, asserted on the command rather than by eye.
-- [ ] `/analytics`, `/analytics/conversion` and `/admin` render a name where they rendered eight hex
-      characters, and still render the id for a row that has no name.
-- [ ] `personal-data.md` carries the new row and states which cascade removes it.
-- [ ] `ago-console`'s ux-gate screenshots regenerate without a diff that hides an untranslated string.
+      values — `OperatorIdentityRefreshEndpointTests.GetMe_CalledTwiceWithDifferentNameClaims_UpdatesTheSameRowToTheSecondValue`.
+- [x] A second call with unchanged claims writes no row, asserted on the command rather than by eye —
+      `OperatorIdentityRefreshTests.RefreshIdentityAsync_ASecondCallWithUnchangedClaims_WritesNoRow_AndReturnsFalse`,
+      against `OperatorRepository.RefreshIdentityAsync`'s own boolean return value.
+- [x] `/analytics`, `/analytics/conversion` and `/admin` render a name where they rendered eight hex
+      characters, and still render the id for a row that has no name — proven in `ago-console`'s own
+      `OperatorAnalyticsPage.test.tsx`/`ConversionReportPage.test.tsx`/`AdminConversationsPage.test.tsx`.
+- [x] `personal-data.md` carries the new row and states which cascade removes it.
+- [x] `ago-console`'s ux-gate screenshots regenerate without a diff that hides an untranslated string —
+      `npm run ux-gate`, 37 passed (5 skipped, unrelated desktop-viewport duplicates of a mobile-only
+      suite).
 
 ## Open questions
 
