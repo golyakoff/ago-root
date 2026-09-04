@@ -81,34 +81,54 @@ Never write a story that requires any of these, and reject one that arrives with
   market that is also a legal matter, not only an ethical one.
 - **A hidden or late-revealed cost or commitment.**
 - **Making the exit hard to find** — a widget that cannot be closed is a widget that gets blocked.
-- **Fake humanity.** Making an automatic reply read like a person is good; letting a person believe a
-  *human is present* when nobody is, is not. The author's own instruction — do not label
-  "offline/online", do not visually split robot from human — is about **not making the visitor feel
-  out of contact**, not about pretending somebody is there. A story must say what the visitor is
-  promised, and that promise must be kept.
+- **Fake presence.** The visitor **must not have to care** whether a reply was written by a person,
+  and **must not be led to believe somebody is sitting there** when nobody is. Those are two
+  different things and only the second is a lie. The need underneath is that the visitor believes an
+  answer is coming — so whatever is promised must be kept, and a promise nobody will keep out of
+  hours is the manipulation, not the phrasing.
 
 **The test:** if this technique were explained to the visitor afterwards, would they feel helped, or
 worked on?
 
 ---
 
-## 2. What the author's own corrections teach — the shape to aim for
+## 2. A story says what the person must be able to and want to — never how it looks
 
-The author annotated two bullets in `flows.md`, and the difference between what was there and what
-they added is exactly what this skill exists to produce.
+**This is the boundary the whole skill turns on, and it is easy to cross without noticing.**
 
-| The flow document said | The author added |
+A user story states the *person's* side: what they must be able to do, what they must want to do, and
+what they must never be made to want or do. **How that is achieved on screen is the designer's
+answer, not the story's.** A story that specifies a form, a panel, a label or a colour has taken the
+design decision and left the designer transcribing.
+
+The author made this correction explicitly, and it also resolves a contradiction: `flows.md` and
+`ui-inventory.md` both refuse to recommend, on purpose. A story that prescribed layout would smuggle
+back in what those two documents deliberately keep out.
+
+### The author's own annotations, read correctly
+
+| `flows.md` had | What the annotation actually establishes |
 |---|---|
-| "Open question — how the widget *looks* after an offline auto-reply; the two states look alike." | Do not let the person feel out of contact. "We're closed, we'll answer in the morning" pushes many out of starting at all. Do not visually split robot from human; do not write offline/online. Make the automatic reply as human as possible; try to resolve without an operator; and if it is out-of-hours and unresolvable, **take the question, ask for a name and phone, and promise a call back** — otherwise they do not return. |
-| "Whether the widget makes the history discoverable, or shows an empty box, is undesigned." | It must. The visitor has to see the operator is in context. **Nothing is as annoying as repeating what you already did because it vanished** — and even the *uncertainty* "should I repeat this?" costs loyalty. |
+| "Open question — how the widget *looks* after an offline auto-reply; the two states look alike." | **Must want to**: write at all, believing an answer is coming. **Must not be made to feel**: out of contact, or that they have reached a closed door — "we are shut, we will reply in the morning" costs the conversation before it starts. **Must not have to care** whether the reply came from a person or not — so the distinction must not be forced on them. **Must be able to**, when it is out of hours and nothing can be resolved: leave the question *and* a way to be reached, and believe somebody will come back. |
+| "Whether the widget makes the history discoverable, or shows an empty box, is undesigned." | **Must be able to** see that what they said before is still there and the operator has it. **Must not be made to** repeat themselves — and, just as costly, **must not be left wondering whether to**. The uncertainty is the damage, not only the repetition. |
 
-Two lessons, and they generalise:
+Notice what is *not* in the right column: no form, no placement, no wording. "Leave a name and a
+phone" is the author's own suggested practice and it belongs in the story as **the author's
+suggestion, clearly labelled** — not as a requirement. The requirement is *a way to be reached*.
 
-1. **A story names the feeling to avoid, not only the state to render.** "Out of contact." "Did I
-   have to say that again?" Those are testable with a person in a way "shows an empty box" is not.
-2. **A story carries the fallback for when the primary goal fails.** The author's out-of-hours case
-   is the whole pattern: the booking will not happen now, so the story's success condition becomes
-   *the contact is kept*, not *the booking is made*.
+Two lessons that generalise:
+
+1. **Name the state the person must not be put in.** "Out of contact." "Did I have to say that
+   again?" Those can be checked with a real person; "shows an empty box" cannot.
+2. **Carry the fallback for when the primary goal fails.** The out-of-hours case is the pattern: the
+   booking will not happen now, so the success condition becomes *the contact is kept*, not *the
+   booking is made*.
+
+### The line, in one test
+
+Ask of every sentence: **could a designer answer this three different ways and satisfy all three?**
+If yes, it is a story. If only one arrangement of pixels satisfies it, you have designed, and you
+should either raise the sentence to the need beneath it or move it to the labelled suggestions.
 
 ---
 
@@ -130,11 +150,20 @@ than none.
 **The moment this happens.** Where they are, what they were doing before, what they are holding in
 their head. On a phone? Mid-task? With somebody waiting?
 
-**What must be true for this to feel right.**
-- …
-- …
+**Must be able to.** Capabilities, in the person's terms. *A way to be reached*, not *a phone
+field*.
 
-**What must never happen.** The failure that costs the relationship, not the pixel.
+**Must want to.** What they have to actually want for this to work, and what makes it wantable
+honestly. If the honest version is not wantable, that is a finding about the product, not a brief for
+better wording.
+
+**Must not be made to want or do.** The boundary. Includes both manipulation (section 1) and ordinary
+disrespect — repeating themselves, re-deciding, wondering whether something registered.
+
+**Must never happen.** The failure that costs the relationship, not the pixel.
+
+**The author's own suggestions, if any.** Verbatim, and labelled as suggestions rather than
+requirements, so a designer can improve on them without appearing to disobey.
 
 **When the primary goal fails.** What still counts as a good outcome, and what the product does to
 get it.
@@ -195,9 +224,15 @@ path is the easy path* and *the work is visible*, never as surveillance. Two spe
 Invented by the author, and it is the cheapest quality gate here.
 
 Take the finished story back to the source material and ask: **would this story have produced the
-author's own annotation?** If `flows.md` says a state is undesigned and the story only says it should
-be designed, the story has added nothing. It has to arrive at the *instruction* — do not split robot
-from human; take the question and ask for a phone — or at a clearly-argued different one.
+author's own annotation?** If `flows.md` says a state is undesigned and the story only says it ought
+to be designed, it has added nothing. It has to arrive at what the person must be able to and want to
+— *believe an answer is coming; not have to care whether a human sent it; be reachable later* — or at
+a clearly-argued different account of the same moment.
+
+Then the second half of the check: **does any sentence answer "how does it look"?** If so, cut it or
+raise it to the need beneath it. Arriving at the author's practices word for word is a sign of the
+first kind of failure, not success — they are one designer's answer, and the story is meant to admit
+more than one.
 
 Then, one further pass: **read the story as the person in it.** Not as its author. Where would they
 hesitate, and what would they assume? Those two answers are usually the story's real content.
