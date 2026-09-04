@@ -506,3 +506,52 @@ customer who was not answered does not complain — they leave.
 
 Reminders follow when a channel exists, on WhatsApp, and are covered by the same recording through the
 platform port decision 8 now calls for.
+
+---
+
+## 10. Navigation shows what a colleague here could grant. Nothing else
+
+**Decided 2026-09-05**, while `23-21` was being verified. That item closed *absent looks like
+forbidden* for the calendar; the question it left open was what the rule is for everything else, and
+whether an unavailable item should be visible at all.
+
+**The rule is about audience, not about pixels.** An entry is worth drawing only for a capability
+**a colleague at this tenant could plausibly grant**. That single sentence decides all three cases:
+
+| Situation | What is shown |
+|---|---|
+| The person holds the permission | the entry, ordinary |
+| The tenant has the capability, this person does not | the entry, **muted, with a lock**, still clickable, leading to a refusal that names who can grant it |
+| The tenant does not have the capability at all | **nothing** |
+
+**Why the third row is a decision and not the old defect surviving.** Showing an operator a
+capability their tenant has not bought is a price list they cannot act on. The buyer is the tenant's
+owner — who already holds the permissions in question and therefore already sees those entries. So a
+greyed-out row has no commercial value to the only person who could buy, and costs clarity for
+everyone who cannot. **Navigation is not a sales surface for somebody who cannot buy.** What a tenant
+does not have belongs on its own owner-facing surface, which is `23-25`.
+
+**Why muted and a lock, rather than either alone.** Muting alone is ambiguous — a faint row reads as
+*less important* or as *broken* just as easily as *not yours*. A marker disambiguates it at a glance,
+which is the whole point: nobody should have to click a thing to find out they cannot use it.
+
+**Why muted rather than `disabled`.** `disabled` is a trap here. The console has **no tooltip** —
+`adr/0030` closed the component set at eleven and `docs/design/gaps.md` lists the tooltip question as
+still open — so a disabled row cannot explain itself, and disabled controls are routinely skipped by
+keyboard navigation and screen readers. The muted row stays a real link: the glyph answers *why is
+this pale*, and the page it opens answers *who can grant it*.
+
+**Two bounds this decision comes with.**
+
+- **The glyph carries a translated hidden label**, or it does not exist for a screen reader — and
+  `11-13` made translation a gate, so an untranslated one fails `ux-gate` rather than shipping.
+- **"Less contrast" has a floor, and it is machine-checked.** `ux-gate` measures WCAG AA contrast, so
+  muting cannot drift into unreadable without the gate refusing it. The judgement is bounded rather
+  than left to taste.
+
+**The lock is one glyph, not an icon set.** The console has no icons at all, deliberately, and
+whether it should is one of the ten open questions in `gaps.md`. This decision opens that question
+**narrowly**: one glyph, for one meaning, because that meaning is unambiguous and stating it in words
+beside every row would bloat a navigation that already has twenty-one entries. `23-24` records it as
+an amendment to `adr/0030` so the next person does not read the exception as permission to bring a
+whole set.
