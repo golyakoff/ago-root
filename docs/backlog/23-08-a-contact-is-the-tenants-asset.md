@@ -1,7 +1,8 @@
 # a contact is the tenant's asset: it is in the register, it has its own clock, and erasure reaches it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#173`. The erasure gap was the real half; the
+  register row and the two clocks are this change.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §4, the *a contact is the tenant's asset* correction
   (2026-09-04)
@@ -91,13 +92,13 @@ cascade.*
 
 ## Done when
 
-- [ ] `personal-data.md` carries the row, the indefinite retention, and the two clocks stated as two.
-- [ ] Erasing a conversation removes that visitor's contact details, asserted, and the erasure job's
+- [x] `personal-data.md` carries the row, the indefinite retention, and the two clocks stated as two.
+- [x] Erasing a conversation removes that visitor's contact details, asserted, and the erasure job's
       own count includes them.
-- [ ] Erasing a conversation does **not** remove another visitor's contact details.
-- [ ] A retention sweep of messages removes no contact detail — an integration test, because this is
+- [x] Erasing a conversation does **not** remove another visitor's contact details.
+- [x] A retention sweep of messages removes no contact detail — an integration test, because this is
       the property the decision is most afraid of losing.
-- [ ] Deleting a site still cascades them, unchanged.
+- [x] Deleting a site still cascades them, unchanged.
 
 ## Open questions
 
