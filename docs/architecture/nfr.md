@@ -113,3 +113,27 @@ Everything above must be visible without attaching a debugger:
   end to end (`7-01`, proven by `Ago.Chat.Integration.Tests.TracingEndToEndTests` against an
   in-memory exporter — a live Jaeger is `7-03`'s job). This is what makes the p95 numbers
   explainable instead of merely reportable.
+
+## Reporting thresholds
+
+Not a scale or latency target - a correctness-of-presentation rule with one number in it, recorded
+here because `23-16`'s own Done-when asks that the number's home be named explicitly rather than left
+implicit in the code that reads it.
+
+- **`Analytics:MinimumSampleForRate`** (default **10**) is the line below which a report may not
+  *rank* rows on a rate. `docs/design/decisions.md` §7's amendment: a rate is never refused for a
+  thin sample - "50% (1 of 2)" prints in full, with its own fraction, no matter how small the
+  denominator - but a row whose own sample is thinner than this threshold is never sorted ahead of
+  another row on the strength of that rate. `ConversionReportReadStore.byOperator` and
+  `TagBreakdownReadStore.byTag` are the only two lists in this codebase's analytics family that rank
+  on a rate at all; see `adr/0103` for the full design and why `OperatorAnalyticsReadStore`/
+  `ModuleFlowReadStore` take no dependency on this value.
+- **This is configuration, not a constant.** Bound from `Analytics:MinimumSampleForRate`
+  (`Ago.Chat.Application.Abstractions.AnalyticsOptions`), validated at startup
+  (`.AddOptions<AnalyticsOptions>().Validate(...).ValidateOnStart()` in `ChatModule.cs`, the same
+  shape every sibling options class in this codebase already uses) so a malformed value fails the pod
+  at boot rather than silently ranking every report by an unintended number. `10` is stated as an
+  unmeasured, deliberately round operational default - the same "hardcode a sane unmeasured default"
+  precedent `RegisterSiteRateLimitOptions` already sets, contrasted with `BillingOptions.PricePerSeatRub`'s
+  own no-default rule for a figure that charges a card: a wrong guess here costs a reordered table
+  row a site owner can see and mentally correct for, never money or lost data.
