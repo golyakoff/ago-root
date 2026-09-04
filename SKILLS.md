@@ -17,6 +17,7 @@ and in `docs/`.
 | `load-test` | Before any performance claim; tuning batch sizes or worker counts; Stage 6. |
 | `adr-writer` | A decision was made between real alternatives, or a rule was deliberately bent. |
 | `embeddable-widget` | Any change to the script that runs on third-party sites. |
+| `commit-guard` | **Every commit and every PR, in every repository.** Refuses a `Co-Authored-By` trailer before git or `gh` runs, plus a stale base, an unpushed branch and being on `main`. Called from wherever the work is. |
 | `commit-prep` | A slice of work is finished and ready for commit and push. |
 | `land-a-slice` | The managing session is turning finished work into merged commits: verify, base check, PR order, queue sweep. |
 | `take-a-backup` | Taking an encrypted backup of the live databases on demand - before a migration, a new database, or whenever one is asked for. |
