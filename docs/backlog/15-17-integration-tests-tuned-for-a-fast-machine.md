@@ -1,7 +1,9 @@
 # eight integration tests sleep 500 ms instead of waiting, and one waits less than it must outlast
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-04), `ago-chat#167`. The first attempt (`#165`) waited for the queue to
+  exist — step 1 of the four `SubscribeAsync` performs — and was corrected to wait for a consumer to
+  attach, step 4. `15-18` carries the ninth file this item's grep missed
 - **Found**: 2026-09-04, by a CI failure on `ago-chat#162` — a pull request that touches none of this.
 
 ## What failed

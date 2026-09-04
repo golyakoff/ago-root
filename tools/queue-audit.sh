@@ -54,6 +54,7 @@ fi
 rows=0
 flagged=0
 unread=0
+open_raw=""
 
 # One rule, not two. Both passes call this, so the `ago-root` check and the mirror check cannot drift
 # apart into different definitions of "looks done".
@@ -109,6 +110,13 @@ audit_repo() {
     return 0
   fi
 
+  # Kept for the two closed-issue passes at the bottom, which need to know which items are still
+  # open. Stashed here rather than fetched again: one call, one answer, no chance of the two
+  # disagreeing because something was closed between them.
+  if [ "$repo" = "ago-root" ]; then
+    open_raw="$issues"
+  fi
+
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     check_issue "$repo" "${line%%|*}" "${line#*|}"
@@ -119,6 +127,127 @@ audit_repo ago-root
 for repo in $MIRROR_REPOS; do
   audit_repo "$repo"
 done
+
+# ---------------------------------------------------------------------------
+# Two checks that read *closed* issues, added 2026-09-04 after both failures
+# below were found by hand rather than by this script.
+#
+# Everything above answers one question: "this issue is open - is its item
+# really unfinished?" That question cannot see either of the failures below,
+# because in both of them the issue is closed and the audit never looks at it.
+# Both passes are `ago-root` only: it is the canonical queue, and the item files
+# live here, so a mirror adds API calls without adding an answer.
+# ---------------------------------------------------------------------------
+
+if ! closed=$(gh issue list --repo "$OWNER/ago-root" --state closed --limit 300                 --json number,title,stateReason --jq '.[]|"\(.number)|\(.stateReason)|\(.title)"' 2>&1); then
+  echo "CANNOT AUDIT ago-root's closed issues - could not read them from GitHub:"
+  echo "  $closed"
+  unread=$((unread + 1))
+  closed=""
+fi
+
+# **A file that still says `ready` for work that has shipped.** The mirror image of the check above,
+# and the more dangerous half: a stale *open* issue merely lingers, but a file saying `Status: ready`
+# is an invitation, and the next session takes it. Seven files were in this state on 2026-09-04 -
+# `11-16`, `13-08`, `15-13`, `15-17`, `17-12`, `22-15`, `22-16` - three of them shipped that same
+# morning. The audit reported a clean queue throughout, correctly by its own definition and
+# uselessly.
+#
+# Flagged only when a *closed* issue names the item. A `ready` file with no issue at all is an
+# ordinary un-queued backlog item, which is a legitimate state and not this script's business.
+if [ -n "$closed" ]; then
+  for file in docs/backlog/*.md; do
+    grep -q '^- \*\*Status\*\*: ready' "$file" || continue
+    item=$(basename "$file" | grep -oE '^[0-9]+-[0-9]+' || true)
+    [ -n "$item" ] || continue
+
+    # An item whose issue is still open is the first check's business, not this one's.
+    if printf '%s
+' "$open_raw" | grep -qE "\|$item · "; then
+      continue
+    fi
+
+    hit=$(printf '%s
+' "$closed" | grep -E "\|$item · " | head -1 || true)
+    [ -n "$hit" ] || continue
+
+    rest=${hit#*|}
+    echo "READY?   $item  (ago-root#${hit%%|*}) is closed as ${rest%%|*}"
+    echo "         but $file still says Status: ready"
+    flagged=$((flagged + 1))
+  done
+fi
+
+# **One number, two items.** `NN-NN ·` is the only thing tying an issue to its backlog file, its
+# stage, its ADRs and its commits, so a number used twice makes every one of those links ambiguous.
+# It happens when a defect is filed with "the next free number" without checking that a *file* with
+# that number already exists - the file is not on the board, so nothing shows it.
+#
+# Found 2026-09-04: `20-21` and `20-22` each named both an unstarted planned item (a file, from
+# `adr/0090`) and a calendar defect that had already shipped with `feat(20-21)`/`feat(20-22)` commits.
+# Three earlier pairs - `10-06`, `11-17`, `15-11` - had the same shape and were closed on both sides,
+# so nothing was left to fix but nothing had noticed either.
+#
+# Duplicates are counted **within one repository**. An item legitimately has one issue here and one
+# in the repository it changes; that pair is the mirror convention, not a collision.
+if [ -n "$closed" ]; then
+  duplicates=$(printf '%s
+' "$closed" "$open_raw"     | grep -oE '\|[0-9]+-[0-9]+ ·' | tr -d '|·' | tr -d ' ' | sort | uniq -d || true)
+  for item in $duplicates; do
+    echo "TWICE    $item  is claimed by more than one ago-root issue:"
+    printf '%s
+' "$closed" "$open_raw" | grep -E "\|$item · " | while IFS= read -r row; do
+      echo "         ago-root#${row%%|*}  ${row##*|}"
+    done
+    echo "         A number names one item. Renumber whichever side has not shipped."
+    flagged=$((flagged + 1))
+  done
+fi
+
+# **The collision that the check above cannot see, and the only one that was still live.** Two
+# issues sharing a number is the easy shape. The dangerous shape is an issue and a *file* sharing
+# one: `20-21` and `20-22` each named an unstarted planned item that had a backlog file and no issue,
+# and a calendar defect that had an issue and had already shipped. Nothing above notices, because
+# there is only ever one issue per number.
+#
+# So this compares the file's own title to the title of the issue bearing its number. Deliberately
+# crude - a word-overlap ratio, not a judgement - because it exists to make somebody look. A title
+# that was reworded after filing will trip it; that is a cheap false positive against a failure that
+# otherwise surfaces only when somebody reads two documents side by side and happens to notice.
+significant_words() {
+  printf '%s' "$1" | tr 'A-Z' 'a-z' | tr -cs 'a-z0-9' '
+' | awk 'length($0) > 3' | sort -u
+}
+
+if [ -n "$closed" ]; then
+  for file in docs/backlog/*.md; do
+    item=$(basename "$file" | grep -oE '^[0-9]+-[0-9]+' || true)
+    [ -n "$item" ] || continue
+
+    issue_row=$(printf '%s
+' "$open_raw" "$closed" | grep -E "\|$item · " | head -1 || true)
+    [ -n "$issue_row" ] || continue
+
+    file_title=$(head -1 "$file" | sed 's/^# *//')
+    issue_title=${issue_row##*· }
+
+    file_words=$(significant_words "$file_title")
+    [ -n "$file_words" ] || continue
+    total=$(printf '%s
+' "$file_words" | wc -l)
+    shared=$(comm -12 <(printf '%s
+' "$file_words") <(significant_words "$issue_title") | wc -l)
+
+    # A third of the file title's own words is the line between "reworded" and "a different item".
+    if [ "$((shared * 3))" -lt "$total" ]; then
+      echo "MISMATCH $item  (ago-root#${issue_row%%|*}) names a different thing than its file:"
+      echo "         issue: $issue_title"
+      echo "         file:  $file_title"
+      echo "         $shared of $total words shared. One number names one item - check for a collision."
+      flagged=$((flagged + 1))
+    fi
+  done
+fi
 
 echo
 echo "$rows queue issues checked across $(( $(printf '%s\n' $MIRROR_REPOS | wc -l) + 1 )) repositories, $flagged flagged."

@@ -1,7 +1,7 @@
 # Pull every checkout whose commit `redeploy.sh` reads
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-03), `ago-root#364` — `ago-landing` is in `redeploy.sh`'s `PULLED_DIRS`
 - **Found**: 2026-09-03, by the worker implementing `20-26` — which added the two calendar checkouts
   to the very loop this is missing from. It named the gap and correctly did not fold it in: different
   product, different promise. Confirmed against the live node afterwards.

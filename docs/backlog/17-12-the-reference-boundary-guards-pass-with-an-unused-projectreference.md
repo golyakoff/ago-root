@@ -1,7 +1,8 @@
 # the reference-boundary guards pass with an unused `ProjectReference`
 
 - **Stage**: 17
-- **Status**: ready
+- **Status**: done (2026-09-04). Both halves: the migrator's guard in `ago-chat@ad5df4d`, the backfill
+  host's in `ago-chat#168`
 - **Found**: 2026-09-04, cleaning up after a mistake of my own — which is how the guard came to be
   tested at all.
 
