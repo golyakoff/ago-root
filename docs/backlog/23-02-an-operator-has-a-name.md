@@ -1,7 +1,8 @@
 # an operator has a name, and the product uses it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05), `ago-chat#178`, `ago-console#109`, `adr/0104`. Unblocks
+  `23-17`, `23-18` and `23-22`, all of which named this item as a dependency.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §1
 
