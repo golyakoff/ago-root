@@ -101,6 +101,15 @@ distinction rather than discovering it at the first deletion.
 
 ---
 
+**Naming, and what the report may add up.** Added 2026-09-04. "Forced" is a bad label for a screen a
+person is judged on; the two kinds are a **standard** conversation and an **additional** one, and the
+mechanism already guarantees the second only happens once capacity is full. Absolute numbers lead and
+a total is allowed - eighty standard conversations taken and closed in a minute each may be worth more
+to a tenant than thirty held open with extras, and only the raw figures show that. What is forbidden
+is a *combined score* that hides which is which.
+
+---
+
 ## 3. The tenant is told whether their widget is working, and why not
 
 **The question.** Story 4.1's tenant must distinguish *not installed* from *installed and quiet*
@@ -150,6 +159,24 @@ whole point of the block is that it is on the tenant's side.
 
 ---
 
+**Two facts, not one, and a beacon.** Added 2026-09-04, after the measurement turned out to be wrong
+in the flattering direction.
+
+`last_seen_at` written from the visitor-session mint measures the **widget**, and two whole classes of
+activity never take that path. A booking, a reminder, a reply over a channel and a cancellation mint
+no session at all - so a tenant whose customers arrive by channel reads "the script has not arrived
+yet", and the advice logic then sends them to fix an install that is irrelevant, which is the mirror
+of the harm this decision forbids. And a returning visitor whose stored token is still valid makes
+**no API call on page load**, so loads counted from mints undercount returning visitors and inflate
+the open rate computed against them - a number wrong in the direction decision 7 refuses.
+
+So: **"the widget was seen" and "the product was used" are separate facts**, and the advice branches
+on both. And the widget sends a **beacon on every mount**, which is also the funnel's first number. It
+is the highest-volume public endpoint in the product and must behave like one: no authentication, a
+tiny body, and no database write per call - batched, as this decision already requires.
+
+---
+
 ## 4. A visitor can leave a name and a phone, in a reusable control, unverified
 
 **The question.** `RecordVisitorContactDetail` exists, but its route is `RequireOperatorIdentity`, so
@@ -181,6 +208,33 @@ is a *reduction* of risk.
 as "recorded by an operator, never used to contact the visitor automatically" — a visitor-supplied
 callback number is the opposite. `personal-data.md` and an ADR, not a silent reuse of a field with
 its meaning reversed. Consent is a requirement, not a UX detail.
+
+---
+
+**A contact is the tenant's asset and lives indefinitely.** Corrected 2026-09-04; the ninety days
+proposed earlier were never agreed and are wrong. A contact ends when the person asks for erasure or
+when the tenant judges it useless - which means the tenant needs an action to say so, or that sentence
+is decorative. The transcript's clock is different: it runs to the end of the contract. Two purposes,
+two clocks, and nobody should later collapse them into one.
+
+**Erasure paths diverge accordingly.** A person's erasure request takes the conversation **and** the
+contact - it is all their data. Sweeping old conversations by retention does **not** take contacts, or
+the tenant would lose an asset every time a transcript ages out. There is a link; there is no cascade.
+
+**And the operator can promote a phone out of the text.** People type "call me on..." into the chat
+because it is the easiest thing to do - the control was not where they were looking, or it appeared at
+the wrong moment. The operator turns that into a contact with one action. **Deliberately their action,
+not automatic extraction**: a product that quietly mines messages for personal data is a different
+product and would surprise people.
+
+**What this dissolves.** The worry that a phone in a message body is a special problem was wrong. The
+transcript is *already* personal data of the same class - a clothing size, an illness mentioned before
+a booking, an address. So erasure has to work on the transcript wholesale rather than hunt for
+substrings, which is both simpler and more honest; and the structured contact stops being a way to
+keep the number *out* of messages. It is a way to make it **findable and actionable**.
+
+**`visitor_contact_details` has no row in `personal-data.md`.** Indefinite retention of personal data
+the register does not mention is its own problem, and not a UX one.
 
 ---
 
@@ -217,6 +271,32 @@ being described honestly.
 
 ---
 
+**The ladder is a property of the tenant, not of a product.** Added 2026-09-04, after the ladder
+turned out to cover one store and not the other.
+
+`20-12` built rung two over the calendar's `customers`. Decision 4 creates a **second** store of
+customer phone numbers - chat's `visitor_contact_details` - read under `Permission.ConversationRead`,
+which every operator holds because it is what the job is, and **not** the narrower assigned-operator
+check. So an operator can read the contacts of any conversation in the tenant, and a tenant sold rung
+two would have got it for bookings and not for callbacks - callbacks being decision 4's own headline
+case.
+
+So the rung is **one setting on the tenant**, and each product reads it and applies it to its own
+store. No shared type crosses the product boundary; a shared *rule* does.
+
+**Reveal counts belong in an audit view, never in the report a person is judged on.** The counter
+exists to catch somebody copying the list before they leave. On a staff-comparison screen it inverts:
+the operator who calls customers back reveals forty numbers and the one who does not reveals two, and
+a manager reading that punishes the useful one - who then stops calling, to protect their figure.
+
+**Pair it with confirmed callbacks rather than reading it alone.** Forty revealed and thirty-one
+confirmed is work; forty revealed and two confirmed is a question. The denominator is the operator's
+own "I called and it is them" mark, so it can be gamed - but gaming it means imitating the work, which
+is exactly the cost worth imposing. We cannot count real calls: the system does not place them, and
+click-to-call is rung three.
+
+---
+
 ## 6. The owner grants a product from a runbook now, from the console later
 
 **The question.** Both `PUT` and `DELETE /api/v1/owner/sites/{siteId}/modules` require the
@@ -237,6 +317,25 @@ openly.
 
 **It becomes clearly right rather than merely convenient if `22-04` ever makes the secret per-site**:
 chat would then hold a key to one tenant instead of a master key.
+
+---
+
+**`--force` exists, and it is recorded.** Added 2026-09-04.
+
+Story 5.3 requires that revoking a *purchased* module be distinguishable from revoking a grant "at the
+moment of acting", and a runbook has no moment. That does not need a screen: the endpoint itself
+refuses to revoke a purchase unless the caller says explicitly that they mean it - the same shape
+`ExpiresAt` already uses, where a perpetual grant must be *stated* rather than defaulted into, and the
+same shape `apply-demo.sh`'s `--force-rollback` uses so that a deliberate act stays possible while an
+accidental one does not.
+
+The override is needed - a tenant breaking the law has to be stoppable regardless of what they paid -
+so **every use of it is recorded: who, when, which tenant, and why, in free text.** That is the act
+which later has to be justified, possibly to the person it was used against.
+
+**Noted, not decided**: if the real need is to stop a law-breaking tenant *entirely*, a flag on
+module-revoke is a workaround - the widget keeps working, the keys stay valid, conversations continue.
+Suspending a tenant is a different action and would need its own item.
 
 ---
 
@@ -275,6 +374,17 @@ A smaller honest number renews the subscription; a larger arguable one ends it.
 
 ---
 
+**Show the absolute numbers instead of refusing to print the rate.** Amended 2026-09-04. Refusing
+hides information; "50% (1 of 2)" is fully honest and lets the reader judge the sample themselves. The
+threshold survives for **ranking**: operators must not be sorted by a rate built on two conversations,
+even with the raw figures beside it.
+
+**And this makes an existing screen wrong.** `/analytics/conversion` prints a per-operator conversion
+rate today with no threshold and no absolutes at all. This decision retroactively breaks it, which
+nobody said when the decision was taken.
+
+---
+
 ## 8. The product reaches the visitor. The visitor does not come looking
 
 **The question.** Story 1.5: how does a visitor reach a booking they already made, given that a
@@ -307,6 +417,41 @@ mechanism, wrong place.
 - **Cadence configurable per site**, like the penalty period.
 - **A reminder must know about cancellation.** "Do not forget" for a cancelled booking is the worst
   message the system can send: it proves we are not keeping up.
+
+---
+
+**Reminders belong to the calendar, and sending belongs to the platform.** Amended 2026-09-04.
+
+The decisive argument is coverage, not ownership: a booking can be made **without chat at all**,
+through the public booking surface. A reminder living in chat would cover only bookings that happened
+to pass through a conversation - an arbitrary subset. The calendar owns the booking, already holds the
+verified phone the booking required, and needs to ask nobody anything.
+
+**But moving the owner does not create a channel.** SMS is `14-03`, closed as *won't build* in favour
+of WhatsApp, and the registered sender is `UnconfiguredPhoneVerificationSender`. Reminders wait on a
+channel either way.
+
+**Outbound sending is a platform port; the decision to send is the product's.** Otherwise chat and the
+calendar each grow their own sender, their own delivery record, their own cost line and their own
+consent story - two post offices for one job.
+
+**The widget's stale-booking problem is separate and stays open.** Chat cannot learn a booking's
+current state: `IModuleGateway` has two calls and no query, and the calendar deliberately does not
+store `chatTaskId`/`siteId`/`conversationId` - "they are never stored here" - so a push back into a
+conversation is **structurally impossible**, not merely unbuilt. That is worth keeping: storing the
+correlation would make the calendar depend on chat existing, which `adr/0027` forbids.
+
+So, in order: **today the person says it in words.** "Cancel my booking" typed into Telegram is an
+ordinary message and already works in every channel, with no contract change - the button is an
+optimisation of something the conversation can already do. **Later, a third sibling port** lets chat
+ask the module, and the accurate affordance then appears in *every* channel at once, which is what
+makes the port worth its cost; it looked expensive when it served one chip in a widget. Until then the
+chip **never claims a live booking**: "you booked here" is a historical fact, "your booking is on
+Friday" is a claim we cannot support.
+
+**A note against hurrying it**: the friction of having to type is not purely a cost. An easy cancel
+button converts some "would have attended" into "cancelled", and typing is a small threshold against
+that. Which way it nets out is unknown, and worth measuring before the button exists.
 
 ---
 
@@ -345,3 +490,19 @@ is then ours.
 
 **Stated limit**: this answers story 4.5 for channel conversations and **not** for widget ones, which
 are the majority. Better a partial answer where we hold the fact than an invented one everywhere.
+
+**Its justification changes, and the decision survives it.** Amended 2026-09-04.
+
+This decision was argued from reminders — *"we are about to send 'confirm you are coming'"*. That
+argument does not hold: the mechanism attaches to `DeliverChannelMessageHandler`, which relays an
+**operator's reply** into a linked channel, while a reminder is a system-initiated send whose only
+port, `IPhoneVerificationSender`, **deliberately throws instead of returning an outcome** — designed
+on the stated assumption that nobody records outcomes. And there is no channel to send on: `14-03` is
+*won't build*, `UnconfiguredPhoneVerificationSender` is what is registered.
+
+So the recording is taken **on its own value**, which is enough: an operator replies in Telegram, the
+send fails, the thread looks answered, and the customer got nothing. Nobody finds out, because a
+customer who was not answered does not complain — they leave.
+
+Reminders follow when a channel exists, on WhatsApp, and are covered by the same recording through the
+platform port decision 8 now calls for.
