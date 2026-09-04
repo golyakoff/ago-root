@@ -1,7 +1,10 @@
 # every gated navigation entry says whether it is available, without being clicked
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). The rule applied: `site:configure` and `site:erase` entries are now
+  always drawn, muted when the caller lacks them; the calendar entry `23-21` already showed muted-or-
+  not gets the same treatment; a tenant that lacks a capability altogether still sees nothing for it.
+  One lock glyph, `adr/0030`'s second amendment, `gaps.md` pile 3 item 3 answered narrowly.
 - **Depends on**: `23-21` — the second list on `GET /api/v1/operators/me` and the shared
   `CalendarAccessRefusal` treatment it introduced. This item generalises both rather than inventing
   a second version of either.
@@ -61,17 +64,26 @@ use it.
 
 ## Done when
 
-- [ ] An operator without `site:configure` sees the admin entries, muted and marked, and reaches a
-      refusal naming who can grant them — asserted on the rendered state, not on pixels.
-- [ ] The same for `site:erase`.
-- [ ] The calendar entry `23-21` already shows is muted and marked too, so the three gates are one
-      treatment rather than two.
-- [ ] A capability the tenant does not have is still shown to nobody — a test, because this is the
-      half most likely to be "fixed" into over-disclosure by a later reader.
-- [ ] The lock glyph has a hidden label present in both `en.ts` and `ru.ts`.
-- [ ] `ux-gate` passes, including its WCAG AA contrast measurement — which is what bounds "muted"
-      from drifting into unreadable.
-- [ ] `adr/0030` carries the one-glyph amendment, and `gaps.md`'s icon question records that it was
+- [x] An operator without `site:configure` sees the admin entries, muted and marked, and reaches a
+      refusal naming who can grant them — asserted on the rendered state, not on pixels
+      (`permissionGating.test.tsx`'s "offers the site-wide sections muted..." and "reaches a
+      refusal" tests; `ux-gate`'s `admin-limited-permissions` screen against the real rendered CSS).
+- [x] The same for `site:erase` (`AccountDeletionPage`'s entry, same tests).
+- [x] The calendar entry `23-21` already shows is muted and marked too, so the three gates are one
+      treatment rather than two (`consoleNav.ts`'s calendar block now sets `muted: true` on that
+      branch; asserted in `permissionGating.test.tsx`).
+- [x] A capability the tenant does not have is still shown to nobody — a test, because this is the
+      half most likely to be "fixed" into over-disclosure by a later reader ("offers no calendar
+      entry at all to an operator on a tenant that has never enabled the module", unchanged from
+      `23-21` and re-verified with a fails-before proof against this exact defect).
+- [x] The lock glyph has a hidden label present in both `en.ts` and `ru.ts`
+      (`navLockedLabel`).
+- [x] `ux-gate` passes, including its WCAG AA contrast measurement — which is what bounds "muted"
+      from drifting into unreadable. The seeded operator held every gated permission before this
+      item, so the gate never rendered a muted entry; `ux-gate/fixtures/screens.ts` gained
+      `admin-limited-permissions`, a reduced-permission run of `/admin` that exercises all three
+      muted gates plus the `AccessRefusal` page in the same screenshot.
+- [x] `adr/0030` carries the one-glyph amendment, and `gaps.md`'s icon question records that it was
       answered narrowly rather than closed.
 
 ## Open questions

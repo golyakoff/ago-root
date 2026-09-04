@@ -1,12 +1,12 @@
 # ADR-0030: Design tokens and a closed hand-rolled component set for the console, not a component library
 
-- **Status**: Accepted, and **amended on 2026-08-26** — a second surface now reads these tokens (the
-  Keycloak login theme, `11-07`), and it answers the webfont question in the last "Negative"
-  consequence below *differently* from the console. That bullet still describes the console
-  correctly; it no longer describes the whole product. The amendment immediately following says what
-  changed and why the same trade-off came out the other way one screen earlier.
-- **Date**: 2026-08-25 (amended 2026-08-26)
-- **Stage**: 11
+- **Status**: Accepted, and **amended twice** — on 2026-08-26 (a second surface now reads these
+  tokens, the Keycloak login theme, `11-07`, and answers the webfont question in the last "Negative"
+  consequence below *differently* from the console) and on 2026-09-05 (`23-24` opens the closed
+  eleven-component set by exactly one glyph, narrowly, for one meaning). Both amendments are appended
+  below the Decision they modify; neither rewrites the original text.
+- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05)
+- **Stage**: 11, second amendment `23`
 
 ## Amendment (2026-08-26): the login page loads no webfont, and the tokens now have a second consumer
 
@@ -57,6 +57,58 @@ single source; a literal colour in the login theme is still a defect; and there 
 says so rather than a convention that hopes so. `ago-deploy` has no CI to hang that check on
 (`adr/0015`'s pipelines are the two backend repositories only), so outside a redeploy it runs when a
 person runs it — stated here rather than implied.
+
+## Amendment (2026-09-05): one glyph, narrowly, not a reopening of the closed set
+
+`23-24` (`docs/design/decisions.md` §10) needed the navigation to mark an entry the signed-in
+operator cannot use but a colleague at this tenant could grant them — muted text plus a small lock
+mark beside the label, leading to a refusal page that says who can fix it. The Decision above closes
+the component set at eleven *on purpose*, and `docs/design/gaps.md` pile 3 item 3 records "no icon
+set, and no icon-only button" as one of the ten real open questions that set left for the author, not
+an oversight. This is that question, answered **narrowly** — as gap item 3 itself anticipated the
+answer might be — rather than left open indefinitely or answered by quietly adding a component.
+
+**The answer is one glyph, for one meaning, not an icon set.** A padlock, inline SVG, `aria-hidden`,
+rendered only beside a nav entry `AppShellNavItem.muted` marks (`src/shell/AppShell.tsx`'s own
+`NavLockGlyph`) — never a general-purpose icon component other screens can reach for. Nothing else in
+the console gained an icon by this amendment: text stays the console's only way to name a concept,
+exactly as gap item 3 stated the case for the original closed set ("text is unambiguous and
+translatable"). The lock is not text *replacing* a word — the entry's own label stays the label; the
+glyph is a second, wordless channel for one fact ("this is not yours to use yet") that would have cost
+real density spelled out beside all twenty-one entries of a navigation that already wraps onto a
+second row on a laptop-width screen (`shell.css`'s own found-live account of that wrap).
+
+**Why this did not need a headless library or a new dependency**, revisiting the Decision's own
+"Alternatives considered" reasoning one more time: a static, decorative SVG path is not a component in
+the sense Radix/React Aria/a component library would answer for — there is no focus management, no
+keyboard interaction, no ARIA state machine behind a lock mark, only a shape and a translated
+`aria-hidden`-adjacent hidden label. The genuinely hard parts that ADR's Context named up front
+(focus trapping, `aria-describedby` wiring, combobox behaviour) are exactly as absent from this glyph
+as they were from `.ago-shell__glyph`, the brand mark already drawn the identical way before this
+amendment. Buying a dependency for a second hand-drawn shape would repeat the "solving a problem this
+application does not have" mistake the original Decision already rejected once.
+
+**The two bounds this glyph is held to, both enforced mechanically, not by convention:**
+
+- **A translated, visually-hidden label**, `strings.navLockedLabel`, present in both `en.ts` and
+  `ru.ts` — without it the glyph does not exist for a screen reader, and `11-13` already made an
+  untranslated interface string a gate failure rather than a nit.
+- **The muted text colour it sits beside is measured, not eyeballed**, the same "Contrast is measured,
+  not eyeballed" rule this ADR's Decision point 5 already states for every other pair `tokens.css`
+  produces: `--ago-ink-faint` at 5.42:1 on `--ago-surface`, comfortably clear of the WCAG AA 4.5:1
+  floor for normal text, and `ux-gate`'s own contrast assertion (`ux-gate/lib/contrast.ts`) now
+  exercises a muted, gated-navigation screenshot for the first time (`ux-gate/fixtures/screens.ts`'s
+  `admin-limited-permissions`) — mechanically checked on every gate run, not merely measured once at
+  authoring time.
+
+**What this amendment is not.** It is not a reopening of "no icon set" as a general position, and the
+next screen that wants a tab bar, a combobox, a date picker or a toast is still the trigger to revisit
+this ADR properly (the Decision's own "The closed list will be tested" consequence, unchanged) — not
+a precedent that one exception opens the door to the next one. A future reader who finds a second icon
+anywhere in this console did not find it licensed by this paragraph.
+
+`docs/design/gaps.md` pile 3 item 3 is updated alongside this amendment to record that the icon
+question was answered, narrowly, rather than left as an open red block.
 
 ## Context
 
