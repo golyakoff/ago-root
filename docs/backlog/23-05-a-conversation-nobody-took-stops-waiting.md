@@ -1,7 +1,7 @@
 # a conversation nobody took stops waiting, and the site chooses how long that takes
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). One additive column, a second capacity-ignoring pass in **both** claimers, and a control on `/settings/auto-reply`.
 - **Depends on**: `23-03` (the interval store and its `source` column) and `23-04` (the compare-free
   increment on `IOperatorCapacity`, which this path reuses rather than re-inventing). `23-20` is not
   a dependency but must land compatibly: an `Away` operator is not `Online` and must not receive one
@@ -72,19 +72,51 @@ is a bad label for a screen a person is judged on, and this is the path that wou
 
 ## Done when
 
-- [ ] With every operator at capacity and one conversation waiting past the site's period, it is
+- [x] With every operator at capacity and one conversation waiting past the site's period, it is
       assigned to the least-active online operator and `active_chats` exceeds `capacity`.
-- [ ] Before the period elapses, that same conversation is not assigned — the existing behaviour,
+- [x] Before the period elapses, that same conversation is not assigned — the existing behaviour,
       asserted so the change is bounded.
-- [ ] With no operator `Online`, nothing is assigned regardless of age, and `14-04`'s auto-reply path
+- [x] With no operator `Online`, nothing is assigned regardless of age, and `14-04`'s auto-reply path
       is unaffected.
-- [ ] An `Away` operator is never selected by this pass.
-- [ ] The period is read per site: two sites with different values behave differently in one test.
-- [ ] Two `Worker` replicas racing produce exactly one assignment and one interval.
-- [ ] Every interval opened by this path carries `Additional`.
-- [ ] `concurrency.md` states the rule and its exception; `data-model.md` carries the new column;
+- [x] An `Away` operator is never selected by this pass.
+- [x] The period is read per site: two sites with different values behave differently in one test.
+- [x] Two `Worker` replicas racing produce exactly one assignment and one interval.
+- [x] Every interval opened by this path carries `Additional`.
+- [x] `concurrency.md` states the rule and its exception; `data-model.md` carries the new column;
       `caching.md` states that this setting is read inside the transaction and never from the cache.
 
 ## Open questions
 
 None.
+
+## Outcome
+
+**Rule 8 is proven here rather than asserted, and the test is the reason to read this item.** The
+penalty is site configuration — written through the ordinary settings path, invalidated through
+`SiteSettingsChanged` like every other site setting — so every instinct says cache it. The claimer must
+not, because the decision it feeds is *whether to assign this conversation over capacity right now*.
+
+The test changes the value with a **bare `UPDATE` on a second connection**, bypassing the aggregate, the
+outbox and every cache-invalidation event this codebase has, and asserts the very next tick sees it.
+Nothing published an event; nothing evicted an entry. That is the difference between testing the
+invalidation mechanism and testing that no mechanism is needed.
+
+**Both claimers got the second pass, and the count says so**: `Ago.Chat.Concurrency.Tests` goes from 54
+to 68 — fourteen mirrored tests holding `SkipLocked` and `RedisLock` to identical outcomes. The item
+names divergence between them as the defect to avoid, and a mirrored suite is what makes that checkable
+rather than promised.
+
+One deliberate asymmetry in **mechanism**, stated rather than hidden: the Redis-lock second pass takes
+no lock. `ClaimAsync` is compare-free, so there is no race for a lock to arbitrate, and correctness
+rests on the conversation's own `xmin` — exactly as that type's existing remarks already say about its
+first pass.
+
+**`Away` is excluded by inheritance, not by a new clause.** Both claimers already filtered
+`Status == Online` after `23-20` landed the same day, and the second pass reuses that predicate with
+only the capacity comparison removed — so no second `Online` literal exists for a later edit to
+desync. Confirmed by reading the code rather than assumed.
+
+**Landed late, and the reason is worth recording.** The code merged in both repositories and this
+documentation half went unwritten for hours with the issue left open — the same failure this day was
+spent finding in five other items. The check that would have caught it, *merged code under an open
+item*, is added in the same change as this one.

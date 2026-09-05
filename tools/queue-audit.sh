@@ -42,6 +42,12 @@ MIRROR_REPOS="ago-chat ago-console ago-widget ago-calendar ago-calendar-console 
 
 OWNER=golyakoff
 
+# Hoisted here from the primary-checkout block below, because the per-issue checks need them too.
+# `--git-common-dir` always resolves to the *primary* repository's `.git` from any worktree of it -
+# this script is usually run from one, so the checkouts cannot be derived from `$0`.
+primary_root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+workspace="$(dirname "$primary_root")"
+
 # **An unreachable GitHub must not read as a clean queue.** The pre-2026-09-02 version parsed a local
 # markdown table, so it could not fail this way; this one can, and the failure is silent by default -
 # an empty issue list and "0 checked, 0 flagged" is indistinguishable from a genuinely empty queue.
@@ -95,6 +101,39 @@ check_issue() {
     echo "         $file"
     flagged=$((flagged + 1))
   fi
+
+  # **Merged code under an open item.** The complement of the worktree check further down, and the one
+  # that catches what that check cannot: work that was never written rather than written and left.
+  #
+  # 2026-09-05 is why this exists, and the instructive part is who it caught. That afternoon five items
+  # were found whose documentation halves had been written and abandoned in worktrees; a check was added
+  # for exactly that, and it worked - it flagged its own author's `23-27` within the hour. Then the same
+  # session dropped `23-05` and `23-19` the same way, and the worktree check said nothing, correctly:
+  # there was nothing in a worktree, because the half had never been written at all. Both times the code
+  # merged in two repositories and the session moved to the next item in the same breath.
+  #
+  # A commit whose subject names this item, on `main`, with the item's issue still open, means the
+  # landing is either mid-flight or was dropped - and only a person can tell which, which is why this
+  # reports rather than fails.
+  # `landed_repo`, not `repo`: shell functions share globals unless declared otherwise, and `audit_repo`
+  # is holding its own `repo` while this runs. Reusing the name here made every issue after the first
+  # report the wrong repository - caught by reading the output rather than by the check failing.
+  for landed_repo in $MIRROR_REPOS; do
+    dir="$workspace/$landed_repo"
+    [ -e "$dir/.git" ] || continue
+    landed=$(git -C "$dir" log --oneline origin/main --grep="($item)" -1 2>/dev/null || true)
+    [ -n "$landed" ] || continue
+    # Only worth reporting when this repository's own documentation has *not* followed it. `ago-root`
+    # carrying a commit for the item is the signal that the half was written.
+    docs=$(git -C "$primary_root" log --oneline origin/main --grep="$item" -1 2>/dev/null || true)
+    if [ -z "$docs" ]; then
+      echo "LANDED?  $item  ($where#$number) has merged code in $landed_repo but nothing in ago-root:"
+      echo "         $landed"
+      echo "         Either the documentation half is unwritten, or the item is mid-landing."
+      flagged=$((flagged + 1))
+    fi
+    break
+  done
 }
 
 # Read one repository's open issues, or say plainly that it could not be read. Per repository rather
@@ -302,8 +341,6 @@ echo
 # `--git-common-dir` always resolves to the *primary* repository's `.git`, from any worktree of it -
 # which is the same property that makes `core.hooksPath` work, and the same one whose absence made the
 # per-worktree `info/exclude` silently do nothing.
-primary_root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
-workspace="$(dirname "$primary_root")"
 
 primary_dirty=0
 for dir in "$primary_root" $(printf '%s\n' $MIRROR_REPOS | sed "s|^|$workspace/|"); do

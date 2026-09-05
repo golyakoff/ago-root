@@ -64,6 +64,16 @@ reads `active_chats` from the database inside its transaction, never from Redis,
 point of that path is an atomic check-and-increment (`concurrency.md`). Caching a value you then
 compare-and-set is how portfolio projects quietly grow race conditions.
 
+**`23-05` added the sharpest example of that line, because it is a *setting* on the wrong side of it.**
+`sites.assignment_penalty_seconds` is site configuration, written through the ordinary settings path
+and invalidated through `SiteSettingsChanged` like every other site setting — so every instinct says
+cache it. The assignment claimer must **not**: it reads the value inside its own transaction, on the
+same connection as the claim, because the decision it feeds is *whether to assign this conversation
+over capacity right now*. A cached penalty is a compare-and-set read one indirection removed, and the
+test that holds this changes the value with a bare `UPDATE` on a second connection — bypassing the
+aggregate, the outbox and every invalidation event this codebase has — then asserts the very next tick
+sees it. Nothing evicted anything, because nothing was ever cached.
+
 `14-04` is the case that shows where the line falls when one use case reads both kinds. The offline
 auto-reply reads three things: whether the feature is on and what it should say (**cached** - it decides
 *what to say*, and a stale copy costs at most one visitor one stale sentence), whether the conversation

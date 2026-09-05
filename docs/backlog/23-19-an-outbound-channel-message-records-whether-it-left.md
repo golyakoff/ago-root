@@ -1,7 +1,7 @@
 # an outbound channel message records whether it left, and the tenant can find out
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). `channel_deliveries`, a per-conversation read, a prune job, and `adr/0116` for what the row may name.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §9, including its 2026-09-04 amendment
 
@@ -92,17 +92,46 @@ repartitioned table, for a case that is rare and self-healing.
 
 ## Done when
 
-- [ ] A refused send writes a row saying refused, with the provider's own detail, and the operator's
+- [x] A refused send writes a row saying refused, with the provider's own detail, and the operator's
       thread shows it.
-- [ ] A delivered send writes a row saying delivered.
-- [ ] A redelivered broker message does not write a second row.
-- [ ] A conversation with no linked channel writes nothing at all — the no-linked-channel outcome is
+- [x] A delivered send writes a row saying delivered.
+- [x] A redelivered broker message does not write a second row.
+- [x] A conversation with no linked channel writes nothing at all — the no-linked-channel outcome is
       not a delivery failure and must not be reported as one.
-- [ ] A widget conversation shows no delivery state, and the screen says why.
-- [ ] Another tenant's delivery records cannot be read.
-- [ ] The prune job removes rows past the window; a test proves it.
-- [ ] `data-model.md`, `messaging.md` and `personal-data.md` carry the table.
+- [x] A widget conversation shows no delivery state, and the screen says why.
+- [x] Another tenant's delivery records cannot be read.
+- [x] The prune job removes rows past the window; a test proves it.
+- [x] `data-model.md`, `messaging.md` and `personal-data.md` carry the table.
 
 ## Open questions
 
 None.
+
+## Outcome
+
+**The item handed over one decision and it was argued, not defaulted.** The row identifies where a
+message went by **reference** to the `ChannelIdentity`, never by copying the address. A delivery row is
+written once per outbound message, so a copy would grow a second store of the value
+`channel_identities` already minimises to one row per site and address.
+
+**And it refused to copy the nearest precedent, which is the part worth reading.** `adr/0112` and
+`adr/0113` — landed hours earlier the same day — both give up referential integrity deliberately. This
+table takes a real foreign key instead, because those two exist to survive an erasure of their subject
+that happens *while the table lives on*, and no such case exists here: `ChannelIdentity` is never
+hard-deleted on its own, checked rather than assumed, and its only hard delete is the site erasure that
+removes these rows in the same statement.
+
+`conversation_id` still carries no key, so the record outlives a single conversation's own erasure —
+the same reasoning as its two siblings, applied where it does hold.
+
+**The console half's real content is the caption, not the badge.** A persistent line states the scope —
+channel conversations only — because without it a widget conversation showing no badge reads as a
+failed delivery rather than as a case this feature does not cover. The screen looks finished without
+it, which is why it is the half that gets skipped.
+
+**Landed late, and the reason is worth recording.** The code merged in both repositories and this half
+went unwritten for hours, with the issue left open — the same failure this day was spent finding in
+five other items, committed by the session that found them. `queue-audit.sh`'s worktree check could not
+catch it, because there was nothing sitting in a worktree: the work had not been written at all. The
+check that would have caught it — *merged code under an open item* — is added in the same change as
+this one.
