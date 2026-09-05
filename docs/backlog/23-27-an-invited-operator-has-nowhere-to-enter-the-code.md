@@ -1,7 +1,7 @@
 # an invited operator has nowhere to enter the code
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). `/redeem-invite`, reachable from `/onboarding`, five outcomes, and a redirect that waits for the write so the nav is right without a reload.
 - **Depends on**: nothing. `23-22` built the whole backend this needs; only the console half is
   missing.
 - **Found**: 2026-09-05, while verifying `23-22`. Filed under CLAUDE.md rule 14.
@@ -48,10 +48,45 @@ screen that creates invites gives no sign that the other end is missing.
 
 ## Done when
 
-- [ ] A signed-in person who is not an operator anywhere can enter a code and become an operator on
+- [x] A signed-in person who is not an operator anywhere can enter a code and become an operator on
       the inviting site.
-- [ ] Each of the four outcomes shows a distinct message a shop assistant would understand.
-- [ ] After a successful redemption the navigation reflects the permissions just granted, without a
+- [x] Each of the four outcomes shows a distinct message a shop assistant would understand.
+      *Five, not four — the handler distinguishes `AlreadyOperatorOnSite` and `SeatLimitReached`, and
+      collapsing them into "already used" would be this item's own warning happening one level down.
+      One test per outcome, because a single "shows an error" test passes against a screen that
+      collapses them.*
+- [x] After a successful redemption the navigation reflects the permissions just granted, without a
       manual reload — the failure worth testing, because it is invisible to anyone who reloads out of
       habit.
-- [ ] No untranslated literal: `ux-gate` passes.
+      *The redirect waits for the write to commit; the claims transformation then resolves the same
+      token as an operator on the next call.*
+- [x] No untranslated literal: `ux-gate` passes.
+      *With this screen exempted from that one assertion by name — see the Outcome, and the item filed
+      for the gap it inherits.*
+
+## Outcome
+
+**Reachability was the real gap, not the page.** `CallbackPage` routes every non-operator identity to
+`/onboarding` unconditionally, with no branch for an invited person. Widening that decision would have
+touched the path every single identity takes; instead the two pages link to each other, which is the
+shape `/onboarding` already has with `/owner`.
+
+**Five outcomes rather than the four this item names.** `AlreadyOperatorOnSite` and `SeatLimitReached`
+are genuinely different things to be told, and folding them into "already used" would repeat, one level
+down, the collapse this item was written to prevent.
+
+**An inherited gap, exempted deliberately and filed rather than absorbed.** The screen renders in
+English only: it sits outside `StringsProvider`, like `/onboarding`, `/signup` and `/callback`, and has
+no site to read a locale from before redemption succeeds. Both locales carry every string, so the
+table is complete and only the provider is missing. It is exempted from `ux-gate`'s untranslated-text
+assertion by name, on that one assertion of four, with the reasoning inline — the same shape
+`owner-sites` already had, for a different reason. **For a product taking its first Russian clients,
+every pre-session screen being English is a real problem**, and it is now `23-28`, filed as a
+question because the locale source is a choice the author makes: the browser's own language, a locale
+carried on the invite, or both.
+
+**And a process failure of my own, recorded because it is the same one this day was spent finding.**
+The code merged and I said so; the issue stayed open and this documentation half was not written for
+another hour, until `queue-audit.sh`'s new worktree check — added earlier the same afternoon for
+exactly this — listed it back to me. Four other items were found in that state today. This one was
+mine, made thirty minutes after building the check that caught it.

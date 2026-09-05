@@ -254,6 +254,34 @@ in this product can take it back afterwards".
 the identity cluster and Sign out but **no nav** (there is no `siteId` yet).
 **Language.** Hardcoded English, including validation messages.
 
+### 2.4 `/redeem-invite` — "Redeem your invite" (`23-27`)
+
+**Who.** An authenticated identity that is **not yet an operator anywhere** — the state an invited
+person is in. Guarded by `RequireAuth` only, outside `PermissionsProvider` and the realtime provider,
+for the same reason `/onboarding` is: the token carries no site claims yet. `ago-chat`'s own route is
+gated on `RequireKeycloakIdentity` rather than `RequireOperatorIdentity` for that same reason.
+**For.** Entering the code a tenant generated on `/settings/operators` (`23-22`), and becoming an
+operator on the inviting site.
+**On it.** `PageHead`, one code field, one primary button.
+**States.** Five, and they are five rather than four on purpose — the handler distinguishes
+`AlreadyOperatorOnSite` and `SeatLimitReached` as separate cases, and folding them into "already used"
+would be the same collapse the item warns against one level down. Wrong code · expired · already
+redeemed · already an operator here · the site is at its plan's operator limit · success (a message,
+held briefly, then the redirect).
+
+**In / out.** In: **`/onboarding` only.** `CallbackPage` routes every non-operator identity to
+`/onboarding` unconditionally, with no branch for "this one arrived with an invite" — so rather than
+widen a routing decision every identity passes through, the two pages link to each other, the same
+two-way shape `/onboarding` already has with `/owner`. Out: `/` after a successful redemption, and the
+redirect deliberately waits for the write to commit, so the same token starts resolving as an operator
+and the nav reflects the new permission with no manual reload.
+
+**Language.** English only in practice, and this is a **known gap rather than a choice** — the screen
+calls `useStrings()` and both locales carry every string, but the route sits outside `StringsProvider`
+and has no site to read a locale from before redemption succeeds. It is exempted from `ux-gate`'s
+untranslated-text assertion for that reason, by name, on that one assertion only. `/onboarding`,
+`/signup` and `/callback` share the gap; see the item filed for it.
+
 ---
 
 ## 3. The operator workspace
