@@ -125,10 +125,20 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
       and carry the remainder out. A ticket rewritten to its delivered scope is closed as done — it
       is not "partly failed", it is a smaller item that succeeded.
     - **Carrying a remainder out means a *new number*, not a link.** When work is split off, it gets
-      a new ticket in the code repository **and always a new item plus issue in `ago-root`.** Leaving
-      it under the finished item's number is the failure this clause exists for: by the `NN-NN ·`
-      title convention that prefix asserts "this *is* item NN-NN", so unfinished work ends up
-      claiming the identity of a finished one, with no `ago-root` twin at all.
+      a new item plus issue in `ago-root`. Leaving it under the finished item's number is the failure
+      this clause exists for: by the `NN-NN ·` title convention that prefix asserts "this *is* item
+      NN-NN", so unfinished work ends up claiming the identity of a finished one.
+    - **One queue, and it is `ago-root`.** An item is filed once — the file in `docs/backlog/` and one
+      issue in `ago-root`. Mirrors in code repositories are not the convention: the count says so
+      plainly (86 issues in `ago-root` against 16 across all eight code repositories at 2026-09-05),
+      and both items that genuinely had a mirror ended the same way — `ago-root` closed, the mirror
+      left open, the queue claiming work that had shipped. `11-15`/`ago-calendar-console#27` is what
+      prompted the closing rule above; `22-14`/`ago-calendar#32` repeated it three days later and was
+      found only because `queue-audit.sh` reads mirrors.
+      This clause used to require a code-repository ticket as well. It was duplication that nobody
+      maintained, and the maintenance cost fell entirely on closing.
+      `queue-audit.sh` still reads every repository, deliberately: a mirror that exists must still be
+      closed, and the check costs nothing when there are none. (Decided 2026-09-05.)
     - **Closing means closing every mirror.** Items are filed twice — in `ago-root` and in the
       repository they change — and closing one is not closing the item. This is part of merging, at
       the same moment as the roadmap and ADR-index sweep, not a later batch.
