@@ -1,7 +1,8 @@
 # the processing instruction says what the system actually does, item by item
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-05), `ago-root#481`. Delivered
+  `docs/architecture/processing-instruction-facts.md`; the eight gaps it found are `24-07`..`24-14`.
 - **Depends on**: nothing in this stage. It can be done first if the tenant agreement is being drafted.
 - **Decision**: `docs/adr/0076-*` — AGO processes visitors' conversation data **on the tenant's
   instruction**
@@ -58,9 +59,9 @@ Citations are for orientation, not legal advice.
 
 ## Done when
 
-- [ ] Every element required by art. 6 ч. 3 has an answer or a stated gap, each with its source.
-- [ ] `personal-data.md` links to it.
-- [ ] Every gap found has a number of its own, rather than a paragraph promising to look later.
+- [x] Every element required by art. 6 ч. 3 has an answer or a stated gap, each with its source.
+- [x] `personal-data.md` links to it.
+- [x] Every gap found has a number of its own, rather than a paragraph promising to look later.
 
 ## Open questions
 
