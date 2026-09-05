@@ -319,15 +319,12 @@ Stated as *what could be produced today*, not what could be built.
 | Retention windows, and that something enforces them | `adr/0057`, `adr/0031`, `adr/0050`, plus the jobs listed under Element 2 | `ago-chat`, `ago-deploy` |
 | That a backup restores | A verified restore procedure that has been run | `adr/0050`, `runbooks/backup-and-restore.md` |
 | The decision record for any of the above | 90-odd ADRs | `docs/adr/` |
+| Everything held for one person, scoped to a `visitors` row | One conversation, or every conversation the same `visitors` row has, plus that visitor's contact details and channel identities — `POST /api/v1/conversations/{id}/exports` and `.../visitor-export`. **Closed `24-11`, and the limit travels with it**: this promises completeness for one `visitors` row and never that two rows are the same human — nothing in this schema makes that link, and a tenant told otherwise would under-answer a real access request without knowing it (`adr/0109`) | `ExportConversationHandler`, `ExportVisitorHandler`, `PersonExportArchiveWriter`, `adr/0109` |
 | Who reached a person's data across a boundary, and when | An `access_records` row per boundary-crossing read: the operator's cross-conversation history read and the platform owner's five cross-tenant surfaces, each with actor, kind, time and the resource reached. **Closed `24-12`, with two limits stated rather than discovered.** The set of recorded surfaces is *named*, not derived from a rule, so a sixth surface is an argument for widening it rather than proof it was covered; and `customer:read` in **AGO Calendar** is not covered at all — a different repository on a different database, which needs its own mechanism or a written decision that it does not | `AccessRecordRepository.cs`, `adr/0113`, `personal-data.md` |
 | That an erasure ran, six months later | An `erasure_records` receipt per erasure request: scope, requesting operator, timestamps, per-step counts, and `Failed` with its reason where a cycle did not finish. **Closed `24-13`, and closed with a stated limit rather than fully**: the receipt names the tenant and the operator and *never* the erased person (`adr/0112`), so it proves that an erasure ran for the right site at the right time — it cannot answer *which visitor* from this table alone, and a conversation erased under a whole-site cascade leaves only the site's aggregate count. Correlating a receipt to a named person's request needs the tenant's own record of that request. **And `Completed` means reachable-now, not gone from backups**: `adr/0050`'s thirty-day window still applies | `ErasureRecordQuery.cs`, `adr/0112`, `personal-data.md` |
 
 **Could not be produced today. These are the findings.**
 
-- **Everything held about *one person*.** Export is whole-site only. A tenant honouring one visitor's
-  access request has to export every visitor they have — which is itself a disclosure problem, not
-  merely an inconvenience. Erasure is per-conversation and per-site; export has no matching
-  granularity. → **Gap `24-11`.**
 - **Documentary evidence of where the database physically is.** → **Gap `24-07`.**
 - **What a channel provider or the LLM vendor retains** once data reaches them. Not answerable from
   these repositories at all. → part of **Gap `24-08`.**
@@ -389,7 +386,7 @@ the question it was asked, and a different question was never asked of it.
 | `24-08` | the register says nothing about what leaves the deployment | `personal-data.md` was written 2026-08-25/26 and inventories *stores*; the six channel adapters and both AI features shipped afterwards, and its residency table still lists channel vendors as an unanswered question |
 | `24-09` | ~~an erasure request cannot reach an archived message~~ — **closed** | `16-02` shipped before `13-06` and said so in its own remarks; the archive arrived and nothing closed the seam until this item did (`docs/adr/0108-*`) |
 | `24-10` | a controller can erase, and cannot block | Erasure was scoped; blocking was never asked for, because the product question ("delete my data") and the statutory operation list are not the same list |
-| `24-11` | one person's data, exported | `16-03` was scoped as *tenant* portability. Subject access is a different granularity and nobody noticed the two were both needed |
+| ~~`24-11`~~ | one person's data, exported | `16-03` was scoped as *tenant* portability. Subject access is a different granularity and nobody noticed the two were both needed. **Closed 2026-09-05** (`adr/0109`) |
 | `24-12` | nothing records who read a person's data | Every control built is preventive by design and each was correct for its own item; evidential logging was never any item's goal |
 | `24-13` | an erasure leaves no record that it happened | `16-02` deliberately rejected a deletion *journal* (it would be a list of people who asked to be forgotten) and never separated that from a per-erasure receipt, which is a different artifact |
 | `24-14` | the secrets register is missing the channel-credential key | `17-03` and `14-01`'s credential storage landed within days of each other; the inventory's own reproducible sweep would find it today |
