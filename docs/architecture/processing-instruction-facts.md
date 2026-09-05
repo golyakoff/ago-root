@@ -79,6 +79,15 @@ recorded anywhere in these repositories. `personal-data.md` already flagged its 
 citation as "here for orientation, not as a reading" — what it did not say is that **the fact
 underneath the citation was never established either**. It was assumed from the tier name.
 
+**Updated 2026-09-05, later the same day: a RIPE registry lookup of the node's address returns
+`country: RU`, `netname: RU-FORNEX`, holder Fornex Hosting S.L.** That is third-party evidence a
+reviewer can check without our cooperation, and it is a real improvement on a tariff name — it also
+dissolves the apparent contradiction above, since a Spain-registered entity holding a block registered
+as Russian is ordinary rather than suspicious. It is still not the fact the statute asks about: a RIPE
+`country` field records where a block is registered as being used, not where a machine physically
+stands. The position is now *likely true, partly evidenced, still undocumented* — and `24-07` is
+narrowed to obtaining one provider confirmation rather than to an open investigation.
+
 That is not a formality. Everything else in this file is checkable by reading a file; this one is not,
 and it is the element where being confidently wrong costs the most.
 
