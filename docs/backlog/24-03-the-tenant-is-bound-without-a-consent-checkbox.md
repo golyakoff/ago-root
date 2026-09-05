@@ -66,6 +66,20 @@ when it starts. Two things follow, and neither is negotiable:
   own authentication and authorisation, argued in this item rather than inherited from a line written
   when there was no route at all.
 
+## What `24-02` settled that this item must not undo
+
+`adr/0114` put the **text** in the database so a lawyer's verdict is a change to data, never a code
+change. That only holds end to end if **which documents this subject must accept is also data**.
+
+The case to design for is real: a lawyer may conclude that an operator needs to accept nothing at all
+(an employment relationship covering it), or that a tenant needs two documents where this item assumed
+one. If the required set is a row, that verdict is a row change. If it is a condition in code, it is a
+release — and the sequencing the author chose for this stage stops working at exactly the moment it
+matters.
+
+So: express *which documents are required, for which subject kind* as data this item reads, not as a
+literal it hard-codes.
+
 ## Done when
 
 - [ ] Registration records an acceptance of the agreement, with its version.
