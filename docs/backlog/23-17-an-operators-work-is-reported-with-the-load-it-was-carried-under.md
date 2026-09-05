@@ -78,6 +78,31 @@ identical in a daily average.
 - Outcome as a dimension. Response-time-against-outcome is a different cut of §7's list and is not
   filed; see the stage report.
 
+## What remains, found 2026-09-05 while building `23-18`
+
+**The backend half of this item shipped. The console half never did**, and the item's own Scope is
+explicit that the console is in it — *"it extends the existing per-operator table rather than creating
+a fifth report screen"* — so the first Done-when above is false, not merely untested.
+
+Verified against `origin/main` rather than inferred:
+
+| | |
+|---|---|
+| `Ago.Chat.Contracts.OperatorAnalyticsOperatorBucketDto` | carries `OperatorLoadSummaryDto? Load`, added by this item |
+| `ago-console` `OperatorAnalyticsOperatorBucketDto` (`types.ts`) | declares `operatorId`, `bucket`, `operatorName` — **no `load` at all** |
+| `OperatorAnalyticsPage.tsx` | zero references to it |
+
+So a tenant cannot see, for their own team, the standard/additional split this item computes and sends.
+
+**This does not become a new number.** It is one promise — *an operator's work is reported with the
+load it was carried under* — in two places, and CLAUDE.md rule 15's 2026-09-03 amendment is explicit
+that the same promise in two places is one ticket even where the code is trivially separable. Splitting
+it would leave a closed ticket claiming a report nobody can read.
+
+**It is now the more urgent half, not the leftover one.** `23-18` shipped the operator's own view of
+the same figures, so an operator sees their split and their manager does not — the asymmetry runs
+backwards from what either item intended.
+
 ## Done when
 
 - [ ] The per-operator table shows standard and additional as separate absolute counts, with a total,
