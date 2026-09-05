@@ -1,7 +1,7 @@
 # an operator sees their own numbers, and sees them first
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). `GET /api/v1/conversations/analytics/me`, gated on operator identity and nothing else, and `/analytics/me` in the console at nav position 2.
 - **Depends on**: `23-17` — the same figures under the same rules, or this ships a second, laxer
   version of the tenant's report. `23-02` — a row an operator recognises as themselves.
 - **Decision**: `docs/design/decisions.md` §7's rules apply; the need is `flows.md` 2.4
@@ -80,3 +80,35 @@ whether operators can predict their own numbers before seeing them.
 ## Open questions
 
 None.
+
+## Outcome
+
+**The merge logic moved rather than being written twice.** `OperatorAnalyticsMerge` was extracted,
+unchanged, out of `GetOperatorAnalyticsForSiteHandler`, and both handlers now call it. That is what
+makes "an operator's own figures equal their row in the tenant's report" true by construction instead
+of true because two implementations happen to agree today — and the item's own Done-when asserts the
+equality on top of that, so the property is both structural and tested.
+
+**There is no permission, and that is the design rather than an omission.** The reasoning is stated at
+the endpoint and at the handler, because "add a permission" is this codebase's reflex and a later
+reader would otherwise fix the absence. The query record carries no operator id at all: the caller is
+taken from the validated principal, so there is no parameter for an endpoint to bind a second identity
+into. An endpoint that accepted one and checked it matched would be the same defect with an extra step.
+
+**A live defect found by the full suite, not anticipated.** Adding the route broke ASP.NET's
+endpoint-metadata build for the *whole* `ConversationsEndpoints` file inside two integration tests that
+hand-roll a minimal container — six tests failing with *"Body was inferred but the method does not
+allow inferred body parameters"* until the new handler was registered there too. Those files already
+carried a comment saying every prior addition to this endpoint group needed the same thing; this is the
+next instance of a known trap rather than a new one.
+
+**The item's title turned out literal.** An operator now sees their standard/additional split before
+their manager does — because `23-17`'s tenant-facing screen still does not show it at all (see that
+item). Not the intended reading of "sees them first", and worth stating: it makes `23-17`'s remaining
+half more urgent, not less.
+
+**Not verified, and named rather than ticked.** There is no HTTP-level test with two real signed-in
+operators asserting one cannot read the other's row over the wire. The claim is proven at the
+Application layer, and structurally the query has no field an HTTP parameter could bind a second
+operator id to — but "structurally impossible" is an argument, not a test. `OperatorOidcFixture`
+already has the two same-site operators such a test would need.

@@ -99,30 +99,31 @@ A single horizontal strip of `NavLink`s, `flex-wrap: nowrap; overflow-x: auto`. 
 | # | Label | Route | Gate |
 |---|---|---|---|
 | 1 | Conversations | `/` | none (always shown) |
-| 2 | All conversations | `/admin` | `site:configure` |
-| 3 | Search | `/search` | `site:configure` |
-| 4 | Analytics | `/analytics` | `site:configure` |
-| 5 | Conversion | `/analytics/conversion` | `site:configure` |
-| 6 | Tag report | `/analytics/tags` | `site:configure` |
-| 7 | Booking flow | `/analytics/booking-flow` | `site:configure` |
-| 8 | Install widget | `/settings/install` | `site:configure` |
-| 9 | Widget appearance | `/settings/widget` | `site:configure` |
-| 10 | AI FAQ assistant | `/settings/faq` | `site:configure` |
-| 11 | Offline auto-reply | `/settings/auto-reply` | `site:configure` |
-| 12 | Canned responses | `/settings/canned-responses` | `site:configure` |
-| 13 | Tags | `/settings/tags` | `site:configure` |
-| 14 | Billing | `/settings/billing` | `site:configure` |
-| 15 | Delete account | `/settings/delete-account` | `site:erase` |
-| 16 | Queue | `/calendar` | `calendar:configure` |
-| 17 | Setup | `/calendar/setup` | `calendar:configure` |
-| 18 | Workers | `/calendar/workers` | `calendar:configure` |
-| 19 | Availability | `/calendar/availability` | `calendar:configure` |
-| 20 | Contacts | `/calendar/contacts` | `calendar:configure` |
-| 21 | Platform sites | `/owner` | `useOwnerEligibility() === "eligible"` (appended in `OperatorShell.tsx`, not in `consoleNav.ts`) |
+| 2 | My numbers | `/analytics/me` | none (always shown) |
+| 3 | All conversations | `/admin` | `site:configure` |
+| 4 | Search | `/search` | `site:configure` |
+| 5 | Analytics | `/analytics` | `site:configure` |
+| 6 | Conversion | `/analytics/conversion` | `site:configure` |
+| 7 | Tag report | `/analytics/tags` | `site:configure` |
+| 8 | Booking flow | `/analytics/booking-flow` | `site:configure` |
+| 9 | Install widget | `/settings/install` | `site:configure` |
+| 10 | Widget appearance | `/settings/widget` | `site:configure` |
+| 11 | AI FAQ assistant | `/settings/faq` | `site:configure` |
+| 12 | Offline auto-reply | `/settings/auto-reply` | `site:configure` |
+| 13 | Canned responses | `/settings/canned-responses` | `site:configure` |
+| 14 | Tags | `/settings/tags` | `site:configure` |
+| 15 | Billing | `/settings/billing` | `site:configure` |
+| 16 | Delete account | `/settings/delete-account` | `site:erase` |
+| 17 | Queue | `/calendar` | `calendar:configure` |
+| 18 | Setup | `/calendar/setup` | `calendar:configure` |
+| 19 | Workers | `/calendar/workers` | `calendar:configure` |
+| 20 | Availability | `/calendar/availability` | `calendar:configure` |
+| 21 | Contacts | `/calendar/contacts` | `calendar:configure` |
+| 22 | Platform sites | `/owner` | `useOwnerEligibility() === "eligible"` (appended in `OperatorShell.tsx`, not in `consoleNav.ts`) |
 
-**This is a flat list of up to 21 items in one horizontal strip.** There is no grouping, no section
+**This is a flat list of up to 22 items in one horizontal strip.** There is no grouping, no section
 heading, no submenu, and no visual break between "chat", "settings", "calendar" and "platform".
-Two labels are ambiguous out of context — "Queue" (calendar) sits nine items after "Conversations"
+Two labels are ambiguous out of context — "Queue" (calendar) sits ten items after "Conversations"
 (the chat queue), and "Setup"/"Install widget" are both first-run installation screens for two
 different products.
 
@@ -557,6 +558,26 @@ and "Flows closed" as 20px numbers — followed by an `Alert tone="info"` carryi
 caveat that a closed flow is not a confirmed booking.
 
 **States.** Loading (`Skeleton lines={3}`) · zero flows (`.ago-empty`) · the stats · error.
+
+### 5.5 `/analytics/me` — "My numbers"
+
+`23-18`. The operator's own row of `/analytics` and `/analytics/conversion`, and **the only screen in
+section 5 with no gate at all** — not "gated on a permission everyone happens to have", but built with
+no permission to check, because a grant is a thing a tenant could withhold and withholding this is the
+failure the item exists to prevent.
+
+Three parts: the conversation bucket (the same column strings `/analytics` uses); the load summary —
+Held, Standard and Additional as **three separate numbers, never combined into a score**; response time
+by load bucket; and the conversion figures, carrying `/analytics/conversion`'s own "not a verified sale"
+caveat rather than a second wording of it.
+
+**States.** Three that are genuinely independent, not one page-wide empty state: the bucket is
+zero-filled when the operator has no conversations in range, while load and conversion stay absent for
+"no data" — an operator who held nothing is not the same as an operator the load report has nothing to
+say about.
+
+It sits at nav position 2, above every screen a manager reads. That is the item's title working
+literally.
 
 ---
 
