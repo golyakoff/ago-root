@@ -684,6 +684,40 @@ will be signed out automatically. The nav stays visible and clickable during thi
 
 ---
 
+### 6.9 `/settings/products` — "What AGO offers"
+
+**Who.** `site:configure` — the same gate `/settings/billing` uses, deliberately (`adr/0106`): the
+buyer is the tenant's owner, who already holds the permissions in question (`decisions.md` §10), and
+there is no dedicated "owner" permission in `Ago.Chat.Domain.Permission` to gate on instead.
+
+Description: "Every product on this platform, and which of them this workspace already has." **No
+fetch of its own** — reads `enabledModules` off the same `GET /api/v1/operators/me` response
+`usePermissions()` already resolves once per session (`23-21`).
+
+One `Table`, three rows, columns *What it does* / *In your workspace* (a `Badge`) / *Next step*:
+
+| Row | Held when | Next step, held | Next step, not held |
+|---|---|---|---|
+| Conversations (the base product) | always | links to the queue (`/`) | — |
+| Booking | `enabledModules` includes `"calendar"` | links to `/calendar` | "Contact AGO to add this to your workspace." |
+| Automatic answers | `enabledModules` includes `"faq"` | links to `/settings/faq` | same contact sentence |
+
+**No copy anywhere on this screen names a module key** — the columns describe outcomes ("Let
+customers book an appointment…"), never "Calendar"/"FAQ" as such (`adr/0106`). **The not-held next
+step is prose, never a link or a button** — enabling a product is owner-only today, through a
+runbook, not a console write (`decisions.md` §6), so a control that looked like it provisioned would
+be worse than plain words. No price appears anywhere on the screen.
+
+**AGO Inbox's channels (Telegram, WhatsApp, …) are not a row here** — there is no equivalent single
+tenant-held fact for them on `GET /api/v1/operators/me` today (a connected channel is a
+`ChannelCredential` row, not an `EnabledModule` entry), and the console has no screen for them at all
+yet. Recorded as a gap, not guessed at (`adr/0106`).
+
+**Not yet in `consoleNav.ts`.** `23-25`'s own Open Question left where this entry belongs to be
+settled together with `23-24`; the route is reachable by direct URL regardless.
+
+---
+
 ## 7. AGO Calendar screens
 
 Seven routes under `/calendar`, all gated on `calendar:configure`, all sharing a *second* refusal
@@ -1423,6 +1457,7 @@ and is complete as a *field* list; I did not confirm their visual grouping.
 | `/settings/tags` | Tags | `site:configure` | 6.6 |
 | `/settings/billing` | Billing | `site:configure` | 6.7 |
 | `/settings/delete-account` | Delete account | `site:erase` | 6.8 |
+| `/settings/products` | What AGO offers | `site:configure` | 6.9 |
 | `/calendar` | Queue (pending bookings) | `calendar:configure` | 7.1 |
 | `/calendar/setup` | Setup | `calendar:configure` | 7.2 |
 | `/calendar/workers` | Workers | `calendar:configure` | 7.3 |

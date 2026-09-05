@@ -1,7 +1,10 @@
 # what else AGO does, on a surface addressed to the person who can buy it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). `/settings/products` in `ago-console`, gated on `site:configure`
+  (`adr/0106`). Reads `enabledModules` off the same `GET /api/v1/operators/me` response
+  `usePermissions()` already resolves (`23-21`) — no new server read. The navigation entry itself
+  stays this item's one open question, deferred to `23-24` as scoped below.
 - **Depends on**: `23-21` — the tenant's own enabled-module list, which is what tells this screen
   which products are already held. `23-14` is not a dependency but is the owner-side mirror of the
   same facts.
@@ -58,17 +61,36 @@ own**, and this is it.
 
 ## Done when
 
-- [ ] An owner sees every product, with the ones their workspace holds marked as held.
-- [ ] An operator without the owner-side permission does not reach this screen — and, per §10 and
-      `23-24`, is not offered it in the navigation either.
-- [ ] A product the tenant does not have offers a next step that is true today, with no control that
-      appears to provision anything.
-- [ ] The screen reads in the tenant's language, both `en.ts` and `ru.ts`, with no module key visible
-      to a reader.
-- [ ] Nothing on this screen claims a price.
+- [x] An owner sees every product, with the ones their workspace holds marked as held. Three rows
+      today: conversations (always held), booking (`enabledModules.includes("calendar")`), automatic
+      answers (`enabledModules.includes("faq")`) — see `adr/0106` for why the list stops there
+      (AGO Inbox's channels have no equivalent tenant-held fact to read yet).
+- [x] An operator without the owner-side permission does not reach this screen — and, per §10 and
+      `23-24`, is not offered it in the navigation either. The screen itself refuses (danger `Alert`,
+      no product data rendered — proven by a test asserting `fetchBillingStatus`-style non-leak); the
+      navigation half is vacuously true today (no entry anywhere points at `/settings/products` yet)
+      and stays `23-24`'s own responsibility to keep true once it adds one.
+- [x] A product the tenant does not have offers a next step that is true today, with no control that
+      appears to provision anything. Prose only ("Contact AGO to add this to your workspace.") — no
+      link, matching the existing no-address "contact us" precedent (`InstallSnippetPage`'s own
+      `installOriginPanelDescription`) rather than inventing an email this repository cannot verify is
+      real or monitored.
+- [x] The screen reads in the tenant's language, both `en.ts` and `ru.ts`, with no module key visible
+      to a reader. `ux-gate`'s own untranslated-Latin-text assertion runs against this screen
+      (`ux-gate/fixtures/screens.ts`'s new `products` entry); a unit test additionally asserts neither
+      `"calendar"` nor `"faq"` appears anywhere in the rendered text.
+- [x] Nothing on this screen claims a price.
 
 ## Open questions
 
-- **Where it sits in the navigation.** It is the one entry whose audience is the owner rather than
-  the operator, and `23-24` is deciding the treatment for gated entries at the same time. Settle it
-  with that item rather than separately, or the two will disagree.
+- **Where it sits in the navigation.** Still open, by design — `23-24` owns `consoleNav.ts` and is
+  deciding the gated-entry treatment at the same time; this item builds the screen and its route
+  (`/settings/products`) and stops there rather than pre-empting that decision. Recommendation for
+  `23-24` to weigh: this is the one entry in the whole nav whose audience is the owner rather than the
+  operator (§10), so it does not fit `23-24`'s own muted/locked treatment (which exists for a
+  capability *the tenant has* that *this operator* cannot use) — an owner who cannot see this screen
+  cannot see it because the tenant's own `enabledModules` are irrelevant to its gate, not because a
+  colleague could grant something this identity lacks. It sits more naturally beside `/settings/billing`
+  in the settings group than among the calendar/FAQ/tag entries above it, gated identically
+  (`site:configure`) and requiring no new muted state of its own — a plain shown/hidden entry, the
+  same shape every other `site:configure`-gated row in `buildTenantNavItems` already has.
