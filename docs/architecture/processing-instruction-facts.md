@@ -72,10 +72,15 @@ destinations, not images" — and images carry no personal data (`adr/0047`, GHC
 
 ### The finding
 
-**Nothing in any repository evidences that the machine is physically in Russia. The claim rests on a
-purchase-page label.** `adr/0026` records what the author bought; `public-deploy.md` repeats it. There
-is no traceroute, no geolocation check, no provider statement, no contract clause, and no invoice
-recorded anywhere in these repositories. `personal-data.md` already flagged its own art. 18 п. 5
+**The machine's location is partly evidenced and still not documented by the provider.** The position
+as it stands: a RIPE registry lookup is third-party evidence a reviewer can check (recorded below); a
+provider confirmation, which is what the statute's question actually needs, does not exist. The two
+are different things and this section keeps them apart.
+
+**As originally found, it was worse, and the history is kept because it is the useful part.** Nothing
+in any repository evidenced the location at all — the claim rested on a purchase-page label. `adr/0026`
+records what the author bought; `public-deploy.md` repeats it. There was no traceroute, no geolocation
+check, no provider statement, no contract clause and no invoice anywhere in these repositories. `personal-data.md` already flagged its own art. 18 п. 5
 citation as "here for orientation, not as a reading" — what it did not say is that **the fact
 underneath the citation was never established either**. It was assumed from the tier name.
 
