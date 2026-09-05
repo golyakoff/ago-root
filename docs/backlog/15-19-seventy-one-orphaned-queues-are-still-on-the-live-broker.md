@@ -47,6 +47,15 @@ the discriminator, and it must be read at the moment of deletion rather than fro
 earlier — a pod that starts between the listing and the delete would have its queue removed underneath
 it.
 
+## Authorised to proceed on the live deployment (author, 2026-09-05)
+
+The author's words: *do this boldly while there are no live clients on the field yet.*
+
+That authorisation is **dated and bounded**, and both halves matter. It rests on a fact that stops
+being true the moment a first tenant signs up — which is expected within weeks — so an implementation
+reading this later must check whether it still holds rather than inherit it. It covers acting on the
+live deployment for this item; it is not a standing licence for the next one.
+
 ## Done when
 
 - [ ] The fixed code is running on the cluster, confirmed by the image tag rather than by the deploy

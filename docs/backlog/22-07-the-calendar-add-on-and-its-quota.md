@@ -33,8 +33,16 @@ network call on a write path, and still a cache by the time the transaction comm
 
 ## What must be got right rather than discovered
 
-- **Lowering N below the workers already created.** Refusing the change, deactivating the excess, or
-  letting it sit over quota are three different products. Decide, do not default.
+- **Lowering N below the workers already created: the excess is deactivated.** Decided by the author,
+  2026-09-05, choosing among the three this item named — refuse the change, deactivate the excess, or
+  let it sit over quota.
+  What that commits to, stated so the implementation does not have to re-derive it: the change is
+  **accepted**, not refused, so a tenant reducing their plan is never blocked by data they already
+  created; the excess workers stop being usable rather than being deleted, so nothing a shop typed is
+  destroyed by a billing action; and the over-quota state does not exist, so no screen has to explain
+  it and no scheduler has to decide whether a deactivated worker may still take a booking.
+  **Which workers are the excess is not decided here** and must not be guessed: an implementation that
+  picks by row order is choosing for the tenant. Ask, or use a rule the tenant can predict and see.
 - **Payment succeeded, provisioning did not.** Money taken and no calendar is the worst outcome here.
   Idempotent retry the outbox gives; what it does not give is anyone noticing — see `22-08`.
 - The unified list mixes channels (internal to `Ago.Chat.*`) with a separate product. That is right
