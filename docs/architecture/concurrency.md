@@ -218,6 +218,29 @@ of conversations currently `Assigned` to that operator that hold a claim** - ass
 a range, by `CloseConversationCapacityConcurrencyTests` with real closes racing real assignment ticks
 against real Postgres.
 
+**`23-05` added the exception, and it is an exception to the rule rather than a hole in it.** A
+conversation nobody has taken for longer than its own site's `assignment_penalty_seconds` is assigned
+to the least-active `Online` operator **with the capacity comparison dropped** — through `23-04`'s
+compare-free `ClaimAsync`, never `TryClaimAsync`, which would refuse by design. So `active_chats` may
+exceed `capacity`, deliberately, and the invariant above still holds exactly: it counts conversations
+holding a claim, and this path takes a claim like any other. What changes is not the accounting but
+who may exceed the ceiling, and why.
+
+Three properties keep it an exception rather than a second, laxer engine:
+
+- **The period is read inside the claimer's own transaction**, never from the site-settings cache
+  (`caching.md`). It is configuration a write decision depends on.
+- **Both implementations have it.** `SkipLockedAssignmentClaimer` and `RedisLockAssignmentClaimer`
+  implement one contract, and one having a second pass the other lacks would make the engine's
+  behaviour depend on which lock strategy a deployment runs. Fourteen mirrored concurrency tests hold
+  them to identical outcomes. The Redis-lock pass takes **no lock**, and that asymmetry is in mechanism
+  only: a compare-free claim has no race for a lock to arbitrate, so correctness rests on the
+  conversation's own `xmin`, exactly as that class's first pass already documents for itself.
+- **`Online` still gates it.** An `Offline` or `Away` operator is never selected — inherited from the
+  existing predicate with only the capacity clause removed, so no second `Online` literal exists to
+  drift. With nobody online, nothing is assigned at any age; that case is `14-04`'s auto-reply and is
+  untouched.
+
 The one residual, stated rather than designed away: the release is issued *after* the close commits,
 so a process death in that window leaks exactly one slot. Releasing before the commit would be worse -
 a save that then loses on `xmin` would leave the conversation assigned with its slot already handed

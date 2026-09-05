@@ -203,6 +203,13 @@ denial.
   what stops the second `SaveChangesAsync` from silently overwriting the first's already-committed row.
   `ux_operator_invites_code_hash` (unique) is how redemption looks a code up.
 
+  **`23-05` added one more: `assignment_penalty_seconds` (`integer`, default `120`)** - how long a
+  conversation may wait before the assignment engine is allowed to ignore capacity for it. Additive,
+  reversible, and read by the claimer *inside its own transaction* rather than through the site-settings
+  cache every other column here goes through (`caching.md`'s own entry for it). The same migration
+  widened `ck_conversation_assignments_source` to admit `Additional`, which `23-03` had deliberately
+  deferred until a real writer existed.
+
   `sites` gained two columns in the same wave: `tier` (`text`, default `'free'`) and `seat_limit`
   (`integer`, default `1`) - nothing in `13-01`'s own scope changes either away from its default; that
   is `13-02`'s job once a real payment exists to drive it.
