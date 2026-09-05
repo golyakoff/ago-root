@@ -61,6 +61,21 @@ is worse than none, because it looks like compliance.
 - The tenant's own acceptance — `24-03`.
 - The processing instruction's contents — `24-06`, though reading 3 would put the operator inside it.
 
+## The exemption `24-01` leaves behind does not extend to this item
+
+`24-01` built `RecordAcceptanceHandler`/`GetAcceptancesForSubjectHandler` with **no host endpoint**, and
+both are listed in `TenantScopeExemptions` — correct for that item, because neither takes a `SiteId` and
+no route maps to either, so there is nothing yet for a permission policy to sit behind.
+
+This item builds one of the real entry points, and the exemption entries will already be in the file
+when it starts. Two things follow, and neither is negotiable:
+
+- **The subject comes from the validated principal, never from a parameter the caller supplies.** An
+  endpoint that accepts a subject id and checks it matches is the same defect with an extra step.
+- **The exemption covers the handler, not the route.** Adding an endpoint means the route carries its
+  own authentication and authorisation, argued in this item rather than inherited from a line written
+  when there was no route at all.
+
 ## Done when
 
 - [ ] The reading is chosen and recorded as an ADR that names the alternatives and why each lost.
