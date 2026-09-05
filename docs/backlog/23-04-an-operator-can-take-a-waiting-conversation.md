@@ -1,7 +1,10 @@
 # an operator can take a waiting conversation, and the system records that they chose to
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05), `ago-chat#179`, `ago-console#112`, `adr/0105`. The schema gap
+  this item found — `23-03`’s CHECK constraint not admitting `Taken` — was closed by a second
+  migration once `23-02` released the wave’s slot, and closing it exposed a unique-index race the
+  constraint failure had been masking.
 - **Depends on**: `23-03` — the interval store and its `source` column; this item adds the `Taken`
   value and a fifth writer
 - **Decision**: `docs/design/decisions.md` §2, first three bullets
@@ -72,18 +75,18 @@ automatic assignments on top of what they took — double-loaded by their own in
 
 ## Done when
 
-- [ ] An operator takes a `Waiting` conversation from the rail and it becomes theirs.
-- [ ] A take when `active_chats >= capacity` succeeds and `active_chats` ends one higher — asserted,
+- [x] An operator takes a `Waiting` conversation from the rail and it becomes theirs.
+- [x] A take when `active_chats >= capacity` succeeds and `active_chats` ends one higher — asserted,
       because this is the invariant the previous design forbade.
-- [ ] Closing a taken conversation releases exactly one slot (`6-09`'s existing test, extended).
-- [ ] A reconnect join of an already-held conversation does not increment — a concurrency test.
-- [ ] Two operators racing to take one conversation: one wins, the other gets
+- [x] Closing a taken conversation releases exactly one slot (`6-09`'s existing test, extended).
+- [x] A reconnect join of an already-held conversation does not increment — a concurrency test.
+- [x] Two operators racing to take one conversation: one wins, the other gets
       `Conversation.InvalidState`, and `active_chats` rose by exactly one.
-- [ ] An operator of another tenant cannot claim by id — the `17-01` guard, asserted through the new
+- [x] An operator of another tenant cannot claim by id — the `17-01` guard, asserted through the new
       route as well as through the hub.
-- [ ] Every interval opened by this path carries `Taken`; every interval opened by a claimer still
+- [x] Every interval opened by this path carries `Taken`; every interval opened by a claimer still
       carries `Assigned`.
-- [ ] `data-model.md`'s `operators` section and `concurrency.md`'s assignment section state the new
+- [x] `data-model.md`'s `operators` section and `concurrency.md`'s assignment section state the new
       rule; the ADR exists.
 
 ## Open questions
