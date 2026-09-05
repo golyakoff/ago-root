@@ -125,21 +125,45 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     something already running"; an empty directory does not. Cost is the other half of the reason:
     every spawn pays a full cold start rediscovering repository structure, and one measured wave of
     three workers cost roughly 840,000 tokens.)
-13. **"Го по жире" is a standing request with fixed terms.** When the author says it, the managing
-    session may run **up to three** background workers on `sonnet`, in parallel, **each in its own
-    isolated worktree** — and opens their pull requests **strictly one at a time**.
-    - **Three is a ceiling, not a target, and non-interference is the precondition.** Judging whether
-      two items collide is the managing session's job before spawning anything: the same repository
-      *file*, the same EF migration, the same shared index, or one item's output being the other's
-      input all mean they do not run together. When in doubt, run fewer.
+13. **Three lanes, held continuously — not waves.** The managing session keeps **three** background
+    workers running on `sonnet`, each in its own isolated worktree, and **refills a lane the moment it
+    frees** rather than batching the next three together. Their pull requests still open **strictly one
+    at a time**. No request is needed to start or continue this; it is the normal state.
+    - **One of the three is the migration lane.** Only items needing an EF migration go in it, and only
+      one at a time. The other two take items that need none. This is not caution about migrations —
+      it is that `AgoChatDbContextModelSnapshot.cs` holds the *whole* model and every migration's
+      `Designer.cs` embeds a copy, so two concurrent `ef migrations add` rewrite the same file from
+      different bases. The visible part is a conflict; the dangerous part is resolving it by taking one
+      side, which drops the other branch's columns from the model state — and EF then generates the
+      *next* migration as a diff against a snapshot that is a lie. That breaks two items later, not at
+      the merge.
+    - **Refilling beats batching for a specific reason.** A wave stalls on its slowest lane: two workers
+      finish, and their capacity sits idle until the third reports. Refilling one lane at a time also
+      makes collision-checking easier, because there is one new item to place against two known ones
+      rather than three against each other.
+    - **Non-interference is still the precondition, and judging it is the managing session's job before
+      spawning anything**: the same repository *file*, the same shared index, or one item's output being
+      the other's input all mean two items do not run together. Sharing a repository is not a collision;
+      sharing a file is. When in doubt, run two.
+      Two collisions on 2026-09-05 came from checking topics rather than files — `23-21` and `23-23` met
+      on two calendar screens, `23-21` and `23-02` on the same `/operators/me` response — so the check
+      is: what files will this item plausibly touch, against what the running lanes already hold.
     - **Sequential PRs are the half that is easy to skip.** Two branches cut from the same `main` and
       opened at once means the second goes stale the moment the first merges, and a pushed branch with
       a stale base is close-the-PR-and-rebuild rather than a rebase (rule 10). Land one, then cut the
       next from the `main` that now contains it. `land-a-slice` already required this for the shared
-      indexes; under this rule it applies to every PR in the wave.
+      indexes; under this rule it applies to every PR, and holds all the harder now that lanes are
+      refilled independently rather than finishing together.
     - Everything else stands unchanged: workers still never spawn anything (rule 12), never write
       history (rule 9), and hand back commit-prep blocks the managing session executes.
-    (Agreed 2026-09-02, generalising what had until then been decided per-wave.)
+    (Agreed 2026-09-02 as a per-request ceiling of three, phrased around the author saying "го по
+    жире". Amended 2026-09-05 into a continuous three, with one lane reserved for migrations: the
+    per-wave phrasing had become a per-wave *stall*, and the author had by then asked for the lanes to
+    be refilled four separate times in one day. The migration lane was the author's own call, taken
+    over the alternative of running migration items in parallel and regenerating them in a planned
+    order at landing — declined because there is one Docker Desktop, so parallel migration branches
+    would queue for the same containers at verification anyway, buying little and adding the snapshot
+    hazard above.)
 14. **A ticket ends in an explicit state, and unfinished work always gets a number of its own.**
     - **Solved → close as done** (`gh issue close <n> --reason completed`). **Cancelled → close as
       won't-do** (`gh issue close <n> --reason "not planned"`). Passing no `--reason` silently means
