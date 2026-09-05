@@ -1275,6 +1275,65 @@ screen in either product prints a rate a reader cannot judge.
 
 ---
 
+## Stage 24 — Consent, and the documents people agree to
+
+**Goal:** every person whose data this system holds is processed on a basis somebody can name, and
+where that basis is their agreement, the agreement can be produced afterwards — which version, when,
+and by whom.
+
+**Where the engineering ends and the lawyer begins, restated because this stage sits on the line.**
+`personal-data.md` already draws it: the published policy, the offer, the processing clause in the
+tenant agreement and the regulator notification belong to `ago-business` and to a lawyer. This stage
+builds **mechanisms**, and produces the facts a drafting lawyer needs. It writes no legal text, and
+`16-04` set the precedent for why — AGO supplies the mechanism, the tenant owns the words.
+
+**What is already done, and it is more than it looks.** `adr/0076` (`16-04`) decided the split: AGO is
+**controller** for its own account holders, and **processor on the tenant's instruction** for visitors'
+conversation data. `16-04` shipped the widget's processing notice, with the tenant's text and the
+tenant's link. `personal-data.md` holds the register of every store. Three of the four hard things are
+in place.
+
+**What is missing is one thing, and it is not a document.** Nothing records that anybody agreed to
+anything. A notice tells; a consent is agreed to and must be provable afterwards. Grepping `ago-chat`
+for consent, acceptance and terms finds nothing that records an act.
+
+**The shape of the answer, per role — and it is not the same shape three times:**
+
+- **The tenant** is on a contract basis (`152-ФЗ` art. 6 ч. 1 п. 5), so a consent tick would be *wrong*
+  rather than merely redundant: a consent that cannot be refused without losing the service is not
+  freely given, and the rules in force from 1 September 2025 name that pattern directly. What they
+  accept is the agreement; anything beyond contract necessity is a separate, refusable control.
+- **The operator** is the role `adr/0076` does not resolve. They registered with AGO, but the party to
+  AGO's contract is their employer. Three readings, one of which needs `adr/0076` superseded. This is
+  where the lawyer is genuinely needed, and it is filed as an item so the question has an owner and an
+  end state rather than living in a conversation.
+- **The visitor** is the tenant's customer, not ours. Their consent is the tenant's to collect and ours
+  to carry — and it attaches to **handing over contact details**, not to opening the chat. Checked
+  against a competitor under the same law: Jivo gates its contact form on the tick, not the
+  conversation, and keeps marketing as a second control that cannot be bundled with the first.
+
+**One product question this stage surfaces rather than settles.** `16-04` recorded that AGO never
+authors a default notice text. Jivo does offer a template. The trade is real in both directions — our
+stance risks a small tenant leaving the feature off for want of any text, theirs risks a generic
+document shown to every visitor of every tenant by a platform that is not party to the relationship.
+`24-05` records it; it is the author's call and, if it changes, `16-04` is superseded rather than bent.
+
+**The order that matters.** `24-01` (the record) and `24-02` (the versions it points at) come before
+anything that shows a document. `24-06` can run at any time and should run early, because it is the
+one that produces facts a lawyer is otherwise left to guess at — including where the data physically
+sits, which is the element most likely to turn up a finding rather than a citation.
+
+**Legal citations throughout are for orientation, not advice** — the same footing `personal-data.md`
+already uses for the localisation rule.
+
+**Done when:** a person accepting something leaves a record naming the version they accepted; that
+version stays readable afterwards; no screen asks for a consent the contract already covers; the
+operator's basis is decided and written down; a tenant who needs their visitors' consent can collect it
+at the contact form without AGO writing their words; and the processing instruction in the tenant
+agreement can be drafted from stated facts rather than from memory.
+
+---
+
 ## Guardrails for all stages
 
 - No stage is "done" with a red arch test, a skipped concurrency test, or a doc the code contradicts.
