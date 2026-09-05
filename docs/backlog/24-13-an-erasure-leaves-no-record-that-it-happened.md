@@ -1,7 +1,7 @@
 # an erasure can be proven afterwards
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-05). `erasure_records`, minted at request time and updated in place by the jobs; `adr/0112` for what it may and may not name.
 - **Depends on**: `16-02` (shipped — the erasure this must become provable)
 - **Decision**: `personal-data.md`, "Deletion versus backups" — a deletion **journal** was deliberately
   rejected, and this item must not reintroduce one
@@ -52,14 +52,50 @@ produce, which is `24-06`. The rejection was of the wrong artifact, and it took 
 
 ## Done when
 
-- [ ] Every erasure — conversation and site — writes a record that survives the erasure.
-- [ ] The record contains no identifier of the person erased, asserted by a test, because that is the
+- [x] Every erasure — conversation and site — writes a record that survives the erasure.
+      *Minted at request time in the same statement that stamps the flag, so a crash between the two is
+      not a state the system can be in. `site_id`/`requested_by` carry no foreign key, so a site's own
+      receipt outlives the `DeleteSiteAsync` it is evidence of.*
+- [x] The record contains no identifier of the person erased, asserted by a test, because that is the
       one property that makes this item safe to build at all.
-- [ ] `personal-data.md` has a row for it.
-- [ ] `processing-instruction-facts.md` Element 6 moves this line out of "could not be produced".
+      *Asserted over the **real persisted row** — every column value serialised, neither the
+      conversation id nor the visitor id permitted anywhere in it — not over the type. Re-proven biting
+      at review: making the failure reason quote the conversation id turns it red while the other three
+      stay green.*
+- [x] `personal-data.md` has a row for it.
+- [x] `processing-instruction-facts.md` Element 6 moves this line out of "could not be produced".
+      *Moved with its limit attached rather than as a clean win — see Outcome.*
 
 ## Open questions
 
 - **How long does a receipt live?** Long enough to answer a question that arrives late, which argues
   for longer than anything else in `adr/0057`. It carries no personal data of the erased person, which
   makes that affordable — but it does carry the operator's id, so it is not free either.
+
+## Outcome
+
+**The gap closes, and the honest version of that sentence has a clause.** Element 6 no longer lists
+"proof that an erasure happened" among the things this system cannot produce — but the row that
+replaces it says what the proof does *not* cover. Asked whether a named person's data was destroyed,
+this system shows that an erasure ran for the right tenant, by the right operator, at the right time,
+with real counts. It cannot say *which visitor* from this table alone, and a conversation erased under
+a whole-site cascade leaves only the site's aggregate count.
+
+That is deliberate and is the substance of `adr/0112`: an erasure receipt that names the erased person
+keeps a pointer to exactly the person whose pointer was supposed to disappear. It is also the decision
+in this item least forced by the evidence, and the first to revisit if a real compliance request turns
+out to need per-person proof after a site-wide erasure.
+
+**It points opposite to `adr/0111`, three items earlier, and that is the interesting part.** An
+acceptance record must name who consented — naming them is its content. An erasure receipt must not.
+The same identifier is load-bearing in one and self-defeating in the other, which is why the sibling
+precedent could not simply be copied.
+
+**Failure is an outcome, not an absence.** A cycle that fails writes `Failed` with what it finished and
+an exception **type name** — never a message, because a message can quote an object key. Unlike
+`ExportStatus`, `Failed` can move back to `Completed`, because erasure retries forever.
+
+**No port, deliberately.** `ErasureRecordQuery` is a plain static query class in `Ago.Chat.Worker`,
+the same category as `ConversationErasureQuery` and `OutboxPruneQuery`: background bookkeeping on a
+timer, no request handler, no second caller, no test needing a fake. A port here would be the
+premature generalisation `clean-architecture.md` names as the platform layer's failure mode.
