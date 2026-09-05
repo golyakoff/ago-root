@@ -320,6 +320,69 @@ for dir in "$primary_root" $(printf '%s\n' $MIRROR_REPOS | sed "s|^|$workspace/|
 done
 [ "$primary_dirty" = "0" ] && echo "No primary checkout carries uncommitted tracked changes."
 
+echo
+# **Work that exists only as uncommitted files in a worktree is invisible to everything else.** Not to
+# this script before today, not to `git log --grep` (which finds commits), not to CI, not to the board.
+# The item's queue row stays open and honest the whole time - and *open* and *nobody has started* look
+# identical, so the next brief written from that row rediscovers what was already built.
+#
+# 2026-09-05 is why this exists. Four items were found in one afternoon whose work had been written and
+# left behind: `23-17`'s console half twice, in two worktrees, plus a documentation half in a third that
+# contained the item's own ADR; and the documentation halves of `23-06`, `23-22` and `24-11`, two of
+# which also carried an ADR (`0109`, `0110`). Three ADRs in total had been written while their code was
+# merged, which is what the gaps in `docs/adr/README.md`'s numbering actually were. Every one was found
+# by accident, by somebody reading nearby code for an unrelated reason.
+#
+# This reports every worktree carrying uncommitted tracked changes, and says whether its item is still
+# open. In-flight work shows up here too and that is correct - the line is a statement of what exists
+# nowhere else, not an accusation. What it makes impossible is *not knowing*.
+# Two passes rather than one list, because the two cases need different amounts of attention. A
+# worktree for an item that is still open may be the half nobody knows exists - that one gets its
+# files printed. A worktree for an item already closed is almost always a leftover from a rebuild,
+# so it gets a single line: worth removing, not worth reading.
+wt_open=""
+wt_closed=""
+for dir in "$primary_root" $(printf '%s\n' $MIRROR_REPOS | sed "s|^|$workspace/|"); do
+  [ -e "$dir/.git" ] || continue
+  for wt in $(git -C "$dir" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}'); do
+    [ "$wt" = "$dir" ] && continue
+    # `.claude/worktrees/` is the agent runtime's own isolation, not task work. Never reported and
+    # never touched: pruning those is what once left a worker unable to resume.
+    case "$wt" in *".claude/worktrees"*) continue ;; esac
+    dirty="$(git -C "$wt" status --porcelain --untracked-files=no 2>/dev/null)" || continue
+    [ -n "$dirty" ] || continue
+    item="$(basename "$wt" | grep -oE '[0-9]+-[0-9]+' | head -1 || true)"
+    if [ -n "$item" ] && printf '%s\n' "$open_raw" | grep -qE "\|$item · "; then
+      wt_open="$wt_open$wt|$item
+$(printf '%s\n' "$dirty" | head -8 | sed 's/^/    /')
+"
+    else
+      wt_closed="$wt_closed  $wt
+"
+    fi
+  done
+done
+
+if [ -n "$wt_open" ]; then
+  echo "Uncommitted work in a worktree, for an item that is still OPEN:"
+  printf '%s' "$wt_open" | while IFS= read -r line; do
+    case "$line" in
+      *"|"[0-9]*) echo "  $(printf '%s' "$line" | cut -d'|' -f1)  ($(printf '%s' "$line" | cut -d'|' -f2) is open)" ;;
+      *) [ -n "$line" ] && echo "  $line" ;;
+    esac
+  done
+  echo "  This exists nowhere else. It is on no branch and in no commit, so nothing else can see it -"
+  echo "  not this script's other checks, not \`git log --grep\`, not CI, not the board."
+fi
+
+if [ -n "$wt_closed" ]; then
+  echo
+  echo "Uncommitted changes in worktrees whose item is already closed (leftovers, safe to remove once read):"
+  printf '%s' "$wt_closed"
+fi
+
+[ -z "$wt_open$wt_closed" ] && echo "No worktree carries uncommitted tracked changes."
+
 # Flagged entries are for a human to resolve, so this is not an error exit - it is a report. A CI job
 # that failed on this would train people to close issues to make it green, which is the opposite of
 # the point.
