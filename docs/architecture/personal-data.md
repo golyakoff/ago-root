@@ -271,7 +271,9 @@ paragraph originally measured against, not the five-place one it warned a carele
 change would produce. The `operators` row above states what does reach it (`23-02`) and what removes
 it — still the ordinary site cascade, still nothing narrower. A body added to an integration event
 would still be the five-place mistake this paragraph warns against; `23-02` is the proof that the
-warning is avoidable, not that it no longer applies.
+warning is avoidable, not that it no longer applies. `23-17`'s own `OperatorLoadReportReadStore` (a
+second reader over `conversation_assignments`, joined to `operators` at read time) holds the claim to
+exactly this same standard — one more `JOIN operators`, never a second copy.
 
 ## Standing constraints
 

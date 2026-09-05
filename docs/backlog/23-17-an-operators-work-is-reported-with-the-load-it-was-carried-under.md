@@ -1,7 +1,7 @@
 # an operator's work is reported with the load it was carried under
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). Backend in the morning, console eight hours later — see the Outcome for why they were apart, which is the more useful half of this record.
 - **Depends on**: `23-03` (the intervals this reads — there is nothing to report without them),
   `23-16` (the rate and comparison rules, or this ships a second, laxer version of them), `23-02`
   (a row a reader can recognise as a person)
@@ -105,19 +105,60 @@ backwards from what either item intended.
 
 ## Done when
 
-- [ ] The per-operator table shows standard and additional as separate absolute counts, with a total,
+- [x] The per-operator table shows standard and additional as separate absolute counts, with a total,
       and no figure combines them.
-- [ ] Response time is reported per load bucket, and a fixture with a known overlap produces the
+- [x] Response time is reported per load bucket, and a fixture with a known overlap produces the
       expected bucketing.
-- [ ] An operator who never exceeded capacity shows zero additional and is not thereby made to look
+      *The console renders it as a fifth table rowed by operator × bucket rather than a column per
+      bucket, because the bucket count is configuration and a column-per-bucket table changes width
+      when a tenant's does. It needs no sort of its own: `OperatorLoadReportReadStore` folds into a
+      `SortedDictionary` keyed by bucket index, so `byLoad` arrives ascending.*
+- [x] An operator who never exceeded capacity shows zero additional and is not thereby made to look
       worse or better — asserted, because a zero in a comparison column is the easiest thing to
       render as a criticism.
-- [ ] The word "forced" appears in no user-visible string in either repository.
-- [ ] `23-16`'s rules hold on every rate this screen prints.
-- [ ] Another tenant's per-operator figures cannot be read.
-- [ ] A conversation an operator held twice (transferred away and back) is counted once as a
+      *Structural, not asserted-and-hoped: the `Table` component has no per-cell styling hook at all.
+      The test gives a future regression something to fail against.*
+- [x] The word "forced" appears in no user-visible string in either repository.
+      *Grepped in both: every hit is "enforced", doc-comment prose, or a test's own `.not.toContain`.*
+- [x] `23-16`'s rules hold on every rate this screen prints.
+- [x] Another tenant's per-operator figures cannot be read.
+- [x] A conversation an operator held twice (transferred away and back) is counted once as a
       conversation and twice as an interval, and the screen says which it is showing.
+      *One meta line under the table, rather than leaving a reader to infer a unit change from two
+      adjacent column headers.*
 
 ## Open questions
 
 None.
+
+## Outcome
+
+**Three of this item's four halves were written and lost, and that is the finding worth more than the
+feature.** The backend merged in the morning (`3707f45`). The console half was written **twice** — two
+working trees, 07:05 and 10:49 — and neither was committed. A documentation half, including this
+item's own `adr/0107`, sat in a third. Only the backend reached `main`.
+
+So a decision this project's working agreements say must be recorded in the same change as the code —
+*a new port rather than a fifth method on `IOperatorAnalyticsReadStore`* — shipped with no ADR at all,
+and the ADR explaining it existed the whole time, one directory away.
+
+**Nothing in the tooling can catch this.** `queue-audit.sh` reads issues and Done-when boxes; work that
+exists only as unstaged files in a directory is invisible to it and to everything else. The item's row
+correctly stayed open the whole time — the system was working. What failed is that *open* and *nobody
+has started* looked identical, and a brief written from the row alone (this one's was) rediscovers from
+scratch what was already done.
+
+It was found only because `23-18` built the operator's own view of the same figures and its implementer
+went looking for how the tenant's screen rendered them. That is luck, not process. The `background-worker-brief`
+skill's §0.5 exists for exactly this and asks for `git log --grep` per repository — which finds
+*committed* work and would not have found any of these three either.
+
+**The third attempt is the one that landed, and it is a different shape.** Rows rather than columns for
+the load buckets, which is why it needs no bucket sort of its own. The two abandoned console attempts
+are superseded rather than lost; their working trees are left untouched, because they carry somebody
+else's uncommitted changes and are not this session's to discard.
+
+**The recovered documentation had to be corrected before it could land.** `ui-inventory.md`'s abandoned
+text described nine columns on the By-operator table — the column-per-bucket design of the second
+attempt, not the row-based one that shipped. Moving a diff across bases is not the same as moving a
+true statement, and this is the case where reading it rather than applying it mattered.
