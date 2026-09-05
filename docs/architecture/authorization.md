@@ -363,6 +363,20 @@ with the second write either, and a rule stated in one place is what would have 
 /api/v1/owner/sites/{siteId}/modules[/{moduleKey}]`, the platform owner granting or revoking a module
 for a named tenant with no payment - a trial, or the repair of a payment that provisioned nothing.
 
+**`23-13` made the `DELETE` asymmetric** (`adr/0118`): revoking a grant the owner made is unchanged,
+but revoking a tenant's own self-service purchase (`EnabledModule.GrantedByOwner` `false`) is refused
+- `Module.RevokePurchaseRequiresForce` - unless the request states both a `Force` flag and a non-blank
+`Reason`, checked before the handler touches the module or the row (`Module.RevokeReasonRequired` if
+the flag is set with no reason). This is **not a second access-control gate**: `RequirePlatformOwner`
+on the route remains the entire authorization story for who may call it at all, exactly as for every
+other owner surface on this page. Force/reason gate a *business* decision the caller has already been
+authorized to make - the same way `EnableModuleForSiteAsOwnerHandler`'s own `ExpiresAt` bound is a
+business rule, not an authorization one. Every exercised override is recorded in its own table,
+`module_revoke_overrides` - who (the caller's Keycloak `sub`, recorded, never authorising), when,
+which site, which module key, and why, in free text - because the override exists precisely so a
+tenant can be stopped regardless of what they paid, which is also what makes it the act that later has
+to be justified.
+
 All three share the shape `12-02` established for the read, and it is the shape that matters here:
 **`RequirePlatformOwner` on the route is the entire access-control story, and the handlers make no
 second check.** They carry no `OperatorId`, call no `IPermissionChecker`, and structurally cannot -

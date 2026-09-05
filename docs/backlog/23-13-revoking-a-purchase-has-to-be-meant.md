@@ -1,7 +1,7 @@
 # revoking a purchase has to be meant, and the override is recorded
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06). A force flag with a required reason, an asymmetric refusal, and `module_revoke_overrides` for every override exercised.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §6, the *`--force` exists, and it is recorded* amendment
   (2026-09-04)
@@ -83,16 +83,51 @@ used against.** So: who, when, which tenant, and why.
 
 ## Done when
 
-- [ ] Revoking a module with `granted_by_owner = false` without the flag is refused, with an error
+- [x] Revoking a module with `granted_by_owner = false` without the flag is refused, with an error
       that says which kind of entitlement it is.
-- [ ] The same call with the flag and a reason succeeds and writes exactly one record.
-- [ ] The flag without a reason is refused before the handler runs.
-- [ ] Revoking an owner-granted module is unchanged and writes no override record.
-- [ ] The recorded subject is the authenticated platform owner, asserted through HTTP rather than
+- [x] The same call with the flag and a reason succeeds and writes exactly one record.
+- [x] The flag without a reason is refused before the handler runs.
+- [x] Revoking an owner-granted module is unchanged and writes no override record.
+- [x] The recorded subject is the authenticated platform owner, asserted through HTTP rather than
       through the handler alone.
-- [ ] A caller without the realm role gets the same refusal as today and nothing is written.
-- [ ] `authorization.md` and `data-model.md` carry it; the ADR or amendment exists.
+- [x] A caller without the realm role gets the same refusal as today and nothing is written.
+- [x] `authorization.md` and `data-model.md` carry it; the ADR or amendment exists.
 
 ## Open questions
 
 None.
+
+## Outcome
+
+**The asymmetry is the whole item, and it is the thing an implementation would most easily flatten.**
+Revoking what the platform owner granted must not get harder; revoking what a tenant **paid for** must.
+An implementation that added ceremony to both would have passed a careless review and missed the point
+entirely — which is why the regression test on the unchanged path matters as much as the new refusal.
+
+**The reason is free text, and that diverges from a sibling deliberately.** `erasure_records` stores an
+exception *type name* and never a message, precisely so a message cannot leak an object key into a
+receipt. Here the opposite holds: the whole purpose of the row is that an exceptional act taken against
+a paying tenant is **justified**, and a justification that cannot name what happened is not one. So
+free text, with `personal-data.md` carrying the same caveat `conversation_notes` already does.
+
+**Two things `adr/0118` records that a reader would otherwise waste time on.**
+
+`module_grant_audit` **is not a table.** Both this item's own text and the brief that dispatched it
+referred to it as though it were; the migration of that name added two columns to `enabled_modules`.
+The ADR says so plainly, so the next reader finds a paragraph instead of hunting for a half-built
+table.
+
+And it **declines the `required`-nullable trick** that `ExpiresAt` uses to force a caller to state a
+value explicitly. Omitting `Force` is never ambiguous — absence means *not forcing* — and that trick
+belongs where a default would lie, not everywhere it once helped.
+
+**Fourth instance of one mechanism in three days.** No foreign key on `site_id`, for the same reason
+`adr/0111`, `0112` and `0113` each gave for their own tables and a fourth that is specific here: the
+tenant whose purchase was overridden and who then closes their account is exactly the one most likely
+to ask, later, who did this and why. A cascade would erase the answer along with the account.
+
+**A process note worth keeping.** The implementing worker wrote its `ago-root` changes into the
+**primary checkout** rather than a worktree, caught itself, and said so in its report. The wording it
+misread was mine: the brief said *you are not editing `ago-root`* next to *never touch `roadmap.md` or
+`adr/README.md`*, and the second reads as a gloss on the first — while this item's own Scope requires
+an `authorization.md` change. The contradiction was in the instruction, not in the worker.
