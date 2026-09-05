@@ -1,9 +1,10 @@
 # erasing a conversation erases its archived copy too
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-05) — see Outcome below
 - **Depends on**: `13-06` (shipped — the archive this must reach), `16-02` (shipped — the erasure job)
-- **Decision**: `docs/adr/0031-*` — "archiving moves the liability, it does not end it"
+- **Decision**: `docs/adr/0031-*` — "archiving moves the liability, it does not end it"; `docs/adr/0108-*`
+  — the rewrite-vs-delete-whole decision this item's own Open questions asked for
 
 ## Goal
 
@@ -55,14 +56,46 @@ itself finished. The stale comment in the erasure job is the visible edge of it.
 
 ## Done when
 
-- [ ] An erasure that runs after a conversation's messages were archived leaves no copy of them in the
-      archive — asserted by an integration test that archives first and erases second.
-- [ ] `ConversationErasureJob`'s remarks describe the system that exists.
-- [ ] `personal-data.md`'s `message_archives` row names the removal path.
+- [x] An erasure that runs after a conversation's messages were archived leaves no copy of them in the
+      archive — asserted by an integration test that archives first and erases second
+      (`ConversationErasureIntegrationTests.ErasingOneConversation_RemovesItsOwnLinesFromAnArchiveItSharesWithAnotherConversation`,
+      real Postgres and real MinIO; fails-before independently confirmed by disabling the new archive
+      step and observing the exact assertion fail).
+- [x] `ConversationErasureJob`'s remarks describe the system that exists.
+- [x] `personal-data.md`'s `message_archives` row names the removal path.
 
 ## Open questions
 
-- **Rewrite the object, or delete it whole?** An archive object covers one site, one retention class,
-  one month — many conversations. Deleting it to erase one conversation destroys other people's
-  transcripts; rewriting it is a read-modify-write on an object the prune job's gate depends on. This
-  is the real design question and it should be decided before implementation, possibly as an ADR.
+None — resolved by `docs/adr/0108-*` below.
+
+- ~~**Rewrite the object, or delete it whole?**~~ **Decided: rewrite, for a per-conversation erasure;
+  delete whole, for a whole-site erasure only once every conversation has already emptied it via the
+  rewrite path.** An archive object covers one site, one retention class, one month — many
+  conversations — so deleting it whole to satisfy one conversation's erasure would destroy other
+  people's transcripts; rewriting it is a read-modify-write, done through the same presigned-URL shape
+  `MessageArchiveJob` already uses for its own upload, with no change to `IFileStorage`'s own contract.
+  Full reasoning, alternatives and consequences in `docs/adr/0108-*`.
+
+## Outcome
+
+Shipped 2026-09-05. `ConversationArchiveEraser` (`Ago.Chat.Worker`) is the new piece: given a site and a
+conversation id, it lists every archive object the site has (`IMessageArchiveRepository.ListForSiteAsync`),
+downloads each one via the existing presigned-GET shape, drops the `messages.jsonl`/`attachments.jsonl`
+lines naming that conversation, and re-uploads the result to the same key — skipping the upload entirely
+for a period the conversation never touched. `ConversationErasureJob.EraseConversationAsync` calls it
+once per conversation, immediately before the conversation row itself is deleted (not before — see that
+method's own remarks on why the ordering is load-bearing, not cosmetic: the row is what
+`erasure_requested_at` lives on, and the retry loop depends on it still existing if this step fails).
+`SiteErasureJob.ProcessSiteAsync` deletes each of the site's own archive objects outright, once its own
+gate confirms every conversation has already been drained through the rewrite path — closing the
+"`message_archives` cascades with the site, and the `.zip` is orphaned in storage" half of this item's
+own Scope.
+
+**This does change conversation erasure's reliability and cost profile, and the report says so
+plainly**: it now depends on object storage being reachable for a read as well as a write (a failure
+here is allowed to leave the conversation flagged for retry, not tolerated the way an attachment-object
+delete failure is — silently completing while an archived copy stood would be the exact defect this item
+closes), and it can cost one HTTP round trip per archived period the site has, not only per attachment.
+
+No EF migration — `23-06`'s held the slot, per this item's own standing instruction, and nothing about
+the schema needed to change; `message_archives`' existing columns and cascade are untouched.

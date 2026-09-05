@@ -209,10 +209,12 @@ The statute's own vocabulary is a list of operations. Mapped to mechanisms that 
 Three things that table does **not** cover, each stated in `personal-data.md` and each load-bearing
 for an instruction:
 
-- **`message_archives` and its `.zip` objects are indefinite**, and `ConversationErasureJob` does not
-  reach them. Its own remarks still say "nothing archives today" — true when `16-02` was written and
-  false since `13-06` shipped. So a conversation erased today can leave an archived copy of its
-  messages standing. → **Gap `24-09`.**
+- ~~**`message_archives` and its `.zip` objects are indefinite, and `ConversationErasureJob` does not
+  reach them.**~~ **Closed by `24-09`.** Its own remarks used to still say "nothing archives today" —
+  true when `16-02` was written and false since `13-06` shipped. `ConversationErasureJob` now rewrites
+  every archive object the site has to drop the erased conversation's own lines, and `SiteErasureJob`
+  deletes the object outright once a whole site's conversations have all been drained this way
+  (`docs/adr/0108-*`; `personal-data.md`'s own `message_archives` row).
 - **The tenant export archive** (`exports/site/{siteId}/{exportId}.zip`, `16-03`) is never pruned and
   is not reached by erasure either (`personal-data.md`'s own row).
 - **RabbitMQ's leaked `deliver-to-connections.{node}` queues hold message text indefinitely** — durable,
@@ -383,7 +385,7 @@ the question it was asked, and a different question was never asked of it.
 |---|---|---|
 | `24-07` | the node's location is a label, not evidence | `adr/0026` recorded a purchase; nothing was ever asked to *verify* a location, because until `16-01` residency was "a happy accident" and afterwards it was cited for orientation |
 | `24-08` | the register says nothing about what leaves the deployment | `personal-data.md` was written 2026-08-25/26 and inventories *stores*; the six channel adapters and both AI features shipped afterwards, and its residency table still lists channel vendors as an unanswered question |
-| `24-09` | an erasure request cannot reach an archived message | `16-02` shipped before `13-06` and says so in its own remarks; the archive arrived and nothing closed the seam. `personal-data.md`'s `message_archives` row already names it |
+| `24-09` | ~~an erasure request cannot reach an archived message~~ — **closed** | `16-02` shipped before `13-06` and said so in its own remarks; the archive arrived and nothing closed the seam until this item did (`docs/adr/0108-*`) |
 | `24-10` | a controller can erase, and cannot block | Erasure was scoped; blocking was never asked for, because the product question ("delete my data") and the statutory operation list are not the same list |
 | `24-11` | one person's data, exported | `16-03` was scoped as *tenant* portability. Subject access is a different granularity and nobody noticed the two were both needed |
 | `24-12` | nothing records who read a person's data | Every control built is preventive by design and each was correct for its own item; evidential logging was never any item's goal |
