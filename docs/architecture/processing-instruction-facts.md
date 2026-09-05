@@ -288,10 +288,15 @@ project's rule is that an open weakness is fixed first and published as history 
 
 - **A record of the persons admitted to processing.** Today the answer is "one", which is why nothing
   records it, which is exactly how it stops being true silently.
-- **Any evidence of who read what.** Every isolation control above is *preventive*. The only audit
-  table in `ago-chat` is `module_grant_audit` (`Stage22AddModuleGrantAudit`, 2026-09-04), which covers
-  a platform owner granting a module to a site — not a single read of a single person's data. Nothing,
-  anywhere, records that an operator opened a conversation. → **Gap `24-12`.**
+- **Evidence of who read what — closed `24-12`, and worth reading for what it does *not* close.** Every
+  isolation control above is *preventive*; until `24-12` the only audit table in `ago-chat` was
+  `module_grant_audit` (`Stage22AddModuleGrantAudit`, 2026-09-04), covering a platform owner granting a
+  module — not a single read of a single person's data. `access_records` now covers the reads that cross
+  a boundary: the operator's cross-conversation history read and the platform owner's five cross-tenant
+  surfaces. **It does not cover an operator opening a conversation they are a party to**, deliberately —
+  that is the ordinary work the product exists for, and recording it would be a second copy of the
+  busiest table's traffic. And it does not cover **AGO Calendar's `customer:read`** at all, which is a
+  different repository on a different database and needs its own answer (`adr/0113`).
 
 `secrets.md` also has a hole this pass found: **`CHANNELS_CREDENTIAL_ENCRYPTION_KEY`, the key that
 encrypts every tenant's channel credentials at rest, is consumed by all three host manifests as a
@@ -314,6 +319,7 @@ Stated as *what could be produced today*, not what could be built.
 | Retention windows, and that something enforces them | `adr/0057`, `adr/0031`, `adr/0050`, plus the jobs listed under Element 2 | `ago-chat`, `ago-deploy` |
 | That a backup restores | A verified restore procedure that has been run | `adr/0050`, `runbooks/backup-and-restore.md` |
 | The decision record for any of the above | 90-odd ADRs | `docs/adr/` |
+| Who reached a person's data across a boundary, and when | An `access_records` row per boundary-crossing read: the operator's cross-conversation history read and the platform owner's five cross-tenant surfaces, each with actor, kind, time and the resource reached. **Closed `24-12`, with two limits stated rather than discovered.** The set of recorded surfaces is *named*, not derived from a rule, so a sixth surface is an argument for widening it rather than proof it was covered; and `customer:read` in **AGO Calendar** is not covered at all — a different repository on a different database, which needs its own mechanism or a written decision that it does not | `AccessRecordRepository.cs`, `adr/0113`, `personal-data.md` |
 | That an erasure ran, six months later | An `erasure_records` receipt per erasure request: scope, requesting operator, timestamps, per-step counts, and `Failed` with its reason where a cycle did not finish. **Closed `24-13`, and closed with a stated limit rather than fully**: the receipt names the tenant and the operator and *never* the erased person (`adr/0112`), so it proves that an erasure ran for the right site at the right time — it cannot answer *which visitor* from this table alone, and a conversation erased under a whole-site cascade leaves only the site's aggregate count. Correlating a receipt to a named person's request needs the tenant's own record of that request. **And `Completed` means reachable-now, not gone from backups**: `adr/0050`'s thirty-day window still applies | `ErasureRecordQuery.cs`, `adr/0112`, `personal-data.md` |
 
 **Could not be produced today. These are the findings.**
@@ -322,7 +328,6 @@ Stated as *what could be produced today*, not what could be built.
   access request has to export every visitor they have — which is itself a disclosure problem, not
   merely an inconvenience. Erasure is per-conversation and per-site; export has no matching
   granularity. → **Gap `24-11`.**
-- **Who accessed a given person's data, and when.** Nothing records it. → **Gap `24-12`.**
 - **Documentary evidence of where the database physically is.** → **Gap `24-07`.**
 - **What a channel provider or the LLM vendor retains** once data reaches them. Not answerable from
   these repositories at all. → part of **Gap `24-08`.**
