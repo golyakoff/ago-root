@@ -97,9 +97,10 @@ not who is legally answerable for them — that second question is `16-04`'s and
 | Redis | Rate-limit buckets — one keyed by **client IP** (`register-site:ip:{ip}`); presence sets and the connection registry, keyed by principal | AGO | Bucket TTL is `ceil(capacity / refill_per_second) + 1` seconds — **≈3601 s (~1 h) for the IP bucket at its default capacity 10, refill 10/3600**. Registry entries: 30 s | Redis expiry. **But**: the deployment mounts a PVC at `/data` and passes no `command:`, so `redis:7-alpine`'s built-in RDB save points apply and the keyspace is written to disk. Expiry survives a reload, so nothing comes back alive — the snapshot file itself is never separately erased | `RegisterSiteHandler.cs:52-67`, `RegisterSiteRateLimitOptions.cs`, `RedisRateLimiter.cs` (Lua `ttl` line), `ConnectionRegistryOptions.cs:12`, `k8s/base/redis.yaml`, `docker/docker-compose.yml:45-51` |
 | RabbitMQ, `deliver-to-connections.{node}` queues | **Message bodies**, inside `NodeDelivery.PayloadJson` | AGO | Milliseconds in steady state. **The exception**: the node id is the pod name (`HOSTNAME`), the queue is `durable, autoDelete: false`, and nothing deletes it — so each pod replacement leaves a queue behind, holding whatever was in flight when the pod died, indefinitely. Publishing to a dead node stops within the registry's 30 s TTL, which bounds *how much*, not *how long* | Nothing automatic. `NodeDeliveryConsumer`'s own remarks already call the queue leak "accepted, not solved… nothing in this project has a queue-retention policy yet" — what was not recorded anywhere is that the leaked queue can contain message text | `NodeFanoutPublisher.cs`, `MessageDto.cs`, `NodeTopics.cs`, `ServiceCollectionExtensions.ResolveNodeId`, `RabbitMqEventConsumer.cs:41-46`, `NodeDeliveryConsumer.cs:15-23`, `k8s/base/rabbitmq.yaml` |
 | RabbitMQ dead-letter queues (`*.dlq`) | The full envelope of a poisoned message — including a `NodeDelivery` body, for `deliver-to-connections.{node}.dlq` | AGO | **Indefinitely.** Durable, no TTL, no consumer, no purge job | Nothing automatic | `RabbitMqEventConsumer.cs:59-61`, `NodeDeliveryConsumer.cs:47` |
-| `outbox.payload` | Body-free by contract — ids, kinds, sequences, trace context | AGO | **Forever.** Rows are stamped `published_at` and never deleted | Nothing automatic | schema snapshot; no `DELETE FROM outbox` exists anywhere in either backend repo |
-| `webhook_deliveries.payload` | Body-free by contract | AGO | Forever | Nothing automatic | `DispatchWebhooksForEventHandler.cs:61-67` |
-| `webhook_deliveries.response_snippet` | Up to 2000 characters of **the tenant's own server's response body**, whatever it happens to contain | AGO | Forever | Nothing automatic | `WebhookDelivery.MaxResponseSnippetLength`, `HttpWebhookDeliveryClient.cs:176-183` |
+| `outbox.payload` | Body-free by contract — ids, kinds, sequences, trace context | AGO | **24 hours.** Corrected 2026-09-05 by `24-06`: this row said "Forever … no `DELETE FROM outbox` exists anywhere in either backend repo", which was true when it was written and stopped being true when `15-04` shipped. A published row now lives long enough to be inspected after an incident and no longer | `OutboxPruneJob` (`15-04`), a batched `DELETE` of published rows every 10 minutes | schema snapshot; `Ago.Chat.Worker/OutboxPruneJob.cs`, `OutboxPruneJobOptions.cs`, registered at `Ago.Chat.Worker/Program.cs:243` |
+| `inbox` (idempotency rows) | Message ids consumers have already handled — no personal data of its own; listed so the row beside it is not read as "nothing else is pruned" | AGO | **24 hours** | `InboxPruneJob` (`15-04`) | `Ago.Chat.Worker/InboxPruneJob.cs`; `Program.cs:255` |
+| `webhook_deliveries.payload` | Body-free by contract | AGO | **30 days.** Corrected 2026-09-05 by `24-06`, same reason as `outbox` above | `WebhookDeliveryPruneJob` (`15-04`) — the window is `6-03`'s own supportability floor, "a tenant debugging yesterday's failure", not a shorter number | `DispatchWebhooksForEventHandler.cs:61-67`; `WebhookDeliveryPruneJobOptions.cs`; `Program.cs:249` |
+| `webhook_deliveries.response_snippet` | Up to 2000 characters of **the tenant's own server's response body**, whatever it happens to contain | AGO | **30 days** — the same prune, the same row | `WebhookDeliveryPruneJob` (`15-04`) | `WebhookDelivery.MaxResponseSnippetLength`, `HttpWebhookDeliveryClient.cs:176-183`; `WebhookDeliveryPruneJobOptions.cs` |
 | The visitor's own browser | `localStorage`: the signed visitor token (7-day `exp`), the visitor id, the current conversation id, a last-seen sequence per conversation. **No message bodies** | The visitor's device | The token expires after 7 days — but it is renewed at the point of use (`17-07`+`17-08`, `adr/0048`), so a returning visitor's `exp` slides forward indefinitely and the shorter number buys no deletion here; **the `localStorage` entries themselves never expire at all** — the widget has no clear path and no "forget me" control | The visitor clearing site data. Nothing in the product | `ago-widget/src/storage.ts`, `JwtTokenService.VisitorTokenLifetime`, `adr/0034`, `adr/0048` |
 | The operator's own browser | `sessionStorage`: the OIDC tokens for scope `openid profile email`, so the ID token carries email and name | The operator's device | Cleared when the tab closes — `oidc-client-ts` with `WebStorageStateStore(sessionStorage)`, chosen deliberately over `localStorage` | Closing the tab; signing out | `ago-console/src/auth/userManager.ts:15-26` |
 | Traces (Jaeger) | **Audited 2026-08-26 (`16-05`) against real traffic, not read off the code.** 28 distinct span-attribute keys across the three services. Ids, routes, connection ids, topic names, outbox ids — plus two nobody in this project wrote: `db.query.text`, the **full SQL statement text** on every database span (parameterised, so no values), and `url.full` on every outbound HTTP call. **No message body, no email, no client IP.** The inbound query string is `Redacted` by the ASP.NET Core instrumentation (`17-02`) and the outbound one by the .NET runtime's own URI redaction (`16-05`, guarded by a test); `db.npgsql.data_source` carries the connection string with the **password stripped by Npgsql**. **The "no token" half of that audit stopped being true when `14-07` landed, and was reinstated 2026-09-02.** `16-05` reasoned about `url.full` on the premise that "the only outbound call is a webhook", so the only secret that could ride an outbound URL was one a tenant had put in a *query string* — which is redacted. `14-07` added a provider that puts its credential in the **URL path**: Telegram addresses every method as `/bot<token>/{method}`, and no instrumentation redacts a path. Every `sendMessage`, `getUpdates` and `getMe` span therefore carried a live bot token, in plain text, into this deployment's own Jaeger — the same secret through the same shape of hole as `14-07`'s already-fixed *logging* leak, and missed by that fix because OpenTelemetry listens to `System.Net.Http`'s `DiagnosticSource` from below the `HttpClient` handler chain, where a redacting `DelegatingHandler` cannot reach. Closed by `Ago.Chat.Infrastructure.Telegram.TelegramTraceUrlRedaction`, an instrumentation enrichment that rewrites the token segment out of `url.full` and leaves every other client's span untouched; proven by a test that fails, printing the token, if the enrichment is unwired. **The premise, not the conclusion, is what to carry forward**: "no secret in `url.full`" is now a per-provider claim, and any future channel that authenticates in a URL path needs the same treatment | AGO | **Bounded by count, not by time: 10000 traces**, evicted oldest-first by Jaeger's own in-memory ring (`adr/0057`). At the current probe-dominated trace rate that is on the order of an hour. Still in-memory only, so also destroyed by a pod restart | The ring evicting it; a pod restart | Jaeger's own query API, read after driving real traffic through the local cluster; `k8s/base/jaeger.yaml` |
@@ -197,12 +198,19 @@ change as this file. **Preserve this**: a "show the original filename" feature w
 
 Worth its own heading because the table's "How long" column has one dominant value.
 
-**Nothing in this system is ever deleted automatically, anywhere, except by a TTL in Redis, by the
-attachment orphan sweep, and — since `16-05`/`adr/0057` — by the telemetry retention below.** No
-message pruning, no partition drop, no outbox trim, no inbox trim, no webhook-delivery trim, no queue
-purge. Every
-"Removal path" in the table above that is not a TTL is *a thing a human or a future item would have to
-run*. `15-04` and `adr/0031` are where that changes; `16-02` is where per-person erasure arrives.
+**This paragraph used to open "nothing in this system is ever deleted automatically, anywhere, except
+by a TTL in Redis, by the attachment orphan sweep, and — since `16-05`/`adr/0057` — by the telemetry
+retention below", and listed "no outbox trim, no inbox trim, no webhook-delivery trim" among the
+absences. Corrected 2026-09-05 by `24-06`: all three exist.** `15-04` shipped `OutboxPruneJob` (24
+hours), `InboxPruneJob` (24 hours) and `WebhookDeliveryPruneJob` (30 days), all registered in
+`Ago.Chat.Worker/Program.cs`; `13-06` shipped the archive-gated `MessagePartitionPruneJob` and
+`MessageArchiveJob`; `16-02` shipped `ConversationErasureJob`/`SiteErasureJob`. The full list of jobs
+that actually run, and the three places they do **not** reach, is in
+`processing-instruction-facts.md`'s own Element 2.
+
+What still holds, and is the reason this heading exists at all: **the removal paths that are not one
+of those jobs are still a thing a human or a future item would have to run** — the tenant export
+archive, `message_archives`' objects, and the leaked node queues among them.
 
 **The telemetry exception, added 2026-08-26 by `16-05` (`adr/0057`).** Container logs — including the
 edge access log, and therefore client IPs — are kept **14 days**, enforced by a daily `CronJob` in
@@ -285,7 +293,7 @@ What this file does assert, because they are facts about this system rather than
 |---|---|---|
 | `10-05` transactional email | Which sending provider | Every account holder's email address, plus the content of verification and password-reset mail |
 | ~~`15-02` backup and verified restore~~ — **answered 2026-08-25, `adr/0050`**: the destination is the author's own machine over existing SSH, encrypted to a key the node does not hold. No vendor, no boundary crossed | — | — |
-| `20-05` / `14-03` SMS and channel vendors | Which gateway | Phone numbers, and message text on any channel that carries it |
+| ~~`20-05` / `14-03` SMS and channel vendors~~ — **partly answered by shipping, and that is the problem**. Six channel adapters have since landed (`14-02` MAX, `14-07` Telegram, `14-08` VK, `14-09` Email, `14-10` WhatsApp, `14-11` Avito), each activated per site by a tenant's own credential row, and two AI features (`19-01`, `19-02`) can send conversation history to YandexGPT on a switch that is AGO's rather than any tenant's. **SMS is still open in the sense this row meant**: no sender implementation exists at all. The destinations, and what reaches each, are tabled in `processing-instruction-facts.md` (2026-09-05); what each vendor *retains* is `24-08` | Which gateway — for SMS, still unanswered | Phone numbers, and message text on any channel that carries it |
 | `adr/0031`'s archive store | Where expired history is archived | Whole conversation transcripts |
 | Any future object-storage vendor | Where attachment bytes live | Documents and photographs visitors uploaded |
 
@@ -386,6 +394,15 @@ file, so that a change that widens the map is a change that has to think about i
 - `data-model.md` — "the file a schema change updates".
 - `.claude/skills/db-migration` — step 5 of *Making the change*.
 - `.claude/skills/messaging-contract` — step 1, on adding a field to a contract.
+
+**A fourth, added 2026-09-05 by `24-06`: `processing-instruction-facts.md`.** That file answers the
+seven things `152-ФЗ` art. 6 ч. 3 requires a processing instruction to state, assembled from this
+register and dated, so that the clause in the tenant agreement is drafted from the system rather than
+from a description of it. It is downstream of this file and cites it throughout — **a row changed here
+can make an answer there wrong**, which is the same drift this section exists to prevent. It also
+holds two things this register deliberately does not: the table of what leaves the deployment
+(channel providers, the LLM vendor), and what evidence this system could actually produce on request.
+Its eight open gaps are `24-07`…`24-14`.
 
 ## What is not decided here
 
