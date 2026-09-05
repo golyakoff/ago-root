@@ -98,6 +98,23 @@ covered. `adr/0113` says so in its own Consequences.
 and never by actor kind. Withholding the platform owner's rows would make unreadable the one question a
 tenant opens this table to ask.
 
+**A permission was added and then removed, at the author's challenge, and the reasoning is worth
+keeping.** The implementation introduced `access_record:read` as a dedicated permission on the argument
+that reading who looked at data is compliance-shaped rather than configuration-shaped. The author asked
+whether that was consistent or simply a reflex at the words *sensitive data*, and it was the reflex.
+
+This project's own rule is written in `Permission.cs`: a dedicated permission exists for a different
+**blast radius** — irreversible destruction (`site:erase`, `conversation:erase`, `attachment:delete`) or
+a complete copy leaving the system (`site:export`, `conversation:export`). For *reads*, the rule points
+the other way and is already stated twice: `webhook:manage`'s own remarks say "reading delivery history
+is not more sensitive than managing the endpoint that produces it", and `channel:manage` says the same.
+
+And the decisive fact: **`GetAllConversationsForSiteHandler` is gated on `site:configure`**, so a holder
+of that permission already reads every conversation on the site, contacts included. A separate
+permission over the *log of who read them* guards nothing from that holder, while adding a capability
+every future custom role has to reason about. The log is now gated on `site:configure`, and the rule is
+written where the permission used to be declared, so the next item does not re-add it.
+
 **A trap this codebase now has three instances of.** Adding an endpoint broke Minimal API's metadata
 build for *every* route in the affected files, inside integration tests that hand-roll a container — 35
 failures, from one unregistered handler. `23-18` hit the identical thing this morning, and the endpoint
