@@ -55,6 +55,7 @@ plus one Keycloak realm role probed separately.
 
 A twelfth, `site:manage-operators`, exists server-side and is named in a comment in
 `src/api/billingApi.ts` — the console never checks it and has no screen behind it (section 14).
+**— corrected 2026-09-05: the console checks it now (`23-22`), see the corrections section.**
 
 ---
 
@@ -114,14 +115,15 @@ A single horizontal strip of `NavLink`s, `flex-wrap: nowrap; overflow-x: auto`. 
 | 14 | Tags | `/settings/tags` | `site:configure` |
 | 15 | Billing | `/settings/billing` | `site:configure` |
 | 16 | Delete account | `/settings/delete-account` | `site:erase` |
-| 17 | Queue | `/calendar` | `calendar:configure` |
-| 18 | Setup | `/calendar/setup` | `calendar:configure` |
-| 19 | Workers | `/calendar/workers` | `calendar:configure` |
-| 20 | Availability | `/calendar/availability` | `calendar:configure` |
-| 21 | Contacts | `/calendar/contacts` | `calendar:configure` |
-| 22 | Platform sites | `/owner` | `useOwnerEligibility() === "eligible"` (appended in `OperatorShell.tsx`, not in `consoleNav.ts`) |
+| 17 | Who works here | `/settings/operators` | `site:manage_operators` |
+| 18 | Queue | `/calendar` | `calendar:configure` |
+| 19 | Setup | `/calendar/setup` | `calendar:configure` |
+| 20 | Workers | `/calendar/workers` | `calendar:configure` |
+| 21 | Availability | `/calendar/availability` | `calendar:configure` |
+| 22 | Contacts | `/calendar/contacts` | `calendar:configure` |
+| 23 | Platform sites | `/owner` | `useOwnerEligibility() === "eligible"` (appended in `OperatorShell.tsx`, not in `consoleNav.ts`) |
 
-**This is a flat list of up to 22 items in one horizontal strip.** There is no grouping, no section
+**This is a flat list of up to 23 items in one horizontal strip.** There is no grouping, no section
 heading, no submenu, and no visual break between "chat", "settings", "calendar" and "platform".
 Two labels are ambiguous out of context — "Queue" (calendar) sits ten items after "Conversations"
 (the chat queue), and "Setup"/"Install widget" are both first-run installation screens for two
@@ -1380,6 +1382,7 @@ its own doc comment.
 card. This is stated as deliberate in `App.tsx` and `consoleNav.ts`.
 
 **13.4 A whole product area has an API and no screen: operator management.**
+**— corrected 2026-09-04; fixed in code, see the corrections section at the end of this document.**
 `site:manage-operators` is named in `ago-console/src/api/billingApi.ts` as gating a real server
 endpoint (`GetSeatAssignmentSummary`). The console never checks that permission, has no route for it,
 and has no UI for inviting, listing, removing or re-roling an operator. `/settings/billing` shows
@@ -1417,6 +1420,10 @@ other four settings screens" without naming the snippet). Either way, the two sc
 embed snippet are the two nobody has a screenshot of.
 
 **13.10 The gate's seeded operator holds six permissions, not eleven.**
+**— the count changed to seven 2026-09-04 (`23-22` added `site:manage_operators` to the default list,
+so its own new screen renders ordinary rather than refused in the gate's default run); the finding's
+own point - a partial, named subset rather than "everything" - is otherwise unaffected, see the
+corrections section.**
 `ux-gate/fixtures/data.ts`, `seededPermissions()`, grants `conversation:close`, `conversation:erase`,
 `attachment:delete`, `site:configure`, `site:erase`, `calendar:configure`. It does **not** grant
 `conversation:read`, so in every gate screenshot of `/conversations/:id` the five sub-panels of the
@@ -1567,3 +1574,26 @@ now carries a hint naming where to get the key, with a link to `/settings/instal
 `22-22` records, and does not answer, the information-architecture question that follows: whether a
 tenant should meet two embed snippets at all (§6.1 and §7.2 each show one). The backlog item was
 still marked *in review* when this correction was written.
+
+**2026-09-05 — §13.4, operator management, is fixed.** The finding was filed as `23-22` and landed in
+`ago-chat` (`GetOperatorTeamHandler`, `GET /api/v1/sites/{siteId}/operators` - a new read, `13-03`'s
+own `seat-assignment-summary` endpoint never carried per-operator rows despite this finding's own text
+assuming it did) and in `ago-console` (`OperatorsTeamPage`, `/settings/operators`, gated on
+`site:manage_operators` - the console's first check of that permission, and a nav entry beside
+`Delete account`, muted rather than absent for an operator who lacks it, `decisions.md` §10's own
+treatment). A tenant can now invite a colleague (the screen predicts a redemption-time seat refusal
+*before* the invite is created, reading the team list's own row count rather than the narrower
+"holds a seat" count `/settings/billing` shows - see `OperatorsTeamPage`'s own doc comment for why
+those are different numbers), see every operator by name and seat status, toggle a seat, and remove
+someone - the removal confirmation states its real consequence (releasing that operator's assigned
+conversations back to `Waiting`, `13-03`'s existing mechanism) before the click, not after.
+
+Two things this correction records rather than silently closing over: **re-roling and a role
+catalogue remain out of scope**, unchanged from `flows.md` 4.3's own "must not be made to learn an
+eleven-permission vocabulary" - `CreateOperatorInviteHandler` still sets a role only at invite time,
+always the ordinary `"Operator"` role, with no picker on this screen. **Redemption itself still has no
+console surface** - `POST /api/v1/operator-invites/redeem` exists and is exercised only by
+`ago-chat`'s own integration tests; an invited colleague has no page in this console to enter the code
+they were given. That is a real, separate gap - "a colleague can join their tenant" is a different
+promise from "the tenant can see and manage who works here" - not one this item's own scope covered,
+and worth its own backlog item.

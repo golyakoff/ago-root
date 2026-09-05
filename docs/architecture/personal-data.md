@@ -276,6 +276,19 @@ warning is avoidable, not that it no longer applies. `23-17`'s own `OperatorLoad
 second reader over `conversation_assignments`, joined to `operators` at read time) holds the claim to
 exactly this same standard — one more `JOIN operators`, never a second copy.
 
+**`23-22` adds a further reader on the identical shape, and what is new is the audience rather than the
+store.** `OperatorTeamReadStore` (`GET /api/v1/sites/{siteId}/operators`, the console's team screen) is
+a plain `select` against `operators` — no copy, no new column, nothing written to disk a second time.
+But it is the first read that hands a colleague's name and email to somebody **because** they hold
+`site:manage_operators` specifically, rather than incidentally: as a byline on an analytics row, or a
+name in an admin conversation list that any holder of `site:configure` already sees.
+
+It does not widen who can ultimately learn a colleague's name — every one of those existing readers is
+reachable by an operator holding a permission the site's own owner already grants. It is named here
+because it is the first screen whose **entire purpose** is showing a list of those two fields, and a
+rule that is only ever applied to incidental exposure stops being applied the first time exposure is
+the point.
+
 ## Standing constraints
 
 These are constraints on decisions the backlog has already opened. They exist here so they are applied

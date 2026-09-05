@@ -14,12 +14,12 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **112**, across 104 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **75** |
+| Use-case entry points in `Ago.Chat.Application` | **113**, across 105 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **76** |
 | Deliberately not RBAC-gated, each with a stated reason | **37** |
-| HTTP routes and hub methods that carry tenant data | **109** |
-| Routes taking a **client-supplied** `siteId` | **44** — nineteen route groups, all permission-gated |
-| Read-model queries | **14**, in eight read stores |
+| HTTP routes and hub methods that carry tenant data | **110** |
+| Routes taking a **client-supplied** `siteId` | **45** — nineteen route groups, all permission-gated |
+| Read-model queries | **15**, in nine read stores |
 | Genuinely cross-tenant reads in the whole codebase | **2** (`12-02`'s owner overview and `23-14`'s per-tenant detail read) |
 | Genuinely cross-tenant **writes** | **3** — `14-12`'s owner unlink, and `22-17`'s owner module grant and revoke |
 
@@ -132,6 +132,21 @@ entry points across 104 handler classes (75 gated, 37 exempt), 109 routes and hu
 client-supplied `siteId`, unchanged — the new route is not one of them), 14 read-model queries, and
 the cross-tenant-read count becomes **2** for the first time since `12-02` — `12-02`'s own list and
 `23-14`'s per-tenant detail, both behind `PlatformOverviewReadStore`.
+
+**A fifth same-day delta.** `23-22` (the console's team screen) added one entry point in one new
+handler class, RBAC-gated: `GetOperatorTeamHandler.HandleAsync`, checking the identical
+`site:manage-operators` permission `ToggleOperatorSeatHandler`/`RemoveOperatorHandler`/
+`GetSeatAssignmentSummaryHandler` already do. One new route, `GET /api/v1/sites/{siteId}/operators`,
+on the *existing* `/api/v1/sites/{siteId}/operators/...` group `13-03`'s own delta already created
+(still nineteen route groups) — but it does add to the 44 client-supplied-`siteId` route count,
+unlike `23-14`'s route right above it, since this one is category 3 (permission-gated), not category
+4 (the platform owner's own). One new read-model query joins the fourteen: `OperatorTeamReadStore.
+GetForSiteAsync`, a ninth read store — added because `GetSeatAssignmentSummaryHandler` (the existing
+reader on this same permission) answers three aggregate numbers only and carries no per-operator
+rows, which this item's own backlog text had assumed it did. Folded straight in: 113 entry points
+across 105 handler classes (76 gated, 37 exempt), 110 routes and hub methods (45 client-supplied
+`siteId`, across the same nineteen groups), 15 read-model queries. The cross-tenant-read and
+cross-tenant-write counts are unaffected — `23-22` added neither.
 
 The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.Tests.TenantScopeTests` walks
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
@@ -267,6 +282,7 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `ToggleOperatorSeatHandler` | **route segment** | `site:manage-operators` | n/a — the operator being toggled is looked up by the same `SiteId`; `13-03` |
 | `RemoveOperatorHandler` | **route segment** | `site:manage-operators` | n/a — the operator being removed is looked up by the same `SiteId`; `13-03` |
 | `GetSeatAssignmentSummaryHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `13-03` |
+| `GetOperatorTeamHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `23-22` |
 | `TransferConversationHandler` | operator claim | `conversation:assign` | `conversation.OperatorId == command.FromOperatorId`; target looked up by `(OperatorId, SiteId)` so a cross-site target is structurally impossible, not merely refused; `18-02` |
 | `AddConversationNoteHandler` | operator claim | `conversation:note_write` | `readStore.GetByIdAsync` is scoped by `command.SiteId`; a different site's conversation is `NotFound`, not `Forbidden`; `18-04` |
 | `GetConversationNotesHandler` | operator claim | `conversation:read` | same site-scoped conversation lookup as the write side; `18-04` |
@@ -600,6 +616,7 @@ visible. Every query, and what scopes it:
 | `ModuleFlowReadStore.GetSiteModuleFlowReportAsync` | **`site_id`** | `18-14`; `22-19`. `where c.site_id = @SiteId`; `GetModuleFlowReportForSiteHandler` gates it on `site:configure`. |
 | `OperatorAnalyticsReadStore.GetSiteAnalyticsAsync` | **`site_id`** | `18-08`; `22-19`. `where c.site_id = @SiteId`, joined out to messages/channel-identity rows via that same site; `GetOperatorAnalyticsForSiteHandler` gates it on `site:configure`. |
 | `TagBreakdownReadStore.GetTagBreakdownAsync` | **`site_id`** | `18-11`; `22-19`. `where c.site_id = @SiteId` in both of its two queries; `GetTagBreakdownReportForSiteHandler` gates it on `site:configure`. |
+| `OperatorTeamReadStore.GetForSiteAsync` | **`site_id`** | `23-22`. `where site_id = @SiteId and removed_at is null`; `GetOperatorTeamHandler` gates it on `site:manage-operators`. Ninth read store. |
 
 Each of these notes also lives in the read store's own remarks, so a reader who arrives at the SQL
 rather than at this file finds the same answer.
