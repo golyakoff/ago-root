@@ -1,14 +1,14 @@
 # The operator console never connects to the operator hub, so nobody can answer
 
 - **Stage**: 5
-- **Status**: **fixed, not deployed** (2026-08-26). Cause found and corrected, a check that fails on it added and seen to fail. The end-to-end demonstration needs a deploy.
+- **Status**: done (2026-09-05). Fixed 2026-08-26; the deploy the last two boxes waited on has since happened, and both were verified against the live deployment today — see Outcome.
 - **Depends on**: nothing.
 - **This number also names something else, and neither side can move** (`22-21`). `ago-root#347`,
   *the demo-credential rate limit answers 500, not 429*, was filed as `5-18` too and shipped as
   `fix(5-18)` in `ago-chat`; this item shipped as `fix(5-18)` in `ago-console`. Both are in merged
   history, so renumbering either would make a commit message untrue. Recorded rather than
   resolved — a reader meeting a `fix(5-18)` commit about rate limits is not looking at this item.
-  `tools/queue-audit.sh` reports it until this file reaches `done`, which the pending deploy does.
+  `tools/queue-audit.sh` reported it until this file reached `done`, which happened 2026-09-05.
 
 ## What is broken
 
@@ -127,12 +127,22 @@ as, not evidence that they could not connect.
 
 ## Done when
 
-- [ ] An operator signing into the console on the live deployment holds a connection, verified in
+- [x] An operator signing into the console on the live deployment holds a connection, verified in
       Redis rather than in the UI.
-      *Needs the deploy. The mechanism is fixed and covered by tests, and the smoke check below fails
-      against the current deployment and is expected to pass after.*
-- [ ] A visitor message on that tenant is assigned to that operator and can be answered, end to end,
-      in a browser. *Same reason.*
+      *Verified 2026-09-05, in Redis as the box asks. The connection registry holds
+      `conn:njC2MfLo5ubUfKaum9M9VA` with `principal = operator:…0002` on a named `ago-chat-api` pod,
+      beside a separate visitor connection — so the registry is discriminating between the two kinds
+      rather than holding anything that connects. `smoke.sh`'s own "Operator hub" section passes on
+      the same run, including the check this item added, which is the transport-level half of the
+      same fact.*
+- [x] A visitor message on that tenant is assigned to that operator and can be answered, end to end,
+      in a browser.
+      *Verified 2026-09-05 from the live data rather than by driving a browser, and the distinction is
+      stated rather than glossed: signing into the console needs a password typed into a form, which
+      this project's operating rules do not permit an AI session to do. What the data shows is the
+      whole chain having happened today through the only client there is — two conversations closed
+      on 2026-09-05, each with a visitor message, an operator assignment, and an operator reply, plus
+      one currently `Assigned` and awaiting an answer.*
 - [x] A check exists that fails if no operator can hold a connection, and it has been seen to fail.
       *`smoke.sh` gained an "Operator hub" section: mint a tenant (`8-07`), sign in through Keycloak,
       negotiate, hold a **Server-Sent Events** stream open, complete the handshake, and fail if the
@@ -167,3 +177,19 @@ The failure was not dishonesty, it was **silence** — `OperatorConnectionProvid
 from `start()` and discarded it, so the single most useful fact in the whole incident (what the
 connection failed with) existed for one instruction and was then thrown away. That `catch` now logs.
 The "Offline" copy also stopped telling operators to reload, which reproduced the fault exactly.
+
+## Outcome
+
+The fix itself landed 2026-08-26 and this item then sat for ten days in `fixed, not deployed` — not
+because anything was pending, but because nobody went back to look after the deploys that followed
+carried it out. That is the failure worth recording: a status that needs an external event to change
+does not change itself, and an item parked in one is indistinguishable from an item nobody finished.
+
+Both remaining boxes were verified on the live deployment on 2026-09-05, by two different routes on
+purpose. The Redis connection registry answers the first directly — an operator principal holding a
+connection, which is what the item asked for instead of the console's own badge. The second was taken
+from the live data rather than a browser, because signing in would mean typing a password into a form;
+the data carries the whole chain anyway, and saying which route was used is the point.
+
+`smoke.sh`'s full run was green at the same moment — 47 passed, 0 failed — including the "Operator
+hub" section this item contributed.
