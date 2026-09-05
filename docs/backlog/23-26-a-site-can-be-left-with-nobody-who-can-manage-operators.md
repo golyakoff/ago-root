@@ -1,7 +1,7 @@
 # a site can be left with nobody who can manage operators
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). The guard, the in-transaction count under a `sites` row lock, and the race proven on real Postgres.
 - **Depends on**: nothing. `23-22` built the removal path this guards; the guard is additive to it.
 - **Found**: 2026-09-05, while verifying `23-22`. Filed under CLAUDE.md rule 14 — a defect found
   inside an item's implementation gets its own number rather than being carried inside it.
@@ -67,11 +67,47 @@ removing each other in either order.
 
 ## Done when
 
-- [ ] Removing the last operator with `site:manage_operators` is refused, whether the caller is the
+- [x] Removing the last operator with `site:manage_operators` is refused, whether the caller is the
       target or somebody else.
-- [ ] Removing a manager while another manager remains still succeeds — the legitimate case is
+- [x] Removing a manager while another manager remains still succeeds — the legitimate case is
       untouched, and a test says so, because a guard that over-refuses is the likelier bug here.
-- [ ] The count is read inside the transaction. A test proves two concurrent removals of the last two
+      *Proven by inverting the guard the other way — `<= 1` to `>= 0` — so that it over-refuses:
+      only this test goes red, while the two refusal tests stay green because they are still
+      refused. A fails-before that distinguishes the two failure directions rather than one.*
+- [x] The count is read inside the transaction. A test proves two concurrent removals of the last two
       managers leave one standing, on real Postgres with two real connections — the assertion in this
       item that is worthless as anything but a demonstration.
-- [ ] The refusal message names the situation and the way out.
+      *Re-proven at review, not accepted from the report: with the guard disabled, both removals
+      succeed and the assertion fails.*
+- [x] The refusal message names the situation and the way out, and maps to `409` — a state conflict,
+      not a malformed request.
+
+## Outcome
+
+**`IPermissionChecker` grew a method rather than the codebase growing a port.** The question — how many
+non-removed operators on this site hold permission X — is answerable entirely from the RBAC join that
+adapter already owns, and a dedicated `IOperatorRemovalGuard` would have duplicated that join for no
+second caller. `IOperatorRepository`'s own remarks state the governing rule: grow a port only when a
+second real caller needs a different question answered.
+
+The transaction boundary reuses `IUnitOfWork` from `18-02`. Rule 2 leaves Application exactly one legal
+seam for an explicit multi-statement transaction, and this item needed precisely the shape that port
+already provides.
+
+**A finding reported by the implementation and rejected at review, recorded because rejecting it was
+the right call and the reasoning should survive.** The report said `PermissionChecker.HasPermissionAsync`
+never consults the caller's own `RemovedAt`, and concluded that a removed operator keeps permissions on
+a stale-but-unexpired session. The method behaves as described; the conclusion does not follow.
+`GetByExternalSubjectIdAndSiteIdAsync` and `ListByExternalSubjectIdAsync` both filter
+`HoldsSeat && RemovedAt == null`, and identity resolution runs per request without caching
+(`adr/0022`), so a removed operator resolves to no identity at all and the permission check is never
+reached. **No ticket was filed**: a number for a hole that is not there costs the author's attention and
+puts a false claim in the queue.
+
+What survives is much narrower and is the reason the "caller ≠ target" case is reachable in the race
+test at all: identity resolves at the start of a request, and a removal can commit during it, so the
+window is **one in-flight request** rather than a session.
+
+**Deliberately not answered here**: whether the platform-owner role needs the equivalent invariant.
+Confirmed absent, different blast radius, and named in `authorization.md` as an open question rather
+than answered by this item's implementation.
