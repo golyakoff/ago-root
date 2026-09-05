@@ -387,6 +387,19 @@ denial.
   `(conversation_id, tag_id)` is already the primary key and covers the forward direction for free).
   Cascades on both `conversation_id` and `tag_id` - removing a conversation or deleting a tag from the
   vocabulary both clean up silently rather than leaving an orphaned pairing.
+- `acceptance_records` (**added in `24-01`**) - `id` (uuid v7), `subject_kind` (`varchar(20)`, one of
+  `Tenant`/`Operator`/`Visitor`), `subject_id` (uuid, widened across all three subject types rather
+  than three nullable FK columns - `AcceptanceSubjectKind`'s own remarks), `document_key`
+  (`varchar(200)`), `document_version` (`varchar(100)`), `accepted_at`, `client_ip?` (`varchar(45)`),
+  `user_agent?` (`varchar(512)`). **`subject_id` carries no foreign key to `sites`/`operators`/`visitors`,
+  deliberately** - `docs/adr/0111-*` decides that erasure does not remove an acceptance record (kept
+  whole as evidence of a lawful basis at the time), and a required FK would pull this table into every
+  one of those aggregates' own cascading deletion, which is the opposite of what the decision needs.
+  The same no-FK shape `conversation_assignments` already uses, for the identical mechanism in service
+  of a different reason. `ix_acceptance_records_subject` on `(subject_kind, subject_id, accepted_at)`
+  for the one real read (`GetAcceptancesForSubjectHandler`, oldest first). Insert-only: no domain
+  method and no repository method ever updates or deletes a row, which is what keeps a second
+  acceptance of the same document from overwriting the first.
 
 ## Keys and indexes
 
