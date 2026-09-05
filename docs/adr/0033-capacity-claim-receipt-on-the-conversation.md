@@ -1,6 +1,8 @@
 # ADR-0033: A capacity claim is a receipt on the conversation, not an assumption about assignment
 
-- **Status**: Accepted
+- **Status**: Accepted — its Consequences' "manual assignment stays capacity-blind" is superseded by
+  ADR-0105; the Decision itself (the receipt, the release-after-commit ordering, `xmin`-arbitrated
+  idempotency) stands unchanged
 - **Date**: 2026-08-25
 - **Stage**: 6 (`6-09`)
 

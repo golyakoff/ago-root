@@ -354,6 +354,56 @@ way: nothing here ever partially commits, so there is no already-succeeded outco
 way out, unlike the close's leaked-slot residual. See `adr/0075` for the full reasoning, including a
 named gap in one concurrency test's own proof of the lock-order claim.
 
+**Shipped in `23-04`: a fifth writer, and the first that charges capacity without ever comparing it.**
+`adr/0033` preserved an asymmetry - the engine's claim is capacity-blind-and-checked
+(`TryClaimAsync`, `WHERE active_chats < capacity`), a hand-picked assignment was capacity-blind-and-
+uncharged (no write at all) - that `decisions.md` §2 replaced with a different one: **a deliberate take
+still never checks capacity, but it now charges it.** `AssignConversationHandler` takes exactly one
+`operators` row, `command.OperatorId`'s, via `IOperatorCapacity.ClaimAsync` - the compare-free sibling
+of `TryClaimAsync`, `UPDATE operators SET active_chats = active_chats + 1 WHERE id = @id`, no
+`capacity` comparison at all, so `active_chats` may end above `capacity` and that is the intended
+state (`decisions.md` §2: "a manual claim increments `active_chats` and does not check it"). The claim
+runs inside the handler's own explicit `IUnitOfWork` transaction, alongside the interval open and the
+conversation's own save - needed because, unlike `CloseConversationHandler`'s release (deliberately
+*after* the commit, accepting a bounded leak), a claim that outlived a losing `SaveChangesAsync` would
+strand a slot on an operator holding nothing for it. That makes this handler a new, one-row participant
+in the same accepted, data-dependent lock-order cycle `adr/0037` already documents for the engine's own
+batches (a single-row `UPDATE` can still be the innocent statement Postgres picks as its cycle's
+victim, `6-10`'s own finding) - so it follows the rule for a third writer of `operators` exactly:
+"take one row... or take many rows and own the retry" resolves here to *taking one row inside a
+transaction it cannot let fail silently*, so it owns the retry the same way `TransferConversationHandler`
+does - the whole transaction retries on `OperatorCapacityContentionException`, 5 attempts, the identical
+jittered backoff, reusing the proven bound rather than re-measuring it for this specific caller (no
+fresh load-test run backs this bound for this handler; see the item's own commit-prep report). The two
+racing-operators case resolves through either of two real Postgres guards, not through `xmin` alone -
+found live, not anticipated, while proving it: both operators' claims land on different `operators`
+rows (no conflict between them there), both stage a new open interval and call `AssignTo` in memory,
+and one of them then loses on whichever guard fires first. The conversation row's own `xmin` is the
+more obvious one; `23-03`'s own partial unique index (`ix_conversation_assignments_open`, "at most one
+open interval per conversation") can equally be the one that actually fires, because EF's
+`SaveChangesAsync` executes an Added entity (the new interval) before a Modified one (the conversation)
+within the same call, so the loser can hit the unique index before its own `UPDATE` ever reaches the
+`xmin` check. Left untranslated, that surfaced as a raw `DbUpdateException` wrapping Postgres's `23505`
+rather than `ConversationConcurrencyConflictException` - `ConversationRepository.SaveAsync` now
+translates both shapes identically (scoped to this one constraint by name, the same "translate exactly
+the constraint this call site can explain" precedent `TagRepository`/`SiteRegistrationRepository`/
+`OperatorInviteRedemptionRepository` already set for their own unique-violation catches), because both
+mean the identical thing: someone else already committed a conflicting fact about this conversation.
+Either way the loser's whole transaction never commits - its capacity claim rolls back with it, so
+`active_chats` rises by exactly one regardless of how many operators raced for the same waiting
+conversation.
+
+**The schema gap this item found is closed.** `23-03`'s own migration constrained
+`conversation_assignments.source` with a Postgres `CHECK (source IN ('Assigned', 'Transferred'))`,
+deliberately not widened in advance. `23-04`'s first pass gave `ConversationAssignmentSource.Taken` its
+first real C# writer without a migration to widen that constraint alongside it - the wave had one
+EF-migration slot and a concurrent item held it, so this was reported as a known gap rather than a
+second migration added out of turn. Once that concurrent item (`23-02`) merged, the slot was free and
+this item's own follow-up (`Stage23WidenConversationAssignmentSourceCheckConstraint`) widened the
+constraint to `source IN ('Assigned', 'Transferred', 'Taken')` and nothing else - confirmed by a
+one-line model-snapshot diff, touching no column or constraint `23-02`'s own migration created.
+`data-model.md`'s `conversation_assignments` bullet has the full account.
+
 Both participants are notified through the same fan-out path `3-02` built:
 `ConversationAssignedToOperator` (a new integration event, named differently from the domain event
 `ConversationAssigned` - `Contracts`/`Domain` naming split established in `3-02` for the same

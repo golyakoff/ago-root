@@ -261,19 +261,59 @@ denial.
   updates a row - not even `Conversation`'s own `operator_id` overwriting on a transfer erases this
   table's memory of who held it before, which is the whole reason it exists: `Conversation.OperatorId`
   gives at most the *current* holder with no start time, and a transfer used to erase the rest.
-  `source` is `Assigned` (either `IAssignmentClaimer`, and - see that enum's own remarks - a manual
-  claim through `AssignConversationHandler`, indistinguishable from an automatic one until `23-04`
-  gives the manual path its own reachable act and its own `Taken` value) or `Transferred`
-  (`TransferConversationHandler`, closing one interval and opening another in the same transaction);
-  `23-04`/`23-05` add `Taken`/`Additional`. **Six writers, one invariant**: the two claimers,
-  `AssignConversationHandler`, `TransferConversationHandler`, `CloseConversationHandler` and
-  `OperatorConversationReleaser` (`4-04`) between them open or close every interval, and the interval
-  write always lands in the identical transaction as the assignment state change it records (CLAUDE.md
-  rule 4) - either the aggregate's own `SaveChangesAsync` (`IConversationAssignmentLog`, EF
-  change-tracked, no `SaveChangesAsync` of its own - see that port's own remarks) or, for the two
-  `Ago.Chat.Worker` claimers, raw SQL issued on the same connection and transaction as the capacity
-  claim it accompanies (`ConversationAssignmentIntervalSql`), deliberately not through the port -
-  splitting the two would let a claim commit without its interval.
+  `source` is `Assigned` (the two `IAssignmentClaimer` implementations only, as of `23-04`) or
+  `Transferred` (`TransferConversationHandler`, closing one interval and opening another in the same
+  transaction); `23-05` still has `Additional` to add. **`23-04` gave the manual path
+  (`AssignConversationHandler`, reached through `OperatorHub.JoinConversationAsync` and the new
+  `POST /api/v1/conversations/{id}/claim`) its own reachable act and its own `Taken` value - every real
+  transition through that handler now writes `Taken`, never `Assigned`, and charges
+  `operators.active_chats` unconditionally (`IOperatorCapacity.ClaimAsync`, no `WHERE active_chats <
+  capacity` at all - `decisions.md` §2: capacity gates the automatic assigner only).** **Six writers,
+  one invariant**: the two claimers, `AssignConversationHandler`, `TransferConversationHandler`,
+  `CloseConversationHandler` and `OperatorConversationReleaser` (`4-04`) between them open or close
+  every interval, and the interval write always lands in the identical transaction as the assignment
+  state change it records (CLAUDE.md rule 4) - either the aggregate's own `SaveChangesAsync`
+  (`IConversationAssignmentLog`, EF change-tracked, no `SaveChangesAsync` of its own - see that port's
+  own remarks) or, for the two `Ago.Chat.Worker` claimers, raw SQL issued on the same connection and
+  transaction as the capacity claim it accompanies (`ConversationAssignmentIntervalSql`), deliberately
+  not through the port - splitting the two would let a claim commit without its interval.
+
+  **A gap this item found, reported, then closed itself once unblocked**: `23-03`'s own migration
+  (`Stage23AddConversationAssignments`) added `ck_conversation_assignments_source`, a Postgres `CHECK
+  (source IN ('Assigned', 'Transferred'))` - deliberately not widened to the other two values in
+  advance ("a member arrives with its first real writer", `ConversationAssignmentSource`'s own
+  remarks). `23-04`'s first pass gave `Taken` its first real writer in C# without a migration to widen
+  this constraint alongside it - the wave running `23-04` had exactly one EF-migration slot and `23-02`
+  held it, so `23-04` was instructed to stop and report rather than add a second one, which it did:
+  every write of a `Taken` interval failed with `23514: violates check constraint
+  "ck_conversation_assignments_source"`, proven live by `AssignConversationConcurrencyTests` and by the
+  pre-existing `OperatorHub.JoinConversationAsync` reconnect path `NodeDeathReconnectTests` exercises.
+  Once `23-02` merged, the slot was free: migration
+  `Stage23WidenConversationAssignmentSourceCheckConstraint` drops and re-adds the one constraint as
+  `CHECK (source IN ('Assigned', 'Transferred', 'Taken'))`, with the matching `HasCheckConstraint` edit
+  in `ConversationAssignmentIntervalConfiguration` - nothing else. The resulting model-snapshot diff is
+  exactly one line, confirming it touches no column or constraint `23-02`'s own migration created.
+
+  **A second, unrelated gap the widened constraint then let through to a real race** -
+  `AssignConversationConcurrencyTests`'s own two-operators-racing scenario kept failing after the
+  migration landed, with a different Postgres error: `23505: duplicate key value violates unique
+  constraint "ix_conversation_assignments_open"`. Cause: `23-03`'s own partial unique index (at most
+  one open interval per conversation) can be the thing that actually rejects the losing operator, not
+  the conversation row's `xmin` - EF's `SaveChangesAsync` executes an Added entity (the new interval)
+  before a Modified one (the conversation) in one call, so the loser can hit the unique index before
+  its own `UPDATE` ever reaches the `xmin` check. `ConversationRepository.SaveAsync` only translated
+  `DbUpdateConcurrencyException` (the `xmin` shape) into `ConversationConcurrencyConflictException`
+  before this item; a raw unique-index violation reached `AssignConversationHandler`'s retry loop as an
+  untranslated `DbUpdateException`, which nothing there catches, and escaped as an unhandled exception
+  instead of the clean `Conversation.InvalidState` the losing operator is supposed to see. Fixed by
+  giving `ConversationRepository.SaveAsync` a second, narrowly-scoped catch - `ex.InnerException is
+  PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName:
+  "ix_conversation_assignments_open" }` - translated identically to the `xmin` case, the same
+  "translate exactly the constraint this call site can explain, nothing wider" precedent
+  `TagRepository`/`SiteRegistrationRepository`/`OperatorInviteRedemptionRepository` already set for
+  their own single-purpose unique-violation catches elsewhere in this file. Found only because the
+  first schema gap had been masking it: every earlier verification run failed at the `CHECK` constraint
+  before ever reaching the statement that could hit the unique index.
   **No foreign key on `conversation_id`** - deliberate, and the answer to the question this item's own
   Scope left open ("does `16-02`'s erasure drain this table"). `ConversationErasureQuery.DeleteConversationAsync`
   removes the whole `conversations` row on a personal-data erasure request, and `decisions.md` §2 is
