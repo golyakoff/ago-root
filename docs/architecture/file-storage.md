@@ -233,3 +233,14 @@ protocol ceiling, not a guess - so a tenant who downloads the manifest and waits
 gets metadata (`attachments.jsonl`) with links that no longer resolve, not the bytes themselves. This
 is accepted, not overlooked: re-requesting a fresh export is the remedy, matching this item's own
 Out-of-scope ("no continuous export" - a tenant who needs current bytes triggers a new run).
+
+**`24-11`'s person-scoped export (`adr/0109`) reuses this decision unchanged**, not a second one:
+`PersonExportArchiveWriter`'s own attachment rows are referenced by presigned URL the identical way,
+with the identical 7-day ceiling (`PersonExportOptions.AttachmentUrlLifetime`, its own field only
+because the writer lives in a different project - `Ago.Chat.Infrastructure.Postgres`, not
+`Ago.Chat.Worker` - not because the value should ever drift). The one difference is where the archive
+itself is built: `SiteExportJob`'s whole-tenant archive is assembled by a Worker job and uploaded to
+object storage before a tenant downloads it, while a person-scoped export is small enough (one
+conversation, or one visitor's own conversations, never a whole tenant's history) to build and stream
+back as the HTTP response body in the same request - synchronous, but never holding attachment bytes
+in that process either, exactly like the whole-site case above.
