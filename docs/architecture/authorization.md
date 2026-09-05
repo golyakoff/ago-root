@@ -242,6 +242,16 @@ rejects a `sub` only when it already resolves to an `Operator` row on *that invi
 "resolves to an operator row anywhere", the older, single-tenant rule that predated `13-07`'s composite
 `(external_subject_id, site_id)` uniqueness.
 
+**`23-22` gave the permission its first console-side check, and a fifth handler.** `ago-console` had
+never checked `site:manage_operators` at all before this item - `ui-inventory.md` §13.4's own finding.
+`GetOperatorTeamHandler` (`GET /api/v1/sites/{siteId}/operators`, `Ago.Chat.Application.UseCases.
+GetOperatorTeam`) is a new read alongside the four existing writers/readers on this permission
+(`CreateOperatorInviteHandler`, `ToggleOperatorSeatHandler`, `RemoveOperatorHandler`,
+`GetSeatAssignmentSummaryHandler`) - the identical `IPermissionChecker` check, no new mechanism. It
+exists because none of the other four return per-operator rows: `GetSeatAssignmentSummaryHandler`
+answers three aggregate numbers only (`13-03`'s own Scope), so a console team screen needed its own
+read rather than reusing that one with a wider response shape.
+
 ## `site:configure` gates a second, distinct thing: shipped in `11-01`
 
 `Permission.SiteConfigure` was granted for exactly one caller until now (`GetAllConversationsForSiteHandler`'s
