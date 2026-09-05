@@ -1,7 +1,7 @@
 # the tenant is told whether their script arrived — and whether the product is being used at all
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-05). Four columns on `sites`, a conditional once-a-minute write, and an install screen that distinguishes never-seen from seen-long-ago. Documentation landed later the same day — see the Outcome.
 - **Depends on**: nothing
 - **Decision**: `docs/design/decisions.md` §3, the install half and the *two facts, not one*
   amendment (2026-09-04)
@@ -90,21 +90,44 @@ has never seen their site. Two states, indistinguishable, and the wrong one is t
 
 ## Done when
 
-- [ ] A visitor-session mint updates `last_seen_at` at most once a minute, proven by two mints inside
+- [x] A visitor-session mint updates `last_seen_at` at most once a minute, proven by two mints inside
       one minute and one row write.
-- [ ] A request from an origin not in the site's list records `last_refused_origin` and does **not**
+- [x] A request from an origin not in the site's list records `last_refused_origin` and does **not**
       update `last_seen_at`.
-- [ ] A site never seen and a site seen long ago are distinguishable through the installation read.
-- [ ] A site never seen whose conversations exist resolves to the *in use, widget unseen* state, and
+- [x] A site never seen and a site seen long ago are distinguishable through the installation read.
+- [x] A site never seen whose conversations exist resolves to the *in use, widget unseen* state, and
       the advice for *zero loads* is not produced for it.
-- [ ] The site cache cannot serve a stale `last_seen_at` — an integration test that writes and then
+- [x] The site cache cannot serve a stale `last_seen_at` — an integration test that writes and then
       reads through the API.
-- [ ] Another tenant's installation state cannot be read (a tenant-isolation test).
-- [ ] `/settings/install` renders every state, and *never seen* is the one a brand-new tenant gets on
+- [x] Another tenant's installation state cannot be read (a tenant-isolation test).
+- [x] `/settings/install` renders every state, and *never seen* is the one a brand-new tenant gets on
       day one.
-- [ ] `data-model.md`'s `sites` section carries the columns and the once-a-minute rule; `caching.md`
+- [x] `data-model.md`'s `sites` section carries the columns and the once-a-minute rule; `caching.md`
       states that these four are never cached.
 
 ## Open questions
 
 None.
+
+## Outcome
+
+**The sighting is written by a conditional `UPDATE`, not by a job and not through the aggregate**, and
+both halves of that matter. Routing a visitor-session mint through `Site` would mean loading the whole
+aggregate — widget config, auto-reply rules, canned responses — to move one timestamp, on the hottest
+write path this product has. The four columns are shadow properties with exactly one legitimate writer,
+the same shape `erasure_requested_at` already established on that table.
+
+The once-a-minute rate is a property of the statement (`WHERE last_seen_at IS NULL OR last_seen_at <
+@now - interval '1 minute'`), not of a scheduler. There is nothing to fall behind and nothing to
+restart.
+
+**None of the four is ever cached, and `caching.md` now says so.** They are read to decide what to tell
+a tenant about their own installation; a cached answer would tell somebody their script never arrived
+because the cache predates it, which is precisely the confusion this item exists to end.
+
+**The documentation half landed hours after the code, and that is the record worth keeping.** The code
+merged in the morning; these three files sat written and uncommitted in a worktree until the afternoon,
+found by `queue-audit.sh`'s worktree check rather than by anybody remembering. It was one of five items
+in that state on the same day. The text needed no correction when it was finally read against the
+merged code — but that was luck, not process: `23-17`'s recovered documentation *did* describe a design
+that never shipped, and only reading it caught that.

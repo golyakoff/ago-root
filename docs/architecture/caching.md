@@ -72,6 +72,21 @@ write a message at all*, so they come from Postgres in the same unit of work as 
 authorise). Same handler, both rules, and stating which read is which is the part that stops the next
 one from guessing.
 
+**`23-06`'s four install-signal columns** (`sites.first_seen_at`/`last_seen_at`/`last_refused_origin`/
+`last_refused_origin_at`) **are never cached**, for a reason adjacent to but distinct from the two
+cases above: this is not a write-side consistency decision (nothing compares-and-sets against these
+four), it is that the one screen this data exists for *is itself the check for staleness*. A tenant
+reading "installed ✓" from a value Redis served five minutes stale, while their script has in fact
+started failing in the meantime, is the exact defect this item exists to close, reappearing one layer
+down. Concretely: the write (`ISiteInstallationSignalRepository`) is a direct conditional `UPDATE`
+against Postgres, deliberately **not** routed through `GetSiteConfigByPublicKeyHandler`'s cached
+`SiteConfigDto` (the row above, "the hot one") even though both live on the same `sites` row - and the
+read (`GetSiteInstallationHandler`) loads them fresh on every call, uncached, the same "low-frequency
+admin read, not the per-message path" posture `GetWidgetConfigHandler`/`GetOfflineAutoReplyHandler`
+already take for their own sibling reads on this table. Proven, not merely stated:
+`SiteInstallationSignalTests`' own `GetSiteInstallationHandler_AfterASighting_SeesItImmediately_EvenWithTheSiteConfigCacheWarm`
+warms the *other* cache first and confirms a fresh sighting is visible on the very next call regardless.
+
 ## Patterns we implement
 
 - **Cache-aside** as the default. Read cache, miss, load, populate, return. **Shipped in `3-04`**:

@@ -62,6 +62,39 @@ denial.
   either: a list capped at twenty entries, read and written as a unit, would buy a join on a
   per-message path and a second aggregate boundary inside `Site`. Order in the array is **behaviour,
   not presentation** - the matcher is first-rule-wins.
+  **Four columns added in `23-06`**: `first_seen_at timestamptz NULL`, `last_seen_at timestamptz
+  NULL`, `last_refused_origin text NULL`, `last_refused_origin_at timestamptz NULL`
+  (`Stage23AddSiteInstallationSignals`, additive/reversible) - what the tenant's install screen
+  (`docs/design/decisions.md` §3, its two-facts amendment) is built from. All four nullable, no
+  default, no backfill - the same `CreatedAt`/`DemoExpiresAt` reasoning above: a stamped default would
+  invent a fact for every row that predates the column, and `null` already means the true thing
+  ("nothing recorded yet").
+  **Shadow properties, not mapped `Site` properties** - the identical shape `erasure_requested_at`
+  already established on this same table (just below): each has exactly one legitimate writer
+  (`ISiteInstallationSignalRepository`, raw Npgsql, never through `Site`'s own load-mutate-
+  SaveChangesAsync path) and is read back only through that port's own `GetAsync`, a Dapper query
+  (`adr/0004`'s read side). Routing a visitor-session mint's sighting through the aggregate would mean
+  loading the whole `Site` - widget config, offline auto-reply rules, canned responses and all - to
+  move one timestamp forward, on the single hottest, highest-concurrency write path this product has
+  (`POST /api/v1/visitor-sessions`).
+  **At most one row write per site per minute, by construction, not by a job.** Both writes
+  (`RecordSightingAsync`/`RecordRefusedOriginAsync`) are one conditional `UPDATE`, e.g.
+  `UPDATE sites SET last_seen_at = @now, first_seen_at = coalesce(first_seen_at, @now) WHERE id = @id
+  AND (last_seen_at IS NULL OR last_seen_at < @now - interval '1 minute')` - called once per mint or
+  renewal, but the row itself changes at most once a minute per site regardless of visitor volume. The
+  refusal write is throttled identically and for the identical reason: the classic failure this column
+  exists to catch (a `www.` vs. bare-domain mismatch) means *every* request from a broken tenant's real
+  traffic hits that branch, so it is exactly as hot as the success path would have been left
+  unthrottled.
+  **No index.** Both writes are point updates by primary key (`id`), and the one read
+  (`GetSiteInstallationHandler`) is a single-row lookup by the same key - `sites`' existing primary key
+  serves both.
+  **The install screen's second fact - "the product was used" - is a read, not a column**, answered
+  from `conversations` (any conversation created for this site within `SiteInstallationOptions`'s
+  configurable window) rather than stored anywhere new. `IConversationReadStore.GetMostRecentCreatedAtAsync`
+  orders by `id` descending (conversation ids are UUID v7, so id order is creation order) rather than
+  filtering on `created_at`, which is what lets it reuse the existing `ix_conversations_site_all
+  (site_id, id)` index - no new index for this item to add.
 - `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, and nothing else.
   **Corrected in `16-01`**: this bullet listed a `token_hash` column that was never built. There is no
   such column in `Stage1CreateChatSchema`, in the EF model snapshot, or in `Visitor.cs`, and the string
