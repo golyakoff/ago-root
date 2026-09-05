@@ -68,7 +68,7 @@ rebase all belong to whoever did the original work, and handing one to a fresh w
 worse than handing it to the one that has the file open.
 
 The saving grows with parallelism, which is why it is worth establishing while running one worker:
-with three, three cold starts per wave is most of the wave.
+with three lanes refilled all day, a cold start per refill is most of what the lanes cost.
 
 **Each new task still begins with its own fresh worktree**, per repository, exactly as before. The
 worker keeps its context; it does not keep its working directory. Two tasks sharing a worktree is
@@ -119,27 +119,32 @@ not round-robin: give a worker tasks in the repository and subsystem it already 
 task shares nothing with what a worker holds, a fresh one is the cheaper choice, and saying so is
 part of the operator's job rather than a defeat.
 
-## 0.75. "Го по жире" — the standing wave request
+## 0.75. Three lanes, held full
 
-CLAUDE.md rule 13. The author saying it means: **up to three background workers on `sonnet`, in
-parallel, each in its own isolated worktree, with pull requests opened strictly one at a time.**
+CLAUDE.md rule 13. **Three background workers on `sonnet`, each in its own isolated worktree, with
+pull requests opened strictly one at a time — and a lane refilled the moment it frees, not when two
+others have caught up.** This is the normal state and needs no request; the author saying "го по
+жире" means resume it after a pause, not start a wave.
 
-It is a request for a *wave*, not for three of anything. The two judgements it delegates are the
-whole job:
+**One of the three is the migration lane.** Items needing an EF migration go there and nowhere else,
+one at a time; the other two lanes take items that need none. Two concurrent `ef migrations add` in
+one repository is a certainty, not a risk: both rewrite `AgoChatDbContextModelSnapshot.cs`, which
+holds the whole model. The conflict is the visible half. The dangerous half is resolving it by taking
+one side, which drops the other branch's columns from the model state and makes the *next*
+migration a diff against a snapshot that lies — a failure that surfaces two items later.
 
-**Do these items actually not interfere?** Decide before spawning, not after. They collide when they
-share a file, when both would add an EF migration to one repository (that is a certainty, not a
-risk — both rewrite the model snapshot), when both touch `docs/adr/README.md` or a stage section of
-`docs/roadmap.md`, or when one item's output is the other's input. Three non-colliding items is a
-wave; three items that share a repository's `package.json` is one item and two rebuilds. **When in
-doubt, run fewer** — the ceiling is permission, not instruction.
+**Do these items actually not interfere?** Decide before spawning, and decide it against *files*, not
+topics. Two items collide when they share a file, when both touch `docs/adr/README.md` or a stage
+section of `docs/roadmap.md`, or when one's output is the other's input. Sharing a repository is not
+a collision; sharing a `package.json` is. Refilling one lane at a time makes this cheaper than a wave
+did — one new item placed against two known ones, rather than three placed against each other. **When
+in doubt, run two.**
 
 **Sequential PRs, and this is the half that gets skipped.** Two branches cut from the same `main` and
 opened together means the second is stale the instant the first merges, and a pushed branch with a
 stale base is close-the-PR-and-rebuild rather than a rebase (`git-workflow.md`, CLAUDE.md rule 10).
 Workers may finish in any order; their PRs go up in one order, each cut from the `main` that already
-contains the last. §5's one-open-PR-at-a-time rule for the shared index generalises here to every PR
-in the wave.
+contains the last. §5's one-open-PR-at-a-time rule for the shared index generalises to every PR.
 
 Nothing else changes: workers still never spawn anything (rule 12), never run `git commit`/`git push`
 (rule 9), and end at a commit-prep block the managing session executes.
@@ -246,8 +251,9 @@ The standing rules are the floor. The brief earns its keep in what only the mana
   sentence in most briefs. Concrete case: `ago-deploy`'s `main` was *not* what was deployed while
   `17-05` sat unmerged, so a worker verifying against the live cluster from `main` would have
   silently stripped a `securityContext` off a public deployment.
-- **One migration per repository per wave, at most.** Two workers adding EF migrations to the same
-  repository both rewrite the model snapshot. That is not a risk, it is a certainty.
+- **Migrations go in the migration lane, one at a time** (rule 13, §0.75). Two workers adding EF
+  migrations to the same repository both rewrite the model snapshot. That is not a risk, it is a
+  certainty — so the brief says explicitly whether this item is the lane's current occupant.
 - **Where the item is likely to go wrong**, in the managing session's judgement — not a summary of
   the item, which the worker will read anyway. Name the decision that is easy to get wrong and
   invisible when wrong.
