@@ -510,12 +510,36 @@ Loads the server's own default window on first render, so it is useful with no i
 Four tables, each with the identical five columns — Conversations, Avg. first response, Avg.
 duration, Missed, plus a first column that changes:
 1. **by channel** — first row "All channels", then Widget / SMS / MAX / Telegram / WhatsApp.
-2. **By operator** — first column is the operator's **first 8 hex characters**, mono.
+2. **By operator** — first column is the operator's own name (`23-02`), or the **first 8 hex
+   characters** of the id, mono, for a row with no name to show.
 3. **By referrer** — host, or "Direct".
 4. **By campaign** — the raw `utm_campaign` string.
 
 A meta line before the referrer table: "What the visitor's browser reported - not a fact AGO Chat has
 independently verified."
+
+**`23-17`: the By-operator table carries three more columns, and a fifth table sits below.** Held,
+Standard and Additional join the By-operator table as three absolute counts, with no figure combining
+them — the labels are `MyNumbersPage`'s own (`23-18`), reused verbatim rather than re-designed for the
+second screen showing the same `OperatorLoadSummaryDto`.
+
+The per-load-bucket breakdown is a **fifth table**, rowed by operator × bucket — operator, bucket
+label, intervals, replies, average first reply — rather than one column per bucket on the table above.
+Rows scale where columns do not: the bucket count is configuration (`Analytics:LoadBucketUpperBounds`),
+so a column-per-bucket table changes width when a tenant's configuration does. The rows need no sort of
+their own; `OperatorLoadReportReadStore` folds into a `SortedDictionary` keyed by bucket index, so the
+server's `byLoad` already arrives ascending.
+
+A meta line under the By-operator table states the unit difference: **Held** counts a conversation once
+even when it was transferred away and back, while Standard and Additional count assignment intervals,
+where that same conversation counts twice.
+
+**Absence and zero are different, and the screen keeps them apart.** An operator whose `load` is absent
+— the load report has nothing to say about them — shows a distinct "No data" string; an operator who
+never exceeded capacity shows a real `0` under Additional. The dash this page already uses elsewhere
+means "nothing to average, because zero", so reusing it here would have blurred exactly the distinction
+the backend preserves deliberately. An operator with no `load` contributes no rows to the fifth table
+at all, rather than an empty row repeating what the table above already says.
 
 **States.** Checking permissions · denied · loading (`Skeleton lines={4}`) · overall count zero
 (`.ago-empty`, "No conversations in this range.") · per-table empties, each with its own sentence ·
