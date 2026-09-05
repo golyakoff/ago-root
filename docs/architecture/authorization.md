@@ -188,6 +188,20 @@ sooner. The demo tenant now seeds two operators - `demo-operator` (`"Operator"` 
 sees every conversation for a site, an ordinary operator does not" is something a session can verify
 against two real accounts, not just assert.
 
+**`site:manage_operators` now carries an invariant, added `23-26`: a site always keeps at least one
+non-removed operator who holds it.** `RemoveOperatorHandler` refuses the removal that would empty it,
+and the refusal is keyed on the site rather than on who is asking - self-removal stays legitimate,
+because somebody leaving the company should not need a colleague to take them off. The reason the
+invariant is worth enforcing rather than documenting is that there is no way back: granting the
+permission is itself gated on the permission, so a site that loses its last holder cannot recover
+without a platform owner acting on the tenant's behalf. The count is read inside the write's own
+transaction under a `sites` row lock (`CLAUDE.md` rule 8), because two concurrent removals of the last
+two holders is exactly the race a cached or out-of-transaction count loses.
+
+**This is chat's own operator set only.** Whether an equivalent invariant should hold for the
+platform-owner role is a separate question with a different blast radius, and it is deliberately not
+answered here.
+
 The admin role's distinguishing feature - seeing every conversation for a site - is gated on
 `Permission.SiteConfigure`, checked by `GetAllConversationsForSiteHandler`
 (`Ago.Chat.Application`) the same way every other permission check in this codebase already is
