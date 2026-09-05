@@ -163,6 +163,21 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
       maintained, and the maintenance cost fell entirely on closing.
       `queue-audit.sh` still reads every repository, deliberately: a mirror that exists must still be
       closed, and the check costs nothing when there are none. (Decided 2026-09-05.)
+    - **The managing session files a found defect itself, without asking** (added 2026-09-05).
+      Implementing one item routinely turns up another: a stale comment, a missing guard, a document
+      that stopped being true, a remainder split off under the clause above. Those get a number the
+      moment they are found — the file, and one issue in `ago-root`.
+      **The boundary is the same one rule 9 draws for merging: no judgement the author has not seen.**
+      So a found defect is filed freely; anything that would *decide* something is not. If the honest
+      item needs a new port, a new store, a changed decision, or a product or commercial choice, it is
+      still filed — but **filed as the question**, with the options and what each costs, the way
+      `24-04` states three readings and picks none. An item that quietly answers an architectural or
+      business question by being written is the failure this clause guards against, not the one it
+      permits.
+      Why this is safe where merging needed conditions: filing costs a number and a paragraph, and a
+      wrong one is closed as not-planned. The expensive failure is the opposite — a defect noticed
+      during an item, mentioned in a report, and never given a number, which is exactly how three
+      stale rows outlived their items here before `queue-audit.sh` existed.
     - **Closing means closing every mirror.** Items are filed twice — in `ago-root` and in the
       repository they change — and closing one is not closing the item. This is part of merging, at
       the same moment as the roadmap and ADR-index sweep, not a later batch.
