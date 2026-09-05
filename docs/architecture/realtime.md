@@ -300,6 +300,46 @@ High-frequency, low-value events. Rules:
   this just adds a second, deliberate leaning-conservative layer on top for the common "graceful
   disconnect, no reconnect" case that TTL alone would only catch late.
 
+### The three-state presence, and which of them the hub owns (`23-20`)
+
+`OperatorStatus` is `Offline` / `Online` / `Away`. The hub owns the first two entirely - every
+transition between them is a side effect of a connection existing or not, and no client ever asks for
+either directly. `Away` is the one state the hub never *chooses*; it only has to not undo it.
+
+- **`OperatorHub.OnConnectedAsync`** calls `Operator.NoteConnected()`, not `Operator.GoOnline()`.
+  `NoteConnected` moves `Offline` to `Online` (the entire behaviour this call site had before this
+  item) and leaves `Away` alone. This is the whole subtlety the backlog item names: before `23-20`,
+  a connection blip - an ordinary SignalR automatic reconnect, indistinguishable server-side from any
+  other disconnect-then-reconnect - silently carried an away operator back to `Online`, because the
+  call site could not tell "a mere connection exists" from "the operator wants to be online".
+- **`OperatorHub.OnDisconnectedAsync`** calls `Operator.GoOffline()` only when this was the operator's
+  last live connection anywhere (unchanged from `4-06`). `GoOffline` itself now leaves `Away` alone
+  too - not only the connect side needed the guard. Without it, an away operator's last connection
+  dropping would erase the fact they went away, and the very next `NoteConnected` would find `Offline`
+  and carry them back to `Online` - the identical defect, reached through the disconnect path instead
+  of the connect one.
+- **Only the operator clears `Away`.** `OperatorHub.SetAwayAsync(false)` calls the pre-existing
+  `Operator.GoOnline()` - the one caller allowed to overwrite a deliberate `Away`, because it is the
+  operator saying so, not a side effect of a connection existing. `SetAwayAsync(true)` calls the new
+  `Operator.GoAway()`. Neither takes an `OperatorId` parameter - the caller's identity is always this
+  connection's own (`Context.User!.GetOperatorId()`), the same shape `GoOnline`/`GoOffline` already
+  had, so there is no "whose presence" question and no way for one operator to set another's.
+- **Neither `Away` nor `Offline` is a candidate for assignment or for `14-04`'s auto-reply
+  suppression** - both `SkipLockedAssignmentClaimer`/`RedisLockAssignmentClaimer` and
+  `OperatorRepository.AnyOnlineForSiteAsync` filter on `Status == Online`, unchanged by this item.
+  `Away` needed no new filter anywhere downstream; the only thing missing before `23-20` was a way to
+  *reach* the state at all.
+- **Going away releases nothing.** It is not going offline: the operator's own `Assigned`
+  conversations are untouched, `OperatorConversationReleaser` is not invoked, and `23-03`'s assignment
+  intervals neither open nor close for it. The console control that flips this
+  (`ago-console`'s `AwayControl`) says so explicitly, distinct from `ConnectionStateBadge`'s own
+  connection-only labels (this section's own "Shipped in `5-07`" note above).
+- **A snapshot read exists too**: `OperatorHub.GetMyPresenceAsync()` (backed by
+  `GetOperatorPresenceHandler`), the identical "re-call after connect/reconnect, not a push" shape
+  `GetVisitorPresenceAsync` already established just above - the console calls it once whenever its
+  own connection reports "connected", so its away control never renders a value a prior reconnect has
+  already made stale.
+
 ## Failure behaviour
 
 | Failure | Effect |
