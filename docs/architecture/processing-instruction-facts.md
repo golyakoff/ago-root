@@ -314,6 +314,7 @@ Stated as *what could be produced today*, not what could be built.
 | Retention windows, and that something enforces them | `adr/0057`, `adr/0031`, `adr/0050`, plus the jobs listed under Element 2 | `ago-chat`, `ago-deploy` |
 | That a backup restores | A verified restore procedure that has been run | `adr/0050`, `runbooks/backup-and-restore.md` |
 | The decision record for any of the above | 90-odd ADRs | `docs/adr/` |
+| That an erasure ran, six months later | An `erasure_records` receipt per erasure request: scope, requesting operator, timestamps, per-step counts, and `Failed` with its reason where a cycle did not finish. **Closed `24-13`, and closed with a stated limit rather than fully**: the receipt names the tenant and the operator and *never* the erased person (`adr/0112`), so it proves that an erasure ran for the right site at the right time — it cannot answer *which visitor* from this table alone, and a conversation erased under a whole-site cascade leaves only the site's aggregate count. Correlating a receipt to a named person's request needs the tenant's own record of that request. **And `Completed` means reachable-now, not gone from backups**: `adr/0050`'s thirty-day window still applies | `ErasureRecordQuery.cs`, `adr/0112`, `personal-data.md` |
 
 **Could not be produced today. These are the findings.**
 
@@ -321,10 +322,6 @@ Stated as *what could be produced today*, not what could be built.
   access request has to export every visitor they have — which is itself a disclosure problem, not
   merely an inconvenience. Erasure is per-conversation and per-site; export has no matching
   granularity. → **Gap `24-11`.**
-- **Proof that an erasure happened.** `ConversationErasureJob` deletes rows and objects and leaves no
-  durable record. The only trace is a log line, and container logs are kept 14 days (`adr/0057`). Asked
-  six months later to show that a named person's data was destroyed on a given date, this system can
-  show that the rows are absent and nothing more. → **Gap `24-13`.**
 - **Who accessed a given person's data, and when.** Nothing records it. → **Gap `24-12`.**
 - **Documentary evidence of where the database physically is.** → **Gap `24-07`.**
 - **What a channel provider or the LLM vendor retains** once data reaches them. Not answerable from
