@@ -1,7 +1,7 @@
 # where the data physically sits is evidenced, not inferred from a tier name
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: ready — **blocked on the author, not on implementation**. The two remaining Done-when entries are a provider confirmation from Fornex and where the backup machine physically stands; neither is answerable from any repository. The third is done (2026-09-05).
 - **Depends on**: nothing. `24-06` found it; it is answerable independently of every other item here.
 - **Decision**: none yet — `adr/0026` records the purchase, not a location fact
 
@@ -88,8 +88,13 @@ it is the one where a confident wrong answer costs the most.
       location is recorded with the method that established it and the date. The RIPE lookup of
       2026-09-05 (`country: RU`, `netname: RU-FORNEX`) is recorded as the first such method.
 - [ ] The backup copies' location is recorded.
-- [ ] `processing-instruction-facts.md` Element 5 no longer contains the words "rests on a
+- [x] `processing-instruction-facts.md` Element 5 no longer contains the words "rests on a
       purchase-page label".
+      *Done 2026-09-05. The section had begun contradicting itself: the finding's opening still made
+      that claim while the paragraph below it recorded the RIPE evidence. The opening now states the
+      current position — partly evidenced, not documented by the provider — and the original finding is
+      kept below it in the past tense, because how a claim came to rest on a tariff name is the useful
+      part of the record.*
 
 ## Open questions
 
