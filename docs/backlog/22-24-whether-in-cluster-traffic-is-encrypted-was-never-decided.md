@@ -1,7 +1,9 @@
 # whether in-cluster traffic is encrypted was never decided, and something is waiting on the answer
 
 - **Stage**: 22
-- **Status**: ready. **Answered by the author, 2026-09-06: TLS between services.** Reading B, not A.
+- **Status**: **open, waiting on the CA bootstrap** (2026-09-06). Decided, built and recorded
+  (`adr/0137`, `ago-root#592`), and **no traffic is encrypted yet**: the two pull requests that arm
+  the mechanism are held until a real CA exists. See *What is waiting*.
 - **Depends on**: nothing. Carried out of `22-18`, which named it and correctly refused to answer it.
 - **Decision**: none taken. The readings are below and the choice is the author's.
 
@@ -52,10 +54,16 @@ right answer all along.
 
 ## Done when
 
-- [ ] The author has chosen, and the choice is recorded where somebody reading about the deployment
-      will find it — `architecture/edge.md` or an ADR, not only here.
-- [ ] If A, the reasoning is written down as a decision rather than left as a default.
-- [ ] If B, in-cluster certificates have an expiry story and something notices before they lapse.
+- [x] The author has chosen, and the choice is recorded where somebody reading about the deployment
+      will find it — `adr/0137`, plus `edge.md` and `secrets.md`.
+- [~] If A, the reasoning is written down as a decision rather than left as a default. **Not
+      applicable** — reading B was chosen, so this box describes a road not taken.
+- [~] If B, in-cluster certificates have an expiry story and something notices before they lapse.
+      **Half met, and the half that is missing is named.** The *leaf* is covered by
+      `TlsCertificateRenewalOverdue`, which already had no per-certificate matcher — proven with a
+      real `promtool` run. The **root** is covered by nothing: it is a plain Secret and deliberately
+      not a cert-manager `Certificate`, because pointing one at it would make cert-manager reissue
+      over an offline root. Ten years and a date in a runbook, and `adr/0137` says so in those words.
 - [ ] `compliance-checklist.md`'s F row points at the answer.
 
 ## Out of scope
@@ -75,3 +83,20 @@ implementation - it is the half that makes this choice safe rather than worse th
 
 Reading A - plain HTTP written down as a decision - is now closed, and `architecture/edge.md` should
 say what was chosen rather than leaving the next reader to infer it from a manifest.
+
+## What is waiting
+
+**The decision is landed. The mechanism is not, and that is deliberate.**
+
+`ago-deploy#155` and `ago-chat#209` are open and held. Merging them is safe — the overlay refuses to
+render without the CA key, `exit 1` naming the file, and `apply-demo.sh` renders before it applies, so
+nothing is ever half-applied. But it would mean **`apply-demo.sh` cannot run at all** until the
+bootstrap is done, and that script is the only repair path for a manifest problem.
+
+**The bootstrap is the author's**, four ordered steps in `runbooks/public-deploy.md` §5b. The ordering
+is the part that matters: **the `ago-chat` image must carry the new root before the overlay that
+presents certificates signed by it is applied**, or the chat side of the hop trusts nothing the
+calendar side presents.
+
+Until then, the chat-to-calendar module call is plain HTTP inside the cluster — which is what it was
+before, and is now a *known* state rather than an unexamined one. That alone was `22-18`'s complaint.
