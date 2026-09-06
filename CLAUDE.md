@@ -293,6 +293,7 @@ If a request would violate a rule above, say so before writing code, and propose
 | How to run things, workspace layout | `docs/runbooks/` |
 | Updating the live demo environment | `docs/runbooks/redeploy.md` |
 | Changing the live Keycloak realm, or making somebody a platform owner | `docs/runbooks/realm-operations.md` |
+| Putting a product on a tenant's account by hand, or taking one away | `docs/runbooks/module-grant-and-revoke.md` |
 | Rotating a secret, or reacting to one that leaked | `docs/runbooks/secret-rotation.md` |
 | A Dependabot or vulnerability-scan finding, or why there is no SBOM | `docs/runbooks/vulnerability-response.md` |
 | What to build next, in what order | The board: <https://github.com/users/golyakoff/projects/1> |

@@ -1,7 +1,7 @@
 # granting and revoking a product has a written procedure
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `23-14` — the runbook's verification step is "look at the tenant on `/owner` and
   confirm what you just granted is there"; without that read there is nothing to verify against but a
   second curl. `23-13` — the revoke section documents the override and its recorded reason.
@@ -70,14 +70,44 @@ A new page in `docs/runbooks/`, beside `realm-operations.md`, covering:
 
 ## Done when
 
-- [ ] The runbook exists and a reader who has never granted a module can follow it end to end against
+- [x] The runbook exists and a reader who has never granted a module can follow it end to end against
       a local cluster.
-- [ ] It contains no secret, no token and no real hostname or address.
-- [ ] It states, at the grant step, what expiry binds and what it does not.
-- [ ] Its revoke section requires checking provenance before acting, names the override, and says
+- [x] It contains no secret, no token and no real hostname or address.
+- [x] It states, at the grant step, what expiry binds and what it does not.
+- [x] Its revoke section requires checking provenance before acting, names the override, and says
       what the recorded reason is for.
-- [ ] `CLAUDE.md`'s "Where to look" table and `docs/runbooks/`'s own index name it.
+- [x] `CLAUDE.md`'s "Where to look" table and `docs/runbooks/`'s own index name it.
 
 ## Open questions
 
 None.
+
+## Outcome (2026-09-06)
+
+`docs/runbooks/module-grant-and-revoke.md`.
+
+**One Done-when assumed a file that does not exist.** It asked for `docs/runbooks/`'s "own index" to
+name the new page. There is no index — the directory holds twelve runbooks and no `README.md`, and the
+only thing that indexes them is `CLAUDE.md`'s *Where to look* table, which now carries a row for this
+one. I did not create an index to satisfy the wording: twelve files with no index is either fine or its
+own item, and inventing one inside a runbook's number is how scope quietly moves.
+
+**Written for the person, not for the endpoint.** The two calls are four lines of the page. The rest is
+the three places somebody forms a wrong belief:
+
+- **`expiresAt` is `required` and nullable**, so the endpoint stops you forgetting it but not from
+  sending `null` without thinking. The page asks you to write down which of the two you chose, at the
+  moment you choose it.
+- **What an expiry binds.** Chat stops offering the module; the module is never told. Said at the point
+  of granting, because that is where the wrong belief forms — not at the point of disappointment.
+- **Provenance before revoking.** The page makes checking `/owner` step one rather than a caution at
+  the end, because the distinction between "we granted it" and "they bought it" cannot be recovered
+  after the row is gone, and it decides whether the override is even in play.
+
+**On the recorded reason, the page takes a position the item did not require.** `adr/0118` chose free
+text over an enumerated code because a justification that cannot name what happened is not one — so the
+runbook says what a real reason looks like and gives three examples of what is not one. A field that
+accepts anything is a field that gets `"cleanup"` unless somebody says otherwise in the place where it
+is typed.
+
+**No secret, no token, no real hostname or address appears in the file** — checked, not assumed.
