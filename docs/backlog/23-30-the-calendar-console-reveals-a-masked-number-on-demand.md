@@ -3,7 +3,7 @@
 - **Stage**: 23
 - **Status**: ready
 - **Depends on**: `23-12` (hard — the backend, the `Masked` flag and the three endpoints)
-- **Decision**: `docs/adr/0126-*`, and `decisions.md` §5 behind it
+- **Decision**: `docs/adr/0123-*` (both sides of the ladder), and `decisions.md` §5 behind it
 
 ## Goal
 
