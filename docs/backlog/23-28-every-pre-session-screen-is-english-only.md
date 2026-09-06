@@ -1,7 +1,9 @@
 # every screen a person sees before they have a site renders in English only
 
 - **Stage**: 23
-- **Status**: ready. **The question below is answered** (author, 2026-09-05) — see *The answer*.
+- **Status**: done (2026-09-06). Four pre-session routes render Russian through their own strings
+  provider; the `ux-gate` exemption this item existed to remove is gone. The code landed in the
+  morning and the documentation half was owed until the evening — see the Outcome.
 - **Depends on**: nothing.
 - **Found**: 2026-09-05, while building `23-27`. Filed under CLAUDE.md rule 14 as a question rather
   than an answer, because the fix turns on a choice about where a locale comes from.
@@ -80,9 +82,32 @@ excused from the untranslated-text assertion, and the exemption's disappearance 
 
 ## Done when
 
-- [ ] The author has chosen among the three options above, and the choice is recorded.
-- [ ] All four routes render in the reader's language under that choice.
-- [ ] `ux-gate`'s by-name exemptions for `redeem-invite` shrink or disappear, whichever the choice
+- [x] The author has chosen among the three options above, and the choice is recorded.
+- [x] All four routes render in the reader's language under that choice.
+- [x] `ux-gate`'s by-name exemptions for `redeem-invite` shrink or disappear, whichever the choice
       allows — the exemption existing is what makes this item checkable.
-- [ ] `ui-inventory.md`'s "Language: hardcoded English" lines are corrected, since three of them
+- [x] `ui-inventory.md`'s "Language: hardcoded English" lines are corrected, since three of them
       currently describe the intended state rather than a defect.
+
+## Outcome
+
+**Code shipped 2026-09-06** (`cdc6518` in `ago-console`), and it did the whole of what the item asked:
+`PreSessionStringsProvider` gives the four routes outside `StringsProvider` a locale of their own, and
+`ux-gate`'s by-name exemption for `redeem-invite` was **deleted rather than widened**. `owner-sites` is
+the one exemption left, and its English is permanent by design rather than a missing locale signal -
+`gate.spec.ts`'s own comment is careful that the two were never the same kind of gap, which is why
+removing one did not mean removing both.
+
+**The documentation half was owed for most of a day, and that is the part worth recording.** Four
+`**Language.** Hardcoded English` lines in `ui-inventory.md` still described the defect after it was
+fixed - including one that called it *a known gap rather than a choice* and pointed at an exemption
+that no longer existed. A reader would have believed all four.
+
+**Nothing mechanical could have caught it.** `queue-audit.sh` flags an item whose Done-when boxes are
+all ticked while its row is open; this item's boxes were all *un*ticked, which is indistinguishable
+from work that has not started. It was found by reading, while picking items for a wave - the same way
+the `background-worker-brief` skill's own step 0.5 says to look before briefing, which is exactly the
+step that was skipped when `24-17` was briefed against a title instead of its body on the same day.
+
+So the honest reading is not *this item was slow*, it is that **a part-finished item is invisible to
+every check this project has**, and the only thing that finds one is somebody opening the file.
