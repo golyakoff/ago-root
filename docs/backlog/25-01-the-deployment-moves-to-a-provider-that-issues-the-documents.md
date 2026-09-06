@@ -1,7 +1,7 @@
 # the deployment moves to a provider that issues the documents
 
 - **Stage**: 25
-- **Status**: ready — **and it is the launch's critical path**
+- **Status**: ready — **not before ~2026-09-20**, and deliberately not the critical path today. The author's call, 2026-09-06: a month at Fornex is already paid and Yandex Cloud is roughly twice the price, so the paid month gets used. That is a cost decision, not a change to the finding — the evidence problem below is unchanged and the launch still cannot happen on Fornex.
 - **Depends on**: `24-07` established the question. Nothing depends on this that can start before it.
 - **Decision**: the author's, 2026-09-06 — **Fornex is out**. The provider question below is open.
 
@@ -35,6 +35,23 @@ Everything is on one machine (`adr/0026`). Verified 2026-09-06:
 - **The Telegram relay** (`adr/0070`), which egresses through the author's own personal endpoint
   because direct calls from *this* node failed. Whether that is still needed from a different network
   is a real question the move gets to re-ask.
+
+## Timing, decided 2026-09-06
+
+**Not before roughly the twentieth.** A month at Fornex is paid for, and Yandex Cloud costs about
+twice as much — so the paid month gets used rather than written off. The author's call, and it is a
+cost decision rather than a reassessment: nothing above changed, and a launch still cannot happen on a
+machine whose location nobody will put in writing.
+
+**What that buys, and it is worth spending deliberately.** The move stops being the thing everything
+waits on, which means the provider choice and the shape below can be decided rather than defaulted,
+and `25-02`'s other lines — the regulator notification especially, which is *"before processing
+starts"* — can be worked in parallel instead of behind it.
+
+**What it costs:** the deadline stops being visible. A migration with a fortnight of slack is a
+migration nobody starts, and this one has a cutover order that punishes being rushed. The first thing
+it needs is not a VM — it is the provider chosen and the shape below settled, and both can happen this
+week at no cost.
 
 ## The open question, and it is two questions
 
