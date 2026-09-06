@@ -1,7 +1,7 @@
 # the tenant is bound by what they accept at registration — and it is not a consent checkbox
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `24-01` (the record), `24-02` (the version it points at)
 - **Decision**: `docs/adr/0076-*` — AGO is **controller** for its own account holders
 
@@ -82,14 +82,49 @@ literal it hard-codes.
 
 ## Done when
 
-- [ ] Registration records an acceptance of the agreement, with its version.
-- [ ] No control on that screen asks for consent to processing the contract already requires.
-- [ ] If a separate optional consent exists, it is unticked by default and refusing it still registers
+- [x] Registration records an acceptance of the agreement, with its version.
+- [x] No control on that screen asks for consent to processing the contract already requires.
+- [x] If a separate optional consent exists, it is unticked by default and refusing it still registers
       the tenant — proven by a test, since this is the half that quietly regresses.
-- [ ] The policy is reachable from the screen by somebody with no account.
+- [x] The policy is reachable from the screen by somebody with no account.
 
 ## Open questions
 
 - **Is there anything today that is genuinely beyond contract necessity?** If not, this item ships one
   acceptance and no consent control, which is the better outcome and should be stated rather than
   treated as an omission.
+
+## Outcome (2026-09-06)
+
+`ago-chat` `9af5938`, `ago-console` `6cd32fa`.
+
+**Registration writes an acceptance per required document, in the registration's own transaction.**
+`RegisterSiteHandler` asks `IRequiredDocumentRepository` which document keys a `Tenant` must accept,
+resolves each against its currently published version, and builds an `AcceptanceRecord` through the
+aggregate's own factory. A key with no published version fails the registration rather than
+registering a tenant bound to nothing — the failure a silent skip would have hidden.
+
+**There is no consent control on the screen, which is the point and not an omission.** The tenant is
+on a contract basis; a tick that cannot be refused without losing the service is not freely given, so
+adding one would have been *wrong* rather than merely redundant. What the screen gained instead is a
+link to the agreement, and `PolicyPage` — mounted outside every provider, alongside `/signup` and
+`/callback`, so somebody with no account can read what they are about to be bound by. The third
+Done-when (an optional consent, unticked, refusable) is satisfied vacuously: no such control exists,
+and the test that would catch a regression is the one asserting the screen has no consent input at
+all.
+
+**`required_documents` is a table, not a constant.** Which documents bind which kind of subject is
+data, the same move `adr/0114` made for a document's own text one item earlier — adding a required
+document is an insert, not a deploy. It carries **no foreign key to `documents`**: a key may
+legitimately be named before it is published, and coupling the two would make that state
+unrepresentable.
+
+**What this leaves true, and it is uncomfortable enough to say plainly: the table ships empty.** In
+every deployment today, `required_documents` has no rows, so a registration records zero acceptances
+and succeeds. The mechanism is complete and the content is not, because the content is a lawyer's.
+That gap is `24-16`, filed separately rather than left implied here.
+
+**No new ADR.** The two decisions a reviewer would ask about are already argued: documents-as-data is
+`adr/0114`, and why a tenant gets no consent tick is argued at length in `roadmap.md`'s own Stage 24
+preamble, with the statute named. An ADR would restate rather than decide. Flagged here so the
+judgement is visible and cheap to overturn.
