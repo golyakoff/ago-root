@@ -420,6 +420,35 @@ fi
 
 [ -z "$wt_open$wt_closed" ] && echo "No worktree carries uncommitted tracked changes."
 
+# An ADR file with no row in docs/adr/README.md. The index is the only place the decisions can be read
+# as a set, so an ADR missing from it is a decision nobody browsing will find - and the gap is created
+# by exactly the situation that makes it hard to avoid: `land-a-slice` forbids two open pull requests
+# touching README.md at once, so a second and third concurrent ADR deliberately ship without their row
+# and somebody is supposed to remember. On 2026-09-06 three were open at the same time.
+# This turns remembering into looking.
+# Read THIS working tree, not `primary_root` - unlike the checks above, which ask "what does the
+# repository as a whole know", this one asks "is the change in front of me complete", and the change
+# being made is in whichever worktree the script was run from. Using `primary_root` here made the check
+# report a missing row that the very edit adding it had just written, one directory away.
+audit_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+missing_rows=""
+for adr in "$audit_root"/docs/adr/[0-9][0-9][0-9][0-9]-*.md; do
+  [ -e "$adr" ] || continue
+  n=$(basename "$adr"); n=${n%%-*}
+  grep -q "^| *$n *|" "$audit_root/docs/adr/README.md" || missing_rows="$missing_rows  $n  ($(basename "$adr"))
+"
+done
+
+echo
+if [ -n "$missing_rows" ]; then
+  echo "ADR files with no row in docs/adr/README.md:"
+  printf "$missing_rows"
+  echo "  Add the row in the next ago-root change. An ADR outside the index is a decision that"
+  echo "  cannot be found by anyone reading the decisions as a set."
+else
+  echo "Every ADR file has a row in docs/adr/README.md."
+fi
+
 # Flagged entries are for a human to resolve, so this is not an error exit - it is a report. A CI job
 # that failed on this would train people to close issues to make it green, which is the opposite of
 # the point.
