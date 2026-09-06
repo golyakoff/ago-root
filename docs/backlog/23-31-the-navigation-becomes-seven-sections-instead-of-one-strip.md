@@ -36,7 +36,7 @@ everywhere except one subheading, so nothing is more than two clicks deep.
 | Аналитика | Мои показатели · Аналитика · Конверсия · Отчёт по меткам · Запись через чат |
 | Календарь *(module)* | Мастера · Услуги · Расписание · В ожидании · Записи · Клиенты · Настройка |
 | Команда | Сотрудники · Общение |
-| Каналы | Установка виджета · Внешний вид · Бот MAX · Бот Telegram · Другие каналы |
+| Каналы | Установка виджета · Виджет на сайте · Бот MAX · Бот Telegram · Другие каналы |
 | Автоматизация | Готовые ответы · ИИ-подсказки · Автоответ офлайн · ИИ-автоответ · ИИ-помощник по вопросам · Метки |
 | Администрирование | Продукты · Оплата · Данные на устройстве · Документы · Удалить аккаунт |
 
@@ -105,9 +105,13 @@ A restructure that lands without redirects is a restructure that breaks every li
 The agreed mock, with every screen's current and proposed address and what each screen does:
 `https://claude.ai/code/artifact/49d80db9-127d-42e9-b43d-985c20a24dde`
 
-## Open questions
+## One naming rule, decided 2026-09-06 rather than left open
 
-- **"Внешний вид" now sits next to "Бот MAX" with no "Виджет на сайте" subheading above it**, so the
-  single word does not say whose appearance it is. Compensated in the description for now; the two
-  ways out are renaming it back to "Внешний вид виджета" or restoring the subheading. Worth deciding
-  while it is one line rather than after tenants have learned it.
+**Every entry under Каналы is named for the channel it is, not for the action it performs**: «Виджет
+на сайте», «Бот MAX», «Бот Telegram», «Другие каналы». The first draft called the widget's own screen
+«Внешний вид», which stopped making sense the moment the "Виджет на сайте" subheading was removed —
+one word next to «Бот MAX» does not say whose appearance it is.
+
+**«Установка виджета» is the exception and stays one**, above the list: it is a task rather than a
+channel. It is done once and never returned to, which is also why it is first and why the empty queue
+still calls for it while `SiteInstallationState` is `NotSeenYet`.
