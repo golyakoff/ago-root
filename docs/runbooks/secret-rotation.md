@@ -211,11 +211,17 @@ Both are retried, so the cost is a window of failures rather than damage.
 repository is pushed to next.
 
 1. Create a new classic PAT, **`read:packages` only**, and note the new expiry.
-2. Set it as a repository secret in **`ago-chat`** and in **`ago-calendar`**.
-3. Re-run one workflow in each and confirm the restore step passes.
+2. Set it as a repository secret in **`ago-chat`**, **`ago-calendar`** and **`ago-faq`**.
+3. Re-run one workflow in each of the three and confirm the restore step passes.
 4. **Only then** revoke the old PAT.
 5. Update the expiry date in `ago-chat/.github/workflows/credential-expiry.yml` and in
    `docs/architecture/secrets.md`.
+
+**This said two repositories until `24-14` re-ran sweep 5 on 2026-09-06 and found a third.** Anyone
+following the old wording would have rotated the PAT, revoked the old one at step 4, and left
+`ago-faq`'s CI failing to restore `Ago.Platform.*` — with nothing in this runbook to say why. Run
+`bash tools/secrets-audit.sh` in `ago-root` before step 2 rather than trusting this list: it
+enumerates the workspace, so a repository added after this sentence was written is still swept.
 
 Step 5 is the one that gets skipped, which is why the reminder that fires lives in the workflow rather
 than in a document. That reminder's own limitation: GitHub disables scheduled workflows in a repository
@@ -271,6 +277,30 @@ registrar served the zone from sixteen authoritative IPs of which only four carr
 fails DKIM for roughly three quarters of the internet while every casual check looks fine. Verify with
 `opendkim-testkey -d <domain> -s <selector> -vvv`, and if it disagrees with `dig`, believe neither
 until you have queried the authoritative nameservers individually.
+
+## The channel-credential encryption key — `CHANNELS_CREDENTIAL_ENCRYPTION_KEY`
+
+**Class: breaking, for the same reason as the key below it, and it needs its own section precisely
+because it looks safer than it is.** This one *is* held correctly — it comes from `infra-credentials`
+like its neighbours, not from a committed literal — so it reads as an ordinary Secret entry a
+"rotate everything" sweep would happily change. It is not one.
+
+Changing it makes every already-stored channel credential permanently undecryptable
+(`channel_credentials`, `14-01`). Nothing warns. What a tenant sees is their Telegram or MAX bot
+quietly ceasing to deliver, with no error that names a key.
+
+The honest interim procedure is the same shape as the webhook key's, and so is the check before
+following it:
+
+1. Count what would break: `select count(*) from channel_credentials`.
+2. Tell every tenant with a connected channel that they must reconnect it.
+3. Change the value and roll all three hosts.
+4. Have each tenant reconnect, supplying their bot token or API credential again.
+
+**Do not follow this once a row belongs to a real tenant** — reconnecting a channel means the tenant
+going back to Telegram or MAX for a token, which is not a thing to ask for because a key was rotated
+on a schedule. The real fix is the same two-key, decrypt-with-either shape `secrets.md`'s open finding
+describes for the webhook key; neither exists yet, and one item would build both.
 
 ## The webhook secret-encryption key — `Webhooks:SecretEncryptionKey`
 

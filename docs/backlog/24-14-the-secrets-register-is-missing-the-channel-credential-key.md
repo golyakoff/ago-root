@@ -1,7 +1,7 @@
 # the secrets inventory lists the key that protects tenants' channel credentials
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: nothing
 - **Decision**: none — `secrets.md`'s own six sweeps are the method this restores
 
@@ -55,11 +55,48 @@ the omission is not knowable to a reader of that file.
 
 ## Done when
 
-- [ ] All six sweeps re-run, dated in the file, and every row they produce is present.
-- [ ] The channel-credential key has a row with its rotation-cost class.
-- [ ] Something forces the next secret into this file.
+- [x] All six sweeps re-run, dated in the file, and every row they produce is present.
+- [x] The channel-credential key has a row with its rotation-cost class.
+- [x] Something forces the next secret into this file.
 
 ## Open questions
 
 - **Where does the forcing function live** so it is actually read? `personal-data.md` uses two skills
   and a sibling doc; the equivalent set for a secret is not obviously the same three.
+
+## Outcome (2026-09-06)
+
+All six sweeps re-run. The item predicted one missing row; the sweeps found four things, and two of
+them were worse than an omission.
+
+1. **`CHANNELS_CREDENTIAL_ENCRYPTION_KEY` has its row**, classed **Breaking** — reversible encryption
+   over stored ciphertext, so changing it silently makes every tenant's channel credential
+   undecryptable. `secret-rotation.md` gained a section for it, written because this key is more
+   dangerous than it looks: it is held *correctly*, from `infra-credentials`, so it reads as an
+   ordinary entry that a "rotate everything" sweep would happily change.
+2. **Sweep 5's own scope was stale.** It said "all seven repositories"; there are ten. `ago-faq` had
+   never been swept, and `ago-landing` was recorded as having no workflow and has one.
+3. **`AGO_PLATFORM_PACKAGES_TOKEN` is in three repositories, not two** — and this was not
+   hypothetical drift. `ago-faq`'s most recent commit is `chore: retrigger CI after re-setting
+   AGO_PLATFORM_PACKAGES_TOKEN`: somebody had already paid for the third copy while the inventory
+   said there were two. Worse, `secret-rotation.md`'s PAT procedure named two repositories and
+   revokes the old token at step 4 — following it would have left `ago-faq`'s CI unable to restore
+   `Ago.Platform.*`, with nothing in the runbook to say why. Both are fixed.
+4. **Sweep 4 finds a second committed literal**, `Channels:CredentialEncryptionKey` in three
+   `appsettings.Development.json`. It is deliberately *not* a second open finding, and section B now
+   says why: what makes the webhook key a finding is not that a literal exists, but that `base/*.yaml`
+   sets it as a literal and no overlay overrides it, so the committed value protects live data. The
+   two look identical to a grep and are not the same fact.
+
+**The forcing function is `tools/secrets-audit.sh`**, not a sentence asking people to remember. It
+re-runs sweeps 1, 2, 3 and 5 and exits non-zero on any name the inventory does not carry. Sweeps 4
+and 6 are deliberately left out — one needs a human to say whether a string is a secret or a fixture,
+the other reads prose — because a script that pretended to run them would report a clean sweep it had
+not made.
+
+It was proven by watching it go red and then green: against `main` it reported
+`CHANNELS_CREDENTIAL_ENCRYPTION_KEY` missing and exited 1; against this change it exits 0.
+
+The open question — where the forcing function lives so it is actually read — is answered by making
+it mechanical rather than by choosing a document. It is additionally named at the point of use, in
+`secret-rotation.md`'s PAT procedure, which is the step this item found already wrong.
