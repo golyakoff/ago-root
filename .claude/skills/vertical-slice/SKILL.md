@@ -68,6 +68,16 @@ or capacity.
 Update any architecture doc the change made wrong. Write an ADR if you chose between real
 alternatives. Both go in the same branch as the code.
 
+**If the slice adds an outbound call that carries personal data — a channel provider, an LLM vendor,
+any third party — it is a change to `docs/architecture/personal-data.md`,** under *Where it goes*.
+Say what reaches them, on whose act, what they retain, and what removes it; **"not established" is an
+acceptable answer and a guess is not.**
+
+This is easy to skip because nothing about it looks like the register. The three other guards on that
+file watch data *arriving* in a store — a migration, a contract, a schema. Six channel adapters and an
+LLM client landed here without one, each a correct reviewed slice, because each added a **destination**
+rather than a store. (`24-08`.)
+
 ## Self-check before reporting done
 
 - [ ] Domain references nothing but `Ago.Platform.Kernel`; Application references no infrastructure.
