@@ -200,6 +200,49 @@ system at all. `file-storage.md` step 1 said the client sends a filename; it was
 change as this file. **Preserve this**: a "show the original filename" feature would add a new personal
 -data field to the schema, the wire and any export.
 
+## Where it goes — destinations outside this deployment
+
+`24-08`, 2026-09-06. Every row above is somewhere **AGO holds bytes**. These are somewhere bytes
+**arrive that AGO does not hold**, and they are in their own table rather than mixed into the one above
+for a reason that is the whole point of the item: the "What removes it" column means something
+different here. Above it names a mechanism this system runs. Here it names somebody else's, and mostly
+we do not know it.
+
+The register was written for erasure and export against stores AGO controls, before any channel adapter
+existed (`16-01`, `16-05`, 2026-08-25/26). Every adapter since was a correct, reviewed slice that added
+a *destination* — a category with no row shape here. "Keeping this true" forced an update when a schema
+changed and nothing forced one when an outbound call was added, which is exactly what drifted.
+
+**A channel is the tenant's own act.** Nothing reaches any provider until that tenant stores a
+credential for it: the adapters are registered unconditionally, the route is per site. So each of these
+transfers is made on the controller's own configuration — which is the shape an instruction can
+describe, and the reason it must be described rather than left implicit.
+
+| Store | What is held | Control | How long | What removes it | Verified from |
+|---|---|---|---|---|---|
+| **MAX** (`14-02`) | Message text, attachments, the provider's own chat id | The provider. Reached only for a site whose tenant stored a `channel_credentials` row for `ChannelKind.Max` | **Not established.** Their terms, not ours, and not answerable from these repositories | **Not established** — no deletion path of ours reaches it. `16-02`'s erasure removes our copy and cannot remove theirs | `MaxChannelAdapter`; `processing-instruction-facts.md` Element 5 (2026-09-05) |
+| **Telegram** (`14-07`) | Same | Same, `ChannelKind.Telegram`. **The outbound hop is not ours either**: `adr/0070` routes these calls through a VLESS relay that is **the author's own personal endpoint, not AGO infrastructure**, because 8 of 15 direct requests from the node failed with no TCP connection at all. Message text on this channel traverses a hop belonging to a private individual | **Not established** | **Not established.** The relay itself is named by `adr/0070` as an accepted gap "worth revisiting before any real paying tenant depends on Telegram specifically" — that condition is close | `TelegramChannelAdapter`; `adr/0070` |
+| **VK** (`14-08`) | Same | Same, `ChannelKind.Vk` | **Not established** | **Not established** | `VkChannelAdapter` |
+| **Avito** (`14-11`) | Same | Same, `ChannelKind.Avito` | **Not established** | **Not established** | `AvitoChannelAdapter` |
+| **WhatsApp / Meta** (`14-10`) | Same | Same, `ChannelKind.WhatsApp` | **Not established** | **Not established** | `WhatsAppChannelAdapter` |
+| **The visitor's own mail provider** (`14-09`) | Message text, attachments, the visitor's email address | **Nobody we contract with.** RFC 5321/5322 direct, no vendor in between — the destination is whichever provider the visitor themselves uses | Theirs, and unknowable to us by construction | Nothing of ours. A sent mail is gone from our reach the moment it is accepted | `EmailChannelAdapter` |
+| **YandexGPT** (`19-01` reply draft, `19-02` categorisation) | **The conversation's own message history**, as prompt context | **AGO, deployment-wide — not the tenant.** The real client is registered only when an API key and folder id are present, and **neither is set in any overlay** (checked 2026-09-05), so nothing reaches it today. See the note below, because the *switch* is the finding, not the current state | **Not established** | **Not established** | `YandexGptReplyDraftClient`, `YandexGptConversationCategorizerClient`; `adr/0078` |
+| **An SMS gateway** (`14-03`, `14-15`) | **Nothing, today** | No adapter exists. The only registered `IPhoneVerificationSender` is `UnconfiguredPhoneVerificationSender`, and no SMS infrastructure project exists | — | — | `IPhoneVerificationSender`; `src/` listing |
+
+**"Not established" is a finding, not a placeholder.** What a provider retains is answerable only from
+that provider's own terms, and writing a guess here would be worse than the gap — this file's value is
+that a reader can act on it. A tenant who needs the answer for their own notice has to get it from the
+provider they chose to connect, and this file should say so rather than imply we know.
+
+**The AI switch is AGO's, and there is no per-tenant control.** Nothing reaches YandexGPT today. But the
+day AGO sets that key, every tenant's closed conversations begin being sent to an LLM vendor for
+categorisation and every tenant's operators can draft replies from one — without any tenant choosing it
+and with nothing for a tenant to point at and refuse. **A processor adding a processing purpose and a
+sub-processor on its own initiative is precisely what a processing instruction exists to constrain.**
+Stating it here is not the fix; building a per-tenant control is a different promise and a different
+item (`24-08`'s own Out of scope), and until one exists this is a row a tenant's lawyer is entitled to
+ask about.
+
 ## Retention, stated plainly
 
 Worth its own heading because the table's "How long" column has one dominant value.
@@ -325,7 +368,7 @@ What this file does assert, because they are facts about this system rather than
 |---|---|---|
 | `10-05` transactional email | Which sending provider | Every account holder's email address, plus the content of verification and password-reset mail |
 | ~~`15-02` backup and verified restore~~ — **answered 2026-08-25, `adr/0050`**: the destination is the author's own machine over existing SSH, encrypted to a key the node does not hold. No vendor, no boundary crossed | — | — |
-| ~~`20-05` / `14-03` SMS and channel vendors~~ — **partly answered by shipping, and that is the problem**. Six channel adapters have since landed (`14-02` MAX, `14-07` Telegram, `14-08` VK, `14-09` Email, `14-10` WhatsApp, `14-11` Avito), each activated per site by a tenant's own credential row, and two AI features (`19-01`, `19-02`) can send conversation history to YandexGPT on a switch that is AGO's rather than any tenant's. **SMS is still open in the sense this row meant**: no sender implementation exists at all. The destinations, and what reaches each, are tabled in `processing-instruction-facts.md` (2026-09-05); what each vendor *retains* is `24-08` | Which gateway — for SMS, still unanswered | Phone numbers, and message text on any channel that carries it |
+| ~~`20-05` / `14-03` SMS and channel vendors~~ — **partly answered by shipping, and that is the problem**. Six channel adapters have since landed (`14-02` MAX, `14-07` Telegram, `14-08` VK, `14-09` Email, `14-10` WhatsApp, `14-11` Avito), each activated per site by a tenant's own credential row, and two AI features (`19-01`, `19-02`) can send conversation history to YandexGPT on a switch that is AGO's rather than any tenant's. **SMS is still open in the sense this row meant**: no sender implementation exists at all. The destinations, and what reaches each, are tabled in `processing-instruction-facts.md` (2026-09-05); what each vendor *retains* is answered by `24-08` (2026-09-06) in the only way it can be: **"not established", per vendor, stated as a finding rather than guessed.** That is each provider's own terms and is not derivable from these repositories; a tenant who needs it for their own notice gets it from the provider they chose to connect | Which gateway — for SMS, still unanswered, and it is now the only one | Phone numbers, and message text on any channel that carries it |
 | `adr/0031`'s archive store | Where expired history is archived | Whole conversation transcripts |
 | Any future object-storage vendor | Where attachment bytes live | Documents and photographs visitors uploaded |
 
@@ -420,8 +463,13 @@ Written down rather than guessed, because a map is most dangerous where it is co
 
 ## Keeping this true
 
-An inventory that drifts is worse than none, because it will be trusted. Four places now name this
-file, so that a change that widens the map is a change that has to think about it:
+An inventory that drifts is worse than none, because it will be trusted. **Six** places now name this
+file, so that a change that widens the map is a change that has to think about it.
+
+(The count said "four" over five entries until `24-08` fixed it, and the way it broke is worth one
+sentence: `24-15` added a bullet and updated the number, not noticing that the paragraph below the list
+introduces a further entry as "a fourth". Two entries claimed the same ordinal. A list whose own count
+is maintained by hand drifts exactly like the inventory it is guarding.)
 
 - `data-model.md` — "the file a schema change updates".
 - `.claude/skills/db-migration` — step 5 of *Making the change*.
@@ -430,8 +478,15 @@ file, so that a change that widens the map is a change that has to think about i
   widget's own storage. The three above all guard data that lands in *our* stores; the widget's
   `localStorage` is the one place this system writes personal data onto a machine we do not control,
   so it was the map's blind spot rather than an entry nobody had got to.
+- `.claude/skills/vertical-slice` — **added 2026-09-06 by `24-08`**, step 6, on a slice that adds an
+  outbound call carrying personal data. The four above guard data *arriving* in a store; six channel
+  adapters and an LLM client landed without touching this file, because each was a correct vertical
+  slice that added a **destination** — a category this register had no row shape for until now. There
+  is deliberately no new skill for it: an adapter is built as an ordinary slice, and a guard placed
+  somewhere its author does not pass through guards nothing.
 
-**A fourth, added 2026-09-05 by `24-06`: `processing-instruction-facts.md`.** That file answers the
+**And one that is a document rather than a skill, added 2026-09-05 by `24-06`:
+`processing-instruction-facts.md`.** That file answers the
 seven things `152-ФЗ` art. 6 ч. 3 requires a processing instruction to state, assembled from this
 register and dated, so that the clause in the tenant agreement is drafted from the system rather than
 from a description of it. It is downstream of this file and cites it throughout — **a row changed here

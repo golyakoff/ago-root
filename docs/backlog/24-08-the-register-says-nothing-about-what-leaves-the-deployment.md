@@ -1,7 +1,7 @@
 # the personal-data register covers what leaves the deployment, not only what it stores
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: nothing. `24-06` tabled the destinations; this item turns that into register rows.
 - **Decision**: `docs/adr/0070-*` (the Telegram relay), `docs/adr/0078-*` (the AI kinds)
 
@@ -58,12 +58,52 @@ update when a **schema** changes; nothing forces one when an outbound call is ad
 
 ## Done when
 
-- [ ] Every destination in `processing-instruction-facts.md`'s Element 5 table has a register row, or
+- [x] Every destination in `processing-instruction-facts.md`'s Element 5 table has a register row, or
       the register says explicitly why it does not.
-- [ ] Where a vendor's retention is unknown, the row says "not established" rather than being omitted.
-- [ ] "Keeping this true" names outbound calls.
+- [x] Where a vendor's retention is unknown, the row says "not established" rather than being omitted.
+- [x] "Keeping this true" names outbound calls.
 
 ## Open questions
 
 - **How much of a vendor's terms belongs in an engineering register at all?** The honest floor is a
   link and a date; anything more is a summary that will rot. Decide once, apply to all six.
+
+## Outcome (2026-09-06)
+
+**The destinations are in their own table, not mixed into the store table, and that is the item's own
+argument made structural.** Every row in the register above is somewhere AGO holds bytes; these are
+somewhere bytes arrive that AGO does not hold. The columns are identical, but *What removes it* means
+a different thing in each: above it names a mechanism this system runs, below it names somebody else's
+— and mostly we do not know it.
+
+**"Not established" appears seven times, and it is the honest answer rather than a placeholder.** What
+a provider retains is derivable only from that provider's own terms, which `24-06` had already recorded
+as unanswerable from these repositories. A guess here would be worse than the gap, because this file's
+whole value is that a reader can act on it. The row says instead where the answer has to come from: the
+provider the tenant themselves chose to connect.
+
+**Two rows carry a finding rather than a fact.**
+
+- **Telegram's outbound hop is not ours.** `adr/0070` routes it through a VLESS relay that is the
+  author's own personal endpoint, because 8 of 15 direct requests from the node failed with no TCP
+  connection at all. That ADR names it an accepted gap *"worth revisiting before any real paying tenant
+  depends on Telegram specifically"* — and with a launch weeks away, that condition is close.
+- **The AI switch is AGO's, deployment-wide, with no per-tenant control.** Nothing reaches YandexGPT
+  today; no key is set in any overlay. But the day one is, every tenant's closed conversations start
+  going to an LLM vendor and no tenant has anything to point at and refuse. A processor adding a
+  purpose and a sub-processor on its own initiative is what an instruction exists to constrain.
+  Building the control is a different promise and stays out of scope; the register now says the gap
+  exists rather than leaving a lawyer to find it.
+
+**The forcing function went where the work actually passes, not where it would read best.** The item
+asked for a fourth entry in "Keeping this true". I first wrote a pointer to a `channel-adapter` skill —
+**which does not exist**; caught before it shipped, and it would have been a guard nobody passes
+through. The entry is `vertical-slice` step 6 instead, because an adapter is built as an ordinary
+slice, and that skill now says what to write and that *"not established" is an acceptable answer and a
+guess is not*.
+
+**One pre-existing error fixed on the way.** That section's own count said "four" over five entries:
+`24-15` had added a bullet and updated the number without noticing the paragraph below the list
+introduces a further entry as "a fourth", so two entries claimed the same ordinal. That was my own
+error from the day before, and a list whose count is maintained by hand drifts exactly like the
+inventory it guards.
