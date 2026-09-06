@@ -555,3 +555,18 @@ whether it should is one of the ten open questions in `gaps.md`. This decision o
 beside every row would bloat a navigation that already has twenty-one entries. `23-24` records it as
 an amendment to `adr/0030` so the next person does not read the exception as permission to bring a
 whole set.
+
+**Amended 2026-09-06 (`23-31`/`adr/0129`): this rule is replaced, not merely extended.** The table
+above asks one question — *does this identity hold the permission* — the same way for every gate.
+`23-31` found that "muted, a colleague could grant it" only ever described the calendar honestly.
+Applied to `site:configure`/`site:erase`/`site:manage_operators`, muted stood in for a fact that is
+never true of a buyable module: a colleague grants those, nobody buys them.
+
+The replacement rule asks a different question — *could this identity obtain the thing itself* — which
+is true only for the tenant, and only for the calendar. So an operator sees nothing muted at all, and
+the lock glyph is withdrawn with the meaning it existed for (`adr/0030`'s third amendment).
+
+The full argument, including what this costs relative to `23-21`'s own fix, is `adr/0129`. **This
+section is left standing rather than rewritten**, because it remains the correct record of what was
+decided and why on 2026-09-05; `adr/0129` is the record of what changed, one day later.
+

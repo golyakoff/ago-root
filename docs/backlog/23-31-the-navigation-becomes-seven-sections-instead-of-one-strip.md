@@ -1,7 +1,8 @@
 # the navigation becomes seven sections instead of one strip of twenty-four
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06). Seven sections behind a two-level accordion, nineteen routes moved
+  with eighteen redirects, and `adr/0129` in place of `23-24`'s muting rule. Deployed the same day.
 - **Depends on**: nothing. `23-32`…`23-37` reserve places in the structure this item builds and can land after it in any order.
 - **Decision**: the author's, 2026-09-06, from a design pass against Jivo's console. Needs **`adr/0129`** for the one part that changes a shipped rule.
 
@@ -93,12 +94,14 @@ A restructure that lands without redirects is a restructure that breaks every li
 
 ## Done when
 
-- [ ] An operator with no tenant-level permissions sees exactly four sections, and nothing muted.
-- [ ] A tenant without the calendar sees it muted with a label saying it can be bought, not hidden.
-- [ ] Every one of the nineteen moved routes answers on its old address with a redirect.
-- [ ] Nothing is more than two clicks from the rail, and the accordion keeps one section open.
-- [ ] `smoke.sh` and `ui-inventory.md` name the new paths, and the tagline's five-route list is gone.
-- [ ] `adr/0129` records the replaced muting rule, including what `23-24` was protecting against.
+- [x] An operator with no tenant-level permissions sees exactly four sections, and nothing muted.
+- [x] A tenant without the calendar sees it muted with a label saying it can be bought, not hidden.
+- [x] Every one of the nineteen moved routes answers on its old address with a redirect.
+- [x] Nothing is more than two clicks from the rail, and the accordion keeps one section open.
+- [x] `ui-inventory.md` names the new paths, and the tagline's five-route list is gone.
+      **`smoke.sh` needed no change**, checked rather than assumed: it addresses hostnames and API
+      routes, and references no console SPA path at all. The item's own scope expected otherwise.
+- [x] `adr/0129` records the replaced muting rule, including what `23-24` was protecting against.
 
 ## Reference
 
@@ -115,3 +118,31 @@ one word next to «Бот MAX» does not say whose appearance it is.
 **«Установка виджета» is the exception and stays one**, above the list: it is a task rather than a
 channel. It is done once and never returned to, which is also why it is first and why the empty queue
 still calls for it while `SiteInstallationState` is `NotSeenYet`.
+
+## Outcome
+
+**Shipped and deployed 2026-09-06** — `ago-console#130`, this change for the documents it made false.
+The strip of twenty-four became seven sections; the header says "Офис"; eighteen of the nineteen moved
+routes redirect, and the nineteenth deliberately does not, because `/calendar/setup` keeps answering
+with a smaller version of the same screen rather than moving wholesale.
+
+**Two defects the ux-gate found that reading did not**: a bare `1fr` grid track at the mobile
+breakpoint let a wide table scroll the page itself instead of its own container, and a `useMatch`
+collision gave `/conversations/all` the workspace's fixed layout, because `all` satisfies
+`/conversations/:conversationId`.
+
+**And one the gate found only because I stopped believing my own green run.** The gate passed locally
+and failed in CI. `playwright.config.ts` sets `reuseExistingServer: !CI`, so repeat local runs were
+served by a preview server still holding an older bundle; `CI=1` reproduced it every time. The failure
+was not timing — the console rendered an **empty `<body>`**, because two APIs answer
+`/api/v1/me/tenancies` with different shapes, the calendar's reader got the chat's body, and
+`tenantName.trim()` threw during render. The fixture is fixed here; the blast radius is `23-41`, filed
+as a question rather than an answer.
+
+**What is not covered, recorded rather than glossed:** `App.tsx`'s wiring of the redirect table into
+its real `<Routes>` tree has no automated test, because rendering it means going through
+`OperatorConnectionProvider` and its real SignalR connection. What stands instead is that there is one
+`MOVED_ROUTES.map(...)` call rather than eighteen hand-copied elements.
+
+**Out of scope and now stale:** `docs/design/design-system/shell.html`, whose nav specimen still shows
+twenty-one flat items.
