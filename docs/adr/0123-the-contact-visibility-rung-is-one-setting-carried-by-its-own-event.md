@@ -104,3 +104,50 @@ has kept clean since `RoleAssignmentsChanged` was introduced for the identical p
 
 **Add `Never` as an unreachable member, gated off at every call site.** Rejected outright by §5's own
 instruction, for the reason in the Decision above.
+
+---
+
+## The calendar side, added 2026-09-06 (`23-12`)
+
+Folded into this ADR rather than written as `0126`, at the author's own call: the ladder is **one
+decision about one account setting**, and splitting it by product would mean a reader who opens either
+file sees half of it. This is not an amendment to an accepted decision — nothing above changed — it is
+the other half of the same one, written a day later because the calendar side shipped a day later.
+
+The three questions the Decision above deliberately left open, and their answers.
+
+**The calendar gets its own `contact_phone_reveals` table.** For chat the question was "widen
+`adr/0113`'s `AccessRecordKind`, or build a table". Here it collapses: **this product has no
+`access_records` to widen at all**, so the argument for widening has no target and the question
+reduces to building one. It takes `contact_reveals`' identical shape — raw Npgsql, no aggregate, no
+foreign key on `tenant_id` or `customer_id`, keyset-paged, a 365-day prune — for the identical
+reasons, including `adr/0111`'s: a record of who revealed a customer's number must survive whatever
+erases that customer, or the one question it exists to answer loses its evidence to the very process
+the question is about.
+
+**Confirming "I called and it is them" is gated on `Permission.CustomerRead` alone, not on the rung.**
+`decisions.md` §5 reads as a per-rung refusal, and the rung it is actually describing is rung three —
+which this ADR removes from the type system on both sides. Under the two rungs that exist, a
+`CustomerRead` holder can always see the number: plainly on `Visible`, on demand under
+`MaskedWithReveal`. So a rung-keyed check would discriminate on nothing until rung three is real.
+**Stated plainly rather than left to be assumed rung-aware: if rung three is ever built,
+`ConfirmOperatorVerifiedPhoneHandler` needs a second look, not an assumption that today's single gate
+already covers it.**
+
+**The projection commits in one save.** `22-07`'s `ModuleQuantityGrantedConsumer` holds a lock across
+a read-decide-write because a quota grant reads its own prior value to decide what to deactivate. A
+rung has nothing to decide from its prior value — it is displayed, never counted against — so the
+consumer follows `RoleAssignmentsChangedConsumer`'s one-save shape instead. Uniformity with a shape
+whose reason does not apply here would have been uniformity of form over reason.
+
+**A missing projection row reads as `Visible`, never as the stricter rung.** A default that tightened
+on absence would turn "the message has not arrived yet" into a policy the tenant never chose, and make
+an outage indistinguishable from a setting.
+
+**One consequence worth naming.** There are now two reveal tables answering the same question in two
+databases. Accepted, because masking is inherently per-product — each product masks its own store —
+and there is no shared database that could hold one row for both.
+
+**One alternative rejected that looks reasonable from a distance:** refusing confirmation while the
+rung is `MaskedWithReveal`. That would refuse the "act" half from an operator who *just revealed the
+number through this exact flow* — reveal-then-act is the masked rung's entire purpose.
