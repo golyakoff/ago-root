@@ -1,7 +1,9 @@
 # the module channel is published to the internet and does not need to be
 
 - **Stage**: 22
-- **Status**: in review (2026-09-04), `ago-deploy#140`
+- **Status**: done (2026-09-04), `ago-deploy#140` - **narrowed on 2026-09-06 to what it delivered.**
+  The module channel is off the internet and asserted both ways. The in-cluster TLS question it
+  named was never decided and is carried out to `22-24`; it was not this item's to answer.
 - **Found**: 2026-09-04, weighing whether `22-11` was safe to deploy.
 
 ## The finding
@@ -53,9 +55,10 @@ a URL rather than a mechanism.
 - [x] The module and module-registration routes answer nothing from outside, proven by trying from
       outside. — both 404 with the new route; `module-tasks` returned to 401 after the revert.
 - [x] `smoke.sh` asserts both halves — refused inside without a credential, absent outside.
-- [ ] Whatever was decided about in-cluster TLS is written down. — **not decided.** Named in the
-      change and here rather than inherited silently; it belongs with whoever issues the provisioning
-      secret, which is the next step and is gated on this.
+- [x] **Carried out to `22-24`, 2026-09-06.** This box asked that *whatever was decided about
+      in-cluster TLS is written down*, and recorded honestly that **nothing was decided**. Closing the
+      issue with it open left the queue claiming a decision existed somewhere; carrying it out gives
+      the question a number of its own, which is what rule 14 asks for and what did not happen here.
 
 ## What the change does not do
 

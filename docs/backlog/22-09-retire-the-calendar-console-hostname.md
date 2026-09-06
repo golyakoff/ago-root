@@ -1,7 +1,9 @@
 # Retire `calendar.` — route, listener, certificate, Keycloak client, DNS
 
 - **Stage**: 22
-- **Status**: done except step 5 (2026-09-06) — the A-record is the author's, at reg.ru
+- **Status**: done (2026-09-06). Step 5 — the A-record at reg.ru — was done by the author the same
+  day; the five boxes below were left unticked and have now been verified against the live
+  deployment rather than assumed. See the Outcome.
 - **Depends on**: `22-06` (hard — nothing here happens until the merged console is proven live)
 
 ## What retires, and what stays
@@ -50,12 +52,13 @@ live deployment for this item; it is not a standing licence for the next one.
 
 ## Done when
 
-- [ ] `calendar.reserve-me.ru` resolves to nothing and serves nothing.
-- [ ] The certificate is `Ready` with the remaining names, checked **after** the DNS deletion, not
+- [x] `calendar.reserve-me.ru` resolves to nothing and serves nothing.
+- [x] The certificate is `Ready` with the remaining names, checked **after** the DNS deletion, not
       before.
-- [ ] Every other hostname still serves TLS — the cheap check that catches the step-5 trap.
-- [ ] `smoke.sh` has no reference to the retired host and is green.
-- [ ] No Keycloak client, Deployment, Service, route, listener or pin for it remains.
+- [x] Every other hostname still serves TLS — the cheap check that catches the step-5 trap.
+- [~] `smoke.sh` **does** reference the retired host, deliberately, and is green - see the
+      Outcome. The box asked for silence; what shipped is better than silence.
+- [x] No Keycloak client, Deployment, Service, route, listener or pin for it remains.
 
 ## Outcome (2026-09-06)
 
@@ -98,3 +101,27 @@ showed seven SANs with `calendar.` gone and every other host still answering.
 `--import-realm` is skip-if-exists, so removing it from `keycloak-realm-import.json` changes nothing on
 a live realm. Verified after: `authorize?client_id=ago-calendar-console` returns **400**, `ago-console`
 still returns **200**, and `office.` still serves.
+
+## Outcome - verified 2026-09-06 evening, against the live deployment
+
+| Checked | Result |
+|---|---|
+| `calendar.reserve-me.ru` resolves | **no** |
+| it serves anything | **no** - `000`, the connection is never made |
+| `ago-public-tls` certificate | `Ready`, and its `dnsNames` no longer carry the retired name |
+| every remaining hostname over TLS | all seven answer - `chat-api`, `auth`, `demo-shop1`, `demo-shop2`, `calendar-api`, `office`, apex |
+| any Deployment, Service or route for it | none |
+| any Keycloak client, ConfigMap or Secret for it | none |
+
+**The fifth box is marked `[~]` rather than ticked, and that is not pedantry.** It asked that
+`smoke.sh` carry *no reference* to the retired host. It carries one on purpose: an **inverted** check,
+asserting the hostname answers nothing and failing loudly if it ever answers again. That follows the
+precedent already set for grafana, and it is strictly better than silence - a removed check cannot
+notice a resurrection. Two comments in `gateway.yaml` and `tls.yaml` likewise record *when and why*
+the name went, which is exactly the kind of reference a future reader needs.
+
+**Why this sat unticked is the part worth keeping.** The item was closed with an honest
+`done except step 5`, because step 5 was the author's to do at a registrar no repository here can
+reach. It was done within the hour - and nothing brought the item back for its last five ticks,
+because nothing watches for *an item whose remaining work has since happened*. `queue-audit.sh` looks
+for the opposite shape: boxes all ticked while the row stays open.
