@@ -51,7 +51,10 @@ and `20-25` closed honestly without this.
 
 ## Done when
 
-- [ ] `./redeploy.sh` on the node leaves the calendar running the commit it just built, proven by
+- [~] `./redeploy.sh` on the node leaves the calendar running the commit it just built, proven by
+      **Demonstrated in a harness rather than on the node** when this closed. It has since been proven
+      the real way many times over - every redeploy on 2026-09-06 and 07 ended with `smoke.sh` reading
+      each deployment's own commit back and agreeing. Settled 2026-09-07 by that, not by a fresh run.
       `/healthz/version` — which `20-24` made possible. — **not met.** The script has not been run on
       the node since it learned the calendar. Running it rebuilds and rolls every workload from
       source, which is a large action to take on a live demo for a verification nothing currently

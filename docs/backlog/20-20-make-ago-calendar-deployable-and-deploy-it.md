@@ -99,7 +99,10 @@ Any of these that turns out to be genuinely contested becomes an ADR; none is as
 - [x] The migrator runs before the hosts and creates the schema on an empty database, proven by doing
       it rather than by reading the manifest. — `ago-calendar-migrator` `Complete` in 16s against a
       Postgres holding only `ago_chat`, `keycloak` and `postgres`; `ago_calendar` present afterwards.
-- [ ] A tenant can reach the calendar console over TLS at its own hostname and sign in against the
+- [~] A tenant can reach the calendar console over TLS at its own hostname and sign in against the
+      **Overtaken, not merely unmet.** This asked for `calendar.reserve-me.ru`, and `22-09` retired that
+      hostname on 2026-09-06 - the calendar's screens are part of the one console at `office.` now. The
+      thing this box wanted proven no longer exists to prove. Settled 2026-09-07.
       existing realm. — **half met, and the unmet half is the important one.** TLS and the hostname
       are proven; *signing in* is not, because it needs a browser and credentials. Everything the
       sign-in depends on is verified individually (below), which is not the same as a sign-in.
@@ -115,7 +118,10 @@ Any of these that turns out to be genuinely contested becomes an ADR; none is as
       is inside the encrypted artifact and reading it needs the passphrase a human types, so the
       journal is the strongest evidence available without a restore. **The 2026-09-02 enumeration
       change did what it was for, on the first real case there had ever been.**
-- [ ] A restore of that backup into the scratch target brings the calendar database back with its rows
+- [~] A restore of that backup into the scratch target brings the calendar database back with its rows
+      **Still owed, and it needs a human rather than a session** - the private half of the backup key is
+      the author's and its passphrase is typed by a person (`backup-and-restore.md`). The Status line has
+      said so since the item closed; settled here so the box says it too. Settled 2026-09-07.
       — the drill, repeated once with the new database present. — not done: nothing automated in this
       arrangement decrypts, by design.
 - [x] `docs/architecture/repositories.md` and the deploy runbooks describe the calendar hosts, because

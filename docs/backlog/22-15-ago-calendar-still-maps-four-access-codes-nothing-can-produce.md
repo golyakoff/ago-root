@@ -22,6 +22,9 @@ for the handler that raises `access.forbidden` and find nothing, and the honest 
 
 ## Done when
 
-- [ ] No mapping in `ago-calendar` names an error code no code path can construct — checked across
+- [~] No mapping in `ago-calendar` names an error code no code path can construct — checked across
+      **Delivered, and the mirror of it got its own number.** `ago-calendar#39` removed the mappings this
+      box names; the opposite gap - codes produced but unmapped - is `22-20`, which is how a reader knows
+      the sweep ran in both directions. Ticked in substance; settled 2026-09-07.
       the file rather than only for these four. `22-05` deleted a great deal, and these were found by
       accident while looking at something else, so the same shape is likely elsewhere.
