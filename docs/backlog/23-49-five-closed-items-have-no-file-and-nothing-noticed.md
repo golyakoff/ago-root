@@ -1,7 +1,8 @@
 # five closed items have no file in the backlog, and nothing noticed
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06). Four files written from what survives, and the audit now reads
+  closed issues.
 - **Depends on**: nothing
 - **Decision**: none needed for the gap. One small choice inside it is named at the bottom.
 
@@ -58,11 +59,44 @@ deciding rather than drifting into.
 
 ## Done when
 
-- [ ] Each of the four has a file that says what it was and what shipped, with lost reasoning marked
+- [x] Each of the four has a file that says what it was and what shipped, with lost reasoning marked
       as lost rather than filled in.
-- [ ] `queue-audit.sh` flags a closed item with no backlog file, and is shown doing it.
-- [ ] How far back the rule applies is decided and written down.
+- [x] `queue-audit.sh` flags a closed item with no backlog file, and is shown doing it.
+- [x] How far back the rule applies is decided and written down.
 
 ## Out of scope
 
 - Re-doing any of the four. All four shipped; this is about the record, not the work.
+
+## Outcome
+
+**The four are not the same kind of thing, and writing them proved it.**
+
+- **`11-18`** was open for **fourteen minutes** and closed as a duplicate, absorbed into `11-17`. It
+  was never implemented under its own number - no commit anywhere names it. Its file says so and is
+  deliberately thinner than the others: that is the true shape of what happened, not a gap in the
+  reconstruction. `CLAUDE.md` rule 15 was written from this very pair the same afternoon.
+- **`11-19`** shipped in one commit and found three real defects on its first run.
+- **`20-21`** and **`20-22`** each shipped in one commit - and each **shares its number with an
+  unstarted planned item**, already renumbered to `20-28`/`20-29` by `22-21`, because a commit message
+  cannot be edited afterwards. Their "nine commits" turned out to be one implementation commit under
+  several refs plus later sweeps citing the number, checked rather than repeated from the item's own
+  count.
+
+**What could not be recovered is named in each file**, rather than filled in: `11-18`'s implementation
+history (there is none), `11-19`'s exemption-list iterations, and for both calendar items *what was
+actually searched* when their issues asked to check `Ago.Platform.*` first - the commits confirm it was
+done and found nothing, and nothing records what was looked at.
+
+**The check reuses the existing file-existence test rather than inventing a stricter one.** Matching
+file content to issue content would have mis-flagged `11-17`, which legitimately carries two closed
+issues on one file by `22-21`'s own prior resolution. A second, stricter definition of *has a record*
+that disagreed with the first would have been a new source of false findings.
+
+**How far back was decided on evidence, not assumption.** `ago-root`'s entire issue history begins at
+`#312` on 2026-09-02, so there is no pre-convention era to exclude; the script says `--limit 500` means
+*all of them, with headroom*, and names size rather than age as the trigger to revisit - and requires a
+reason per entry if a cutoff is ever added, the way `secrets-audit.sh`'s allow-list already does.
+
+Verified at landing rather than taken from the report: moving `11-19`'s new file aside makes the audit
+name it, and restoring it makes the audit clean again.

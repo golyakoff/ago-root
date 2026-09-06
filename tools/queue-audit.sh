@@ -168,17 +168,31 @@ for repo in $MIRROR_REPOS; do
 done
 
 # ---------------------------------------------------------------------------
-# Two checks that read *closed* issues, added 2026-09-04 after both failures
-# below were found by hand rather than by this script.
+# Checks that read *closed* issues, added 2026-09-04 and 2026-09-06 after the
+# failures below were found by hand rather than by this script.
 #
 # Everything above answers one question: "this issue is open - is its item
-# really unfinished?" That question cannot see either of the failures below,
-# because in both of them the issue is closed and the audit never looks at it.
-# Both passes are `ago-root` only: it is the canonical queue, and the item files
-# live here, so a mirror adds API calls without adding an answer.
+# really unfinished?" That question cannot see any of the failures below,
+# because in every one of them the issue is closed and the audit never looks
+# at it. All these passes are `ago-root` only: it is the canonical queue, and
+# the item files live here, so a mirror adds API calls without adding an
+# answer.
+#
+# **How far back this looks, decided rather than drifted into (`23-49`):**
+# --limit 500 is not a rolling window, it is "all of them" with headroom -
+# checked on 2026-09-06, ago-root has 130 issues total (104 closed), starting
+# at #312 on 2026-09-02. There is no pre-convention era to exclude: the
+# per-item-issue convention and this repository's own issue tracking began at
+# the same moment, so every closed issue that has ever existed here fits in
+# one page today. The trigger to revisit this is size, not age - when the
+# closed count approaches the limit, raise the limit first. A date cutoff
+# only earns its keep once excluding old, pre-convention noise is a real
+# problem rather than a hypothetical one, and it should carry its own reason
+# the way NOT_SECRETS carries one per entry, not be added pre-emptively
+# against items that do not exist yet.
 # ---------------------------------------------------------------------------
 
-if ! closed=$(gh issue list --repo "$OWNER/ago-root" --state closed --limit 300                 --json number,title,stateReason --jq '.[]|"\(.number)|\(.stateReason)|\(.title)"' 2>&1); then
+if ! closed=$(gh issue list --repo "$OWNER/ago-root" --state closed --limit 500                 --json number,title,stateReason --jq '.[]|"\(.number)|\(.stateReason)|\(.title)"' 2>&1); then
   echo "CANNOT AUDIT ago-root's closed issues - could not read them from GitHub:"
   echo "  $closed"
   unread=$((unread + 1))
@@ -309,6 +323,43 @@ if [ -n "$closed" ]; then
       flagged=$((flagged + 1))
     fi
   done
+fi
+
+# **A closed issue whose item never had a backlog file at all - the gap `23-49` itself is about.**
+# Every check above reads an issue and asks something about it *against its file*: stale, ready but
+# shipped, claimed twice, or naming something different. Every one of those questions presupposes a
+# file exists to ask it of. An item that never had one is invisible to all four, because closing is
+# the only thing that would make anyone look, and closing is exactly what stops anyone looking.
+#
+# Four items shipped this way and were found only because a person asked whether the queue was
+# actually complete, not because anything mechanical noticed: `11-18` (closed as a duplicate inside
+# fourteen minutes - no file, no commit anywhere, no trace but the issue itself), `11-19` (one
+# commit), and `20-21` / `20-22` (nine commits each, cited by number in two other items' own files).
+#
+# The file-existence test is the same one `check_issue` uses for open issues above: any file whose
+# name starts with the item number counts, regardless of which of two same-numbered issues it
+# actually documents. That is deliberate, not a hole in this check - `11-17` legitimately names two
+# different closed issues and carries one file between the two of them (`22-21`'s own resolution:
+# skip a collision where nothing live wears the number), and this pass must not re-flag a collision
+# that check already lets stand. It is why this looks for *a* file, never *the* file.
+if [ -n "$closed" ]; then
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    number=${line%%|*}
+    rest=${line#*|}
+    stateReason=${rest%%|*}
+    title=${rest#*|}
+
+    item=$(printf '%s' "$title" | grep -oE '^[0-9]+-[0-9]+' || true)
+    [ -n "$item" ] || continue
+
+    file=$(find docs/backlog -maxdepth 1 -name "$item-*.md" | head -1)
+    if [ -z "$file" ]; then
+      echo "NOFILE   $item  (ago-root#$number, closed $stateReason) - closed issue names an item with no backlog file at all"
+      echo "         $title"
+      flagged=$((flagged + 1))
+    fi
+  done <<< "$closed"
 fi
 
 echo
