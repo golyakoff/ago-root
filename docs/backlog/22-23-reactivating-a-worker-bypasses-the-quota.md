@@ -1,7 +1,8 @@
 # reactivating a worker bypasses the quota that deactivated it
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-06). One port method beside the one creation already uses, and a
+  transition check the item did not ask for and needed.
 - **Depends on**: `22-07` (the quota this walks around), which must land first
 - **Decision**: none needed — `22-07`'s own `adr/0125` already decided the shape this must follow
 
@@ -60,7 +61,36 @@ one edit away.
 
 ## Done when
 
-- [ ] Reactivating a worker past the quota is refused, with nothing written.
-- [ ] The refusal is proven under real concurrency, not only sequentially.
-- [ ] The check shares `TryAddWithinQuotaAsync`'s lock discipline rather than introducing a second
+- [x] Reactivating a worker past the quota is refused, with nothing written.
+- [x] The refusal is proven under real concurrency, not only sequentially.
+- [x] The check shares `TryAddWithinQuotaAsync`'s lock discipline rather than introducing a second
       shape for the same invariant.
+
+## Outcome
+
+`ago-calendar#45`, merged 2026-09-06.
+
+**The gate reuses creation's shape rather than adding a second one** - the same
+`SELECT worker_quota ... FOR UPDATE` plus a real `COUNT(*)`, inside the transaction that decides.
+Two reasons, and only one is style: a second way of counting the same invariant is how the two drift,
+and rule 8 forbids a write decision reading anything but the database inside its own transaction.
+
+**What the item did not specify turned out to be the interesting half.** Only a *false-to-true
+transition* counts as a reactivation. The console's edit form resends the worker's current activity
+alongside whatever the human actually changed, so gating on the requested end state alone would have
+refused an ordinary rename the instant a tenant sat exactly at its quota. A test asserts the rename
+stays legal at the limit, and it reddens if the transition guard is dropped.
+
+That is worth keeping because it is the shape of a whole class of quota bug: **the check has to ask
+what changed, not what was asked for.**
+
+**One pre-existing test needed a quota to keep meaning what it meant.** `WorkerEndpointTests`
+deactivates and reactivates the seeded worker to prove the display-name freeze, and the seed's default
+quota of zero made that reactivation illegal under the new gate. Seeded with one - the scenario the
+test was always about - rather than exempting the path, which would have removed the coverage instead
+of fixing the fixture.
+
+**Verified independently before landing**: two consecutive full-solution runs green (205 / 160 / 26 /
+26 / 269), and the fails-before re-proven here rather than taken from the report. One unrelated test
+(`ConfirmationSweepTests`) failed once on a first run and passed in four consecutive runs afterwards -
+recorded rather than filed, because one unreproduced observation is not yet a flake.
