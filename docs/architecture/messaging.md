@@ -93,6 +93,7 @@ supposed to prevent.
 | `OperatorStatusChanged` | `operator_id` | Assignment engine, cache invalidation |
 | `AttachmentConfirmed` | `conversation_id` | Thumbnailer (image content types only) |
 | `CacheInvalidated` | key namespace | All nodes (fan-out to every replica, not competing consumers) |
+| `TeamMessagePosted` (`23-32`) | `site_id` | Fan-out to every operator of the site (`TeamChatFanoutConsumer`) - the team chat's own sibling of `MessageAccepted`, keyed by the room's own ordering unit instead of a conversation |
 
 ### AGO Calendar's own topics
 

@@ -271,6 +271,42 @@ already assigned unless the caller genuinely has a supervisor-style override) if
 ever lets an operator browse conversations outside their own queue - out of scope here since nothing
 in `5-07` needed it.
 
+### The team chat (`23-32`)
+
+Three new `OperatorHub` methods, deliberately not extensions of the conversation ones above - a team
+room has no conversation id to join, and a site's operator claim already names the one room a
+connection may ever reach:
+
+- `SendTeamMessageAsync(body, clientMessageId?)` - no `siteId`/`operatorId` parameter at all; both come
+  off the caller's own JWT claim inside the handler (`SendTeamMessageHandler`'s own remarks), the same
+  "never a caller-supplied value" rule every operator-claim-scoped entry point in this product follows
+  (`tenant-isolation.md`). Returns the assigned `sequence`; the local echo is a re-read of the
+  just-written row (`GetTeamHistoryAsync`, `beforeSequence: sequence + 1, pageSize: 1`) pushed back as
+  `"TeamMessageReceived"` to the caller only - real delivery to every other operator of the site goes
+  through the outbox (`TeamMessagePosted`, `messaging.md`) and `TeamChatFanoutConsumer`, the identical
+  split `SendMessageAsync`'s own local-echo-vs-fan-out shape above already uses.
+- `GetTeamHistoryAsync(beforeSequence, pageSize)` - the room's own backward-keyset page, `null` for
+  the most recent one, the same convention `GetHistoryAsync` uses for a conversation.
+- `GetTeamDeltaAsync(afterSequence)` - the reconnect catch-up, the team-chat sibling of
+  `JoinConversationAsync`'s own `lastKnownSequence` branch. Unlike a conversation, there is no
+  server-side subscription record to replay on reconnect (no "join" ever happened), so this is called
+  by the console page itself, once per genuine transition into `"connected"` - see `ago-console`'s
+  `TeamChatPage.tsx` for why that transition has to be tracked explicitly rather than fired
+  unconditionally on mount: `OperatorConnectionProvider` starts every session `"connecting"` and mounts
+  every route immediately, so an unconditional call on mount reaches `OperatorConnection` before its
+  first `start()` resolves and throws "no connection has been started yet" - a real defect the
+  `ux-gate`'s own `team-chat` screen caught once, precisely because it drives a real hub handshake a
+  hand-written fake connection in a component test does not.
+
+All three are new entries in `HubContractManifest`, per this file's own "a hub method's parameter
+count is a contract" rule above - `SendTeamMessageAsync`/`GetTeamHistoryAsync` take two parameters,
+`GetTeamDeltaAsync` takes one, and none may grow once a real client depends on that arity.
+
+`"TeamMessageReceived"`'s own wire shape, `Ago.Chat.Contracts.TeamMessageDto`, is deliberately not
+`MessageDto` - no conversation id, no attachment, no author kind (the author is always an operator),
+plus `authorIsAdmin` (`23-32`'s own labelling requirement, stamped at send time - see `data-model.md`'s
+`team_messages` bullet for why it is not recomputed from the author's role today).
+
 ## Presence and typing
 
 High-frequency, low-value events. Rules:
