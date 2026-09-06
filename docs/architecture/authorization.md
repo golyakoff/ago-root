@@ -784,6 +784,36 @@ whole serialised response rather than the one field a careless edit might mask, 
 does not display it" and "the browser never receives it" are different guarantees and only the second
 one survives somebody opening the network tab.
 
+## A masked rung gates what a list shows, never who may reveal it: shipped in `23-12`
+
+The account's contact-visibility rung crosses into AGO Calendar **by projection**
+(`IContactVisibilityProjectionStore`), the identical mechanism `22-05` established for the role
+catalogue. A missing projection row reads as `Visible` — deliberately the permissive default, because
+a stricter one would turn "the message has not arrived yet" into a policy the tenant never chose, and
+an outage would be indistinguishable from a setting.
+
+**Masking happens in the read model**, in the four `CustomerRead`-gated read paths, in the one place
+that constructs each row. Not in the API layer and not in the console: keeping it in the mapping step
+means there is no code path between "read from Postgres" and "masked" where the real number sits in an
+in-process object something could serialise by accident.
+
+**A reveal is gated on the same `Permission.CustomerRead` the list already checks** — never a second,
+stronger check against the rung. The rung governs what a list shows, not who may reveal, exactly as
+`adr/0123` decided for the chat side; a rung check on reveal would refuse nobody it had not already
+admitted.
+
+**Confirming "I called and it is them" is gated identically, and that is a decision rather than an
+oversight.** `decisions.md` §5 reads as though confirmation belongs only to certain rungs — but rung
+three is absent from this product's `ContactVisibility` too (`adr/0123`'s restriction, taken literally
+on both sides), so there is no rung today on which a `CustomerRead` holder cannot already see the
+number. A rung-keyed check would have nothing to discriminate on until rung three exists. `adr/0126`
+argues it.
+
+**The reveal audit view takes the wider `Permission.CalendarConfigure`, not `CustomerRead`.** An
+operator who may reveal one customer's number is not thereby trusted with the whole tenant's history of
+who revealed what — the same refusal `ago-chat`'s `GetContactRevealsForSiteHandler` states for its
+sibling read.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
