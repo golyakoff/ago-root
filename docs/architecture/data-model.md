@@ -440,6 +440,20 @@ denial.
   for the one real read (`GetAcceptancesForSubjectHandler`, oldest first). Insert-only: no domain
   method and no repository method ever updates or deletes a row, which is what keeps a second
   acceptance of the same document from overwriting the first.
+- `required_documents` (**added in `24-03`**) - `id` (uuid v7), `subject_kind` (`varchar(20)`, the same
+  three values `acceptance_records` uses), `document_key` (`varchar(200)`), unique on
+  `(subject_kind, document_key)`. It answers one question - *which documents must a subject of this
+  kind accept* - and it answers it as **rows rather than as code**, the same move `adr/0114` made one
+  item earlier for a document's text: adding a required document is an insert, not a deploy.
+  **No foreign key to `documents`**, deliberately and for a different reason than
+  `acceptance_records`' own missing keys: a required document may legitimately be named before it is
+  published, and `RegisterSiteHandler` resolves each key against the current published version at
+  registration time, failing the registration if it cannot. Coupling the two would make "we require a
+  document that does not exist yet" unrepresentable, which is a state a deployment genuinely passes
+  through.
+  **The table ships empty**, and that is not an oversight - `24-16` exists because nothing yet puts a
+  row in it in any deployment, so today a registration records zero acceptances and succeeds. This
+  table is the mechanism; the rows are the content decision, and the content decision is a lawyer's.
 
 ## Keys and indexes
 
