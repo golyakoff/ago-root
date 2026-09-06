@@ -1,7 +1,7 @@
 # the visibility rung is a property of the account, and chat's own contacts obey it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `23-08` (the register entry for `visitor_contact_details`, so a masking change
   lands over a store the register knows about). `23-09` is not a dependency and may land in either
   order.
@@ -105,18 +105,49 @@ their figure. Write that into the audit view's own description, and into `23-17`
 
 ## Done when
 
-- [ ] A tenant on `Visible` sees today's behaviour, byte for byte — asserted, because this must not
+- [x] A tenant on `Visible` sees today's behaviour, byte for byte — asserted, because this must not
       change the micro case, where the person reading the number **is** the tenant.
-- [ ] A tenant on `MaskedWithReveal` gets masked values from the list read, and the unmasked value is
+- [x] A tenant on `MaskedWithReveal` gets masked values from the list read, and the unmasked value is
       not present anywhere in the list response.
-- [ ] A reveal returns the value and writes exactly one record naming the operator.
-- [ ] A caller without `ConversationRead` cannot reveal, and gets the same refusal the list gives.
-- [ ] A caller of another tenant cannot reveal (a tenant-isolation test).
-- [ ] The tenant can read the reveal record, and the screen says what it is for and what it is not.
-- [ ] The event is published from the outbox in the write's own transaction, and a redelivery changes
+- [x] A reveal returns the value and writes exactly one record naming the operator.
+- [x] A caller without `ConversationRead` cannot reveal, and gets the same refusal the list gives.
+- [x] A caller of another tenant cannot reveal (a tenant-isolation test).
+- [x] The tenant can read the reveal record, and the screen says what it is for and what it is not.
+- [x] The event is published from the outbox in the write's own transaction, and a redelivery changes
       nothing (`messaging.md`).
-- [ ] The four documents above carry the change.
+- [x] The four documents above carry the change.
 
 ## Open questions
 
 None.
+
+## Outcome (2026-09-06)
+
+`adr/0123` carries the reasoning. What is worth recording here is what the item did not settle and
+what verifying it turned up.
+
+**Two decisions the item left open, both made in the ADR.** How the fact crosses into `ago-calendar`
+(a new minimal contract, `ContactVisibilityChanged`, rather than widening a chat-internal one), and
+whether a reveal belongs beside `24-12`'s `access_records` (no — its own table, because the revealing
+operator crosses no boundary they did not already hold `ConversationRead` over).
+
+**Rung three is absent from the type system, not disabled.** `decisions.md` §5's sharpest instruction,
+taken literally: a value present in code is a value a screen or a sales conversation can point at.
+
+**What is not built, stated so nobody assumes it is.** `ago-calendar` consumes the new contract
+nowhere — that is `23-12`, and until it exists the event's redelivery behaviour on the calendar side is
+unverified by construction. There is also **no console screen** for the rung itself or for the reveal
+audit trail; both are reachable only through the API, and each needs its own item. The console change
+in this item is the contact panel's reveal button and nothing else.
+
+**Verification turned up something outside this item.** The worker proposed new rows for
+`tenant-isolation.md` and said plainly that its headline numbers were a manual count from the diff
+rather than the tool's. Running `tools/tenant-isolation-scan/` found four of that file's five headline
+counts already wrong against `main` — before this item's own additions. The numbers are refreshed here
+from the tool; the fact that **nothing re-runs the scan** is `24-17`, filed separately, because a
+number and a mechanism are different promises.
+
+The same scan showed the per-row tables lag the machine count by seven gated handlers, and that the
+`RBAC-gated` heading said 75 over 76 rows. Both are recorded in the file as documentation debt rather
+than silently patched, with `Unaccounted: 0` stated beside them: this is stale prose, not an ungated
+handler, and conflating the two is how a real finding gets muted later.

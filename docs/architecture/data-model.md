@@ -210,6 +210,15 @@ denial.
   widened `ck_conversation_assignments_source` to admit `Additional`, which `23-03` had deliberately
   deferred until a real writer existed.
 
+  **`23-11` added `contact_visibility` (`text`, `NOT NULL`, default `'Visible'`)** - the account-wide
+  rung `decisions.md` §5 names, mapping `Ago.Chat.Domain.ContactVisibility`. Additive and reversible;
+  every pre-existing row reads `'Visible'`, so no tenant's contact surfaces change under them. A
+  `CHECK` constraint (`ck_sites_contact_visibility`) admits exactly `'Visible'` and
+  `'MaskedWithReveal'` - and there is deliberately no third value for it to enumerate, because the
+  enum this maps has no third member at all (`adr/0123`). Read through the site-settings cache like
+  its neighbours rather than inside a transaction, because unlike `assignment_penalty_seconds` no
+  write decision depends on it: it changes what a read *displays*.
+
   `sites` gained two columns in the same wave: `tier` (`text`, default `'free'`) and `seat_limit`
   (`integer`, default `1`) - nothing in `13-01`'s own scope changes either away from its default; that
   is `13-02`'s job once a real payment exists to drive it.
@@ -454,6 +463,16 @@ denial.
   **The table ships empty**, and that is not an oversight - `24-16` exists because nothing yet puts a
   row in it in any deployment, so today a registration records zero acceptances and succeeds. This
   table is the mechanism; the rows are the content decision, and the content decision is a lawyer's.
+
+- `contact_reveals` (**added in `23-11`**) - `id` (uuid v7), `occurred_at`, `site_id`, `conversation_id`,
+  `contact_detail_id`, `operator_id`, `surface` (`text`, today always `"ConsoleContactPanel"`, with no
+  `CHECK`: nothing reads it back to branch on, so it is not yet a closed set). One row per deliberate
+  unmasking, holding **no copy of the value revealed** - a log of unmaskings that stored them would be
+  a second unmasked store. **No foreign key on `site_id` or `contact_detail_id`** - the fourth use of
+  `adr/0111`/`0112`/`0113`'s mechanism, here so the record survives both a site's own erasure and
+  `23-08`'s conversation-scoped contact-detail drain. Indexed `(site_id, id)` for the tenant's own
+  keyset-paged read; pruned past 365 days by `ContactRevealPruneJob`, the shape `access_records`' own
+  prune job already establishes.
 
 ## Keys and indexes
 

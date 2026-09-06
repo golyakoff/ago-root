@@ -14,14 +14,29 @@ tenant's data**".
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **113**, across 105 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **76** |
-| Deliberately not RBAC-gated, each with a stated reason | **37** |
-| HTTP routes and hub methods that carry tenant data | **110** |
-| Routes taking a **client-supplied** `siteId` | **45** — nineteen route groups, all permission-gated |
+| Use-case entry points in `Ago.Chat.Application` | **134**, across 123 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **87** |
+| Deliberately not RBAC-gated, each with a stated reason | **47** |
+| HTTP routes and hub methods that carry tenant data | **114** |
+| Routes taking a **client-supplied** `siteId` | **55** — all permission-gated |
 | Read-model queries | **15**, in nine read stores |
 | Genuinely cross-tenant reads in the whole codebase | **2** (`12-02`'s owner overview and `23-14`'s per-tenant detail read) |
 | Genuinely cross-tenant **writes** | **3** — `14-12`'s owner unlink, and `22-17`'s owner module grant and revoke |
+
+**Re-run 2026-09-06 while landing `23-11`, and four of the five had drifted again.** The scan reported
+130 entry points against the 113 written here, 119 handler classes against 105, 83 gated against 76,
+and 52 client-supplied-`siteId` routes against 45 — before `23-11`'s own four additions, which is what
+brings them to the figures above. The routes row read 110 and the scan said 110, which is the more
+dangerous shape rather than the reassuring one: the composition behind that total had changed while
+the total had not, so a reader spot-checking that one row would conclude the table was maintained.
+
+`Unaccounted: 0` in both runs, and no exemption key had gone stale, so this was drift in the
+*documentation* and not a gap in the isolation. Saying which is not pedantry: a maintenance chore that
+reads as a security finding is how the next real one gets muted.
+
+**Nothing re-runs the scan, which is why it drifted twice** — the first time for ten stages before
+`22-19` built the tool, the second time for the two weeks since. That is `24-17`, filed the same day,
+which states three shapes for a forcing function and picks none.
 
 **Re-derived in `22-19`, from a full scan of every mechanical row rather than a further delta.** The
 first three rows had not been re-derived since `14-04`; `Ago.Chat.Application.UseCases` had grown
@@ -237,9 +252,17 @@ Grouped by gate. The full machine-checked list lives in
 `ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs`; this table is the same
 information organised for a reader.
 
-### RBAC-gated (75)
+### RBAC-gated (80 listed, 87 by scan)
 
 Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything else.
+
+**The two numbers differ, and the difference is the point.** This table lists 80 handlers; the scan
+that produces the headline figures counts 87. Seven gated handlers landed without a row here, and the
+heading said 75 while 76 rows sat under it even before that. The rows are prose maintained by hand and
+the count is machine-derived, so the count is the one to trust — and the gap is documentation debt,
+not an ungated handler: `scan_entry_points.py` reports `Unaccounted: 0`, meaning every entry point is
+either gated or on the exemption list, which `Ago.Chat.Architecture.Tests.TenantScopeTests` enforces at
+build time regardless of what is written here. Reconciling the rows is `24-17`.
 
 | Use case | `siteId` from | Permission | Additional ownership check |
 |---|---|---|---|
@@ -320,6 +343,10 @@ Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything 
 | `RevokeModuleForSiteHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — the (site, module) pair is the row's own key; `22-11`; `22-19` |
 | `RotateModuleCredentialHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — same key-scoped lookup; `22-11`; `22-19` |
 | `VerifyModuleRegistrationHandler` | **route segment** | `site:configure` | `modules.GetAsync(siteId, moduleKey)` — same key-scoped lookup; `22-11`; `22-19` |
+| `GetContactVisibilityHandler` | **route segment** | `site:configure` | n/a — the site is the object being read; `23-11` |
+| `UpdateContactVisibilityHandler` | **route segment** | `site:configure` | n/a — the site is the object being written; `23-11` |
+| `GetContactRevealsForSiteHandler` | **route segment** | `site:configure` | the read store filters `site_id`; deliberately not a permission of its own, on `access_records`' own reasoning — a caller who can already read every conversation on the site is not additionally guarded by a separate permission over the log of who revealed what; `23-11` |
+| `RevealVisitorContactDetailHandler` | **operator claim** | `conversation:read` | `conversation.SiteId == command.SiteId` **and** `detail.VisitorId == conversation.VisitorId` — the second check is what stops a detail belonging to another visitor being revealed through a conversation the caller legitimately holds; `23-11` |
 
 ### Not RBAC-gated, with the reason (37)
 
@@ -575,6 +602,9 @@ is exactly what makes it interesting. See *The guard* below.
 | `POST /webhooks/email` | anonymous, provider-verified | n/a; `22-19` |
 | `GET /api/v1/sites/{siteId}/message-archives` | `RequireOperatorIdentity` | **client-supplied**; `13-06`; `22-19` |
 | `GET /api/v1/sites/{siteId}/message-archives/{retentionClass}/{period}/download` | `RequireOperatorIdentity` | **client-supplied**; `13-06`; `22-19` |
+| `GET`/`PUT /api/v1/sites/{siteId}/contact-visibility` | `RequireOperatorIdentity` | **client-supplied**; `23-11` |
+| `GET /api/v1/sites/{siteId}/contact-reveals` | `RequireOperatorIdentity` | **client-supplied**; `23-11` |
+| `POST /api/v1/conversations/{conversationId}/contact-details/{contactDetailId}/reveal` | `RequireOperatorIdentity` | operator claim — the route carries no `siteId` at all, so there is nothing for a caller to supply; `23-11` |
 | `GET`/`PUT /api/v1/sites/{siteId}/modules` | `RequireOperatorIdentity` | **client-supplied**; `20-07`; `22-19` |
 | `DELETE /api/v1/sites/{siteId}/modules/{moduleKey}` | `RequireOperatorIdentity` | **client-supplied**; `22-11`; `22-19` |
 | `POST /api/v1/sites/{siteId}/modules/{moduleKey}/rotate` | `RequireOperatorIdentity` | **client-supplied**; `22-11`; `22-19` |
