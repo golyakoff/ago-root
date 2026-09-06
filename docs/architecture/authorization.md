@@ -252,6 +252,19 @@ exists because none of the other four return per-operator rows: `GetSeatAssignme
 answers three aggregate numbers only (`13-03`'s own Scope), so a console team screen needed its own
 read rather than reusing that one with a wider response shape.
 
+**`23-32`/`23-33`: the team chat reads `site:manage_operators` twice, for two different questions.**
+`23-32`'s `SendTeamMessageHandler` calls `IPermissionChecker.HasPermissionAsync` with this permission
+to decide a *label* on the message it is about to post (`AuthorIsAdmin` - "is the tenant visible as
+the tenant"), never an authorization outcome; every operator of the site may send unconditionally
+(listed in `TenantScopeExemptions` with that reasoning - the check happens, but it gates nothing).
+`23-33`'s `RemoveTeamMessageHandler` is this permission's first real *capability* gate inside the team
+room: removing a message is refused outright when the caller does not hold it, checked fresh against
+the remover on every call rather than trusting a message's own stored label (`adr/0133`'s own Decision
+states why reusing the permission, rather than a caller's stored `AuthorIsAdmin`, is the correct
+check). Both readings are the same permission answering the same underlying question - "does this
+operator currently hold the tenant's own admin power" - just put to two different uses six numbers
+apart in the backlog.
+
 ## `site:configure` gates a second, distinct thing: shipped in `11-01`
 
 `Permission.SiteConfigure` was granted for exactly one caller until now (`GetAllConversationsForSiteHandler`'s

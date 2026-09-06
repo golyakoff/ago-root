@@ -307,6 +307,30 @@ count is a contract" rule above - `SendTeamMessageAsync`/`GetTeamHistoryAsync` t
 plus `authorIsAdmin` (`23-32`'s own labelling requirement, stamped at send time - see `data-model.md`'s
 `team_messages` bullet for why it is not recomputed from the author's role today).
 
+### The team chat's own removal (`23-33`)
+
+A fourth `OperatorHub` method, added alongside the three above rather than folded into any of them:
+
+- `RemoveTeamMessageAsync(teamMessageId)` - one parameter, a new `HubContractManifest` entry
+  (`Arity: 1`). Gated on `Permission.SiteManageOperators`, checked fresh against the caller
+  (`RemoveTeamMessageHandler`'s own remarks, `adr/0133`) - the first genuine capability gate this room
+  has had since `23-32` shipped it with none. The local echo mirrors `SendTeamMessageAsync`'s own
+  shape (a re-read of the just-tombstoned row, pushed back to the caller only), but under a
+  **different** client method name, `"TeamMessageRemoved"`, never `"TeamMessageReceived"` - the
+  console's own transport-level dedup (`SeenMessageIds`, keyed by message id) exists to collapse a
+  *new* post's local echo against its own fan-out copy, and a removal names an id already delivered
+  once by its original post, so routing it through the same push would be silently dropped forever.
+  Real delivery to every other operator of the site goes through its own outbox event
+  (`TeamMessageRemoved`, `messaging.md`) and its own consumer, `TeamMessageRemovedFanoutConsumer` -
+  a distinct `BackgroundService` from `TeamChatFanoutConsumer`, not a second branch inside it, so a
+  slow or failing removal fan-out can never starve the ordinary post fan-out's own competing-consumer
+  pool.
+
+`Ago.Chat.Contracts.TeamMessageDto` itself grew two members for this: `Body` is now nullable (`null`
+exactly when `RemovedAt` is not), and `RemovedAt` (`DateTimeOffset?`) is the tombstone timestamp a
+client renders a fixed placeholder for. Redacted at the read side (`TeamMessageReadStore`), never at
+rest - `adr/0133`'s own Decision states why the original text stays in the row.
+
 ## Presence and typing
 
 High-frequency, low-value events. Rules:
