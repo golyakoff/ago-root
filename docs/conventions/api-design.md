@@ -59,6 +59,31 @@ in the code, and written down nowhere a reader would look before changing it.
   `429` with `Retry-After`, which the widget must honour with jittered backoff.
 - Payload ceilings are small and enforced; file bytes never come through the API (`adr/0008`).
 
+**`POST /api/v1/widget-activity` (`23-07`) is the second unauthenticated widget endpoint**, beside
+`POST /api/v1/visitor-sessions`, and it takes the same shape on purpose: the site's public key and an
+event kind (`load` | `open`) in the body, nothing else, and the same two CORS layers with the same
+layer-2 origin check against *that* site's `AllowedOrigins`. A refused origin is recorded as a refusal
+and counts nothing, checked in that order.
+
+Three things differ from every other endpoint here, each deliberate:
+
+- **It is rate-limited per IP, not per site.** Every other widget-facing limit is per site because a
+  site's own traffic is what it is protecting. This one fires on every page load of every tenant, so a
+  per-site bucket would be sized either too small for a busy tenant or too large to limit anything;
+  the abuse it can actually see is one caller, and that is an IP. It still answers `429` with
+  `Retry-After`, which the widget honours with the same jittered backoff.
+- **An unrecognised `kind` is a `400`, not a silent no-op.** On a public unauthenticated endpoint an
+  unexpected value is as likely to be a caller bug as a probe, and neither should be counted.
+- **The response is not the point and the caller does not read it.** The widget's `sendBeacon` is an
+  ordinary `fetch` whose promise is never awaited and whose rejection is swallowed - offline, `429`,
+  DNS failure, anything - so it can never fail the widget, never block its first paint, and never
+  surface as an unhandled rejection on the host page. **It is deliberately not
+  `navigator.sendBeacon`**: that API would also survive a page unloading immediately after mount,
+  which this one does not, but it cannot carry `Content-Type: application/json` without becoming a
+  `Blob`, and it reports nothing about whether the request was even attempted. The counts are
+  explicitly approximate (`data-model.md`), so losing the occasional beacon to a fast navigation is
+  within what this endpoint already promises; being unable to see failures is not.
+
 **Shipped in `5-01`**: two layers, not one - a browser's CORS preflight (`OPTIONS`) carries only the
 `Origin` header and the target URL, never the request body and never another header's *value* (only
 its *name*, via `Access-Control-Request-Headers`), so nothing at preflight time can say *which site*

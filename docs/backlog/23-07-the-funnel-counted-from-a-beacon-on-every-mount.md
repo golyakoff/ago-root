@@ -1,7 +1,9 @@
 # the funnel — loads, opens, conversations — counted from a beacon on every mount
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06). Three counters on a per-day table, accumulated in memory and
+  flushed by a hosted service, with the advice resolved in Domain. Deployed the same day. One
+  Done-when clause could not be closed honestly and carries out to `23-40` — see the Outcome.
 - **Depends on**: `23-06` — the sighting record and the installation read this extends
 - **Decision**: `docs/design/decisions.md` §3, the funnel half and the *beacon* amendment
   (2026-09-04)
@@ -89,22 +91,56 @@ another plan" reads as a sale, and the whole point of the block is that it is on
 
 ## Done when
 
-- [ ] Three counts appear for a site that has had traffic, and `0 / 0 / 0` for a brand-new one.
-- [ ] A page load by a returning visitor whose token needs no renewal still counts as a load, and
+- [x] Three counts appear for a site that has had traffic, and `0 / 0 / 0` for a brand-new one.
+- [x] A page load by a returning visitor whose token needs no renewal still counts as a load, and
       still updates `last_seen_at` — the two failures the amendment names, asserted together.
-- [ ] Opening the panel twice in one session counts one open.
-- [ ] The beacon writes no row synchronously: a test asserts the request path issues no database
+- [x] Opening the panel twice in one session counts one open.
+- [x] The beacon writes no row synchronously: a test asserts the request path issues no database
       write.
-- [ ] The beacon is refused from an origin the site does not allow, and rate-limited per IP with a
+- [x] The beacon is refused from an origin the site does not allow, and rate-limited per IP with a
       `429` and a `Retry-After` (`5-20`'s existing shape).
-- [ ] Each zero state produces its own advice and none produces another's — asserted on the resolved
+- [x] Each zero state produces its own advice and none produces another's — asserted on the resolved
       state, not on the rendered words.
-- [ ] Advice naming a capability the tenant's tier does not include is never produced.
-- [ ] A pod restart mid-window loses at most the unflushed batch and never a whole day.
-- [ ] The widget's bundle-size budget still passes (`ago-widget`'s own gate).
-- [ ] `data-model.md` carries the table and says it is approximate; `api-design.md` carries the
+- [x] Advice naming a capability the tenant's tier does not include is never produced.
+- [~] A pod restart mid-window loses at most the unflushed batch and never a whole day. **Half
+      met.** "Never a whole day" is structural and proven; the shutdown flush is not covered, and the
+      test written for it was dropped rather than merged. Carried out to `23-40`.
+- [x] The widget's bundle-size budget still passes (`ago-widget`'s own gate).
+- [x] `data-model.md` carries the table and says it is approximate; `api-design.md` carries the
       public endpoint.
 
 ## Open questions
 
 None.
+
+## Outcome
+
+**Shipped 2026-09-06**, backend then widget, then deployed to the demo stand the same evening:
+`ago-chat#203`, `ago-widget#58`, and `ago-chat#204` for the one Done-when found untested at landing.
+Migration `20260906103639_Stage23AddSiteWidgetActivity` applied cleanly on the stand; smoke 45/45.
+
+**The write path is the part worth remembering.** A mount beacon fires on every page load of every
+tenant's site, so a row per beacon would have put the busiest table in the system on the visitor
+request path. Beacons accumulate in memory per `(site, day, kind)` and a hosted service flushes
+counter *increments* every ten seconds. Rule 8 does not bite — nothing reads these counters to decide
+a write — and `docs/design/decisions.md` §3 already licenses the screen being approximate.
+
+**Three things this item found that it did not go looking for:**
+
+- **Dapper 2.1.79 cannot bind a `DateOnly` parameter at all**, while Npgsql maps it to `date` happily,
+  so reads worked and writes threw. The handler is deliberately not the obvious
+  `ToDateTime(TimeOnly.MinValue)` fix — turning a calendar day into an instant to satisfy a library
+  invents a time of day. Where it registers took two wrong answers first, each refused by something
+  concrete rather than by taste; the file records both.
+- **The rate limiter shipped with nothing exercising its refusing branch.** Every test passed a
+  limiter that always allows. Closed by `ago-chat#204`.
+- **The flusher's shutdown flush cannot currently be proven.** The test for it passes alone and fails
+  about half the time in the full integration project, and an instrumented run showed the row written
+  with no swallowed exception. Dropped rather than merged, because a test that is right half the time
+  is worse than the gap it covers. Everything learned is in `23-40`.
+
+**One correction made after merge rather than before.** The widget PR's description said the beacon
+used `navigator.sendBeacon` with a `keepalive` fallback. It does not — it is an ordinary `fetch`
+whose promise is never awaited and whose rejection is swallowed. The description had been written from
+this item's wording rather than from the code. Both the PR and `api-design.md` now say what is true,
+including what the plain `fetch` gives up.
