@@ -1,7 +1,7 @@
 # the tenant can tell their visitors what the widget puts on their device
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: nothing. `24-05` is adjacent — it settles what a visitor *consents* to; this settles
   what the tenant must be able to *declare*.
 - **Decision**: `docs/design/decisions.md` §10's audience reasoning applies by analogy; the storage
@@ -65,13 +65,13 @@ still incomplete.
 
 ## Done when
 
-- [ ] A tenant can read, from the console, every key the widget writes and what each is for.
-- [ ] The document says these are not cookies, in those words.
-- [ ] Each entry states its lifetime, including the honest answer where nothing expires it.
-- [ ] `personal-data.md` carries the row, including that this store is on the visitor's own device and
+- [x] A tenant can read, from the console, every key the widget writes and what each is for.
+- [x] The document says these are not cookies, in those words.
+- [x] Each entry states its lifetime, including the honest answer where nothing expires it.
+- [x] `personal-data.md` carries the row, including that this store is on the visitor's own device and
       what that means for erasure — we cannot reach it, and the register should say so rather than
       imply we can.
-- [ ] A test asserts the documented key set matches what the widget actually writes, so the document
+- [x] A test asserts the documented key set matches what the widget actually writes, so the document
       cannot drift from the code the way `16-02`'s own remarks did.
 
 ## Open questions
@@ -82,3 +82,33 @@ still incomplete.
   details: consent attaches to the act, not to using the product. The same reasoning plausibly applies
   here, and plausibly is not good enough. Needs the author, and probably the lawyer already engaged for
   `24-04`.
+
+## Outcome (2026-09-06)
+
+`ago-widget` `39d5286`, `ago-console` `95a188d`.
+
+**The item's own first fact held up, and it changed the shape of the answer.** We set no cookies —
+verified again at implementation, including that the transport default which would have sent the host
+page's cookie jar is explicitly disabled. So the deliverable is not a cookie banner; it is a
+disclosure of `localStorage`, which a tenant's cookie audit will not find.
+
+**`WIDGET_STORAGE_DISCLOSURE` in `ago-widget/src/storage.ts` is the single source.** The console
+screen renders it and its test asserts against it, so the document cannot drift from the code — which
+is what the fifth Done-when asked for, and the failure `16-02`'s own remarks had already suffered.
+
+**`personal-data.md` gained the row, and it is the only row in that register where AGO has no erasure
+path at all.** That is stated rather than softened: `16-02`'s erasure does not reach a visitor's own
+device and no future job can. What clears an entry is the visitor clearing their site data, or each
+key's own replacement rule. A register that implied otherwise would be wrong in the direction that
+matters.
+
+**A fifth forcing place was added, because the existing four could not have caught this.**
+`personal-data.md`'s "Keeping this true" named `data-model.md`, the `db-migration` skill and the
+`messaging-contract` skill. All three guard data landing in *our* stores. A key written to somebody
+else's device passes no migration, no contract and no schema review, so the widget's storage was the
+map's blind spot rather than an entry nobody had got round to. `.claude/skills/embeddable-widget` now
+names the register, in its own Storage and privacy section.
+
+**The open question is untouched and still the author's** — whether writing the identifier needs
+consent or is strictly necessary to the service the visitor asked for. This item made the facts
+available, which is what a lawyer needs to answer it; `24-05` owns the consent question itself.
