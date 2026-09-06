@@ -1,7 +1,7 @@
 # the board that `roadmap.md` calls the only queue holds nothing that is open
 
 - **Stage**: 23
-- **Status**: ready. **Answered by the author, 2026-09-06, and with a third shape neither reading
+- **Status**: done (2026-09-07), `ago-root#593`. Was: **answered by the author, 2026-09-06, and with a third shape neither reading
   offered: the queue is not kept anywhere — it is computed.**
 - **Depends on**: nothing
 - **Decision**: none taken. Two readings, below, and the choice is the author's.
@@ -92,8 +92,31 @@ work lands:** which open items are ready to be started right now.
 
 ## Done when (replacing the ones above)
 
-- [ ] `roadmap.md` says the queue is computed from open issues, and points at what computes it.
-- [ ] A command answers *what is ready to start now* from the issues and the backlog files.
-- [ ] `Depends on` is machine-readable enough for that command to be right, and where it is not, the
+- [x] `roadmap.md` says the queue is computed from open issues, and points at what computes it.
+- [x] A command answers *what is ready to start now* from the issues and the backlog files.
+- [x] `Depends on` is machine-readable enough for that command to be right, and where it is not, the
+      item says so. **Surveyed rather than assumed**: of 322 backlog files, 169 name items in
+      backticks, 100 say *nothing*, 52 carry no such field, one is an OR — and **zero** name a
+      dependency the script cannot read. The unparseable branch exists and reports rather than
+      guesses, with no live example to exercise it today.
       item says so rather than the command guessing.
-- [ ] Nothing claims an ordered list lives anywhere.
+- [x] Nothing claims an ordered list lives anywhere.
+
+## Outcome
+
+`ago-root#593`, merged by the author, together with `23-50` because both changed the same script.
+
+**The answer was neither reading, and that is what makes it worth recording.** Both options this item
+offered argued about *where an ordered list lives*. The author's answer removed the premise: the queue
+is computed from the open issues, every time it is asked, so the staleness both readings were trying
+to avoid has nowhere to live.
+
+**The command reports what it cannot decide.** A `Status` that says *ready* plus a qualifier, a
+dependency shaped as an OR, or one naming no item number is surfaced for a person rather than folded
+into an answer. The three items blocked today by a provider, a lawyer and a scheduled run fall out by
+their own words - no number is hardcoded anywhere, which was the whole point.
+
+**One weakness, found by running it rather than by reading it.** Six of the nine items it reports as
+*qualified* are qualified by prose I wrote myself - `Status: ready. **Answered by the author…**` -
+which is the opposite of a blocker. The script is right to refuse to guess; the cost lands on my own
+habit of writing explanations into a field a machine reads. Worth knowing before trusting the buckets.

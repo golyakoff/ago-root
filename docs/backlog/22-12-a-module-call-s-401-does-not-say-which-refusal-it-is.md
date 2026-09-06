@@ -38,7 +38,10 @@ So the answer may well be *"the wire stays a flat 401; the distinction lives in 
 - [x] If the wire stays flat, the reason is recorded where the next person to ask will find it. —
       `adr/0099`, which also records the **premise**: if `22-18` moves this channel inside the cluster,
       the anonymous-prober argument weakens and the decision is worth revisiting.
-- [ ] A smoke or alert check can tell "not enabled" from "refused", or it is stated why it cannot.
+- [~] A smoke or alert check can tell "not enabled" from "refused", or it is stated why it cannot.
+      **Met by the second half, not the first**: the Outcome states why a check cannot tell them apart.
+      The box's own wording allows that, so this is settled rather than unmet - it was never ticked
+      because the answer sat in prose instead. Settled 2026-09-07.
       — **described precisely, not built.** `smoke.sh` lives in `ago-deploy`, out of this item's lane.
       And one fact only a look at the live deployment could supply: production logs are **plain text**,
       with no JSON console formatter, so the two values render into the message string rather than

@@ -58,7 +58,10 @@ State the choice and what it replaced.
       both directions. The bare no-argument form still means the three chat hosts and nothing else,
       verified rather than assumed: `TARGETS` defaults to the chat deployments and calendar is
       reachable only by name.
-- [ ] The migrator's coupling holds in both directions, proven by performing a rollback rather than by
+- [~] The migrator's coupling holds in both directions, proven by performing a rollback rather than by
+      **Honestly unmet, and unprovable when this closed**: there was no second calendar image to move
+      between. There is now, so this is provable - but proving it is a rollback on a live deployment,
+      which is the author's to authorise, not a session's. Settled 2026-09-07.
       reading the script. — **not met, and it cannot be yet.** There is no second calendar image to
       move between in recorded revision history. What was verified instead: every refusal path (a
       non-SHA tag, an unknown component, a bad tag under the new scope) exits before any `kubectl`

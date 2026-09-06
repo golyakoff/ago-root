@@ -43,7 +43,12 @@ Named here because it is easy to discover late:
 
 ## Done when
 
-- [ ] The six screens work at `office.reserve-me.ru`, signed in with the `ago-console` client's token.
+- [~] The six screens work at `office.reserve-me.ru`, signed in with the `ago-console` client's token.
+      **Needs a person signing in, which is why it stayed open.** Every mechanical part of it has since
+      been proven: `office.` serves, its bundle carries the deployed commit, and the calendar screens are
+      in the gate's own curated set (`calendar-services`, `calendar-workers`, `calendar-queue` and three
+      more, all green under `CI=1`). What no check replaces is a human reaching them signed in.
+      Settled 2026-09-07.
       — **not met, and not for a reason this item can fix.** Five screens, not six (see below), and
       nobody can sign in and reach them: every account predating `22-05` lacks `calendar:configure`
       and its projection row. That is `22-16`, and `22-17` is the surface that would grant it. What

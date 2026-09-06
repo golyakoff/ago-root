@@ -1,7 +1,9 @@
 # the Done-when boxes are load-bearing for one check and optional in practice
 
 - **Stage**: 23
-- **Status**: ready. **Answered by the author, 2026-09-06: reading A, plus a periodic review** — the
+- **Status**: done (2026-09-07). The rule is in `CLAUDE.md` rule 14, the checks are in
+  `queue-audit.sh`, and the backlog the rule created is `23-55`. Was: **answered by the author,
+  2026-09-06: reading A, plus a periodic review** — the
   boxes are the record, closing requires them settled, and partially-done items get looked at on
   purpose rather than by accident.
 - **Depends on**: nothing
@@ -103,9 +105,36 @@ this whole item is about.
 
 ## Done when (replacing the ones above)
 
-- [ ] `CLAUDE.md` rule 14 says a ticket closes only with every Done-when settled, and names the three
+- [x] `CLAUDE.md` rule 14 says a ticket closes only with every Done-when settled, and names the three
       ways to settle one.
-- [ ] `queue-audit.sh` flags a closed item with unsettled boxes, shown flagging one and staying quiet
+- [x] `queue-audit.sh` flags a closed item with unsettled boxes, shown flagging one and staying quiet
       on a properly closed one.
-- [ ] `queue-audit.sh` can list partially-done open items on request.
-- [ ] The eighteen existing ones are settled or explicitly left, on the record.
+- [x] `queue-audit.sh` can list partially-done open items on request.
+- [~] The eighteen existing ones are settled or explicitly left, on the record. **Six settled the
+      same evening** — and settling them was nearly mechanical, because their `Status` lines already
+      said the box was unmet and why; the truth was written, just not where a check could find it.
+      **The remaining twelve are carried out to `23-55`**, because unlike the six, nothing in their
+      files says whether a box is true: each needs reading against what the item shipped. Ticking
+      thirty-nine boxes on the say-so of a `Status` line would produce exactly the reassurance this
+      item exists to remove.
+
+## Outcome
+
+`ago-root#593`, merged by the author.
+
+**The rule and the check landed together, which is the point.** The boxes had been load-bearing for
+one automated check and optional in practice - the worst of both, because the check gave a
+reassurance it could not give. Rule 14 now says a ticket closes only with every box settled, and the
+audit flags a closed item that breaks it: on its first run it found eighteen.
+
+**What the first sweep taught, and it was not what I expected.** Six of the eighteen were not sloppy
+at all - their `Status` lines already said which box was unmet and why, in those words. The
+information existed and was honest; it simply sat where no check would look. That is a milder failure
+than the one this item was filed about, and worth separating from it: the convention was not being
+ignored, it was being followed in the wrong field.
+
+**And one of the six turned out to be overtaken rather than unmet.** `20-20`'s box asked that a
+tenant reach the calendar console at its own hostname - and `22-09` retired that hostname. The thing
+it wanted proven no longer exists to prove, which no amount of ticking or leaving would have said.
+
+The other twelve are `23-55`.
