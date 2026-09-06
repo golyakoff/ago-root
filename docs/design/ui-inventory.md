@@ -61,76 +61,96 @@ A twelfth, `site:manage-operators`, exists server-side and is named in a comment
 
 ## 1. The console shell — the frame every signed-in screen sits in
 
+**Rewritten in full for `23-31` (2026-09-06)** — the flat, twenty-four-item horizontal strip this
+section used to describe is gone, replaced by a seven-section, two-level accordion in a left column.
+Read this section as current for the commit named at the top of this file's own update; the
+`buildTenantNavItems`/tagline/"flat list" text this replaces is preserved nowhere else in this
+document — see `git log` on this file for the pre-`23-31` version if it is ever needed.
+
 Files: `src/shell/AppShell.tsx`, `src/shell/shell.css`, `src/shell/OperatorShell.tsx`,
 `src/shell/consoleNav.ts`.
 
 There are three shell shapes:
 
-1. **`AppShell`** — the full frame. Two stacked header rows, an optional full-bleed demo notice, and
-   a `<main>`. Used by every signed-in screen.
+1. **`AppShell`** — the full frame. One header row, an optional full-bleed demo notice, a left
+   **rail** (the accordion, desktop only) and a `<main>`. Used by every signed-in screen with a
+   `sections` prop.
 2. **`CenteredShell`** — brand row only, content vertically and horizontally centred. Used by the
    sign-in redirect spinner (`RequireAuth`) and `/callback`.
-3. **`AppShell` with no `nav` and no `identity`** — used by `/signup`.
+3. **`AppShell` with no `sections` and no `identity`** — used by `/signup`; renders `<main>` as a
+   direct child, no rail, no drawer, no hamburger.
 
-### Header, row 1 ("who you are")
+### Header (one row now, not two)
 
-Left: a hamburger button (`.ago-shell__menu-button`, hidden by CSS above `40rem`), then the brand —
-a 2rem lilac square with the letter `A`, the wordmark `AGO` in Unbounded, and a small uppercase
-tagline underneath.
-
-The tagline is variable and this is the only place the product names itself:
-
-| Tagline | When |
-|---|---|
-| `Operator console` | default |
-| `Client console` | on `/admin`, `/settings/widget`, `/settings/install`, `/settings/auto-reply`, `/settings/billing` only — an explicit `useMatch` list in `OperatorShell.tsx` |
-| `Platform owner console` | on `/owner` |
+Left: a hamburger button (`.ago-shell__menu-button`, hidden by CSS above `40rem`, present only when
+there is a nav to show), then the brand — a 2rem lilac square with the letter `A`, and the single word
+**"Офис"**. `23-31`'s own instruction: "the header says 'Офис' and nothing else." The two-line
+`AGO` wordmark plus a route-driven tagline (`Operator console` / `Client console` / `Platform owner
+console`, decided by a five-route `useMatch` list in `OperatorShell.tsx`) is gone entirely, and that
+list's own incompleteness (eight of the thirteen tenant screens were never in it — the defect this
+section used to name explicitly) is moot along with it. "Офис" is a literal, un-translated brand word
+— read from neither `strings` table, the same treatment `"AGO"` had before it (and still has
+elsewhere: `ux-gate/lib/i18nCompleteness.ts`'s own exemption list is unchanged, "Офис" needs none —
+it is pure Cyrillic).
 
 Right: the identity cluster — an optional tenancy `Select` (only when the identity has more than one
 tenancy), the operator's display name, an optional `site <first 8 hex>` mono badge (only when there
 is *no* tenancy switcher), a theme `Select` (Match system / Light / Dark), and a small secondary
-**Sign out** button.
+**Sign out** button. Unchanged by `23-31`.
 
-### Header, row 2 ("where you can go")
+### The left rail — a two-level accordion, seven sections
 
-A single horizontal strip of `NavLink`s, `flex-wrap: nowrap; overflow-x: auto`. It is hidden below
-`40rem` and replaced by the hamburger + drawer. Order and gating come from
-`buildTenantNavItems()` in `src/shell/consoleNav.ts`:
+The flat strip and its own mobile drawer twin are both gone. In their place: one accordion, rendered
+twice — `.ago-shell__rail` (a persistent left column, desktop only, `16rem` wide) and
+`.ago-shell__drawer-nav` (inside the mobile dialog) — over the identical `sections` array
+`buildTenantNavSections()` (`src/shell/consoleNav.ts`) builds, never two independently-gated lists.
+Exactly one section is open at a time; which one defaults to whichever section contains the current
+route (`AppShell.tsx`'s `activeSectionId`, matched by a real `<NavLink>`-style rule first, then a
+looser path-prefix rule for a drill-down route with no nav entry of its own), falling back to the
+first section otherwise. Clicking a different section's header opens it and closes whichever was
+open; the accordion is never left with zero sections open.
 
-| # | Label | Route | Gate |
+**Seven sections, built in this order — a section with no visible item is not rendered at all**, so an
+ordinary operator's rail is shorter than the table below by however many sections that leaves empty:
+
+| # | Section | Items (in order) | Gate on the section itself |
 |---|---|---|---|
-| 1 | Conversations | `/` | none (always shown) |
-| 2 | My numbers | `/analytics/me` | none (always shown) |
-| 3 | All conversations | `/admin` | `site:configure` |
-| 4 | Search | `/search` | `site:configure` |
-| 5 | Analytics | `/analytics` | `site:configure` |
-| 6 | Conversion | `/analytics/conversion` | `site:configure` |
-| 7 | Tag report | `/analytics/tags` | `site:configure` |
-| 8 | Booking flow | `/analytics/booking-flow` | `site:configure` |
-| 9 | Install widget | `/settings/install` | `site:configure` |
-| 10 | Widget appearance | `/settings/widget` | `site:configure` |
-| 11 | AI FAQ assistant | `/settings/faq` | `site:configure` |
-| 12 | Offline auto-reply | `/settings/auto-reply` | `site:configure` |
-| 13 | Canned responses | `/settings/canned-responses` | `site:configure` |
-| 14 | Tags | `/settings/tags` | `site:configure` |
-| 15 | Billing | `/settings/billing` | `site:configure` |
-| 16 | Delete account | `/settings/delete-account` | `site:erase` |
-| 17 | Who works here | `/settings/operators` | `site:manage_operators` |
-| 18 | Queue | `/calendar` | `calendar:configure` |
-| 19 | Setup | `/calendar/setup` | `calendar:configure` |
-| 20 | Workers | `/calendar/workers` | `calendar:configure` |
-| 21 | Availability | `/calendar/availability` | `calendar:configure` |
-| 22 | Contacts | `/calendar/contacts` | `calendar:configure` |
-| 23 | Platform sites | `/owner` | `useOwnerEligibility() === "eligible"` (appended in `OperatorShell.tsx`, not in `consoleNav.ts`) |
+| 1 | Диалоги / Conversations | Мои (`/`, always) · Все диалоги `/conversations/all` · Поиск `/conversations/search` | last two need `site:configure` |
+| 2 | Аналитика / Analytics | Мои показатели `/analytics/me` (always) · Аналитика `/analytics/site` · Конверсия `/analytics/conversion` · Отчёт по меткам `/analytics/tags` · Запись через чат `/analytics/booking-flow` | last four need `site:configure` |
+| 3 | Календарь / Calendar | Мастера `/calendar/masters` · Услуги `/calendar/services` · Расписание `/calendar/schedule` · В ожидании `/calendar/waiting` · *Записи (reserved, no screen)* · Клиенты `/calendar/clients` · Настройка `/calendar/setup` | see "The muting rule", below — this is the one section with three real outcomes |
+| 4 | Команда / Team | Сотрудники `/team/people` · *Общение (reserved, no screen)* | "Сотрудники" needs `site:manage_operators`; "Общение" needs nothing, so this section never empties |
+| 5 | Каналы / Channels | Установка виджета `/channels/install` · Виджет на сайте `/channels/widget` · *Бот MAX (reserved)* · *Бот Telegram (reserved)* · *Другие каналы (reserved)* | whole section needs `site:configure` |
+| 6 | Автоматизация / Automation | Готовые ответы `/automation/canned` · *ИИ-подсказки (reserved)* · Автоответ офлайн `/automation/auto-reply` · *ИИ-автоответ (reserved)* · ИИ-помощник по вопросам `/automation/faq` · Метки `/automation/tags` | whole section needs `site:configure` |
+| 7 | Администрирование / Administration | Продукты `/account/products` · Оплата `/account/billing` · Данные на устройстве `/account/device-storage` · *Документы (reserved)* · Удалить аккаунт `/account/delete` | first four need `site:configure`; "Удалить аккаунт" needs its own `site:erase`, independently |
 
-**This is a flat list of up to 23 items in one horizontal strip.** There is no grouping, no section
-heading, no submenu, and no visual break between "chat", "settings", "calendar" and "platform".
-Two labels are ambiguous out of context — "Queue" (calendar) sits ten items after "Conversations"
-(the chat queue), and "Setup"/"Install widget" are both first-run installation screens for two
-different products.
+*Italic* entries are `reserved` (`AppShellNavItem.reserved`) — a place held for a screen that does not
+exist yet, drawn as inert text (no `href`, not part of the tab order, a small "Скоро"/"Coming soon"
+badge), never a working link.
 
-The active item is marked three ways at once (colour, weight 800, and a 2px underline that grows
-from the left on hover), plus `aria-current="page"`.
+"Platform sites" (`/owner`) is not one of the seven — it renders as `AppShell`'s own `pinnedItem`, one
+flat link below the accordion, present only for the one identity `useOwnerEligibility()` calls
+eligible, exactly the place it held as the flat list's own final entry before `23-31`.
+
+**The muting rule, replaced (`adr/0129`).** Before `23-31`, an entry a colleague at this tenant could
+grant but this operator did not hold was drawn **muted** (faint text, a padlock glyph) rather than
+hidden — `23-24`'s own decision (`decisions.md` §10). `adr/0129` narrows that: muted now means *"this
+identity could obtain the thing itself"*, which in this console is only ever true of the calendar, for
+whoever holds `site:configure` (the "tenant" — the same permission `/account/billing`'s checkout and
+`/account/products` already treat as "may act for the tenant as a whole"):
+
+| Viewer | Holds `calendar:configure` | Lacks it, holds `site:configure` | Lacks it, does not hold `site:configure` |
+|---|---|---|---|
+| Календарь section | full seven items, ordinary | **one item, muted** ("В ожидании", `Badge` reading "Докупить"/"Add-on") | **section not drawn at all** |
+
+Every other gate (`site:configure`, `site:erase`, `site:manage_operators`) is a plain hide-when-
+lacking, ordinary-when-holding check now — no muted state, no padlock. **An operator with no
+tenant-level permission (and no `calendar:configure` of their own) sees exactly three sections**
+(Диалоги, Аналитика, Команда, the last with only its reserved "Общение" place); **one who also holds
+`calendar:configure`** — a calendar-only operator with no administrative grant — **sees exactly four**
+(the same three, plus Календарь, full and unmuted). The item's own Done-when names the second case.
+
+The active item is marked two ways at once (colour, weight 800 — no more growing underline, that idiom
+belonged to the horizontal strip), plus `aria-current="page"`.
 
 ### The demo notice
 
@@ -142,12 +162,13 @@ so header + notice pin together as one unit.
 
 ### The mobile drawer
 
-Below `40rem` the nav row is `display: none` and the hamburger appears. The drawer is a real native
+Below `40rem` the rail is `display: none` and the hamburger appears. The drawer is a real native
 `<dialog>` opened with `showModal()` (`src/components/Dialog.tsx`, `variant="drawer"`), fixed to the
 left edge, `width: min(20rem, 85vw)`, full height, sliding in with a transform. It renders the *same*
-`nav` array as the bar — one data source, two renderers. Focus trapping, Escape-to-close, backdrop
-click and focus restoration to the hamburger are the browser's, and are covered by
-`ux-gate/mobileNavDrawer.spec.ts`.
+accordion, over the *same* `sections` array, as the rail — one data source, two renderers, sharing one
+lifted "which section is open" state so the two can never disagree about it even though only one is
+ever visually reachable at a given viewport. Focus trapping, Escape-to-close, backdrop click and focus
+restoration to the hamburger are the browser's, and are covered by `ux-gate/mobileNavDrawer.spec.ts`.
 
 ### The eleven components
 
@@ -193,6 +214,13 @@ There is no `EmptyState` *component* — `NoConversationSelected` has its own be
   never the 1088px reading measure. `/signup`, `/onboarding` and `/owner` render `AppShell`
   themselves; `/owner` also passes `wide`, `/signup` and `/onboarding` do not.
 - `fixed` (viewport-height, internal scrolling) is passed only for `/` and `/conversations/:id`.
+- **`23-31`**: when there is a rail to show, `<main>` no longer sits directly inside `.ago-shell` —
+  a new `.ago-shell__body` (`display: grid; grid-template-columns: 16rem minmax(0, 1fr)`) wraps the
+  rail and `<main>` together, itself capped at the same 1180px. Below `40rem` that grid collapses to
+  one column (`minmax(0, 1fr)`, not a bare `1fr` — found live in `ux-gate`: a bare `1fr` track has an
+  implicit `auto` minimum, so a wide table forced the whole page to overflow horizontally instead of
+  scrolling inside `.ago-table-scroll`). A screen with no `sections` at all (`/signup`) skips this
+  wrapper entirely and keeps the pre-`23-31` layout, unchanged.
 
 ---
 
@@ -262,7 +290,7 @@ the identity cluster and Sign out but **no nav** (there is no `siteId` yet).
 person is in. Guarded by `RequireAuth` only, outside `PermissionsProvider` and the realtime provider,
 for the same reason `/onboarding` is: the token carries no site claims yet. `ago-chat`'s own route is
 gated on `RequireKeycloakIdentity` rather than `RequireOperatorIdentity` for that same reason.
-**For.** Entering the code a tenant generated on `/settings/operators` (`23-22`), and becoming an
+**For.** Entering the code a tenant generated on `/team/people` (`23-22`), and becoming an
 operator on the inviting site.
 **On it.** `PageHead`, one code field, one primary button.
 **States.** Five, and they are five rather than four on purpose — the handler distinguishes
@@ -476,7 +504,7 @@ in browser site settings; an unsupported browser gets its own variant.
 
 ## 4. Supervision screens
 
-### 4.1 `/admin` — "All conversations"
+### 4.1 `/conversations/all` — "All conversations"
 
 **Who.** `site:configure`.
 **For.** Seeing every conversation on the site, not just your own.
@@ -500,7 +528,7 @@ danger alert, "Back to queue" link) · loading (`Skeleton lines={4}`) · empty (
 "No conversations yet.") · error (`Alert`) · a success alert after an erase ("The conversation has
 been erased."). Erasing is a two-step confirm dialog followed by a polling `Spinner` in the row.
 
-### 4.2 `/search` — "Search"
+### 4.2 `/conversations/search` — "Search"
 
 **Who.** `site:configure`.
 **For.** Finding a conversation by what was said in it.
@@ -533,7 +561,7 @@ optional preset row, a `.ago-search-form` date range, a "Showing 1 Sep 2026 – 
 and one or more `Table`s. **None of them contains a chart, a sparkline, a trend arrow, or any
 graphical element.** Every number is a table cell.
 
-### 5.1 `/analytics` — "Analytics"
+### 5.1 `/analytics/site` — "Analytics"
 
 Description: "How your site is doing: conversation volume, average time to first reply, and
 conversations that never got one, overall and by channel."
@@ -624,7 +652,7 @@ section 5 with no gate at all** — not "gated on a permission everyone happens 
 no permission to check, because a grant is a thing a tenant could withhold and withholding this is the
 failure the item exists to prevent.
 
-Three parts: the conversation bucket (the same column strings `/analytics` uses); the load summary —
+Three parts: the conversation bucket (the same column strings `/analytics/site` uses); the load summary —
 Held, Standard and Additional as **three separate numbers, never combined into a score**; response time
 by load bucket; and the conversion figures, carrying `/analytics/conversion`'s own "not a verified sale"
 caveat rather than a second wording of it.
@@ -641,14 +669,22 @@ literally.
 
 ## 6. Site settings
 
-Eight routes. Seven are gated on `site:configure`; `/settings/delete-account` is gated on
+Eight routes. Seven are gated on `site:configure`; `/account/delete` is gated on
 `site:erase`. All follow the same skeleton: `PageHead` with a descriptive sentence, an optional
 top-level load error, a `Skeleton` inside a `Panel` while loading, then `Panel`s containing forms.
 The save control is always a single primary **Save** / "Saving…" button at the bottom, and success is
 always a green `Alert` reading "Saved." **No screen warns about unsaved changes on navigation, and
 none has a Cancel or Reset.**
 
-### 6.1 `/settings/install` — "Install widget"
+**`23-31`: these eight routes are three separate nav sections now, not one.** This document's own
+§6 numbering groups them by their old shared `site:configure` gate, which is still true and still
+useful for finding a screen by permission — but the rail groups them by what they are: `/channels/install`/`/channels/widget` sit in "Каналы", `/automation/canned`/`/automation/faq`/
+`/automation/auto-reply`/`/automation/tags` sit in "Автоматизация", and `/account/billing`/
+`/account/device-storage`/`/account/products`/`/account/delete` sit in "Администрирование" (§1's own
+"The left rail" table has the full seven-section breakdown). Nothing about any individual screen's
+own content changed by this regrouping — only which accordion section its nav entry lives in.
+
+### 6.1 `/channels/install` — "Install widget"
 
 Description: "This is what your website needs so visitors can chat with you - your site's own key,
 and the web address it's set up to work on."
@@ -666,7 +702,7 @@ Three `Panel`s:
 
 **States.** Checking permissions · denied · loading · error · loaded. There is no per-panel error.
 
-### 6.2 `/settings/widget` — "Widget appearance"
+### 6.2 `/channels/widget` — "Website widget" (renamed from "Widget appearance" by `23-31`)
 
 Description explains changes take effect on the visitor's next page load.
 
@@ -682,7 +718,7 @@ Two `Panel`s, five controls:
 per-field validation errors (colour, notice URL) · submit error · saved.
 **There is no preview of the widget itself.** The only visual feedback is the colour swatch.
 
-### 6.3 `/settings/faq` — "AI FAQ assistant"
+### 6.3 `/automation/faq` — "AI FAQ assistant"
 
 Two independent forms with two independent save buttons on one screen.
 1. **Module registration** — *Module key* (placeholder `faq`), *Trigger words* (comma-separated
@@ -694,7 +730,7 @@ Two independent forms with two independent save buttons on one screen.
 panel is replaced by an `Alert tone="info"` saying the AI FAQ backend is not configured for this
 deployment. The module-registration panel still renders and still saves.
 
-### 6.4 `/settings/auto-reply` — "Offline auto-reply"
+### 6.4 `/automation/auto-reply` — "Offline auto-reply"
 
 One `Panel` containing: a bare checkbox row "Reply automatically when nobody is online"; a
 *Default reply* `Textarea`; then a `<fieldset>` "Keyword rules" with an intro explaining first-match
@@ -702,13 +738,13 @@ wins, and a repeating row of *Keyword N* + *Reply N* inputs and a **Remove** but
 appended automatically as soon as the last row gains any text** — there is no "Add rule" button. Nine
 distinct validation messages, shown one at a time in a danger alert above the save button.
 
-### 6.5 `/settings/canned-responses` — "Canned responses"
+### 6.5 `/automation/canned` — "Canned responses"
 
 Structurally identical to 6.4: one `Panel`, one `<fieldset>` "Responses", repeating *Title N* +
 *Text N* (a 2-row `Textarea`) + **Remove**, the same auto-appending blank row, six validation
 messages, one Save.
 
-### 6.6 `/settings/tags` — "Tags"
+### 6.6 `/automation/tags` — "Tags"
 
 Description: "Labels you can attach to conversations, and use later to filter or count them."
 
@@ -723,7 +759,7 @@ Each mutation fires immediately against the server and reloads the list; there i
 **States.** Checking permissions · denied · loading · load error · `.ago-empty` "No tags yet." · a
 row-level error alert inside the panel · a create-level error alert below the create form.
 
-### 6.7 `/settings/billing` — "Billing"
+### 6.7 `/account/billing` — "Billing"
 
 Description: "Your site's current tier, seat usage, and subscription."
 
@@ -749,7 +785,7 @@ tier runs to period end with no refund.
 screen shows a tier name, three numbers, and a seat count field. Checkout is a full-page redirect to
 the payment provider's hosted page.
 
-### 6.8 `/settings/delete-account` — "Delete account"
+### 6.8 `/account/delete` — "Delete account"
 
 **Who.** `site:erase` — a deliberately different gate from every screen above.
 One `Panel` "Delete this account" with a paragraph enumerating what is deleted (every conversation,
@@ -763,9 +799,9 @@ will be signed out automatically. The nav stays visible and clickable during thi
 
 ---
 
-### 6.9 `/settings/products` — "What AGO offers"
+### 6.9 `/account/products` — "What AGO offers"
 
-**Who.** `site:configure` — the same gate `/settings/billing` uses, deliberately (`adr/0106`): the
+**Who.** `site:configure` — the same gate `/account/billing` uses, deliberately (`adr/0106`): the
 buyer is the tenant's owner, who already holds the permissions in question (`decisions.md` §10), and
 there is no dedicated "owner" permission in `Ago.Chat.Domain.Permission` to gate on instead.
 
@@ -778,8 +814,8 @@ One `Table`, three rows, columns *What it does* / *In your workspace* (a `Badge`
 | Row | Held when | Next step, held | Next step, not held |
 |---|---|---|---|
 | Conversations (the base product) | always | links to the queue (`/`) | — |
-| Booking | `enabledModules` includes `"calendar"` | links to `/calendar` | "Contact AGO to add this to your workspace." |
-| Automatic answers | `enabledModules` includes `"faq"` | links to `/settings/faq` | same contact sentence |
+| Booking | `enabledModules` includes `"calendar"` | links to `/calendar/waiting` | "Contact AGO to add this to your workspace." |
+| Automatic answers | `enabledModules` includes `"faq"` | links to `/automation/faq` | same contact sentence |
 
 **No copy anywhere on this screen names a module key** — the columns describe outcomes ("Let
 customers book an appointment…"), never "Calendar"/"FAQ" as such (`adr/0106`). **The not-held next
@@ -792,14 +828,18 @@ tenant-held fact for them on `GET /api/v1/operators/me` today (a connected chann
 `ChannelCredential` row, not an `EnabledModule` entry), and the console has no screen for them at all
 yet. Recorded as a gap, not guessed at (`adr/0106`).
 
-**Not yet in `consoleNav.ts`.** `23-25`'s own Open Question left where this entry belongs to be
-settled together with `23-24`; the route is reachable by direct URL regardless.
+**Wired into `consoleNav.ts` as of `23-31`**, at `/account/products` — `23-25` built the route and
+screen and left the nav placement open, deliberately, pending this item's own restructure
+(`strings.navAccountProducts`'s own doc comment).
 
 ---
 
 ## 7. AGO Calendar screens
 
-Seven routes under `/calendar`, all gated on `calendar:configure`, all sharing a *second* refusal
+Eight routes under `/calendar/*` (`/calendar/waiting`, `/calendar/setup`, `/calendar/services`,
+`/calendar/masters`, its two drill-downs, `/calendar/schedule`, `/calendar/clients` — `23-31` renamed
+three of these and added `/calendar/services`, carved out of `/calendar/setup`, `§7.2a` below), all
+gated on `calendar:configure`, all sharing a *second* refusal
 state the chat screens do not have: when `VITE_CALENDAR_API_BASE_URL` is unset, the page renders a
 `PageHead` and an `Alert tone="info"` ("The calendar backend is not configured for this deployment
 yet, so this screen cannot be used here.") — the nav entry is still shown, deliberately.
@@ -812,7 +852,7 @@ and they still read as a different product. Four differences hold across all sev
 - Their loading state is a `Skeleton` inside a bare `Panel`.
 - Several use bare `<ul>`/`<li>` and bare `<pre>` where the chat screens would use `Table`/`Panel`.
 
-### 7.1 `/calendar` — "Queue" (Pending bookings)
+### 7.1 `/calendar/waiting` — "Queue" (Pending bookings)
 
 Description: "Everything here confirms itself at its deadline unless you reject it first. Ordered by
 deadline, soonest first."
@@ -834,7 +874,15 @@ variant; nothing distinguishes the destructive one.
 
 ### 7.2 `/calendar/setup` — "Setup"
 
-`PageHead` description is the tenant name. Four `Panel`s:
+**`23-31`: the "Services" panel that used to be the third of four here moved out**, to its own screen
+at `/calendar/services` (§7.2a below) — the item's own reasoning: a service is one of the
+dictionaries a booking is built from (alongside masters and the schedule), not part of this screen's
+embed/calendars/working-hours configuration. **This is the one moved-route pair that is not a
+redirect**: `/calendar/setup` keeps answering at its own address, unredirected, because this
+(smaller) screen still lives there — see `movedRoutes.ts`'s own doc comment in `ago-console` for why
+redirecting it to `/calendar/services` would have been wrong.
+
+`PageHead` description is the tenant name. Three `Panel`s (was four before `23-31`):
 
 1. **"Approved page origins"**, whose *description* is actually the embed description ("Paste this on
    your own site. One tag: the chat widget and the booking flow arrive together."). Body: a bare
@@ -845,15 +893,27 @@ variant; nothing distinguishes the destructive one.
    Below, a create form: *Calendar name*, *IANA time zone* (a **free-text input** defaulting to
    `Europe/Moscow`, not a picker), a "Published" checkbox, **Add calendar**.
    **There is no edit or delete for a calendar, and no empty state — an empty `<ul>` renders nothing.**
-3. **"Services"** — a bare `<ul>` of `name · 45 min`, then a create form (*Service name*,
-   *Duration (minutes)*, **Add service**). Again create-only, no empty state.
-4. **"Working hours"** — a form: *Worker* `Select`, *Day* `Select` (Sunday…Saturday), *Opens* and
+3. **"Working hours"** — a form: *Worker* `Select`, *Day* `Select` (Sunday…Saturday), *Opens* and
    *Closes* native time inputs, **Add working hours**. Two substitute states: "Add a worker first -
    working hours belong to a worker on a calendar." when there are no workers, and "That worker is
    not on a calendar yet, so there are no hours to give them." beneath a disabled button.
    **Existing rules can be added but not edited or removed from this screen.**
 
-### 7.3 `/calendar/workers` — "Workers"
+### 7.2a `/calendar/services` — "Services" (new, `23-31`)
+
+Carved out of `/calendar/setup`'s own third panel, verbatim — same fields, same API
+(`getConfiguration`/`createService`), no new ones. `PageHead` title only, no description (unlike the
+source screen — `configuration.tenantName` was dropped rather than copied along, matching every other
+calendar screen besides `/calendar/setup` itself, none of which name the tenant in their own
+`PageHead`). One `Panel` "Services": a bare `<ul>` of `name · 45 min`, then a create form (*Service
+name*, *Duration (minutes)*, **Add service**). Create-only, no empty state, no edit, no delete — the
+identical limits the source panel had.
+
+**Out of scope, stated by the item that built this screen rather than left silent**: price and
+description are not fields here either — `23-35` is a separate, undecided item for whether the
+service dictionary should carry them at all.
+
+### 7.3 `/calendar/masters` — "Masters" (renamed from "Workers" by `23-31`)
 
 `PageHead` with a **title only** — no description sentence, unlike every chat screen.
 
@@ -882,7 +942,7 @@ a modal.
 **States.** Denied · not configured · loading · error · `<p className="ago-meta">No workers yet.</p>`
 returned by `WorkersTable` in place of the table.
 
-### 7.4 `/calendar/workers/:workerId/slots` — "<Name>'s slots"
+### 7.4 `/calendar/masters/:workerId/slots` — "<Name>'s slots"
 
 Reached only from a Workers row action or the edit card's link; **no nav entry**.
 
@@ -898,7 +958,7 @@ Phone. **Three of the six status labels are raw enum identifiers** —
 **States.** Denied · not configured · loading · empty ("No slots in this range.") · error · rows.
 Nothing on this screen is actionable; it is read-only.
 
-### 7.5 `/calendar/workers/:workerId/recut` — "Re-cut schedule"
+### 7.5 `/calendar/masters/:workerId/recut` — "Re-cut schedule"
 
 Reached only from a Workers row action; **no nav entry**. The only screen in the console that fetches
 nothing on mount — it opens as a bare form.
@@ -920,7 +980,7 @@ inserted and bookings cancelled, plus a list of the dates left in the old grid.
 has been generated yet" info alert · preview · confirm · done. No loading skeleton — the busy state is
 only a disabled button.
 
-### 7.6 `/calendar/availability` — "Availability"
+### 7.6 `/calendar/schedule` — "Schedule" (renamed from "Availability" by `23-31`)
 
 `PageHead` with a **title only**, no description.
 
@@ -937,7 +997,7 @@ screen is two write-only forms with no way to see or undo what they did.
 **States.** Denied · not configured · loading · load error · a substitute info alert when no worker is
 on a calendar ("No worker is on a calendar yet, so there are no days to edit.") · the forms.
 
-### 7.7 `/calendar/contacts` — "Contacts"
+### 7.7 `/calendar/clients` — "Contacts"
 
 Description: "Every customer who has ever booked with this tenant." A `Refresh` button.
 
@@ -1036,7 +1096,7 @@ are one template string, `src/ui/styles.ts`. All DOM is built imperatively; `tex
 `data-api` (else inferred from the script's own origin, else a build-time default),
 `data-booking="true"`, and `data-demo-notice="public"|"private"` (or the older
 `data-public-demo="true"`). Appearance — colour, launcher side, language, processing-notice text and
-link — comes from the server at bootstrap, driven by `/settings/widget` in the console.
+link — comes from the server at bootstrap, driven by `/channels/widget` in the console.
 
 **Language.** English and Russian (`src/i18n/`), chosen by the site's configured widget locale.
 
@@ -1182,8 +1242,8 @@ measurement: the bar "does not fit fifteen items at this width". It is now 21.
 **4. Every table is `overflow-x: auto` inside a bordered box, with `white-space: nowrap` headers.**
 `.ago-table-scroll` / `.ago-table thead th` (`components.css`). There is no card, stacked, or
 priority-column mobile treatment anywhere. The widest tables are `/owner` (8 columns),
-`/calendar/workers/:id/slots` (7), `/calendar/contacts` (6), `/analytics/conversion` and
-`/analytics/tags` (6 each), `/admin` (6 with the erase column). On a 375px viewport these are
+`/calendar/masters/:id/slots` (7), `/calendar/clients` (6), `/analytics/conversion` and
+`/analytics/tags` (6 each), `/conversations/all` (6 with the erase column). On a 375px viewport these are
 side-scrolling regions inside a vertically scrolling page.
 
 **5. The header's identity row packs six controls into one flex row.** Tenancy `Select` + operator
@@ -1191,7 +1251,7 @@ name + site badge + theme `Select` + Sign out. `flex-wrap: wrap` is the only acc
 sub-40rem media query changes only the gap and the operator block's alignment.
 
 **6. `.ago-search-form` is a bottom-aligned wrapping flex row** with `min-width: 16rem` on the phrase
-field. On the four report screens and `/search` this puts a date range and a submit button on one line
+field. On the four report screens and `/conversations/search` this puts a date range and a submit button on one line
 at desktop width and wraps them into a stack below roughly 500px — a reflow, not a different control.
 
 **7. The composer's action cluster.** Above 40rem, `.ago-composer__row` puts the textarea and a
@@ -1205,7 +1265,7 @@ console screen is therefore capped at 1180px and centred.
 **9. Hover-only affordances.** The nav's growing underline, `.ago-table tbody tr:hover`, and
 `a.ago-list__row:hover` are all hover states. Each has a non-hover counterpart for the *active* case,
 so nothing is unreachable, but the "this row is interactive" cue on a table row is hover-only — and
-on `/admin` rows are not interactive at all.
+on `/conversations/all` rows are not interactive at all.
 
 **10. Fixed pixel geometry inside components.** `.ago-dialog { width: min(32rem, 100vw - 2rem) }`,
 `.ago-shortcuts__row { grid-template-columns: 4.5rem 1fr }`, `.ago-message__thumb { max 7.5rem }`,
@@ -1257,8 +1317,8 @@ page scroll sideways.
 Each of these is two places in the code doing the same job differently.
 
 **12.1 A supervisor can list every conversation but cannot open one.**
-`/admin`'s columns (`AdminConversationsPage.tsx`, `buildColumns`) contain no `Link` — no cell and no
-row navigates to `/conversations/:id`. `/search` (`SearchConversationsPage.tsx`, `ResultRow`) *does*
+`/conversations/all`'s columns (`AdminConversationsPage.tsx`, `buildColumns`) contain no `Link` — no cell and no
+row navigates to `/conversations/:id`. `/conversations/search` (`SearchConversationsPage.tsx`, `ResultRow`) *does*
 link, but only for `Assigned` conversations, and tells the reader why in words for the other two
 states. The same reader, on the same site, with the same permission, gets a drill-down on one screen
 and none on the other.
@@ -1294,12 +1354,12 @@ Calendar screens: `<Panel><p className="ago-meta">…</p></Panel>` — grey text
 `ConversionReportPage.tsx` and `TagBreakdownReportPage.tsx` render This month / Last month / Last 30
 days. `OperatorAnalyticsPage.tsx` and `BookingFlowConversionPage.tsx` do not. The same two screens
 also label their fields **From** / **To** while the other two label them **From (optional)** /
-**To (optional)**, and their submit button says **Apply** on all four but the sibling `/search` says
+**To (optional)**, and their submit button says **Apply** on all four but the sibling `/conversations/search` says
 **Search**.
 
 **12.7 Channel names are translated in one place and raw in another.**
 `en.ts` has `analyticsChannelSms: "SMS"`, `analyticsChannelMax: "MAX"`, `analyticsChannelTelegram`,
-`analyticsChannelWhatsApp` — used in `/analytics`. `ChannelIdentitiesPanel.tsx` renders
+`analyticsChannelWhatsApp` — used in `/analytics/site`. `ChannelIdentitiesPanel.tsx` renders
 `<Badge>{identity.kind}</Badge>` — the raw server enum — and its picker's `<option>`s are the raw
 kinds too. `ContactDetailsPanel.tsx` does the same with `detail.kind`.
 
@@ -1321,7 +1381,7 @@ operator.
 
 **12.10 Two words for the same navigation target, and one word for two.**
 "Conversations" is the nav label for `/`, the rail's own heading, and part of "All conversations" for
-`/admin`; `ConversationPage`'s mobile back link says "← Conversations" and points at `/`, while every
+`/conversations/all`; `ConversationPage`'s mobile back link says "← Conversations" and points at `/`, while every
 permission-refusal page says "Back to queue" and points at the same place. "Queue" in the nav means
 the *calendar's* pending bookings.
 
@@ -1381,15 +1441,15 @@ Meanwhile `ago-widget/demo/booking.html` uses the correct form, `data-booking="t
 **13.2 `/signup` is a route with nothing linking to it.** Established in 2.2 above from the code and
 its own doc comment.
 
-**13.3 Two calendar routes have no nav entry.** `/calendar/workers/:workerId/slots` and
-`/calendar/workers/:workerId/recut` are reachable only from a Workers row action or the worker edit
+**13.3 Two calendar routes have no nav entry.** `/calendar/masters/:workerId/slots` and
+`/calendar/masters/:workerId/recut` are reachable only from a Workers row action or the worker edit
 card. This is stated as deliberate in `App.tsx` and `consoleNav.ts`.
 
 **13.4 A whole product area has an API and no screen: operator management.**
 **— corrected 2026-09-04; fixed in code, see the corrections section at the end of this document.**
 `site:manage-operators` is named in `ago-console/src/api/billingApi.ts` as gating a real server
 endpoint (`GetSeatAssignmentSummary`). The console never checks that permission, has no route for it,
-and has no UI for inviting, listing, removing or re-roling an operator. `/settings/billing` shows
+and has no UI for inviting, listing, removing or re-roling an operator. `/account/billing` shows
 "Seats used" and "Seat limit" as numbers with no way to see or change who occupies them.
 (`docs/backlog/13-01-operator-invitations-and-seat-entitlement.md` is marked **done** — the backend
 shipped; the console screen did not.)
@@ -1397,7 +1457,7 @@ shipped; the console screen did not.)
 **13.5 Conversation transfer has shipped server-side and has no control.**
 `docs/backlog/18-02-transfer-a-conversation.md` is marked **done (2026-08-29, `ago-chat#118`)**. A
 grep of the whole `ago-console/src` tree for `transfer` returns only an unrelated word in a comment.
-There is no transfer button on the conversation header, in the visitor panel, or on `/admin`.
+There is no transfer button on the conversation header, in the visitor panel, or on `/conversations/all`.
 
 **13.6 Tenant data export has shipped server-side and has no control.**
 `docs/backlog/16-03-tenant-data-export.md` is marked **done (2026-08-28, `ago-chat#113`)**. Nothing in
@@ -1418,7 +1478,7 @@ the sixth screen would have called, so five moved and the sixth was never wired.
 **13.9 `/calendar/setup` is excluded from the rendered UX gate.**
 `ux-gate/fixtures/screens.ts` covers nine console screens plus the two calendar drill-downs.
 `/calendar/setup` is the one deliberate exclusion, because its `<pre>` embed snippet would fail the
-gate's "no untranslated interface text" assertion. That same comment states `/settings/install` was
+gate's "no untranslated interface text" assertion. That same comment states `/channels/install` was
 excluded earlier for the identical reason (the file's own five-screens rationale groups it with "the
 other four settings screens" without naming the snippet). Either way, the two screens that show an
 embed snippet are the two nobody has a screenshot of.
@@ -1446,7 +1506,7 @@ clipboard." alerts persist for the life of the mount.
 
 **13.13 `Waiting` conversations are visible in three places and actionable in none.**
 The rail's Waiting section is explicitly read-only ("assigned automatically, never claimed here").
-`/admin` shows them with no link. `/search` shows them with the note "Unclaimed — assign it from the
+`/conversations/all` shows them with no link. `/conversations/search` shows them with the note "Unclaimed — assign it from the
 queue to open it" — which points at a queue that has no assign action. There is no claim, assign or
 take control anywhere in the product.
 
@@ -1456,7 +1516,7 @@ take control anywhere in the product.
 renders whatever list of times the server sent as a column of buttons.
 
 **13.15 One environment flag hides a whole screen's main content.**
-With `VITE_FAQ_API_BASE_URL` unset, `/settings/faq`'s knowledge-base panel is replaced by an info
+With `VITE_FAQ_API_BASE_URL` unset, `/automation/faq`'s knowledge-base panel is replaced by an info
 alert while the module-registration form still saves. With `VITE_CALENDAR_API_BASE_URL` unset, all
 seven calendar screens are info alerts — but their five nav entries still render, deliberately.
 
@@ -1481,7 +1541,7 @@ Keycloak's pages, not this codebase's. `ago-deploy` carries a login theme
 `ago-deploy`, which is outside the two repositories named in the brief. **The first screen a new
 tenant ever sees is therefore not inventoried here.**
 
-**14.3 The payment provider's hosted checkout.** `/settings/billing` redirects the whole page to a
+**14.3 The payment provider's hosted checkout.** `/account/billing` redirects the whole page to a
 `confirmationUrl` returned by the server. What the tenant sees there is the provider's, not ours.
 
 **14.4 The marketing/landing site.** `ago-landing` is a separate repository and was not in scope. It
@@ -1527,28 +1587,29 @@ and is complete as a *field* list; I did not confirm their visual grouping.
 | `/onboarding` | Finish setting up your site | session only | 2.3 |
 | `/` | Conversations (queue, nothing open) | session only | 3.1–3.2 |
 | `/conversations/:conversationId` | The open conversation | session only | 3.3–3.5 |
-| `/admin` | All conversations | `site:configure` | 4.1 |
-| `/search` | Search | `site:configure` | 4.2 |
-| `/analytics` | Analytics | `site:configure` | 5.1 |
+| `/conversations/all` | All conversations | `site:configure` | 4.1 |
+| `/conversations/search` | Search | `site:configure` | 4.2 |
+| `/analytics/site` | Analytics | `site:configure` | 5.1 |
 | `/analytics/conversion` | Conversion | `site:configure` | 5.2 |
 | `/analytics/tags` | Tag report | `site:configure` | 5.3 |
 | `/analytics/booking-flow` | Booking flow | `site:configure` | 5.4 |
-| `/settings/install` | Install widget | `site:configure` | 6.1 |
-| `/settings/widget` | Widget appearance | `site:configure` | 6.2 |
-| `/settings/faq` | AI FAQ assistant | `site:configure` | 6.3 |
-| `/settings/auto-reply` | Offline auto-reply | `site:configure` | 6.4 |
-| `/settings/canned-responses` | Canned responses | `site:configure` | 6.5 |
-| `/settings/tags` | Tags | `site:configure` | 6.6 |
-| `/settings/billing` | Billing | `site:configure` | 6.7 |
-| `/settings/delete-account` | Delete account | `site:erase` | 6.8 |
-| `/settings/products` | What AGO offers | `site:configure` | 6.9 |
-| `/calendar` | Queue (pending bookings) | `calendar:configure` | 7.1 |
+| `/channels/install` | Install widget | `site:configure` | 6.1 |
+| `/channels/widget` | Website widget | `site:configure` | 6.2 |
+| `/automation/faq` | AI FAQ assistant | `site:configure` | 6.3 |
+| `/automation/auto-reply` | Offline auto-reply | `site:configure` | 6.4 |
+| `/automation/canned` | Canned responses | `site:configure` | 6.5 |
+| `/automation/tags` | Tags | `site:configure` | 6.6 |
+| `/account/billing` | Billing | `site:configure` | 6.7 |
+| `/account/delete` | Delete account | `site:erase` | 6.8 |
+| `/account/products` | What AGO offers | `site:configure` | 6.9 |
+| `/calendar/waiting` | Queue (pending bookings) | `calendar:configure` | 7.1 |
 | `/calendar/setup` | Setup | `calendar:configure` | 7.2 |
-| `/calendar/workers` | Workers | `calendar:configure` | 7.3 |
-| `/calendar/workers/:workerId/slots` | Worker slots | `calendar:configure` | 7.4 |
-| `/calendar/workers/:workerId/recut` | Re-cut schedule | `calendar:configure` | 7.5 |
-| `/calendar/availability` | Availability | `calendar:configure` | 7.6 |
-| `/calendar/contacts` | Contacts | `calendar:configure` | 7.7 |
+| `/calendar/services` | Services | `calendar:configure` | 7.2a |
+| `/calendar/masters` | Masters | `calendar:configure` | 7.3 |
+| `/calendar/masters/:workerId/slots` | Worker slots | `calendar:configure` | 7.4 |
+| `/calendar/masters/:workerId/recut` | Re-cut schedule | `calendar:configure` | 7.5 |
+| `/calendar/schedule` | Schedule | `calendar:configure` | 7.6 |
+| `/calendar/clients` | Contacts | `calendar:configure` | 7.7 |
 | `/owner` | Platform sites | server-side platform owner | 8.1 |
 | `/owner/sites/:siteId` | Platform sites (detail) | server-side platform owner | 8.1a |
 | `*` | — | — | redirects to `/` |
@@ -1573,7 +1634,7 @@ The fourth is now deliberate and documented in the code: `data-site` stays the l
 `YOUR-CHAT-SITE-KEY`, because reading the real chat site key needs `site:configure`
 (`GET /api/v1/sites/{siteId}/installation`) and this screen only requires `calendar:configure`.
 Fetching it would either fail for a calendar-only operator or widen the screen's own gate. The screen
-now carries a hint naming where to get the key, with a link to `/settings/install`.
+now carries a hint naming where to get the key, with a link to `/channels/install`.
 
 `22-22` records, and does not answer, the information-architecture question that follows: whether a
 tenant should meet two embed snippets at all (§6.1 and §7.2 each show one). The backlog item was
@@ -1582,12 +1643,13 @@ still marked *in review* when this correction was written.
 **2026-09-05 — §13.4, operator management, is fixed.** The finding was filed as `23-22` and landed in
 `ago-chat` (`GetOperatorTeamHandler`, `GET /api/v1/sites/{siteId}/operators` - a new read, `13-03`'s
 own `seat-assignment-summary` endpoint never carried per-operator rows despite this finding's own text
-assuming it did) and in `ago-console` (`OperatorsTeamPage`, `/settings/operators`, gated on
+assuming it did) and in `ago-console` (`OperatorsTeamPage`, `/team/people`, gated on
 `site:manage_operators` - the console's first check of that permission, and a nav entry beside
 `Delete account`, muted rather than absent for an operator who lacks it, `decisions.md` §10's own
-treatment). A tenant can now invite a colleague (the screen predicts a redemption-time seat refusal
+treatment **at the time — `23-31`/`adr/0129` later replaced that treatment with hide-when-lacking for
+this entry, see the correction below**). A tenant can now invite a colleague (the screen predicts a redemption-time seat refusal
 *before* the invite is created, reading the team list's own row count rather than the narrower
-"holds a seat" count `/settings/billing` shows - see `OperatorsTeamPage`'s own doc comment for why
+"holds a seat" count `/account/billing` shows - see `OperatorsTeamPage`'s own doc comment for why
 those are different numbers), see every operator by name and seat status, toggle a seat, and remove
 someone - the removal confirmation states its real consequence (releasing that operator's assigned
 conversations back to `Waiting`, `13-03`'s existing mechanism) before the click, not after.
@@ -1601,3 +1663,20 @@ console surface** - `POST /api/v1/operator-invites/redeem` exists and is exercis
 they were given. That is a real, separate gap - "a colleague can join their tenant" is a different
 promise from "the tenant can see and manage who works here" - not one this item's own scope covered,
 and worth its own backlog item.
+
+**2026-09-06 — the navigation section of §1 is rewritten in full for `23-31`, not merely corrected.**
+Every prior mention in this document of the flat twenty-four-item horizontal strip, the route-driven
+tagline, and `23-24`'s muted-when-a-colleague-could-grant-it treatment describes the console **before**
+this date. `23-31` replaced the strip with a seven-section, two-level accordion in a left column
+(`consoleNav.ts` `buildTenantNavSections`), replaced the header's `AGO`-plus-tagline block with the
+single literal word "Офис", and `adr/0129` replaced the muting rule itself: muted now means "this
+identity could buy the thing", true only of the calendar for a `site:configure`-holding tenant, never
+"a colleague here could grant it". Nineteen routes moved; eighteen of them are dead-address redirects
+(`App.tsx`'s `MOVED_ROUTES`), the nineteenth (`/calendar/setup` → `/calendar/services`, "Услуги") is
+not one — that old address keeps answering because the (smaller) setup screen still lives there. §1's
+own "The left rail" table is the current, correct description; every other section of this document
+that names an old route (`/admin`, `/search`, `/settings/*`, `/calendar/workers`,
+`/calendar/availability`, `/calendar/contacts`) has had its literal path corrected in place to the new
+one, mechanically, without re-verifying every surrounding sentence against a fresh read of the code —
+treat a sentence whose *reasoning*, as opposed to its route string, seems to assume the old flat nav
+as a candidate for a further correction, not as verified current.

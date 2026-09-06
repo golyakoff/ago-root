@@ -1,12 +1,14 @@
 # ADR-0030: Design tokens and a closed hand-rolled component set for the console, not a component library
 
-- **Status**: Accepted, and **amended twice** — on 2026-08-26 (a second surface now reads these
+- **Status**: Accepted, and **amended three times** — on 2026-08-26 (a second surface now reads these
   tokens, the Keycloak login theme, `11-07`, and answers the webfont question in the last "Negative"
-  consequence below *differently* from the console) and on 2026-09-05 (`23-24` opens the closed
-  eleven-component set by exactly one glyph, narrowly, for one meaning). Both amendments are appended
-  below the Decision they modify; neither rewrites the original text.
-- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05)
-- **Stage**: 11, second amendment `23`
+  consequence below *differently* from the console), on 2026-09-05 (`23-24` opens the closed
+  eleven-component set by exactly one glyph, narrowly, for one meaning), and on 2026-09-06 (`23-31`/
+  `adr/0129` closes that opening again — the meaning the glyph existed for is gone, and nothing
+  replaces it with a second one). All three amendments are appended below the Decision they modify;
+  none rewrites the original text.
+- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05, amended 2026-09-06)
+- **Stage**: 11, second amendment `23`, third amendment `23`
 
 ## Amendment (2026-08-26): the login page loads no webfont, and the tokens now have a second consumer
 
@@ -109,6 +111,28 @@ anywhere in this console did not find it licensed by this paragraph.
 
 `docs/design/gaps.md` pile 3 item 3 is updated alongside this amendment to record that the icon
 question was answered, narrowly, rather than left as an open red block.
+
+## Amendment (2026-09-06): the glyph is withdrawn — the meaning it marked no longer exists
+
+`23-31`/`adr/0129` replaces `23-24`'s own muting rule (`docs/design/decisions.md` §10) with a
+narrower one: muted now means "this identity could obtain the thing itself" — in practice the
+calendar module, for a tenant who has not bought it — never "a colleague at this tenant could grant
+it". Thirteen of the fourteen entries that glyph used to mark no longer carry a muted state at all:
+they are hidden outright when the permission is missing, exactly as they were before `23-24`. The one
+gate that keeps a muted state marks a *different* fact than the glyph stated — not "locked, a
+colleague holds the key", but "for sale".
+
+**The glyph is deleted, not repointed.** A padlock reads as "restricted", not "buyable", and reusing
+the same shape for the opposite meaning would be a worse-than-nothing visual pun; `adr/0129`'s own
+"Alternatives considered" says so directly. `NavLockGlyph` is removed, and the calendar's muted entry
+carries a small visible `Badge` instead — already one of the eleven, not a new component and not a
+second icon.
+
+**So the closed set is eleven again, with no open exception.** The 2026-09-05 amendment warned that a
+future reader who found a second icon in this console "did not find it licensed by this paragraph";
+as of today there is no icon in the console at all. `docs/design/gaps.md` pile 3 item 3 is therefore
+**re-opened** rather than closed by that amendment's own last line, because the concrete answer which
+closed it no longer ships.
 
 ## Context
 

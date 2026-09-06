@@ -78,13 +78,17 @@ ADR, not an addition to a backlog.
 2. **No warning tone.** `Alert` has danger and success; anything in between is one or the other today.
    The re-cut screen and the lapsed-grant screen both want *"this is fine but look"*.
 
-3. ~~**No icon set, and no icon-only button.**~~ **Answered narrowly by `23-24`, 2026-09-05** — not
-   closed to a general position either way. A closed set with no icons was a real position, and stays
-   the position for everything except the one case `23-24` needed: a muted nav entry now carries one
-   inline-SVG lock glyph beside its label (`src/shell/AppShell.tsx`'s `NavLockGlyph`, `adr/0030`'s
-   second amendment), translated hidden label and all. No icon-only button exists anywhere in the
-   console, and this glyph is not one — it sits beside text, never instead of it. The next screen that
-   wants a real icon set is still a fresh decision, not a precedent this one already spent.
+3. **No icon set, and no icon-only button. Re-opened 2026-09-06 (`23-31`/`adr/0129`), after one day
+   answered.** `23-24` answered this narrowly on 2026-09-05 by shipping one inline-SVG lock glyph
+   beside a muted nav entry's label (`NavLockGlyph`, `adr/0030`'s second amendment). `23-31` replaced
+   the muting rule that glyph existed for — muted now means *"you can obtain this yourself"*, which a
+   padlock states wrongly — so the glyph was **deleted rather than repointed** and the calendar's
+   muted entry carries a `Badge` instead. There is now no icon anywhere in the console again, which
+   is exactly where this question stood before `23-24`.
+
+   Recorded as re-opened rather than quietly restored, because the interesting part is that the
+   answer did not survive its own week: it was tied to one meaning, and the meaning changed. A future
+   answer to this question should be one that does not depend on a single rule staying true.
 
 4. **No tooltip and no popover.** Every explanation in the console is inline prose today. That is a
    defensible stance and an expensive one on dense screens.
@@ -116,9 +120,12 @@ ADR, not an addition to a backlog.
 ## What this changes about the number
 
 Thirty-seven sounds like a backlog. It is three deletions, roughly twenty that close as a
-side-effect of work already sliced or already coming, and **ten questions** — nine still open, one
-(item 3, the icon question) answered narrowly by `23-24` on 2026-09-05, in the course of building the
-muted-navigation treatment stage 23 itself needed, not in a separate design pass.
+side-effect of work already sliced or already coming, and **ten questions**.
+
+All ten are open again as of 2026-09-06. Item 3, the icon question, was answered narrowly by `23-24`
+on 2026-09-05 and **re-opened by `23-31`/`adr/0129` one day later** — the answer was one glyph for one
+meaning, and `23-31` replaced that meaning, so the glyph went with it. That is worth more than the
+count: an answer tied to a single rule lasts exactly as long as the rule does.
 
 Ten was a conversation, and it is the same shape as the nine that produced `decisions.md`: options,
 a recommendation, an answer recorded so the next item cannot quietly contradict it. Nine remain that
