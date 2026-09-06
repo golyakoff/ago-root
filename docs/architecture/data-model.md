@@ -95,6 +95,12 @@ denial.
   orders by `id` descending (conversation ids are UUID v7, so id order is creation order) rather than
   filtering on `created_at`, which is what lets it reuse the existing `ix_conversations_site_all
   (site_id, id)` index - no new index for this item to add.
+  **`team_chat_last_sequence integer NOT NULL DEFAULT 0` added in `23-32`** - a shadow property, the
+  identical shape `erasure_requested_at` already takes on this same table: one legitimate writer
+  (`Ago.Chat.Infrastructure.Postgres.TeamChatRepository`'s own atomic `UPDATE ... RETURNING`, never
+  through `Site`'s load-mutate-`SaveChangesAsync` path), never a mapped `Site` property. See the
+  `team_messages` bullet below for the full reasoning on why this lives here rather than a second,
+  lazily-created `team_chat_rooms` table.
 - `site_widget_activity` (**added in `23-07`**) - `site_id`, `day` (`date`), and three counters:
   `loads`, `opens`, `conversations`, all `integer not null default 0`. Composite primary key
   `(site_id, day)`, cascading from `sites` like every other tenant-scoped table, and **no other
@@ -457,6 +463,42 @@ denial.
   `(conversation_id, tag_id)` is already the primary key and covers the forward direction for free).
   Cascades on both `conversation_id` and `tag_id` - removing a conversation or deleting a tag from the
   vocabulary both clean up silently rather than leaving an orphaned pairing.
+- `team_messages` (**added in `23-32`**) - `id` (uuid v7), `site_id`, `author_operator_id`,
+  `author_is_admin` (`boolean`), `body` (`text`), `sequence` (`int`), `client_message_id?` (`uuid`),
+  `created_at`. `23-32`'s own second kind of message store: one room per tenant, invisible to any
+  visitor, structurally separate from `messages`/`conversations` rather than a `Kind` discriminator on
+  either - the identical "a separate table, not a filtered row" reasoning `conversation_notes` above
+  gives for itself, and for the same class of leak this would otherwise risk (a visitor-facing read
+  that forgot to exclude it). Not partitioned like `messages` - `Ago.Chat.Infrastructure.Postgres
+  .Persistence.TeamMessageConfiguration`'s own remarks state why a four-operator room never approaches
+  the volume `Stage15RepartitionMessagesByTenantHash` exists for.
+  **`sequence` is a per-site counter, not a global one** - `sites.team_chat_last_sequence` (a shadow
+  property on `Site`, the identical "one column, no CLR property, one legitimate writer" shape
+  `erasure_requested_at` already establishes on the same table) is incremented by one atomic
+  `UPDATE ... RETURNING`, the compare-and-set CLAUDE.md rule 8 asks for - never computed in memory,
+  never read-then-written as two statements. `ix_team_messages_site_sequence`, **unique** on
+  `(site_id, sequence)`, backstops that invariant at the constraint level too, the same
+  belt-and-braces db-migration.md asks for everywhere else. `ix_team_messages_site_client_message_id`,
+  **unique** on `(site_id, client_message_id) WHERE client_message_id IS NOT NULL`, is `5-07`'s
+  retry-dedup idiom reused verbatim - a caller that retries a send after a `SendOutcomeUnknownError`-
+  shaped failure with the same `client_message_id` gets the original row back, not a duplicate.
+  `author_is_admin` is stamped once, at send time, from whether the author then held
+  `site:manage_operators` (`SendTeamMessageHandler`'s own remarks on why that permission - not a new
+  `Operator.IsAccountOwner` flag - stands in for "is this the tenant's owner"), denormalized for the
+  same reason `Message.SiteId`/`RetentionClass` are: a label a reader sees on an old message should
+  reflect who was speaking at the time, not be silently rewritten by a later role change.
+  Cascades on `site_id` (`ON DELETE CASCADE` from `sites`, the same plain-cascade shape `operators`/
+  `tags` already ride, listed in `SiteErasureQuery.DeleteSiteAsync`'s own doc comment) and on
+  `author_operator_id` (`ON DELETE CASCADE` from `operators` too - real integrity, even though
+  `RemoveOperatorHandler` only ever soft-deletes via `removed_at`, so this second cascade only ever
+  fires alongside the first).
+  **No outbox event carries this table's contents.** Sending a message stages a `TeamMessagePosted`
+  row (`Ago.Chat.Contracts`) in the same `SaveChangesAsync` as the message itself (rule 4), but that
+  event carries only `TeamMessageId`/`SiteId`/`Sequence` - no body, the identical "small payload, a
+  consumer that needs the text reads the room's own history instead" shape `MessageAccepted` already
+  takes. Its only consumer, `Ago.Chat.Worker.TeamChatFanoutConsumer`, exists purely to drive realtime
+  fan-out to every operator of the site (`ResolveTeamMessageDeliveryTargetsHandler`) - it is
+  infrastructure for delivery, not a business fact another bounded context would ever subscribe to.
 - `acceptance_records` (**added in `24-01`**) - `id` (uuid v7), `subject_kind` (`varchar(20)`, one of
   `Tenant`/`Operator`/`Visitor`), `subject_id` (uuid, widened across all three subject types rather
   than three nullable FK columns - `AcceptanceSubjectKind`'s own remarks), `document_key`
