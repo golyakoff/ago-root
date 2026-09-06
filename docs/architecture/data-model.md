@@ -95,6 +95,27 @@ denial.
   orders by `id` descending (conversation ids are UUID v7, so id order is creation order) rather than
   filtering on `created_at`, which is what lets it reuse the existing `ix_conversations_site_all
   (site_id, id)` index - no new index for this item to add.
+- `site_widget_activity` (**added in `23-07`**) - `site_id`, `day` (`date`), and three counters:
+  `loads`, `opens`, `conversations`, all `integer not null default 0`. Composite primary key
+  `(site_id, day)`, cascading from `sites` like every other tenant-scoped table, and **no other
+  index**: the one read sums a site's rows over a window, which the primary key already serves as a
+  range scan.
+  **These numbers are approximate, deliberately, and the install screen is licensed to be**
+  (`docs/design/decisions.md` §3). A mount beacon fires on every page load of every tenant's site, so
+  a row per beacon would put the busiest table in the system on the visitor request path. Instead
+  beacons accumulate in memory per `(site, day, kind)` and a hosted service
+  (`WidgetActivityFlusherService`, default interval 10s and unmeasured - Stage 7 is what would give it
+  a real number) drains the accumulator and upserts counter *increments*. A pod that dies mid-window
+  loses at most one interval of counts and never a day.
+  **Rule 8 is not in play here and it is worth saying why.** "Never cache what a write decision
+  depends on" bites when a stale read lets a write through that should have been refused; nothing
+  reads these counters to decide anything. They drive one advisory sentence on one screen -
+  `WidgetFunnelAdviceResolver`, which is Domain because it is a rule about which of three plausible
+  faults the ratios point at, not a query. A capacity check or a sequence would still come from the
+  database inside the transaction, exactly as `caching.md` requires.
+  **The counters are stored per day rather than as running totals** so that the screen can answer
+  "over the last N days" without a second table, and so that a wrong count from a lost flush ages out
+  of the window instead of being carried forever.
 - `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, and nothing else.
   **Corrected in `16-01`**: this bullet listed a `token_hash` column that was never built. There is no
   such column in `Stage1CreateChatSchema`, in the EF model snapshot, or in `Visitor.cs`, and the string
