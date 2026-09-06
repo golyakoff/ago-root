@@ -1,7 +1,7 @@
 # a visitor can leave a name and a phone, and it is stored as a contact
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `23-08` — the register entry and the erasure path, which must exist before this
   store gains a second kind of row
 - **Decision**: `docs/design/decisions.md` §4, including its 2026-09-04 correction
@@ -99,16 +99,16 @@ propose again.
 
 ## Done when
 
-- [ ] Out of hours, a visitor is offered the control, fills it in, and a row exists in
+- [x] Out of hours, a visitor is offered the control, fills it in, and a row exists in
       `visitor_contact_details` with source `Visitor` and unverified.
-- [ ] The visitor cannot write a contact detail onto a conversation that is not theirs — a
+- [x] The visitor cannot write a contact detail onto a conversation that is not theirs — a
       tenant-isolation test in the shape `tenant-isolation.md`'s visitor-token rows already use.
-- [ ] A visitor cannot set the verified flag, by any request they can construct.
-- [ ] The operator's visitor aside distinguishes an operator-recorded detail from a visitor-supplied
+- [x] A visitor cannot set the verified flag, by any request they can construct.
+- [x] The operator's visitor aside distinguishes an operator-recorded detail from a visitor-supplied
       one, and says which are unverified.
-- [ ] Erasing the conversation removes it (`23-08`'s path, asserted again from this source).
-- [ ] The processing notice is shown before the field, and the tenant's own text is what is rendered.
-- [ ] `personal-data.md` carries the amended row; the ADR exists and supersedes the old caption's
+- [x] Erasing the conversation removes it (`23-08`'s path, asserted again from this source).
+- [x] The processing notice is shown before the field, and the tenant's own text is what is rendered.
+- [x] `personal-data.md` carries the amended row; the ADR exists and supersedes the old caption's
       claim; `ui-inventory.md` §3.4's caption is corrected.
 
 ## Open questions

@@ -452,7 +452,11 @@ permission sees the facts block and the closing note with a silent gap where fiv
    and Unlink buttons behind separate permissions. Below, a `Select` of linkable channel kinds and a
    **Generate code** button; the generated code is shown in an `Alert tone="success"` as plain text.
 7. **Unverified contact details.** Caption "Recorded by an operator - never used to contact the
-   visitor automatically." Rows of accent `kind` badge + value + **Delete**. Below, a `Select` of
+   visitor automatically." **Half of that is no longer true, corrected 2026-09-06 (`23-09`,
+   `adr/0128`)**: a detail can now also be typed by the *visitor themselves*, through the widget's own
+   control, when nobody is on shift. The panel says which of the two it was and whether it is
+   verified; the caption's second half - never used to contact anyone automatically - still holds.
+   Rows of accent `kind` badge + value + **Delete**. Below, a `Select` of
    kinds + a free-text input + **Record**.
 
 The panel closes with a standing note explaining that the current page and referrer are not collected
