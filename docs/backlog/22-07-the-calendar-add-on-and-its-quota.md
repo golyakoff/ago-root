@@ -1,7 +1,7 @@
 # The calendar add-on, and the quota it grants
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `22-04`, `22-05`
 
 ## The shape the author asked for
@@ -51,9 +51,47 @@ network call on a write path, and still a cache by the time the transaction comm
 
 ## Done when
 
-- [ ] Enabling the add-on for N masters results in a calendar the tenant can configure, with no
+- [x] Enabling the add-on for N masters results in a calendar the tenant can configure, with no
       manual step anywhere.
-- [ ] The (N+1)-th worker is refused by the calendar, inside its own transaction, proven by trying.
-- [ ] Changing N takes effect, and the lowering rule is stated in writing and tested.
-- [ ] The channel toggles beside it keep working — this screen is shared, so it is a regression
+- [x] The (N+1)-th worker is refused by the calendar, inside its own transaction, proven by trying.
+- [x] Changing N takes effect, and the lowering rule is stated in writing and tested.
+- [x] The channel toggles beside it keep working — this screen is shared, so it is a regression
       surface, not a new page.
+
+## Outcome (2026-09-06)
+
+`adr/0125` carries the reasoning. Recorded here: what the item left open, and three things that are
+true afterwards and would otherwise be assumed away.
+
+**The item's own open question — which workers are the excess — was answered by a stated rule, not by
+asking.** The most recently created active workers are deactivated first, tie-broken by `WorkerId`
+(a UUIDv7, itself time-ordered) descending, until the active count matches the new quota. The property
+that makes it defensible is predictability rather than fairness: a tenant sorting their own worker list
+by "added on" sees exactly which ones a downgrade would cut. It is a pure function in
+`Ago.Calendar.Domain` (`WorkerQuotaPolicy`), unit-tested with no database at all.
+
+**Nothing is deleted and the downgrade is never refused.** A lowered quota deactivates; the rows stay,
+so an upgrade restores them. That is the kindness in the design — and it is exactly what makes `22-23`
+possible, below.
+
+**A real gap, found by this item's own worker and deliberately not fixed here.** `UpdateWorkerHandler`
+— `PUT /workers/{id}` with `IsActive: true` — reactivates without any quota check, so a tenant can walk
+straight around a downgrade one worker at a time through the ordinary edit screen. Verified by reading
+the handler rather than accepted on report. It is filed as **`22-23`**: closing it needs a new
+repository method, a restructured handler and its own concurrency tests, which is a second promise
+(rule 15) rather than a corner of this one.
+
+**The chat-side migration was regenerated at landing, and the reason is worth recording.** It was
+generated against a base that predated `23-11`, so after the rebuild its `Designer.cs` described a
+model without `contact_reveals` or `sites.contact_visibility` while the migration itself now applies
+*after* them — the "snapshot that is a lie" `CLAUDE.md` rule 13 names. Regenerating was safe here
+because the migration is pure EF output with no hand-written SQL, and the regenerated `Up()` is
+**byte-identical** to the original, which is the check that makes regeneration safe rather than hopeful.
+
+**What is not proven, stated rather than implied.** No test in either repository exercises a real
+RabbitMQ round trip between chat's outbox publish and the calendar's consumer — the same honestly
+stated gap `22-05` left for `RoleAssignmentsChangedConsumer`. Each side is proven in isolation: chat
+stages the envelope in the right transaction, the calendar applies a grant correctly when called
+directly. The wire between them is not. There is also **no console screen** — the item's own text made
+one conditional, and `GetTenantConfigurationHandler` now exposes `WorkerQuota` so a screen has
+something to read once somebody builds it.
