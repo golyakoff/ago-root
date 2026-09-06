@@ -781,7 +781,7 @@ admitted.
 oversight.** `decisions.md` §5 reads as though confirmation belongs only to certain rungs — but rung
 three is absent from this product's `ContactVisibility` too (`adr/0123`'s restriction, taken literally
 on both sides), so there is no rung today on which a `CustomerRead` holder cannot already see the
-number. A rung-keyed check would have nothing to discriminate on until rung three exists. `adr/0126`
+number. A rung-keyed check would have nothing to discriminate on until rung three exists. `adr/0123`
 argues it.
 
 **The reveal audit view takes the wider `Permission.CalendarConfigure`, not `CustomerRead`.** An

@@ -786,13 +786,13 @@ here unchanged**. What follows is only what is specific to this product.
 - `contact_visibility_projections` (**added in `23-12`**) - `tenant_id` (PK), `rung` (`text`),
   `updated_at`. This product's own projection of the account's contact-visibility rung, replicated from
   `ago-chat`'s `ContactVisibilityChanged` exactly as `role_assignment_projections` replicates
-  `RoleAssignmentsChanged` (`adr/0123`, `adr/0126`). **A missing row reads as `Visible`**, deliberately:
+  `RoleAssignmentsChanged` (`adr/0123`). **A missing row reads as `Visible`**, deliberately:
   a stricter default would turn a message that has not arrived yet into a policy the tenant never chose.
 - `contact_phone_reveals` (**added in `23-12`**) - `id`, `occurred_at`, `tenant_id`, `customer_id`,
   `operator_id`, `surface`. One row per deliberate reveal of a masked phone number, holding **no copy of
   the number**. Raw Npgsql with no aggregate, no foreign key on `tenant_id` or `customer_id`, keyset-paged
   by `(tenant_id, id)`, pruned past 365 days by `ContactPhoneRevealPruneJob` - `access_records`' shape,
-  and its own table rather than a widened enum for the reason `adr/0126` gives: unlike `ago-chat`, this
+  and its own table rather than a widened enum for the reason `adr/0123` gives: unlike `ago-chat`, this
   product has no `access_records` to widen in the first place.
 - `customers` gains `operator_confirmed_phone_at timestamptz null` (**`23-12`**) - "I called and it is
   them", kept distinct from the existing `phone_verified_at`, which is the SMS code's own answer. Two

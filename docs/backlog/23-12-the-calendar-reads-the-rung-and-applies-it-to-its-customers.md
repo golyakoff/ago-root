@@ -99,8 +99,9 @@ None.
 
 ## Outcome (2026-09-06)
 
-`adr/0126` carries the three decisions this side needed. `adr/0123` decided the account side and said
-in its own Consequences that the calendar's were open, so this is not a restatement.
+`adr/0123` carries the three decisions this side needed. They were drafted as a separate `0126` and
+**folded into `0123` at the author's call (2026-09-06)**: the ladder is one decision about one account
+setting, and a reader who opened either half would have seen half of it.
 
 **`20-12` had already built both ends of a ladder without naming it**, which changed the shape of the
 work: `Permission.CustomerRead` already gated the phone in four read paths, and the phone was *absent*
