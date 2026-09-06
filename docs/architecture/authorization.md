@@ -759,6 +759,31 @@ rather than carrying a second copy. `adr/0030` gained a second amendment for the
 needed - a lock, inline SVG, beside a muted entry - and `docs/design/gaps.md` records the icon
 question it answers as answered narrowly, not closed to a general position.
 
+## Masking is not a permission, and the reveal that lifts it is not a fourth gate: shipped in `23-11`
+
+`23-11` adds four callers and **no new permission**, which is the part worth stating because the
+obvious design would have added one.
+
+`GetContactVisibilityHandler`, `UpdateContactVisibilityHandler` and `GetContactRevealsForSiteHandler`
+take `site:configure` — the same reading `11-01` and `14-04` already applied to it twice: a site-wide
+setting and the log of what it did are "configure this site", and inventing a narrower permission for
+contact visibility specifically would be the naming judgment `adr/0016` argues against. The reveal
+*log* takes it for the reason `access_records` already states for its own read: a caller who can
+already read every conversation on the site, contacts included, is not additionally guarded by a
+separate permission over the record of who revealed what.
+
+`RevealVisitorContactDetailHandler` takes **`conversation:read` and nothing else — not the rung**.
+That is a decision rather than an omission (`adr/0123`). The rung governs what a *list* displays; it
+does not govern who may reveal. Gating reveal on the rung as well would be a second check with nothing
+behind it: the caller already holds the permission that shows them every other unmasked field in the
+identical response, so a rung check there would refuse nobody it had not already admitted.
+
+What actually protects the value is that **masking happens in the read model**, not in the console. On
+`MaskedWithReveal` the list response never carries the real value at all — asserted by searching the
+whole serialised response rather than the one field a careless edit might mask, because "the console
+does not display it" and "the browser never receives it" are different guarantees and only the second
+one survives somebody opening the network tab.
+
 ## Done when nothing here is open anymore
 
 - [x] An ADR chooses the authorization model - `adr/0016`, RBAC.
