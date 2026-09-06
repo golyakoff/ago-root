@@ -1,7 +1,8 @@
 # a tenant can see and publish their own documents
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready, **narrowed 2026-09-06** after the author corrected what this item assumed.
+  It is the tenant's *own* documents only; the two other audiences below are `23-52` and a question.
 - **Depends on**: `23-31` reserves the place (Администрирование → Документы). `24-02` built the store.
 - **Decision**: `adr/0114` — a document's text is data; only publishing and reading it is code
 
@@ -50,3 +51,32 @@ every legal correction.
 - [ ] Publishing a new version works from the console and the old version stays readable.
 - [ ] A tenant can answer "which version did this person accept, and when" without asking us.
 - [ ] Nothing in the console offers to edit a published version in place.
+
+## The author's correction, 2026-09-06 — and it is not a detail
+
+This item was filed believing *documents* meant one thing: the consent text a **tenant publishes to
+their own visitors**, which is what `24-02` and `24-05` actually built.
+
+The author's reading is wider, and closer to what a real account needs:
+
+| Who writes it | Who reads it | Example | Where it stands |
+|---|---|---|---|
+| **AGO → the tenant** | the tenant | договор, соответствие безопасности | **nothing exists.** `23-52` |
+| **the tenant → their clients** | a visitor | consent text | built (`24-02`/`24-05`), no screen — **this item** |
+| **the tenant → their operators** | an operator | *maybe* — the author says *может быть* | not decided, see below |
+
+**The first row is the one that changes plans.** Those documents *"должны автоматически создаваться при
+регистрации теннанта"* — so they are not a screen at all, they are part of what a registration
+produces. A tenant who signs up today gets an account with **no contract on it**, and nothing in this
+queue said so until now. That is `23-52`, and it outranks this item.
+
+**Why they are separate tickets and not one.** They make different promises with different actors and
+different lifecycles: one is *we place our terms on their account when it is created*, the other is
+*they publish their words to their visitors*. Rule 15's test - would closing one leave the other
+broken - says no, both land green alone. And one screen listing all three would have to answer *who
+may publish this kind* three different ways.
+
+**The third row is a question, deliberately left open here.** A document from a tenant to their own
+operators has no reader in this system yet: an operator accepts nothing at sign-in today (`24-04` is
+the item that would change that), so a document with no acceptance path is a file, not an agreement.
+It is worth having *after* `24-04`, and worth nothing before it.

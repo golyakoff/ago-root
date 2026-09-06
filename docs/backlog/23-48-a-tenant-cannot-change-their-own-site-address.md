@@ -3,7 +3,8 @@
 - **Stage**: 23
 - **Status**: ready
 - **Depends on**: nothing. `23-46` made the absence honest; this removes it.
-- **Decision**: none needed for the gap itself. One question inside it is the author's, below.
+- **Decision**: the author's, 2026-09-06 — **only the platform owner may edit a tenant's site address.
+  Nobody else.** The question this item held open is answered; the surface it lives on is sketched.
 
 ## What is actually true
 
@@ -43,23 +44,35 @@ entry lived.
   worse than one that refuses.
 - A test that the widget's own origin check honours the new value without a restart.
 
-## The question inside it, which is the author's
+## The answer (author, 2026-09-06)
 
-**Who may change it?** Two readings, and they differ in what a support request is for:
+**Only the platform owner may edit it, for any tenant. Nobody else — not even the tenant.**
 
-- **The tenant themselves**, under `site:configure` like every other tenant-wide setting. Fewest
-  support requests. But the allowed origin is the one field where a typo silently kills the product
-  for that tenant, and they will not see the consequence until a customer does not appear.
-- **The platform owner only**, from `/owner`, with the tenant still asking. Keeps a second pair of
-  eyes on the field most likely to be wrong, at the cost of every domain move being a ticket.
+That is the second of the two readings this item offered, and it takes the cost the first was trying
+to avoid: every domain move becomes a request to us. Worth naming what it buys, because it is not
+caution for its own sake — **this is the one field whose typo silently kills the product for that
+tenant**, and they will not see the consequence until a customer fails to appear.
 
-A third shape exists — the tenant edits, and the console *shows them* whether the widget has been seen
-at the new address since the change (`23-06` already records the sighting) — which turns the silent
-failure into a visible one and makes the first reading much safer. It is more work.
+**It also collapses the sketch this item offered as a third shape.** Showing the tenant whether the
+widget has been seen at the new address was only needed to make *tenant-edits* safe. With the owner
+editing, the person making the change is the person who can read the install screen anyway.
+
+## Where it lives, which the author sketched rather than settled
+
+*«может быть в списке клиентов — там же где теннант будет подключать каналы вручную и менять квоты»*
+
+`/owner` already lists every site and already has a per-tenant detail screen. So this is a field on a
+screen that exists, not a new place — and it lands beside two other things the same page is going to
+want for the same reason: **manual channel connection** and **quota changes**, both of which are
+today either a runbook or a database statement.
+
+That is a pattern rather than three coincidences: *the platform owner's own maintenance surface*.
+Worth noticing while building this one, and worth **not** building the other two inside this ticket —
+they are separate promises with their own arguments (`23-36` already owns channels).
 
 ## Done when
 
-- [ ] The author has chosen who may edit it.
+- [x] The author has chosen who may edit it — the platform owner, and nobody else.
 - [ ] A tenant's site address can be changed without anyone writing SQL.
 - [ ] A value that is not an origin is refused with a message naming what is wrong with it.
 - [ ] The change takes effect immediately, proven against the cache rather than assumed.
