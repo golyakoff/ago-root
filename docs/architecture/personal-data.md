@@ -181,6 +181,29 @@ new read paths return columns `customers` already held (this file's own table ro
 `ON DELETE CASCADE` chains that are unaffected by who is permitted to read them. What widened is
 *visibility*, not *storage* - the same distinction `18-07`'s own entry above draws for `messages.body`.
 
+### `23-12` adds a masked rung, a reveal record, and an operator's own confirmation mark
+
+**`contact_visibility_projections` holds no personal data.** It is this product's own copy of the
+*account's* contact-visibility rung, replicated from `ago-chat`'s `ContactVisibilityChanged` the same
+way `role_assignment_projections` replicates `RoleAssignmentsChanged`. A rung is a setting about a
+tenant, not a fact about a person. **A missing row reads as `Visible`** — never a stricter default
+earned by nothing more than a message not having arrived yet, which would make an outage look like a
+policy.
+
+**`contact_phone_reveals` is personal data about the *operator*, not the customer.** It records that
+this operator asked for this customer's number, when, and from which surface — and **never the number
+itself**, which is what keeps a log of unmaskings from becoming a second unmasked store. Retention is
+**365 days**, pruned by `ContactPhoneRevealPruneJob`: the identical window and the identical reasoning
+`ago-chat`'s own `contact_reveals` states for itself — this is evidence of an ordinary lawful read by
+our tenant's own staff, not proof of a lawful basis or of a completed erasure. No foreign key on
+`tenant_id` or `customer_id`, so the record survives the erasure of either.
+
+**`customers.operator_confirmed_phone_at`** is a small addition to personal data this file already
+inventories, and it deliberately does not merge with `phone_verified_at`: "an SMS code came back" and
+"I called and it was them" are different facts with different strength, and a single column would have
+made the weaker one unrecoverable. No new retention or erasure story — it goes with the rest of the row
+under the same cascade.
+
 ### Two corrections `16-01` made to the first draft
 
 **There is no `visitors.token_hash`.** Both this file and `data-model.md` described a column that was
