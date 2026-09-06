@@ -1,6 +1,6 @@
 # the deployment moves to a provider that issues the documents
 
-- **Stage**: 24
+- **Stage**: 25
 - **Status**: ready — **and it is the launch's critical path**
 - **Depends on**: `24-07` established the question. Nothing depends on this that can start before it.
 - **Decision**: the author's, 2026-09-06 — **Fornex is out**. The provider question below is open.
@@ -75,7 +75,7 @@ the critical path two weeks before a launch.
 
 ## Out of scope
 
-- The compliance checklist itself — that is `24-20`, and it is what says whether *everything else* is
+- The compliance checklist itself — that is `25-02`, and it is what says whether *everything else* is
   ready, not just the machine.
 - Any change to what the application does. This is a move, and a move that changes behaviour cannot be
   verified as a move.
