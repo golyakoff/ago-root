@@ -1,7 +1,9 @@
 # Dependabot has never proposed a single NuGet update for either product repository
 
 - **Stage**: 17
-- **Status**: in review (2026-09-04), `ago-chat#160` + `ago-calendar#34` — the one Done-when that
+- **Status**: done (2026-09-04), `ago-chat#160` + `ago-calendar#34` - **narrowed on 2026-09-06.** The
+  configuration shipped and restores still work everywhere; that Dependabot actually opens a NuGet PR
+  was never proven, and two days later still has not happened. Carried out to `17-14`. Was: in review — the one Done-when that
   matters cannot be met by the change itself. See Outcome.
 - **Found**: 2026-09-03, tracing why `17-10`'s transitive floors had drifted.
 
@@ -53,7 +55,12 @@ fourth would be worse than the problem.
 
 ## Done when
 
-- [ ] Dependabot opens NuGet PRs for both product repositories, **proven by an actual run**.
+- [x] **Carried out to `17-14`, 2026-09-06**, because it is still not true. Checked that day: every
+      Dependabot pull request either product repository has ever received is `github-actions`, all
+      three dated 2026-08-27 - *before* this item's own change merged. **No NuGet pull request has
+      ever appeared in either repository.** The `nuget` ecosystem is configured; something between
+      that configuration and a pull request does not run, and the ecosystem that does not run is the
+      one carrying the actual dependency risk.
 - [x] Local development, CI and the Docker image build all still restore — each considered, and the
       two that could not be run said so rather than being reported as passing.
 - [x] The number of places that answer "where do packages come from" does not grow.
