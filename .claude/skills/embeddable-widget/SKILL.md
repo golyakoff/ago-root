@@ -50,6 +50,15 @@ host page" rule above.
 - Visitor token in `localStorage` under a namespaced key, scoped to one site. No cookies on the host
   domain, no fingerprinting, no reading anything the host page put in storage.
 - Never log or transmit page content, form values, or URLs beyond what the tenant explicitly enabled.
+- **Adding anything to `localStorage` is a change to `ago-root/docs/architecture/personal-data.md`.**
+  Add the entry to `WIDGET_STORAGE_DISCLOSURE` in `src/storage.ts` — that constant is what the
+  tenant's own `/settings/device-storage` screen renders and what its test asserts against — and then
+  update the register's row for the visitor's own browser.
+  This is easy to skip for a reason worth naming: every other guard on that register watches *our*
+  stores, and a key written to somebody else's device does not pass a migration, a contract or a
+  review that would catch it. It is also the one row in that register where **AGO has no erasure path
+  at all** — we cannot reach the store — so an entry added without a lifetime is an entry that never
+  goes away and nobody wrote down. (`24-15`.)
 
 ## Uploads
 
