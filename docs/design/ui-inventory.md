@@ -244,7 +244,11 @@ There is no `EmptyState` *component* — `NoConversationSelected` has its own be
 `/owner` if it has none but is the platform owner; `/onboarding` otherwise. On failure there is
 **no link out at all** — the two error states are dead ends whose only instruction is "reload".
 
-**Language.** Hardcoded English.
+**Language.** Russian (`23-28`). This route sits outside `StringsProvider` and has no site to read a
+locale from, so it renders through `PreSessionStringsProvider` instead - the author's own answer to
+`23-28`: an identity with no `operators` row yet has no tenant, and the absence of one means Russian
+rather than English. This line said *hardcoded English* until 2026-09-06, describing a defect that
+had already been fixed.
 
 ### 2.2 `/signup` — "Sign up for AGO Chat"
 
@@ -259,7 +263,11 @@ screen — no form, no fields, no marketing.
 explicitly and explains why: `RequireAuth` redirects an unauthenticated visitor straight to
 Keycloak's login page, so there is no console-rendered page a "Sign up" link could live on. The
 route exists to be linked from outside (a marketing page). Out: Keycloak.
-**Language.** Hardcoded English.
+**Language.** Russian (`23-28`). This route sits outside `StringsProvider` and has no site to read a
+locale from, so it renders through `PreSessionStringsProvider` instead - the author's own answer to
+`23-28`: an identity with no `operators` row yet has no tenant, and the absence of one means Russian
+rather than English. This line said *hardcoded English* until 2026-09-06, describing a defect that
+had already been fixed.
 
 ### 2.3 `/onboarding` — "Finish setting up your site"
 
@@ -282,7 +290,8 @@ plain words that registering additionally makes this account an operator of a ne
 in this product can take it back afterwards".
 **In / out.** In: `/callback` only. Out: `/` on success, `/owner` via that alert. The header carries
 the identity cluster and Sign out but **no nav** (there is no `siteId` yet).
-**Language.** Hardcoded English, including validation messages.
+**Language.** Russian, including validation messages (`23-28`) - see 2.1 for the mechanism. This line
+said *hardcoded English* until 2026-09-06, after the fix had landed.
 
 ### 2.4 `/redeem-invite` — "Redeem your invite" (`23-27`)
 
@@ -306,11 +315,17 @@ two-way shape `/onboarding` already has with `/owner`. Out: `/` after a successf
 redirect deliberately waits for the write to commit, so the same token starts resolving as an operator
 and the nav reflects the new permission with no manual reload.
 
-**Language.** English only in practice, and this is a **known gap rather than a choice** — the screen
-calls `useStrings()` and both locales carry every string, but the route sits outside `StringsProvider`
-and has no site to read a locale from before redemption succeeds. It is exempted from `ux-gate`'s
-untranslated-text assertion for that reason, by name, on that one assertion only. `/onboarding`,
-`/signup` and `/callback` share the gap; see the item filed for it.
+**Language.** Russian (`23-28`), and the `ux-gate` exemption this line used to describe **is gone**.
+
+The gap was real when written: the screen called `useStrings()` and both locales carried every string,
+but the route sat outside `StringsProvider` with no site to read a locale from, so it fell through to
+the context's bare English default - and was exempted from `ux-gate`'s untranslated-text assertion by
+name for exactly that reason. `23-28` removed the reason rather than working around it, and the
+exemption went with it. `owner-sites` is the one screen still exempted there, and its English is
+permanent by design (see 6.1) rather than a missing locale signal - which is why removing one
+exemption did not mean removing both.
+
+`/onboarding`, `/signup` and `/callback` shared the same gap and were fixed in the same change.
 
 ---
 
