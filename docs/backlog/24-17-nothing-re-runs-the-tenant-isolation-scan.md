@@ -3,7 +3,7 @@
 - **Stage**: 24
 - **Status**: ready
 - **Depends on**: nothing. `22-19` built the scan; this is about what makes anyone run it.
-- **Decision**: none yet — the open question below is a real choice, not a formality
+- **Decision**: taken by the author 2026-09-06 — each backend computes its own numbers by reflection and serves them; the console sums them; visible to the platform owner only
 
 ## Goal
 
@@ -43,39 +43,71 @@ The comparison worth making: `personal-data.md` has stayed true through the same
 separate places name it and make a change that widens the map a change that has to think about it.
 `tenant-isolation.md` has one tool and no caller.
 
+## The decision, taken by the author 2026-09-06
+
+**Each backend computes its own numbers at runtime, by reflecting over its own handlers, and serves
+them. The console adds them up.** Not a script reading source text from outside, and not a CI check in
+`ago-chat`.
+
+The author ruled out the CI shape for a reason worth keeping: it would need the same check in
+`ago-calendar` too, and it makes one repository's build depend on a file in another that it cannot see.
+
+**And the measurement removed the argument the other two rested on.** The scan takes **1.5 seconds**
+end to end — 0.8 to export the tree, 0.6 to run both scripts. It reads source text; there is no build
+and no test. So "run it rarely because it is expensive" was never a real constraint, and the choice
+came down to *where the number should live* rather than what it costs.
+
+### Why runtime is more honest than the script, not merely different
+
+The script infers the numbers from **source text**. The application can answer from **itself** —
+`Ago.Chat.Architecture.Tests.TenantScopeTests` already walks the IL of every handler to enforce this
+invariant at build time, so the same reflection at startup reports a fact about the assembly that is
+actually running rather than about a checkout somebody may not have.
+
+That closes the drift by construction. A number that is *computed* cannot go stale; a number that is
+*written down* always can, which is what this item exists because of, twice.
+
+### It is shown to the platform owner and to nobody else
+
+Also the author's call, and the reason matters: **"47 entry points that do not check permissions" is a
+hint for somebody looking for a way in.** It goes on `/owner`, behind the realm role no write in this
+codebase grants — not to tenants, and not in any anonymous response.
+
 ## Scope
 
-- Something that fails, or is impossible to skip, when the counts stop matching the source.
-- Whatever that mechanism is, it must distinguish **"the numbers moved"** from **"a handler is
-  ungated"**. Those are a documentation chore and a security finding respectively, and a mechanism
-  that shouts equally about both will be muted for the first reason and then miss the second.
-- Refresh the five counts as part of this item, so it does not land describing a state it also leaves.
+- Each backend exposes its own counts — entry points, RBAC-gated, exempt, and the routes figures —
+  computed at runtime from its own handlers, not read from a committed file.
+- The console reads both products and shows one combined figure, on `/owner` only.
+- **It must distinguish "the numbers moved" from "a handler is ungated".** Those are a documentation
+  chore and a security finding, and a display that shouts equally about both will be ignored for the
+  first reason and then miss the second. `Unaccounted` is the field that carries the distinction and it
+  should be impossible to miss when it is not zero.
+- Refresh the five counts in `tenant-isolation.md` as part of this item, so it does not land describing
+  a state it also leaves.
+- **Say in `tenant-isolation.md` that the table is now a snapshot of a live figure**, with where to read
+  the live one. A document that looks authoritative and is second-hand is how this drifted the first
+  two times.
 
 ## Out of scope
 
-- Changing what the scan measures, or its approximation of "RBAC-gated". `22-19` settled that and the
-  approximation currently produces `Unaccounted: 0`, which is the evidence it is good enough.
-- Any change to isolation itself. Nothing here suggests a hole; see the note above.
+- Changing what is measured, or the approximation of "RBAC-gated". `22-19` settled that, and it
+  currently produces `Unaccounted: 0`, which is the evidence it is good enough.
+- Retiring `tools/tenant-isolation-scan/`. It stays: it is the only thing that can measure a *checkout*
+  rather than a running deployment, which is what a reviewer reading the repository has.
+- Any change to isolation itself. Nothing here suggests a hole.
 
 ## Done when
 
-- [ ] The five counts match a scan run on the day the item lands.
-- [ ] Something mechanical fails when they stop matching.
-- [ ] A newly ungated handler is distinguishable, at a glance, from a count that merely moved.
+- [ ] Each backend serves its own counts, computed at runtime from its own handlers.
+- [ ] `/owner` shows one combined figure, and nothing anonymous or tenant-facing exposes it.
+- [ ] A non-zero `Unaccounted` is visibly different from a count that merely moved.
+- [ ] `tenant-isolation.md`'s five counts match reality on the day this lands, and the file says the
+      table is a snapshot rather than the source.
 
-## Open questions
+## What this deliberately does not solve
 
-- **Where does the mechanism live, and what does it cost?** Three shapes, and they trade differently:
-  - **A CI check in `ago-chat`** fails the PR that moves the numbers. Strongest, and the one that
-    catches it at the moment of the change — but it puts a check on `ago-chat` that fails because a
-    file in *`ago-root`* is stale, which is a cross-repository coupling this project has otherwise
-    avoided, and `ago-chat`'s CI cannot see `ago-root` at all today.
-  - **A check in `ago-root`'s own `tools/queue-audit.sh`**, the way `24-14` put the secrets sweep in
-    `tools/secrets-audit.sh`. Cheap, already run at every landing, no new coupling — but it only fires
-    when somebody lands an `ago-root` change, so a run of pure `ago-chat` work drifts silently until
-    the next one.
-  - **Naming the file in the skills that accompany the changes that move it**, the way
-    `personal-data.md` is named in four places. Cheapest and weakest: it is the mechanism that already
-    failed once here, since `22-19` is cited in this file and did not stop the drift.
-  The author's call. `24-14` chose the middle shape for the analogous problem, and it has not yet had
-  time to prove itself.
+**Nothing here catches drift while nobody is looking at the screen.** A runtime figure is correct
+whenever it is asked and silent when it is not, which is a different property from a check that fires
+on its own. The author's separate decision — that "loss and forgot" checks should run **every 12
+hours** — is `25-03`, and the two are complements rather than alternatives: this one makes the number
+impossible to get wrong, that one makes somebody look.
