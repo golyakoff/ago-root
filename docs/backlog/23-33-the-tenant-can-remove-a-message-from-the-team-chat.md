@@ -1,7 +1,8 @@
 # the tenant can remove a message from the team chat
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06). A tombstone, `site:manage_operators` checked live, its own
+  cascading record, and its own realtime channel. `adr/0133`.
 - **Depends on**: `23-32` — hard. There is nothing to moderate until the room exists.
 - **Decision**: the author's, 2026-09-06 — filed separately and deliberately after the chat itself
 
@@ -43,9 +44,9 @@ engineering one.
 
 ## Done when
 
-- [ ] The owner can remove a message; an operator cannot remove another's.
-- [ ] Every removal leaves a record naming who did it and when, and that record survives the message.
-- [ ] `personal-data.md` records the removal log as data about the **operator**, the way
+- [x] The owner can remove a message; an operator cannot remove another's.
+- [x] Every removal leaves a record naming who did it and when, and that record survives the message.
+- [x] `personal-data.md` records the removal log as data about the **operator**, the way
       `contact_reveals` and `access_records` already are.
 
 ## Open questions

@@ -1,7 +1,8 @@
 # signing out takes two or three clicks, because the console signs itself back in first
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06), except the one decision it deliberately leaves open - whether
+  sign-out should also forget the chosen shop. `ago-console#136`, on the stand the same evening.
 - **Found**: 2026-09-06, by the author, using the office console normally.
 - **Decision**: none needed for the defect. One question about how far sign-out should reach is at
   the bottom, and it is the author's.
@@ -75,10 +76,36 @@ nondeterministic, so a single manual try looks like it worked.
 
 ## Done when
 
-- [ ] One press of Выйти reaches Keycloak's login page, every time.
-- [ ] A test reproduces the race against the real event ordering and fails without the fix.
-- [ ] Whether sign-out also clears the remembered tenant is decided and recorded.
+- [x] One press of Выйти reaches Keycloak's login page, every time.
+- [x] A test reproduces the race against the real event ordering and fails without the fix.
+- [~] Whether sign-out also clears the remembered tenant is decided and recorded. **Still open.**
+      The author had no preference; the recommendation is to forget it, and it was deliberately not
+      built into the fix - it is a different promise (what the browser remembers), it lands green on
+      its own, and folding it in would make one press carry two arguments.
 
 ## Out of scope
 
 - Session length, token lifetime and silent renew. Those are `5-16`'s and working.
+
+## Outcome
+
+`ago-console#136`, deployed the same evening.
+
+**The fix is one fact and its ordering**: whether a sign-out is in flight, set *before*
+`signoutRedirect` is called. That ordering is the whole of it - it is what lets the guard tell *on the
+way out* from *never signed in*, which are the same null user a fraction of a second apart.
+
+**A failed redirect resets the flag and the reset is not rethrown.** Every call site is a click
+handler with nowhere to put a rejection, so rethrowing would turn a failed sign-out into an unhandled
+rejection and change nothing anybody can see - the test caught exactly that in the first draft. The
+guard resuming and redirecting to sign in is the honest visible outcome.
+
+**Two things fixed alongside because they are the same press:** the label follows the direction now,
+through the string table, where it was a hardcoded English `Signing in…` in *both* directions - wrong
+about the language on every Russian screen and wrong about the fact while somebody was leaving.
+
+**Why nothing caught it, which is the part worth keeping.** Every test in this repository mocks
+`userManager` with plain `vi.fn()`s that resolve without firing anything, so `removeUser`'s ordering -
+the whole of the defect - never happens. The gate signs *in* and never out. The new test's fake fires
+`userUnloaded` before it resolves, exactly as the library does, and the file says it is worth no more
+than that fidelity.

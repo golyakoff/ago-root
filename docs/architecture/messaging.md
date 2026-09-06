@@ -94,6 +94,7 @@ supposed to prevent.
 | `AttachmentConfirmed` | `conversation_id` | Thumbnailer (image content types only) |
 | `CacheInvalidated` | key namespace | All nodes (fan-out to every replica, not competing consumers) |
 | `TeamMessagePosted` (`23-32`) | `site_id` | Fan-out to every operator of the site (`TeamChatFanoutConsumer`) - the team chat's own sibling of `MessageAccepted`, keyed by the room's own ordering unit instead of a conversation |
+| `TeamMessageRemoved` (`23-33`) | `site_id` | Fan-out to every operator of the site (`TeamMessageRemovedFanoutConsumer`) - a distinct event and a distinct client push method (`TeamMessageRemoved`, never `TeamMessageReceived`) from `TeamMessagePosted` above, deliberately: the console's own transport-level dedup collapses a repeated push of the same message id, and a removal names an id already delivered once by its own post |
 
 ### AGO Calendar's own topics
 

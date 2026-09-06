@@ -463,9 +463,9 @@ denial.
   `(conversation_id, tag_id)` is already the primary key and covers the forward direction for free).
   Cascades on both `conversation_id` and `tag_id` - removing a conversation or deleting a tag from the
   vocabulary both clean up silently rather than leaving an orphaned pairing.
-- `team_messages` (**added in `23-32`**) - `id` (uuid v7), `site_id`, `author_operator_id`,
-  `author_is_admin` (`boolean`), `body` (`text`), `sequence` (`int`), `client_message_id?` (`uuid`),
-  `created_at`. `23-32`'s own second kind of message store: one room per tenant, invisible to any
+- `team_messages` (**added in `23-32`, `removed_at` added `23-33`**) - `id` (uuid v7), `site_id`,
+  `author_operator_id`, `author_is_admin` (`boolean`), `body` (`text`), `sequence` (`int`),
+  `client_message_id?` (`uuid`), `created_at`, `removed_at?`. `23-32`'s own second kind of message store: one room per tenant, invisible to any
   visitor, structurally separate from `messages`/`conversations` rather than a `Kind` discriminator on
   either - the identical "a separate table, not a filtered row" reasoning `conversation_notes` above
   gives for itself, and for the same class of leak this would otherwise risk (a visitor-facing read
@@ -499,6 +499,23 @@ denial.
   takes. Its only consumer, `Ago.Chat.Worker.TeamChatFanoutConsumer`, exists purely to drive realtime
   fan-out to every operator of the site (`ResolveTeamMessageDeliveryTargetsHandler`) - it is
   infrastructure for delivery, not a business fact another bounded context would ever subscribe to.
+  **`23-33`: `removed_at?` is the room's own tombstone flag** - never a physical `DELETE` (a hole in
+  `sequence` would misdirect `GetDeltaAsync`'s reconnect catch-up), and the write side never scrubs
+  `body` either; `TeamMessageReadStore` is where a removed message's text actually stops being served
+  (`adr/0133`).
+- `team_message_removals` (**added in `23-33`**) - `id` (uuid v7), `team_message_id`, `site_id`,
+  `removed_by_operator_id`, `removed_at`. One row per removal - who, which message, when - the team
+  chat's own small accountability record, the same physical shape `module_revoke_overrides` (`23-13`)
+  takes for a different exceptional act, but **diverging on its foreign keys rather than copying
+  them**: real `ON DELETE CASCADE` FKs to both `sites` and `team_messages` (not `module_revoke_overrides`'
+  deliberate no-FK), because this record is meant to go with the room it describes, not outlive it -
+  `adr/0133`'s own Decision states the full reasoning, including why that is the opposite call from
+  `adr/0118`'s and why it is still correct. Written through EF, not raw Npgsql like
+  `module_revoke_overrides` - it must commit atomically with the `TeamMessageRemoved` outbox row
+  (rule 4), which that table's own event-less write never needed. `ix_team_message_removals_team_message_id`,
+  **unique**, is the "one removal record per message" invariant backstopped at the constraint level;
+  `ix_team_message_removals_site_id` is the ordinary site-scoped-read index every table here carries,
+  reserved for a future support screen this item does not build.
 - `acceptance_records` (**added in `24-01`**) - `id` (uuid v7), `subject_kind` (`varchar(20)`, one of
   `Tenant`/`Operator`/`Visitor`), `subject_id` (uuid, widened across all three subject types rather
   than three nullable FK columns - `AcceptanceSubjectKind`'s own remarks), `document_key`
