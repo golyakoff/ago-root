@@ -1334,6 +1334,53 @@ agreement can be drafted from stated facts rather than from memory.
 
 ---
 
+## Stage 25 — What a lawyer, a regulator and a hosting contract need, before the first real tenant
+
+**Goal:** nothing about this launch is unlawful, and every claim that it is lawful rests on a document
+somebody can point at.
+
+**Why this is a separate stage from 24, and the line between them is sharp.** Stage 24 states its own
+boundary in its preamble: *it builds mechanisms, and produces the facts a drafting lawyer needs. It
+writes no legal text.* That was right, and it means Stage 24 cannot contain the other half. This stage
+is that half — the parts that are **not** code: a hosting provider that issues paperwork, a
+notification to the regulator, a determined protection level, a threat model, published texts, and a
+signed processing clause.
+
+The two stages fail in opposite ways, which is the real argument for keeping them apart. Stage 24's
+failure is a mechanism that does not exist — invisible from inside the product, found only by putting
+two lists side by side (`24-06`). This stage's failure is a mechanism that exists and cannot be
+**evidenced**, which looks identical from the inside and is worse at an inspection. `24-07` is exactly
+that shape and is what opened this stage: the machine is probably in the right country, and the
+provider does not issue a document saying so.
+
+**What is already true, and it is more than the stage list suggests.** Stage 24 landed the mechanisms
+this one has to evidence: acceptance records with the version accepted (`24-01`, `adr/0111`), documents
+as data so a lawyer's wording change is one call rather than a deploy (`24-02`, `adr/0114`), no consent
+tick where the contract already covers it (`24-03`), the visitor's own refusable consent that does not
+gate the conversation (`24-05`), erasure and its receipts (`16-02`, `24-13`), export (`24-11`), access
+records (`24-12`), blocking (`24-10`, `adr/0124`), and a personal-data register that now covers what
+**leaves** the deployment as well as what it stores (`24-08`). Most of what is left is calendar time,
+not engineering time — which is precisely why it starts now rather than at the end.
+
+**The order that matters.** `25-01` (a provider that issues the documents) gates everything, because
+every other answer on the page is about data sitting somewhere we cannot currently evidence. The
+regulator notification is second and has a sequencing question of its own that is better asked early
+than late. `25-02` is the checklist that holds the rest and is expected to be edited many times before
+it is finished — it is a working file, not a deliverable.
+
+**Legal citations in this stage are for orientation, not advice**, the same footing
+`personal-data.md` already uses. Every line that needs a lawyer's determination says so, and an
+engineer's confident reading of an amended statute is exactly the thing this stage exists to stop
+being relied on.
+
+**Done when:** the deployment runs where its location can be evidenced on paper; the regulator has been
+told what is processed and it matches what the system does; the protection level is determined in a
+document and its measures are in place; the published texts are a lawyer's; and every line of
+`docs/compliance-checklist.md` is either ticked against an artefact or explicitly accepted as a risk
+the author is taking knowingly.
+
+---
+
 ## Guardrails for all stages
 
 - No stage is "done" with a red arch test, a skipped concurrency test, or a doc the code contradicts.

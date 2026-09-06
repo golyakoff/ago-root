@@ -1,8 +1,8 @@
 # where the data physically sits is evidenced, not inferred from a tier name
 
 - **Stage**: 24
-- **Status**: ready — **blocked on `24-19`, not on implementation**. The confirmation this item was waiting for cannot be obtained: the author decided 2026-09-06 that Fornex does not issue the documents `152-ФЗ` compliance needs, so the deployment moves. This item closes against the *new* provider's confirmation.
-- **Depends on**: `24-19` for the primary node's own answer — that is where the provider changes. The backup-location and relay-egress answers depend on nothing and are still owed here.
+- **Status**: ready — **blocked on `25-01`, not on implementation**. The confirmation this item was waiting for cannot be obtained: the author decided 2026-09-06 that Fornex does not issue the documents `152-ФЗ` compliance needs, so the deployment moves. This item closes against the *new* provider's confirmation.
+- **Depends on**: `25-01` for the primary node's own answer — that is where the provider changes. The backup-location and relay-egress answers depend on nothing and are still owed here.
 - **Decision**: none yet — `adr/0026` records the purchase, not a location fact
 
 ## Goal
@@ -61,7 +61,7 @@ cannot be evidenced is, at an inspection, indistinguishable from a location that
 
 So the first Scope entry below — *request a written confirmation from Fornex* — is struck. It was the
 right next step when it was written and it has no answer. The deployment moves instead, to VK Cloud,
-Yandex Cloud or Selectel, and **that move is `24-19`**.
+Yandex Cloud or Selectel, and **that move is `25-01`**.
 
 **What survives from this item is the method, not the conclusion.** The RIPE lookup stays in the
 record: it is how the question was investigated, it is checkable by a reviewer without our
@@ -84,10 +84,10 @@ it is the one where a confident wrong answer costs the most.
 ## Scope
 
 - ~~**Request a written confirmation of the datacentre location from Fornex**~~ — **struck
-  2026-09-06**: there is no such confirmation to be had, which is what `24-19` exists to fix. The
+  2026-09-06**: there is no such confirmation to be had, which is what `25-01` exists to fix. The
   sentence is kept struck rather than deleted, because "we asked and they do not issue one" is the
   finding, and a deleted line reads as a step nobody thought of.
-- **File the new provider's written confirmation** once `24-19` has moved the deployment, together
+- **File the new provider's written confirmation** once `25-01` has moved the deployment, together
   with a RIPE lookup of the new address — the same evidence, from the same method, about a machine
   whose provider will also put it in writing.
 - Record *how* each answer was established, not only the conclusion — the RIPE lookup is the first
