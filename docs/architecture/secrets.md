@@ -11,7 +11,15 @@ do".
 ## How this list was built, so a reader can check it rather than trust it
 
 Six sweeps, because "short and factual" is easy and "complete" is the part worth anything. Anyone
-re-running these should find the same set:
+re-running these should find the same set.
+
+**All six were last re-run on 2026-09-06 (`24-14`)**, and they did not find the same set: one missing
+key, a PAT in three repositories where this file said two, and a repository recorded as having no
+workflow that has one. Sweeps 1, 2, 3 and 5 are now `tools/secrets-audit.sh`, which exits non-zero on
+anything it finds that this file does not name. Sweeps 4 and 6 stay manual, deliberately — one needs a
+human to say whether a string is a secret or a fixture, the other reads prose — so a re-run of *those*
+two is still a person's job, and the date above is when that was last done.
+
 
 1. **Every key in the three `secretGenerator` sources** — `ago-deploy/docker/.env.example`,
    `k8s/overlays/local/.env.example`, `k8s/overlays/demo/.env.example`.
@@ -22,12 +30,22 @@ re-running these should find the same set:
 4. **Every credential-shaped literal committed in a manifest or an `appsettings*.json`** — the sweep
    that finds a secret whose value is *not* in a Secret at all. It found one, and it is the open
    finding at the bottom of this file.
-5. **Every `secrets.*` reference in every repository's `.github/workflows/`** — all seven repositories,
-   including the two that have no workflow at all.
+5. **Every `secrets.*` reference in every repository's `.github/workflows/`** — **all ten
+   repositories**, including the two that have no workflow at all. This said *seven* until
+   `24-14` re-ran it: `ago-faq` was never swept at all, and `ago-landing` was swept once, recorded
+   as having no workflow, and has had one since. A sweep whose own scope is a number written down
+   once is a sweep that stops covering the thing it was defined over — which is why
+   `tools/secrets-audit.sh` enumerates the workspace rather than carrying a list.
 6. **Every credential named in an ADR or runbook but held outside every repository** — the node's own
    keys, the backup keypair, and anything a human keeps on a laptop. `adr/0050` explicitly assigns its
    key to this inventory; the rest come from `public-deploy.md`, `backup-and-restore.md` and
    `adr/0040`.
+
+**Sweeps 1, 2 and 3 also produce names that are not secrets** — a role name, a username, an SMTP
+host, a port. Those are not listed below, and a reader re-running the sweeps will therefore find
+about sixteen names this file does not mention and should not. `tools/secrets-audit.sh` carries the
+exclusions explicitly, each with its reason, so "the same set" is checkable rather than a matter of
+agreeing about what counts.
 
 What the sweeps deliberately do **not** cover: git history. Auditing history for previously committed
 secrets is a different technique and `17-03` puts it out of scope; nothing in these sweeps suggested a
@@ -65,6 +83,7 @@ tracked `.env` anywhere.
 | `GRAFANA_ADMIN_PASSWORD` | The Grafana admin account | same | A human | Restart |
 | `AUTH_JWT_SIGNING_KEY` | Every visitor session token, for every site | same | `Ago.Chat.Api` only | **Draining since `adr/0067`** |
 | `KEYCLOAK_DEMO_PROVISIONER_SECRET` | The `ago-demo-provisioner` confidential client — the one credential here that lets a web-facing process *write* to the identity provider | same, **and** the client's own record inside Keycloak | `Ago.Chat.Api`, `Ago.Chat.Worker` (never `Ago.Chat.Webhooks`) | Coordinated |
+| `CHANNELS_CREDENTIAL_ENCRYPTION_KEY` | **Every tenant's channel credential at rest** — the bot tokens and API credentials for MAX, Telegram, VK, Avito, WhatsApp and Email (`14-01`'s `channel_credentials`) | `.env` on the deploying machine → Secret | Api, Worker, Webhooks, via `Channels__CredentialEncryptionKey` | **Breaking** — see below |
 | `KEYCLOAK_SMTP_PASSWORD` | Nothing. Present and **deliberately empty** | — | — | — |
 | ~~`CHATMODULE_SHARED_SECRET`~~ | **Never existed as a deployed value, and no longer exists as a concept** (`22-04`, same day it was recorded). `adr/0094` introduced one secret per module deployment; `22-04` replaced it with a per-site row in each module product's own database before it was ever put in an environment. Kept as a struck-through line rather than deleted, because a reader who finds `adr/0094`'s Consequences will come looking for it | — | — | — — there is nothing to rotate here; rotating a *site's* credential is `22-11`, which now exists — see the row below |
 | `ModuleProvisioning:Secret` | **One independent value per module deployment.** The bootstrap credential that authenticates `22-11`'s provisioning routes — the calls that create, rotate and delete a *site's* module credential. A holder can register, rotate or delete the registration for **any** site that deployment serves: strictly more powerful than `adr/0094`'s per-call credential, which only forges one call. Accepted because a bootstrap anchor cannot be scoped to the per-site row it exists to create (`adr/0095`) | The module deployment's own environment. **Never on chat's side** — chat does not persist it; a human supplies it per provisioning call | `Ago.Calendar.Api`, `Ago.Faq.Api`, and whoever performs a provisioning call | Restart |
@@ -86,6 +105,21 @@ Notes that change what a reader would otherwise assume:
 - **`AUTH_JWT_SIGNING_KEY` is one key shared by every site.** It is the whole subject of `adr/0067`;
   what it grants is the binding to one existing conversation's history, and nothing else, because the
   minting endpoint is public and unauthenticated by design (`adr/0034`).
+- **`CHANNELS_CREDENTIAL_ENCRYPTION_KEY` is the same rotation shape as the open finding at the
+  bottom of this file, and the opposite storage shape.** Reversible encryption over stored
+  ciphertext: changing the value without re-encrypting does not fail loudly, it silently makes every
+  already-registered channel credential undecryptable, so a tenant's Telegram bot stops delivering
+  and nothing says why. That is what puts it in **Breaking** rather than Restart, and it is the fact
+  a reader consults this file to learn. Where it differs from `Webhooks:SecretEncryptionKey` is that
+  it was **sourced from `infra-credentials` from day one** — `k8s/base/api.yaml`'s own comment beside
+  it says so, in as many words, citing the finding on the line above it as the thing not to repeat.
+  It was missing from this inventory, not from the Secret.
+- **This entry is why `tools/secrets-audit.sh` exists.** `17-03` wrote this file on 2026-08-27 and
+  `14-01`'s channel storage landed within days; nothing then made adding a secret update the
+  inventory, and ten days later the file was missing a key, understating a PAT's blast radius by a
+  third, and asserting a repository had no workflow when it had one. `personal-data.md` stays true
+  because three separate places make adding a column update it. This file now has one place, and it
+  is mechanical.
 - **There is one Postgres role, not two, and `adr/0056` assigned that observation here.** With DDL
   confined to `Ago.Chat.Migrator`, the three serving hosts could run under a DML-only role — a genuine
   reduction, since an application compromise then could not alter the schema. It needs two roles, two
@@ -103,6 +137,15 @@ Two, and they are opposite cases: one is a deliberate published value, the other
 | The three seeded Keycloak demo accounts' passwords | `ago-deploy/k8s/base/keycloak-realm-import.json` | **Published by decision** (`adr/0034`) |
 | `Webhooks:SecretEncryptionKey` | `ago-deploy/k8s/base/{api,worker,webhooks}.yaml`, and three `appsettings.Development.json` in `ago-chat` | **Open finding — see the last section** |
 
+**`Channels:CredentialEncryptionKey` also has a committed literal, in the same three
+`appsettings.Development.json` files, and it is deliberately not listed above.** Sweep 4 finds it and
+a reader re-running that sweep will too, so it is worth saying why it is not a third row: a
+`Development` value is overridden by the environment everywhere that is not a developer's own
+machine, and every manifest that serves a real deployment supplies this one from `infra-credentials`.
+What makes the webhook key a finding is not that a literal exists — it is that `base/*.yaml` sets it
+as a literal and the demo overlay does not override it, so the committed value is the one actually
+protecting live data. The two cases look identical to a grep and are not the same fact.
+
 The seeded demo passwords are published on purpose: `adr/0034` reasons about this realm on the basis
 that every account in it is a demo account whose password is in a public repository, and that is what
 makes mandatory TOTP ceremony rather than protection there. The trigger it names for revisiting is the
@@ -114,18 +157,24 @@ changed through `runbooks/realm-operations.md` rather than by editing that file.
 
 | Name | Where | Scope | Expires | Class |
 |---|---|---|---|---|
-| `AGO_PLATFORM_PACKAGES_TOKEN` | Repository secret in **two** repositories: `ago-chat` and `ago-calendar` | Classic PAT, `read:packages` only | **2027-08-25** | Coordinated |
+| `AGO_PLATFORM_PACKAGES_TOKEN` | Repository secret in **three** repositories: `ago-chat`, `ago-calendar` and `ago-faq` | Classic PAT, `read:packages` only | **2027-08-25** | Coordinated |
 | `GITHUB_TOKEN` | Not held anywhere — GitHub mints it per job | Per-workflow `permissions:` block | Per job | n/a |
 
-Sweep 5 in full: `ago-chat` and `ago-calendar` reference `secrets.AGO_PLATFORM_PACKAGES_TOKEN`;
-`ago-chat`, `ago-console` and `ago-widget` reference `secrets.GITHUB_TOKEN` for a GHCR login;
-`ago-platform` uses `GITHUB_TOKEN` to push packages; `ago-calendar-console`, `ago-deploy`, `ago-landing`
-and `ago-root` reference no secret at all (the last three have no workflow).
+Sweep 5 in full, re-run 2026-09-06 over all ten repositories: `ago-chat`, `ago-calendar` **and
+`ago-faq`** reference `secrets.AGO_PLATFORM_PACKAGES_TOKEN`; `ago-chat`, `ago-console`,
+`ago-widget`, `ago-calendar-console` **and `ago-landing`** reference `secrets.GITHUB_TOKEN` for a
+GHCR login; `ago-platform` uses `GITHUB_TOKEN` to push packages; `ago-deploy` and `ago-root`
+reference no secret at all, and have no workflow.
 
 Three facts worth keeping beside the PAT:
 
-- **One value in two repositories is deliberate.** A personal account has no shared Actions secret, so
-  two copies are unavoidable; the only choice was one expiry to track or two.
+- **One value in three repositories is deliberate; the *third* copy was not recorded.** A personal
+  account has no shared Actions secret, so the copies are unavoidable. What was avoidable is the
+  inventory saying two: `ago-faq` restores `Ago.Platform.*` in CI exactly as the other two do, and
+  its most recent commit is literally `chore: retrigger CI after re-setting
+  AGO_PLATFORM_PACKAGES_TOKEN`. Somebody had already paid the cost of a third copy while this file
+  said there were two — so the drift was not hypothetical, and the number that was wrong is the one
+  a rotation is planned against.
 - **The expiry now fires.** `ago-chat/.github/workflows/credential-expiry.yml` is a scheduled workflow
   that fails when the date is inside 30 days, because a date written in a backlog file is a record and
   not a reminder. Its own limitation is in its header and repeated in the runbook: GitHub disables
