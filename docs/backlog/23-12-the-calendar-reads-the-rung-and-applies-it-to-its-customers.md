@@ -1,7 +1,7 @@
 # the calendar reads the account's rung and applies it to its own customers
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `23-11` — the setting and the event this projects. Cannot start before that
   contract exists.
 - **Decision**: `docs/design/decisions.md` §5, including the 2026-09-04 amendment
@@ -81,18 +81,58 @@ to choose.
 
 ## Done when
 
-- [ ] A tenant on `Visible`, and a tenant with no projected value at all, both see today's behaviour
+- [x] A tenant on `Visible`, and a tenant with no projected value at all, both see today's behaviour
       byte for byte.
-- [ ] A tenant on the masked rung gets masked values in all four read paths, and no unmasked value
+- [x] A tenant on the masked rung gets masked values in all four read paths, and no unmasked value
       appears anywhere in a list response.
-- [ ] A reveal returns the number and writes exactly one record naming the operator.
-- [ ] A caller without `CustomerRead` cannot reveal, and gets the refusal the list already gives.
-- [ ] A caller of another tenant cannot reveal (a tenant-isolation test).
-- [ ] An operator-confirmed number is distinguishable from a code-verified one in the read model, and
+- [x] A reveal returns the number and writes exactly one record naming the operator.
+- [x] A caller without `CustomerRead` cannot reveal, and gets the refusal the list already gives.
+- [x] A caller of another tenant cannot reveal (a tenant-isolation test).
+- [x] An operator-confirmed number is distinguishable from a code-verified one in the read model, and
       the confirm act is refused on a rung where the number cannot be seen.
-- [ ] A redelivered rung event leaves one projected value.
-- [ ] The tenant can read the reveal record, and the screen states what it is for.
+- [x] A redelivered rung event leaves one projected value.
+- [x] The tenant can read the reveal record, and the screen states what it is for.
 
 ## Open questions
 
 None.
+
+## Outcome (2026-09-06)
+
+`adr/0126` carries the three decisions this side needed. `adr/0123` decided the account side and said
+in its own Consequences that the calendar's were open, so this is not a restatement.
+
+**`20-12` had already built both ends of a ladder without naming it**, which changed the shape of the
+work: `Permission.CustomerRead` already gated the phone in four read paths, and the phone was *absent*
+from the list read models rather than merely hidden. What did not exist was any rung concept at all.
+Worth recording because the migration named `Stage20AddAccountOwnerAndContactVisibility` **is
+misleadingly named** — its content is `operators.is_account_owner` and
+`operator_roles.grants_customer_read`, `20-12`'s two-layer gate, not a rung. A reader going by the name
+would conclude this item was already done.
+
+**Three decisions the item left to whoever built it.**
+
+1. **The calendar gets its own `contact_phone_reveals` table.** `adr/0123` answered "widen the enum or
+   build a table" for chat; here the question collapses, because this product has no `access_records`
+   to widen in the first place.
+2. **Confirmation is gated on `CustomerRead` alone, not on the rung.** §5 reads as a per-rung refusal,
+   but rung three is absent from this product's enum too, so there is no rung on which a `CustomerRead`
+   holder cannot already see the number — a rung-keyed check would discriminate on nothing.
+3. **The consumer commits in one save**, following `RoleAssignmentsChangedConsumer` rather than
+   `22-07`'s two-save shape: a rung has nothing to decide from its own prior value, so there is no
+   read-decide-write to hold a lock across.
+
+**A negative finding the worker reported rather than hid, and it is the useful part of this report.**
+The test named `TheSameRungEventDeliveredTwice_ProjectsOnceAndRecordsTheInboxOnce` **does not
+discriminate** a correct `StageAsync` from a naive always-insert one. `EfInboxChecker` catches *any*
+unique-violation, not only a duplicate `message_id`, so a spurious primary-key conflict from the
+broken version is swallowed and reported as "not new" — rolling back both writes and leaving the same
+observable state the correct code produces. `RestagingADifferentRung_ReplacesTheProjectedValue` is the
+test that actually proves it. The first test is weaker evidence than its name implies and is **left
+that way, said out loud**, rather than renamed to look better.
+
+**The console half is not built and is now `23-30`.** Four screens would have to reveal on demand
+instead of rendering a number: the calendar queue, the contacts report, a worker's slots, and the recut
+preview. The backend gives them everything they need — a `Masked` flag on every response row, both
+verification timestamps on the contacts report, and three new endpoints — so the split is clean and
+each half closes green on its own.
