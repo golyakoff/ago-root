@@ -34,23 +34,41 @@ the numbers a queue would have meant re-partitioning items into new stages, whic
 the cost of each stage reading as an argument rather than a bucket. The order lives here instead, and
 a stage number stays a name.
 
-### Now — on the board
+### Now — computed, not kept
 
-**The queue moved to the board on 2026-09-02**: <https://github.com/users/golyakoff/projects/1>.
+**There is no ordered list here, on the board, or anywhere else.**
 
-Status and order live there and only there. This file keeps the narrative — what each stage is for
-and what landed in it — and `docs/backlog/<item>.md` keeps the reasoning: alternatives, Done-when,
-Outcome. The ordered table that used to sit here is **gone rather than duplicated**: two lists of one
-queue is the staleness problem twice over, and this one went stale three times while it was the only
-one there was.
+`23-47` found what four days had already made true: the board at
+<https://github.com/users/golyakoff/projects/1> held thirteen cards, all thirteen `Done`, while every
+one of the twenty-three then-open items sat off it. The sentence this section used to carry — *status
+and order live there and only there* — **had been false the whole time, and nothing caught it**,
+because nothing read the board: not `tools/queue-audit.sh`, not a person picking work.
 
-Issue titles begin with the item number (`20-20 · Make AGO Calendar deployable`), which is what keeps
-an issue traceable to its backlog file, to its stage, and to every ADR and commit that already names
-work that way — `conventions/git-workflow.md` has the rule and why the match is anchored.
-`tools/queue-audit.sh` reads those issues now, and treats an unreachable GitHub as *could not look*
-rather than *nothing to see*.
+**The queue is derived, every time it is asked**, from the open issues this repository already
+tracks. `bash tools/queue-audit.sh --ready` reads each one and its backlog file and answers a single
+question: which are ready to start right now — `Status: ready`, plainly, with every item named in
+`Depends on` no longer open. Nothing is written down between runs, so there is no second list to fall
+out of sync with the first. `adr/0136` is the decision, and records why both readings this item first
+offered — fill the board, or declare issues the queue — missed the better answer: **they argued about
+where a list lives, when the staleness they were each avoiding disappears if there is no list.**
 
-Two items sit parked off the board, because they cannot be started:
+It says out loud what it cannot decide. An item whose `Status` says *ready* plus a qualifier is
+reported as **qualified**, for a person to read, rather than folded into either answer — and an item
+blocked by something that is not another item (a provider, a lawyer, a scheduled run) lands there
+too, by its own words rather than by a special case.
+
+This file keeps the narrative — what each stage is for and what landed in it — and
+`docs/backlog/<item>.md` keeps the reasoning: alternatives, Done-when, Outcome. Issue titles begin
+with the item number (`20-20 · Make AGO Calendar deployable`), which is what keeps an issue traceable
+to its backlog file, to its stage, and to every ADR and commit that already names work that way —
+`conventions/git-workflow.md` has the rule and why the match is anchored. `tools/queue-audit.sh`
+treats an unreachable GitHub as *could not look* rather than *nothing to see*, in every mode.
+
+The board may still be glanced at for what is in flight. **It asserts nothing, and nothing here points
+at it as an authority.**
+
+Two items sit outside the ready computation, because they cannot be started regardless of what their
+own `Status` or `Depends on` would otherwise say:
 
 | Item | Why parked |
 |---|---|

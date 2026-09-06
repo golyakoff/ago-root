@@ -10,18 +10,36 @@
 #
 # **Reads GitHub issues, not `docs/roadmap.md`** (changed 2026-09-02, when the Now queue moved to the
 # board at https://github.com/users/golyakoff/projects/1). The roadmap's stage sections stay as
-# narrative; the board holds status and order; the item file holds the reasoning. This script is the
-# thing that notices when the first two disagree with the third.
+# narrative; the item file holds the reasoning. `23-47` (2026-09-06) removed the board as a third
+# claimant: the queue is not kept anywhere, board included - it is computed from these same issues,
+# which is what `--ready` below does. This script is the thing that notices when a document asserts
+# an order that does not match what is actually open.
 #
 # The check is deliberately dumb: an item whose Done-when list has no unchecked boxes left is
 # reported. That is a heuristic, not a verdict - an item can legitimately sit in the queue with
 # everything ticked while its PRs are still open. It is here to make somebody look, not to decide.
 #
-# Run from anywhere inside the repository:  bash tools/queue-audit.sh
+# Three ways to run it:
+#   bash tools/queue-audit.sh            the full audit (unchanged shape, plus the UNSETTLED check below)
+#   bash tools/queue-audit.sh --ready    which open ago-root items are ready to start right now
+#   bash tools/queue-audit.sh --partial  which open ago-root items have a partial Done-when
+#
+# `--ready` and `--partial` read only `ago-root`'s own open issues - one `gh issue list` call, not the
+# cross-repository sweep the full audit does - because readiness is a question about this repository's
+# own queue, and because a Windows session hitting `gh`'s rate limit here would rather make one call
+# than a hundred.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+MODE="full"
+case "${1:-}" in
+  --ready)   MODE="ready" ;;
+  --partial) MODE="partial" ;;
+  "")        MODE="full" ;;
+  *)         echo "Usage: $0 [--ready|--partial]" >&2; exit 2 ;;
+esac
 
 # **Items are filed twice**, once here and once in the repository they change, and closing only one
 # of the pair is a real, observed failure: on 2026-09-02 `11-15` shipped, `ago-root#322` was closed,
@@ -53,7 +71,246 @@ workspace="$(dirname "$primary_root")"
 # an empty issue list and "0 checked, 0 flagged" is indistinguishable from a genuinely empty queue.
 # `gh` returning nothing is therefore treated as "could not look", never as "nothing to see".
 if ! command -v gh >/dev/null 2>&1; then
-  echo "CANNOT AUDIT - the GitHub CLI is not installed; the queue lives on the board and cannot be read."
+  echo "CANNOT AUDIT - the GitHub CLI is not installed; the queue is computed from GitHub issues and"
+  echo "cannot be read without it."
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Field readers, added 2026-09-06 (`23-47`, `23-50`). A backlog item's header is a handful of
+# `- **Field**: value` bullets, and a value sometimes wraps onto continuation lines indented by two
+# spaces with no `- **` of their own (e.g. `1-06`'s `Depends on`). These two functions are the one
+# place that knows that shape, so the readiness and Done-when checks below read it the same way.
+# ---------------------------------------------------------------------------
+
+# Prints every line of one field's value, the first line (with its `- **Field**:` prefix) followed by
+# any indented continuation lines, stopping at the first line that is neither.
+extract_field() {
+  local file="$1" field="$2"
+  awk -v field="$field" '
+    $0 ~ "^- \\*\\*" field "\\*\\*:" { p=1; print; next }
+    p {
+      if ($0 ~ /^  /) { print; next }
+      exit
+    }
+  ' "$file"
+}
+
+# Same, collapsed to one line with the `- **Field**:` prefix stripped and internal whitespace
+# normalised - the form every check below actually wants to reason about or print.
+field_value() {
+  local file="$1" field="$2"
+  extract_field "$file" "$field" \
+    | sed -E "1s/^- \\*\\*${field}\\*\\*: ?//" \
+    | sed -E 's/^ +//' \
+    | tr '\n' ' ' \
+    | sed -E 's/ +/ /g; s/^ +//; s/ +$//'
+}
+
+# A `Status` value is READY only when it says exactly that and nothing more. Anything that starts
+# with "ready" but goes on - `ready — blocked on the deploy`, `ready. **Answered by the author...**` -
+# is QUALIFIED: a human wrote a reason next to the word, and this script is not the thing that decides
+# whether that reason still blocks it. Guessing either way is exactly what `23-47`/`23-50` are about,
+# so a qualified status is reported, never silently folded into READY or NOT_READY.
+classify_status() {
+  local lc
+  lc=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  case "$lc" in
+    ready|"ready.") echo "READY" ;;
+    ready*)         echo "QUALIFIED" ;;
+    *)               echo "OTHER" ;;
+  esac
+}
+
+# Classifies a `Depends on` value. Prints one word on its own line:
+#   NONE          - says "nothing" (or a variant like "nothing new architecturally")
+#   NONE_NOFIELD  - the file has no Depends-on field at all (the `Found`-defect convention - see the
+#                   header survey in `23-47`'s report; every such file sampled was either done or a
+#                   standalone defect, never a real unstated dependency)
+#   OR            - "at least one of `a`/`b`/`c`" - a real dependency this script does not evaluate,
+#                   because AND-ing them would be wrong and picking one would be guessing
+#   UNPARSEABLE   - the field says something else with no item number in it (an ADR only, a provider,
+#                   a person) - a real dependency this script cannot read, reported rather than assumed
+#   PARSEABLE     - one or more item numbers, printed one per line after the marker
+# `` `NN-NN` `` and `` `NN-NN-rest-of-filename.md` `` are both read; a bare, unquoted `NN-NN` is not -
+# every citation surveyed for `23-47` used backticks, and matching bare digit pairs would also catch
+# a date fragment such as the `09-06` inside `(2026-09-06)` on a `Status` line.
+classify_depends() {
+  local file="$1"
+  local raw
+  raw=$(field_value "$file" "Depends on")
+  if [ -z "$raw" ]; then
+    echo "NONE_NOFIELD"
+    return
+  fi
+  local lc
+  lc=$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')
+  case "$lc" in
+    nothing*) echo "NONE"; return ;;
+  esac
+  if printf '%s' "$lc" | grep -q "at least one of"; then
+    echo "OR"
+    return
+  fi
+  local refs
+  refs=$(printf '%s' "$raw" | grep -oE '`[0-9]{1,2}-[0-9]{2}' | tr -d '`' | sort -u || true)
+  if [ -z "$refs" ]; then
+    echo "UNPARSEABLE"
+    return
+  fi
+  echo "PARSEABLE"
+  printf '%s\n' "$refs"
+}
+
+# **`23-50`'s answer, read literally: there is a question with an answer that changes as work lands -
+# which open items are ready to start right now.** Not a list kept anywhere; recomputed on every run
+# from the same issues `queue-audit.sh` already reads, plus the `Status`/`Depends on` fields of each
+# one's backlog file. An item is READY when its own Status is plainly `ready` and every item it
+# depends on is no longer open - "no longer open" rather than "closed done", because a dependency's own
+# issue can be missing (never filed) or closed as not-planned and neither should block anything.
+#
+# **The three items already known to be blocked on something that is not another item** - `15-19`
+# (the deploy), `17-14` (a scheduled Dependabot run), `24-07` (`25-01`, which the Depends-on line
+# already says) - are not special-cased by number. `17-14`'s own Status does not say plain "ready", so
+# it never enters this computation; `24-07`'s real dependency on `25-01` falls out of the ordinary
+# PARSEABLE path since `25-01` is open; `15-19` has no Depends-on field and a qualified Status
+# ("ready — **blocked on the deploy**"), so it lands in QUALIFIED, not READY. No number is hardcoded
+# anywhere in this function - enumerating rather than keeping a list is the whole point of `23-47`.
+compute_readiness() {
+  local issues="$1"
+  echo "Ready to start right now - computed from ago-root's open issues and their backlog files."
+  echo "READY means: Status says plainly \"ready\", and every item this depends on is no longer open."
+  echo "This is derived fresh on every run. Nothing here is kept between runs."
+  echo
+
+  local ready_list="" blocked_list="" qualified_list="" unknown_list="" nofile_list=""
+
+  while IFS= read -r rdy_line; do
+    [ -n "$rdy_line" ] || continue
+    rdy_number=${rdy_line%%|*}
+    rdy_title=${rdy_line#*|}
+    rdy_item=$(printf '%s' "$rdy_title" | grep -oE '^[0-9]+-[0-9]+' || true)
+    [ -n "$rdy_item" ] || continue
+
+    rdy_file=$(find docs/backlog -maxdepth 1 -name "$rdy_item-*.md" | head -1)
+    if [ -z "$rdy_file" ]; then
+      nofile_list="${nofile_list}  ${rdy_item}  (ago-root#${rdy_number}) - no backlog file, cannot assess
+"
+      continue
+    fi
+
+    rdy_status_val=$(field_value "$rdy_file" "Status")
+    rdy_st=$(classify_status "$rdy_status_val")
+
+    if [ "$rdy_st" = "OTHER" ]; then
+      continue
+    fi
+    if [ "$rdy_st" = "QUALIFIED" ]; then
+      qualified_list="${qualified_list}  ${rdy_item}  (ago-root#${rdy_number})  Status: ${rdy_status_val}
+"
+      continue
+    fi
+
+    # rdy_st = READY from here on.
+    rdy_dep_out=$(classify_depends "$rdy_file")
+    rdy_dep_kind=$(printf '%s\n' "$rdy_dep_out" | head -1)
+    rdy_refs=$(printf '%s\n' "$rdy_dep_out" | tail -n +2)
+
+    case "$rdy_dep_kind" in
+      NONE)
+        ready_list="${ready_list}  ${rdy_item}  (ago-root#${rdy_number})
+"
+        ;;
+      NONE_NOFIELD)
+        ready_list="${ready_list}  ${rdy_item}  (ago-root#${rdy_number})  [no Depends-on field - treated as no dependency]
+"
+        ;;
+      OR)
+        unknown_list="${unknown_list}  ${rdy_item}  (ago-root#${rdy_number}) - Depends-on is an OR of several items, not AND; not evaluated:
+      $(field_value "$rdy_file" "Depends on")
+"
+        ;;
+      UNPARSEABLE)
+        unknown_list="${unknown_list}  ${rdy_item}  (ago-root#${rdy_number}) - Depends-on names no item number this script can read:
+      $(field_value "$rdy_file" "Depends on")
+"
+        ;;
+      PARSEABLE)
+        rdy_blockers=""
+        for rdy_dep in $rdy_refs; do
+          if printf '%s\n' "$issues" | grep -qE "\|${rdy_dep} · "; then
+            rdy_blockers="$rdy_blockers $rdy_dep"
+          fi
+        done
+        if [ -z "$rdy_blockers" ]; then
+          ready_list="${ready_list}  ${rdy_item}  (ago-root#${rdy_number})
+"
+        else
+          blocked_list="${blocked_list}  ${rdy_item}  (ago-root#${rdy_number}) - blocked on:${rdy_blockers}
+"
+        fi
+        ;;
+    esac
+  done <<< "$issues"
+
+  echo "READY NOW:"
+  if [ -n "$ready_list" ]; then printf '%s' "$ready_list"; else echo "  none"; fi
+  echo
+  echo "BLOCKED on another open item:"
+  if [ -n "$blocked_list" ]; then printf '%s' "$blocked_list"; else echo "  none"; fi
+  echo
+  echo "QUALIFIED - Status says \"ready\" plus more; read the qualifier yourself before treating as available:"
+  if [ -n "$qualified_list" ]; then printf '%s' "$qualified_list"; else echo "  none"; fi
+  echo
+  echo "UNKNOWN - Status is ready but Depends-on cannot be read mechanically. Not a guess in either direction:"
+  if [ -n "$unknown_list" ]; then printf '%s' "$unknown_list"; else echo "  none"; fi
+  if [ -n "$nofile_list" ]; then
+    echo
+    echo "NO FILE - issue names an item with no backlog file, cannot assess:"
+    printf '%s' "$nofile_list"
+  fi
+}
+
+# `23-50`'s partial-report Done-when: "дай тикеты с частичным Done-when" as one command rather than a
+# favour somebody has to remember to ask for.
+partial_report() {
+  local issues="$1"
+  echo "Open ago-root items with a partial Done-when - some boxes settled, some not."
+  echo
+
+  local pr_found=0
+  while IFS= read -r pr_line; do
+    [ -n "$pr_line" ] || continue
+    pr_number=${pr_line%%|*}
+    pr_title=${pr_line#*|}
+    pr_item=$(printf '%s' "$pr_title" | grep -oE '^[0-9]+-[0-9]+' || true)
+    [ -n "$pr_item" ] || continue
+    pr_file=$(find docs/backlog -maxdepth 1 -name "$pr_item-*.md" | head -1)
+    [ -n "$pr_file" ] || continue
+    pr_open_n=$(grep -c '^- \[ \]' "$pr_file" || true)
+    pr_done_n=$(grep -c '^- \[x\]' "$pr_file" || true)
+    if [ "$pr_open_n" != "0" ] && [ "$pr_done_n" != "0" ]; then
+      echo "  ${pr_item}  (ago-root#${pr_number})  ${pr_done_n} ticked, ${pr_open_n} open"
+      pr_found=$((pr_found + 1))
+    fi
+  done <<< "$issues"
+
+  echo
+  echo "${pr_found} open item(s) with a partial Done-when."
+}
+
+if [ "$MODE" != "full" ]; then
+  if ! ready_issues=$(gh issue list --repo "$OWNER/ago-root" --state open --limit 100 \
+                  --json number,title --jq '.[]|"\(.number)|\(.title)"' 2>&1); then
+    echo "CANNOT AUDIT - could not read ago-root's open issues from GitHub:"
+    echo "  $ready_issues"
+    exit 1
+  fi
+  if [ "$MODE" = "ready" ]; then
+    compute_readiness "$ready_issues"
+  else
+    partial_report "$ready_issues"
+  fi
   exit 0
 fi
 
@@ -229,6 +486,47 @@ if [ -n "$closed" ]; then
     echo "         but $file still says Status: ready"
     flagged=$((flagged + 1))
   done
+fi
+
+# **A closed issue whose Done-when is not all settled.** `23-50`'s finding: everything above answers
+# "does an open issue's file look finished" - this asks the opposite, unasked question, "does a closed
+# issue's file actually say so". Three real defects were found by hand on 2026-09-06 because nothing
+# checked this: `22-09` (closed "done except step 5", the last five ticks never came back for),
+# `22-18` (closed with a box reading "not decided"), `17-11` (closed with "proven by an actual run"
+# still unticked, and still not true two days later).
+#
+# Settled means `[x]`, or `[~]` with its own sentence explaining what shipped instead - `23-50`'s own
+# third way to settle a box, "carried out to its own number", also ends as either `[x]` or `[~]` on
+# the box itself, so nothing extra is needed here to recognise it. `grep -c '^- \[ \]'` already counts
+# only the bare, unticked marker - a `[~]` line was never counted as open, so it needs no special
+# handling to count as settled.
+#
+# Deliberately `ago-root` only, same reasoning as the two closed-issue checks above: the item files
+# live here, and a mirror issue closing in a product repository says nothing about whether *this*
+# repository's Done-when boxes are settled.
+if [ -n "$closed" ]; then
+  while IFS= read -r dw_line; do
+    [ -n "$dw_line" ] || continue
+    dw_number=${dw_line%%|*}
+    dw_rest=${dw_line#*|}
+    dw_stateReason=${dw_rest%%|*}
+    dw_title=${dw_rest#*|}
+
+    dw_item=$(printf '%s' "$dw_title" | grep -oE '^[0-9]+-[0-9]+' || true)
+    [ -n "$dw_item" ] || continue
+
+    dw_file=$(find docs/backlog -maxdepth 1 -name "$dw_item-*.md" | head -1)
+    [ -n "$dw_file" ] || continue
+
+    dw_open_n=$(grep -c '^- \[ \]' "$dw_file" || true)
+    if [ "$dw_open_n" != "0" ]; then
+      dw_status=$(field_value "$dw_file" "Status" | cut -c1-72)
+      echo "UNSETTLED $dw_item  (ago-root#$dw_number, closed $dw_stateReason) has $dw_open_n unticked Done-when box(es)"
+      echo "         Status: $dw_status"
+      echo "         $dw_file"
+      flagged=$((flagged + 1))
+    fi
+  done <<< "$closed"
 fi
 
 # **One number, two items.** `NN-NN ·` is the only thing tying an issue to its backlog file, its

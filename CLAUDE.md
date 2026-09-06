@@ -172,6 +172,18 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
     - **Never leave a ticket half-done.** Either finish it, or rewrite it to what actually shipped
       and carry the remainder out. A ticket rewritten to its delivered scope is closed as done — it
       is not "partly failed", it is a smaller item that succeeded.
+    - **A ticket does not close while a Done-when box is unsettled.** Settled means one of three
+      things: ticked; `[~]` with a sentence saying what was delivered instead and why that is right;
+      or carried out to its own number, per the clause below. `tools/queue-audit.sh` flags a closed
+      issue with an unticked box left behind, and `--partial` lists open items with a partial
+      Done-when on request — added 2026-09-06 (`23-50`), after three items closed with exactly that
+      shape and nothing noticed: `22-09` (closed *done except step 5*, and the last five ticks were
+      never come back for once step 5 happened an hour later), `22-18` (closed with a box reading
+      *not decided*, which left the queue implying a decision existed), and `17-11` (closed with
+      *proven by an actual run* unticked, and still not true two days later).
+      **The boxes were load-bearing for one automated check and optional in practice**, which is the
+      worst of both: the check gave a reassurance it could not give, and the cost of the convention
+      was paid without the benefit. That is how `23-28` sat half-done for a day, invisible.
     - **Carrying a remainder out means a *new number*, not a link.** When work is split off, it gets
       a new item plus issue in `ago-root`. Leaving it under the finished item's number is the failure
       this clause exists for: by the `NN-NN ·` title convention that prefix asserts "this *is* item
