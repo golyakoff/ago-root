@@ -251,6 +251,60 @@ This is a one-time cluster-level flag (persists across every future `Certificate
 overlay's own) — do it once, right after installing cert-manager, before ever applying an overlay that
 uses the `gatewayHTTPRoute` solver.
 
+## 5b. The internal CA bootstrap **(not yet run for real — `22-24`/`adr/0137`)**
+
+One-time, and only once per root's whole lifetime (10 years, by the certificate's own stated
+duration) — not part of the ordinary redeploy loop. `adr/0137` has the full reasoning; this is the
+mechanical sequence.
+
+**Why this cannot be skipped or deferred to `.env`, unlike every other credential in this repository.**
+The certificate this key signs is trusted by a value **committed and built into the `ago-chat`
+image**, not read from a Secret at runtime — so the public half must exist, identical, in both
+repositories *before* that image is built, and the private half must exist before cert-manager can
+sign anything with it. Run in this order:
+
+```bash
+# 1. Generate the root, offline, on whichever machine will hold the private key (never the node -
+#    docs/architecture/secrets.md's own class for this key explains why there is no faster path if
+#    it is lost). EC P-256, 10-year validity - sized so this sequence is rare, not routine.
+openssl ecparam -name prime256v1 -genkey -noout -out internal-ca.key
+openssl req -x509 -new -key internal-ca.key -sha256 -days 3650 \
+  -subj "/CN=ago-internal-ca" \
+  -addext "basicConstraints=critical,CA:TRUE" \
+  -addext "keyUsage=critical,keyCertSign,cRLSign" \
+  -out internal-ca.crt
+
+# 2. The certificate is public - commit it, identically, in both repositories.
+cp internal-ca.crt ago-deploy/k8s/overlays/demo/internal-ca.crt
+cp internal-ca.crt ago-chat/internal-ca.crt
+#    Commit and push both. `ago-chat`'s copy needs a rebuilt, republished image before it does
+#    anything - the CA step is in its Dockerfile, not read at runtime - so get that build through CI
+#    and confirm the new tag is what k8s/overlays/demo/kustomization.yaml's `images:` block pins
+#    before continuing to step 4.
+
+# 3. The private key never leaves this machine and is never committed anywhere.
+cp internal-ca.key ago-deploy/k8s/overlays/demo/internal-ca.key   # gitignored - confirm with
+                                                                    # `git status` before going further
+
+# 4. Only once the ago-chat image from step 2 is live: apply the overlay so cert-manager reads the
+#    new Secret and issues the one leaf adr/0137 scopes to.
+kubectl apply -k k8s/overlays/demo
+kubectl get certificate ago-calendar-api-internal-tls -n ago-chat -w
+```
+
+**Verify the pods actually trust it before calling this done** — a certificate nothing trusts fails
+closed, which is safe but is still a way for the module channel to go down that a render cannot catch.
+There is no in-pod probe for this: `ago-chat-worker`'s image is Chiseled and has no shell, the same
+limitation `22-18`'s own smoke check ran into. Confirm instead from outside the pod, once a real
+tenant's module row is provisioned with `https://ago-calendar-api` as its entry point: a real module
+call succeeds (`smoke.sh`, or the console's own module flow), and `ago-chat-worker`'s logs show no
+`ModuleUnreachableException` at that moment.
+
+`adr/0137`'s own report has the offline demonstration that the mechanism works (a real `ago-chat`
+image build, inspected directly, trusting a leaf this same CA shape signed) — this step is what turns
+that demonstration into the live deployment's actual root, which is a different claim and one this
+runbook cannot make on the author's behalf.
+
 ## 6. Get source and build images on the VPS **(session) — done 2026-08-24**
 
 > **Amended 2026-08-25 by `15-06`/`adr/0047`.** The three `Ago.Chat.*` hosts no longer have to be

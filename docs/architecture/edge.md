@@ -181,6 +181,29 @@ protection.
 This does not change what the edge is responsible for. It changes what a mistake at the edge costs: a
 compromised static-file pod is now a compromised static-file pod, rather than a database client.
 
+## Whether traffic behind the edge is itself encrypted
+
+`22-18` took the chat -> calendar module channel off the public internet and, in doing so, named a
+question it correctly did not answer: is the traffic on that now-internal hop readable in transit.
+`22-24` carried that question forward with three readings and no decision; **the author has chosen
+reading B — TLS between services, certificates issued in-cluster** (`adr/0137`).
+
+This is a **narrower** decision than the NetworkPolicies above, and the two must not be read as one
+mechanism: a NetworkPolicy answers *who may open a connection*, this answers *whether the bytes on a
+connection that is allowed are readable*. Scoped to exactly the hop `22-18` named - chat's calls to
+`ago-calendar-api`'s module endpoints (`Ago.Chat.Api`'s registration/provisioning calls,
+`Ago.Chat.Worker`'s task channel) - on a second Kestrel endpoint (config-driven, no code change) and a
+private root CA generated offline, since the caller that must trust it is a container image CI builds
+before any cluster or cert-manager `Certificate` exists (`adr/0137`'s own Consequences explains why
+that rules out cert-manager's usual in-cluster self-signed pattern). Postgres, Redis, RabbitMQ, MinIO
+and Keycloak are left on plain in-cluster HTTP/TCP, by explicit decision, not by omission - doing
+every hop at once was rejected as exactly how a change like this becomes unlandable.
+
+`adr/0137` has the full mechanism, what it costs (a root CA with no automated expiry alert - a named,
+accepted gap, mitigated only by a ten-year duration - versus the leaf certificate, which the existing
+`TlsCertificateRenewalOverdue` Prometheus rule already covers with no changes to the rule itself,
+`adr/0045`), and what was demonstrated rather than merely argued.
+
 ## What the edge must **not** be responsible for
 
 Auth decisions, CORS logic that depends on a site's `allowed_origins` (that is a database lookup,

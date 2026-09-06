@@ -87,8 +87,19 @@ tracked `.env` anywhere.
 | `KEYCLOAK_SMTP_PASSWORD` | Nothing. Present and **deliberately empty** | — | — | — |
 | ~~`CHATMODULE_SHARED_SECRET`~~ | **Never existed as a deployed value, and no longer exists as a concept** (`22-04`, same day it was recorded). `adr/0094` introduced one secret per module deployment; `22-04` replaced it with a per-site row in each module product's own database before it was ever put in an environment. Kept as a struck-through line rather than deleted, because a reader who finds `adr/0094`'s Consequences will come looking for it | — | — | — — there is nothing to rotate here; rotating a *site's* credential is `22-11`, which now exists — see the row below |
 | `ModuleProvisioning:Secret` | **One independent value per module deployment.** The bootstrap credential that authenticates `22-11`'s provisioning routes — the calls that create, rotate and delete a *site's* module credential. A holder can register, rotate or delete the registration for **any** site that deployment serves: strictly more powerful than `adr/0094`'s per-call credential, which only forges one call. Accepted because a bootstrap anchor cannot be scoped to the per-site row it exists to create (`adr/0095`) | The module deployment's own environment. **Never on chat's side** — chat does not persist it; a human supplies it per provisioning call | `Ago.Calendar.Api`, `Ago.Faq.Api`, and whoever performs a provisioning call | Restart |
+| The internal CA private key (`22-24`/`adr/0137`) | Signs the leaf certificate `ago-calendar-api-internal-tls` presents on the chat->calendar module hop's TLS listener. Generated offline, once, by whoever deploys — never by cert-manager, and never committed. Supplied as `k8s/overlays/demo/internal-ca.key` (gitignored), fed to a dedicated `kubernetes.io/tls` `secretGenerator` entry with `disableNameSuffixHash: true` | `.env`-adjacent file on the deploying machine → Secret `ago-internal-ca`. **Its public half (`internal-ca.crt`) is committed in both `ago-deploy` and `ago-chat`** — a certificate is not a secret, and `ago-chat`'s own `Dockerfile` bakes that file into the image's trust store | cert-manager's `ago-internal-ca-issuer` `Issuer` (signs); every `Ago.Chat.Api`/`Ago.Chat.Worker` image (trusts, via the OS root store — no code, no environment variable) | **Coordinated, heavier than every other row in this class** — see below |
 
 Notes that change what a reader would otherwise assume:
+
+- **The internal CA's key is the one row in this table whose rotation reaches outside the cluster
+  entirely.** Every other `Coordinated` row here is two or more *deployment-side* places changing
+  together. This one is not: the public half is committed source in **two repositories**, and one of
+  them (`ago-chat`) only takes effect once its image is rebuilt and republished — so "rotate the
+  credential" is, for this one row, "cut a change, get it through CI, redeploy" before the Secret edit
+  even matters. Until that image ships, `ago-calendar-api`'s new leaf (signed by whatever key
+  `ago-internal-ca` now holds) is presented to a chat pod still trusting the old root, and the module
+  channel fails closed (`ModuleUnreachableException`) rather than silently. There is no faster path,
+  and `adr/0137` sized the root's own validity (10 years) specifically so this sequence is rare.
 
 - **`KEYCLOAK_ADMIN_PASSWORD` stopped being a deployment setting at `15-01`/`adr/0036`.** Keycloak now
   has a database that remembers the admin account, so this value is first-boot-only: editing it and
@@ -196,6 +207,7 @@ that should not exist.
 | The public TLS private key | Secret `ago-public-tls`, created by cert-manager | Automatic, ~30 days before expiry. `TlsCertificateRenewalOverdue` (`adr/0045`) is what says it stopped |
 | The Let's Encrypt ACME account key | Secret `letsencrypt-prod-account-key` | Never, by design; cert-manager recreates it if lost |
 | Keycloak's realm signing keys | Inside the `keycloak` database (`adr/0036`) | Keycloak's own key rotation. Consequently they are inside every backup — which is why `adr/0050` backs that database up |
+| The chat->calendar module hop's leaf TLS private key | Secret `ago-calendar-api-internal-tls`, created by cert-manager under the `ago-internal-ca-issuer` `Issuer` | Automatic, every 90 days, re-signed by the same root key each time — the same `TlsCertificateRenewalOverdue` rule covers it with **no changes to the rule**, since its `expr` carries no per-certificate matcher (`adr/0137`) |
 
 ## E. Credentials held outside every repository and outside the cluster
 
