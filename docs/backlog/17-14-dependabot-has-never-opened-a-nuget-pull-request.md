@@ -30,16 +30,34 @@ be told apart from a broken one from the outside — and **the ecosystem that is
 requests is the one carrying the actual dependency risk.** GitHub Actions bumps are the cheap half of
 what `17-11` was for; .NET packages are the expensive half, and they are the silent one.
 
-## The most likely cause, to start from rather than to assume
+## The cause, established 2026-09-06 — and this section replaces a guess
 
-`ago-chat`'s NuGet block names a private registry (`ago-platform-github`, GitHub Packages, `adr/0018`)
-and Dependabot needs a credential for it. A registry it cannot authenticate against is the ordinary
-way this ecosystem fails **silently**: the update job errors on its own, no pull request appears, and
-nothing in the repository's normal view says so.
+**What this section said when the item was filed was wrong**, and it is left corrected rather than
+quietly rewritten, because a confidently-wrong written-down cause is the thing this project keeps
+catching. It guessed a missing registry credential. The evidence points elsewhere, and part of it
+points against that guess.
 
-**Look at the Dependabot job log before changing anything.** GitHub keeps the last run's outcome under
-Insights → Dependency graph → Dependabot; an errored job says which registry and why. Fixing a guess
-would be the second mistake.
+**The job was running, and failing, and reporting success.** `17-11`'s own fix addressed exactly what
+Dependabot's update-job log named: the checked-in `nuget.config` pointed at a **Windows path that does
+not exist on Dependabot's Linux runner**, so the `nuget` ecosystem failed `NU1301` on every run,
+reported success anyway, and proposed nothing. Nobody could tell — the `github-actions` ecosystem kept
+opening ordinary pull requests on the same schedule and made the whole mechanism look alive.
+
+**And no scheduled run has happened since that fix.** `dependabot.yml` runs the `nuget` ecosystem
+**weekly, Monday 06:00 UTC**. `17-11` merged **Thursday 2026-09-03 21:58 UTC**. The only Monday since
+is **2026-09-07**, which has not arrived. So *"no NuGet pull request exists"* is, as of filing, exactly
+what a correctly-fixed configuration would also look like.
+
+**Against the credential guess:** the Dependabot secret exists in both repositories, and its Actions
+twin — the same PAT against the same feed — restored successfully in CI on 2026-09-06. That is not
+proof the Dependabot copy is valid, since they are separate secrets, but it is evidence in the other
+direction from what this section originally asserted.
+
+**`17-11` was not closed carelessly, and the audit that carried this out said so too harshly.** Its
+first Done-when was **deliberately** unticked with a written reason: it needs a live Dependabot run on
+GitHub, which is the author's, and no amount of local verification can stand in for it. Carrying the
+open thing out to its own number was still right — the queue should hold it under a number rather than
+inside a closed item — but the record should say the box was left open on purpose, not overlooked.
 
 ## Scope
 
