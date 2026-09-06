@@ -190,7 +190,7 @@ The statute's own vocabulary is a list of operations. Mapped to mechanisms that 
 | Retrieval, use | Yes | The read stores (`adr/0004`, Dapper), the console, the analytics reports |
 | Transfer / provision / access | Yes | Webhooks to the tenant's own endpoint (body-free by contract); the six channel providers; the LLM vendor if configured. See the table under Element 5 |
 | Depersonalisation | **No mechanism.** | Nothing anonymises. The one place a value is hashed is a Redis rate-limit key (`20-03`/`20-10`), and `personal-data.md` says explicitly that this is pseudonymisation, not anonymisation, because the input space is enumerable |
-| Blocking | **No mechanism.** | See the gap below |
+| Blocking | Yes | `conversations.blocked_at`/`blocked_by`, reversible, gated on `Permission.ConversationBlock`; every act and its reversal recorded separately in `conversation_block_records`, never one row updated. `ConversationBlockRepository.cs`; `BlockConversationHandler`/`UnblockConversationHandler` (`24-10`, `adr/0124`) |
 | Deletion, destruction | Yes, partly | See the deletion table below |
 
 **Deletion, in detail** — the jobs that actually run, all in `Ago.Chat.Worker`, all registered in its
@@ -227,11 +227,28 @@ for an instruction:
   remarks call the leak "accepted, not solved"). Not in the backup set, deliberately (`adr/0050`), so
   it does not propagate — but it is a place message text lives that nothing removes.
 
-**Blocking is the operation with no mechanism at all.** A controller instructed to *suspend*
-processing of one person's data — stop using it, without destroying it — has nothing to invoke.
-`conversations.erasure_requested_at` (`Stage16AddErasureRequestedAt`) queues a deletion; there is no
-state between "processed normally" and "gone". Naming it matters because an instruction that lists
-the operations will list this one. → **Gap `24-10`.**
+**Blocking exists since `24-10` (2026-09-06), and what it means is worth stating precisely.** A
+controller instructed to *suspend* processing of one person's data — stop using it, without destroying
+it — invokes `blocked_at`/`blocked_by`, which is a different thing from
+`conversations.erasure_requested_at` (`Stage16AddErasureRequestedAt`): that one queues a deletion and
+is terminal, this one holds indefinitely and is reversible. A conversation can be both at once.
+
+A blocked conversation is **unreachable from every operator-facing read** — the conversation list, the
+detail fetch, message history, `18-07`'s cross-conversation visitor history, full-text search, the
+operator queue, four separate analytics and reporting read stores, and the tenant export — **not routed**
+by the automatic assignment engine, and **not answered** by the offline auto-reply.
+
+**An inbound message from a blocked visitor is still accepted and stored** (`adr/0124`). The visitor is
+never told they are blocked: refusing silently loses a real message to a real business with no trace,
+and refusing visibly would make AGO's widget state something about a visitor's own data status that the
+*tenant* is the party who must decide whether and how to say. Storage-without-processing is also the
+shape blocking has in the statutory list it comes from — storage is the operation blocking permits.
+
+**What is not frozen, stated rather than left to be discovered.** Write paths beyond auto-reply and
+auto-assignment — closing, assigning, transferring, setting an outcome, adding a note, and the realtime
+push to an operator's already-open tab — are untouched. In practice a blocked conversation cannot be
+*found* through any discovery path, so this bites only where an operator already held the id. It is a
+residual of scoping the work to the reads, not a guarantee this mechanism makes about writes.
 
 ## Element 3 — the purposes of processing
 
@@ -390,7 +407,7 @@ the question it was asked, and a different question was never asked of it.
 | `24-07` | the node's location is a label, not evidence | `adr/0026` recorded a purchase; nothing was ever asked to *verify* a location, because until `16-01` residency was "a happy accident" and afterwards it was cited for orientation |
 | `24-08` | the register says nothing about what leaves the deployment | `personal-data.md` was written 2026-08-25/26 and inventories *stores*; the six channel adapters and both AI features shipped afterwards, and its residency table still lists channel vendors as an unanswered question |
 | `24-09` | ~~an erasure request cannot reach an archived message~~ — **closed** | `16-02` shipped before `13-06` and said so in its own remarks; the archive arrived and nothing closed the seam until this item did (`docs/adr/0108-*`) |
-| `24-10` | a controller can erase, and cannot block | Erasure was scoped; blocking was never asked for, because the product question ("delete my data") and the statutory operation list are not the same list |
+| ~~`24-10`~~ **closed 2026-09-06** | ~~a controller can erase, and cannot block~~ | Erasure was scoped; blocking was never asked for, because the product question ("delete my data") and the statutory operation list are not the same list. Closed by `24-10`/`adr/0124`; the residual it did *not* close — write paths beyond auto-reply and auto-assignment — is named in Element 2 rather than left implied |
 | ~~`24-11`~~ | one person's data, exported | `16-03` was scoped as *tenant* portability. Subject access is a different granularity and nobody noticed the two were both needed. **Closed 2026-09-05** (`adr/0109`) |
 | `24-12` | nothing records who read a person's data | Every control built is preventive by design and each was correct for its own item; evidential logging was never any item's goal |
 | `24-13` | an erasure leaves no record that it happened | `16-02` deliberately rejected a deletion *journal* (it would be a list of people who asked to be forgotten) and never separated that from a per-erasure receipt, which is a different artifact |
