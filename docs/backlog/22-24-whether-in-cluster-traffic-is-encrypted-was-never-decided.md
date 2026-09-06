@@ -1,7 +1,7 @@
 # whether in-cluster traffic is encrypted was never decided, and something is waiting on the answer
 
 - **Stage**: 22
-- **Status**: ready — **and it is a question before it is work**
+- **Status**: ready. **Answered by the author, 2026-09-06: TLS between services.** Reading B, not A.
 - **Depends on**: nothing. Carried out of `22-18`, which named it and correctly refused to answer it.
 - **Decision**: none taken. The readings are below and the choice is the author's.
 
@@ -62,3 +62,16 @@ right answer all along.
 
 - The provisioning secret itself and its rotation (`secrets.md`, `docs/runbooks/secret-rotation.md`).
 - Public-edge TLS, which is settled and working.
+
+## The answer (author, 2026-09-06)
+
+**Reading B: TLS between services, with certificates issued in-cluster.** cert-manager already runs
+here for the public certificate, so the machinery exists.
+
+**The cost this buys is named in the reading and does not go away by being chosen**: certificate
+lifecycle for internal names, one more thing that expires, and a failure mode where an expiry takes
+down a path no user-facing check watches. So the expiry story is not a nice-to-have in the
+implementation - it is the half that makes this choice safe rather than worse than plain HTTP.
+
+Reading A - plain HTTP written down as a decision - is now closed, and `architecture/edge.md` should
+say what was chosen rather than leaving the next reader to infer it from a manifest.

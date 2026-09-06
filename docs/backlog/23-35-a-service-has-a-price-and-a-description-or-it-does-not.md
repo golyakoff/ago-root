@@ -1,7 +1,8 @@
 # a service has a price and a description — or it deliberately does not
 
 - **Stage**: 23
-- **Status**: ready — **and it is a question before it is work**
+- **Status**: ready. **Answered by the author, 2026-09-06: a service has a price and a description.**
+  It is work now, not a question.
 - **Depends on**: `23-31` moves the service dictionary onto its own screen
 - **Decision**: **open.** The author raised it 2026-09-06; the commercial half is not decided
 
@@ -62,3 +63,12 @@ must maintain; internal it is a note.
 
 - **Who is the price a promise to?** That single question decides everything above, and it is
   commercial rather than technical.
+
+## The answer (author, 2026-09-06)
+
+**A service has a price and a description.** Both, on the service itself, in the dictionary `23-31`
+moved onto its own screen.
+
+What still has to be decided *while building it*, and belongs in the change rather than back here:
+what a price means when a service's real cost depends on the master or the duration, and whether a
+visitor sees it before booking. Neither changes the answer above; both change the screen.

@@ -1,7 +1,8 @@
 # the board that `roadmap.md` calls the only queue holds nothing that is open
 
 - **Stage**: 23
-- **Status**: ready — **and it is a question before it is work**
+- **Status**: ready. **Answered by the author, 2026-09-06, and with a third shape neither reading
+  offered: the queue is not kept anywhere — it is computed.**
 - **Depends on**: nothing
 - **Decision**: none taken. Two readings, below, and the choice is the author's.
 
@@ -60,3 +61,39 @@ sentence has to change. A rule with no check is what produced this item.
 ## Out of scope
 
 - Re-ordering the queue itself. This is about where the order lives, not what it is.
+
+## The answer (author, 2026-09-06)
+
+Neither reading. **"Очередь сейчас каждый раз должна просто «считаться» — её нет заранее, она
+строится из issue, доступных к разработке."**
+
+That is a better answer than either option this item offered, and it is worth saying why rather than
+just recording it. Both readings assumed the queue is a *list somebody maintains* and argued about
+**where** it is kept. The failure they were each trying to avoid - a second list going stale - is
+avoided completely by not having a list at all.
+
+**So there is no ordered queue to keep honest. There is a question with an answer that changes as
+work lands:** which open items are ready to be started right now.
+
+## What follows from it
+
+- **The board stops being the queue**, and `roadmap.md`'s sentence - *status and order live there and
+  only there* - is simply false and has to go. What replaces it is not a pointer to another place; it
+  is a statement that the queue is derived.
+- **Something has to compute it**, or the answer lives only in whoever last read the issues.
+  `tools/queue-audit.sh` already reads every open issue and every backlog file - readiness is one more
+  question asked of what it already has: is the item's `Status` ready, and is everything it depends on
+  closed.
+- **`Depends on` becomes load-bearing.** It is prose today, and a computed queue can only read it if
+  it names item numbers in a form a script can find. That is the one real cost of this answer, and it
+  should be paid deliberately rather than discovered.
+- **The board can stay** as a place to look at what is in flight. It just stops being asserted as the
+  source of order.
+
+## Done when (replacing the ones above)
+
+- [ ] `roadmap.md` says the queue is computed from open issues, and points at what computes it.
+- [ ] A command answers *what is ready to start now* from the issues and the backlog files.
+- [ ] `Depends on` is machine-readable enough for that command to be right, and where it is not, the
+      item says so rather than the command guessing.
+- [ ] Nothing claims an ordered list lives anywhere.

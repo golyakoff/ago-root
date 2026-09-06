@@ -1,7 +1,9 @@
 # the Done-when boxes are load-bearing for one check and optional in practice
 
 - **Stage**: 23
-- **Status**: ready — **and it is a question before it is work**
+- **Status**: ready. **Answered by the author, 2026-09-06: reading A, plus a periodic review** — the
+  boxes are the record, closing requires them settled, and partially-done items get looked at on
+  purpose rather than by accident.
 - **Depends on**: nothing
 - **Decision**: none taken. Two readings below; the choice is the author's.
 
@@ -69,3 +71,41 @@ more rule about how `Status` is phrased, which is itself unenforced prose.
 ## Out of scope
 
 - The three real cases. They are already handled: `22-09` closed, `22-18` → `22-24`, `17-11` → `17-14`.
+
+## The answer (author, 2026-09-06)
+
+**Reading A, with the half this item did not think of.** The author's own words: the boxes exist so
+somebody can come and see *how far a ticket got and what is left* - which is exactly what they are
+for, and exactly what they had stopped being.
+
+So: **a ticket does not close while a box is unsettled.** Settled means one of three things, and the
+third is the one that was missing in practice:
+
+1. ticked;
+2. `[~]` with a sentence saying what was delivered instead and why that is right;
+3. **carried out to its own number** - which is rule 14's existing requirement, and which is what
+   `22-18` and `17-11` both needed and neither got.
+
+**And the review is deliberate rather than occasional.** *"Дай тикеты с частичным Done-when"* should
+be a command, not a favour - otherwise it happens when somebody remembers, which is the failure mode
+this whole item is about.
+
+## What follows from it
+
+- `queue-audit.sh` flags a **closed** issue whose Done-when are not all settled. Today it only looks
+  at the opposite shape. All three real defects found on 2026-09-06 - `22-09`, `22-18`, `17-11` - are
+  exactly this, and none was caught by anything.
+- It gains a **partial report**: every open item with some boxes ticked and some not, so the author's
+  periodic sweep is one command.
+- The rule goes where a person looks **before closing** - `CLAUDE.md` rule 14 already owns closing, so
+  it belongs there rather than in a convention nobody reads at that moment.
+- The eighteen already-closed harmless ones are tidied or explicitly left, on the record.
+
+## Done when (replacing the ones above)
+
+- [ ] `CLAUDE.md` rule 14 says a ticket closes only with every Done-when settled, and names the three
+      ways to settle one.
+- [ ] `queue-audit.sh` flags a closed item with unsettled boxes, shown flagging one and staying quiet
+      on a properly closed one.
+- [ ] `queue-audit.sh` can list partially-done open items on request.
+- [ ] The eighteen existing ones are settled or explicitly left, on the record.
