@@ -1,7 +1,10 @@
 # Dependabot has never opened a NuGet pull request, in either product repository
 
 - **Stage**: 17
-- **Status**: ready
+- **Status**: **open, waiting on a scheduled run** (2026-09-06). The cause is established, the
+  watchdog shipped in both product repositories, and the runbook carries the row. The first two
+  Done-when need a live Dependabot run - the next weekly window is 2026-09-07 06:00 UTC - and
+  neither code nor argument can stand in for it. See *What is waiting*.
 - **Depends on**: nothing. Carried out of `17-11`, which shipped the configuration and could not prove
   it works.
 - **Decision**: none needed. This is a mechanism that does not run.
@@ -72,9 +75,33 @@ inside a closed item — but the record should say the box was left open on purp
 - [ ] The reason no NuGet pull request has appeared is known and written down, from the job log.
 - [ ] A NuGet pull request exists in both product repositories, or the job log shows nothing to
       update and that is recorded as the answer rather than assumed as one.
-- [ ] A silently failing update job is visible somewhere a person will actually look.
+- [x] A silently failing update job is visible somewhere a person will actually look -
+      `dependabot-nuget-watchdog.yml` in both product repositories, plus the detection row in
+      `runbooks/vulnerability-response.md` that this taxonomy was missing.
 
 ## Out of scope
 
 - `ago-platform`'s own Dependabot, which restores from public sources and has never had this problem.
 - Acting on whatever the first NuGet PR proposes. That is ordinary work.
+
+## What is waiting, and a mistake worth recording
+
+**This item was closed and reopened within a minute on 2026-09-06, by the session that closed it.**
+Closing was wrong, and it is precisely the shape `23-50` was filed about an hour earlier: an item
+whose remaining Done-when need something only the author can do, closed because the part that could
+be built had been built.
+
+What shipped is real - the cause established from the record rather than guessed, the watchdog in
+both repositories, the runbook row. **It is not this item's promise.** The promise is that a NuGet
+pull request appears, or that the job log names why one does not, and neither has happened.
+
+**Two ways to finish it, both the author's:**
+
+1. **Wait.** The next scheduled `nuget` run is **2026-09-07 06:00 UTC**. Then look at
+   *Insights - Dependency graph - Dependabot* in either product repository. A pull request closes the
+   first two boxes; no pull request, and that page's job log names the real error - which no API
+   endpoint reaches, checked across REST and GraphQL.
+2. **Do not wait.** That same page has a manual *Check for updates* per ecosystem, which runs the job
+   immediately. It is tied to a GitHub session and cannot be invoked from here.
+
+Either way the watchdog is now the standing check, so this stops depending on anybody remembering.
