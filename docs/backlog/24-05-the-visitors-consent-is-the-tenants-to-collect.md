@@ -1,7 +1,7 @@
 # the visitor's consent attaches to handing over contact details, not to opening the chat
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done (2026-09-06)
 - **Depends on**: `24-01` (the record), `24-02` (the version). `16-04` shipped the notice this builds
   on; `23-09`/`23-10` are the acts this consent actually attaches to.
 - **Decision**: `docs/adr/0076-*` — AGO is **processor** on the tenant's instruction for visitors'
@@ -109,16 +109,55 @@ literal it hard-codes.
 
 ## Done when
 
-- [ ] A site can require a recorded consent before contact details are accepted; the default is
+- [x] A site can require a recorded consent before contact details are accepted; the default is
       unchanged behaviour.
-- [ ] Consent gates the contact details and **not** the conversation — asserted by a test, because this
+- [x] Consent gates the contact details and **not** the conversation — asserted by a test, because this
       is the half that would quietly become a gate on the product.
-- [ ] Anything beyond the contact is a separate, independently refusable control.
-- [ ] Where required, the acceptance is recorded with the tenant's document version.
-- [ ] `personal-data.md` records the store and its erasure path.
+- [x] Anything beyond the contact is a separate, independently refusable control.
+- [x] Where required, the acceptance is recorded with the tenant's document version.
+- [x] `personal-data.md` records the store and its erasure path.
 
 ## Open questions
 
 - **Does AGO offer a template text?** See above. It changes `16-04`'s recorded stance and should
   supersede it rather than bend it.
 - **The channel case is genuinely unsolved**, and naming it here is not solving it.
+
+## Outcome (2026-09-06)
+
+`ago-chat` `#202`, `ago-widget` `#57`, `adr/0127`.
+
+**No new store, and finding that out was most of the item.** `acceptance_records` (`24-01`) already
+carried `Visitor` as a subject kind; this is its first real writer and its first real reader. The
+tenant's own consent text rides `24-02`'s document mechanism through a second, permission-gated entry
+point rather than a parallel store, and the read side needed no change at all.
+
+**`personal-data.md` needed no new row, which is worth stating because the opposite is the natural
+assumption.** The `acceptance_records` row already documents `Visitor`-kind rows generically, erasure
+exception included. The new boolean flag and the tenant's consent document are *configuration*, not
+personal data — the same reasoning that already left `16-04`'s notice text and `24-02`'s documents
+without rows of their own.
+
+**Two decisions the item did not name.** Gating **both** write paths rather than only the visitor's
+form — an operator promoting a number from the transcript stores the same class of data, and `23-09`'s
+own argument for why a visitor-typed number is what it is does not care who structured it. And
+accepting **any past** version rather than the current one, because `adr/0114` deliberately left the
+version question open and a strict check would silently re-demand consent every time a lawyer fixed a
+comma.
+
+**Checked against the statute after the fact, and the result is worth keeping honest.** Three rules in
+force since 1 September 2025 apply. Two of them this build already satisfies — no pre-ticked boxes,
+purposes not combined — by accident of reasoning from the product question rather than from knowledge
+of the rule. The third, whether a tick against a versioned document is *«отдельный документ»*, this
+design **does not answer**, and it is filed as `25-02`'s D7 rather than assumed either way.
+
+**A pre-existing staleness found and deliberately not fixed here.** `tenant-isolation.md` lists nine
+visitor paths and does not include `RecordVisitorContactDetailHandler.HandleAsVisitorAsync` from
+`23-09`, nor any of `24-01`/`24-02`/`24-03`'s exemptions. Adding only this item's two entries would
+have left the document looking more current than it is. `24-17` is where that file stops being
+hand-maintained.
+
+**What is not built.** No console screen for the per-site toggle or for the tenant's own publish flow —
+a tenant needs the raw API today. And the open question the item was filed with is still open: whether
+AGO should offer a default consent template at all. `16-04`'s boundary says no; a competitor does; that
+is the author's call and not this item's.
