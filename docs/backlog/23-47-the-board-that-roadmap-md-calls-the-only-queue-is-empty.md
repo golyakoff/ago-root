@@ -54,9 +54,13 @@ sentence has to change. A rule with no check is what produced this item.
 
 ## Done when
 
-- [ ] The author has chosen, and the choice is recorded.
-- [ ] `roadmap.md` says what is true of the queue on the day it is read.
-- [ ] Whichever place holds the order, something mechanical notices when an item is missing from it.
+- [x] The author has chosen, and the choice is recorded — and the answer was neither reading offered.
+- [x] `roadmap.md` says what is true of the queue on the day it is read.
+- [~] Whichever place holds the order, something mechanical notices when an item is missing from it.
+      **Overtaken rather than unmet.** This box assumed some place holds the order; the author's answer
+      is that none does. So there is nothing for an item to be missing *from*, and the mechanical check
+      it asked for became `--ready`, which computes the answer instead of guarding a list. The
+      Outcome's own boxes below record what actually shipped.
 
 ## Out of scope
 

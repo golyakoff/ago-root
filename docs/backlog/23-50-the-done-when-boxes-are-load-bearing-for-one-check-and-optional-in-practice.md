@@ -63,12 +63,14 @@ more rule about how `Status` is phrased, which is itself unenforced prose.
 
 ## Done when
 
-- [ ] The author has chosen, and the choice is recorded in `CLAUDE.md` or the git-workflow convention
-      — wherever a person actually looks before closing an item.
-- [ ] `queue-audit.sh` implements that choice, whatever it is, and is shown flagging a case it should
+- [x] The author has chosen, and the choice is recorded in `CLAUDE.md` or the git-workflow convention
+      — wherever a person actually looks before closing an item. Reading A, in rule 14.
+- [x] `queue-audit.sh` implements that choice, whatever it is, and is shown flagging a case it should
       flag and staying quiet on one it should not.
-- [ ] The eighteen harmless items are either tidied or explicitly left, on the record, rather than
-      remaining ambiguous.
+- [~] The eighteen harmless items are either tidied or explicitly left, on the record, rather than
+      remaining ambiguous. **Six settled the same evening; the other twelve carried out to `23-55`,**
+      because each needs reading against what its item shipped rather than a pass that ticks on the
+      strength of a `Status` line — which is the reassurance this item exists to remove.
 
 ## Out of scope
 
