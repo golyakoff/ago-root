@@ -103,7 +103,10 @@ chat history render of 20 images is one round trip's worth of signing, not 20.
 
 ## Validation and safety
 
-- Size ceiling per file and per conversation, enforced at presign time and re-verified after upload.
+- Size ceiling per file, enforced at presign time and re-verified after upload. **Per *conversation*
+  there is no ceiling at all** - this line said there was one from the day it was written, and
+  `CreateAttachmentHandler` compares one declared size against one constant and sums nothing.
+  `23-75` builds it; corrected here on 2026-09-07 rather than left reading as shipped.
   **Two layers since `5-13`, and they answer different questions.** The ceiling itself is the
   application's (`CreateAttachmentHandler` vs `AttachmentOptions.MaxSizeBytes`) — storage cannot know a
   product's quota. What storage now enforces is that the upload is *the size it declared*: the declared
