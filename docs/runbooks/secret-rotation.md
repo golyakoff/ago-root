@@ -302,6 +302,36 @@ going back to Telegram or MAX for a token, which is not a thing to ask for becau
 on a schedule. The real fix is the same two-key, decrypt-with-either shape `secrets.md`'s open finding
 describes for the webhook key; neither exists yet, and one item would build both.
 
+## The module-provisioning secret — `ModuleProvisioning:Secret`
+
+**Class: restart, on both sides that hold it** (`secrets.md`). `23-65`/`adr/0150` added a second
+holder of this value: `Ago.Chat.Api` now keeps its own copy in configuration, alongside the copy each
+module deployment (`Ago.Calendar.Api`, `Ago.Faq.Api`) already held, so the platform owner's `/owner`
+grant/revoke screen can call the owner routes without a browser ever seeing the secret.
+
+**Rotating it means changing it in both places, in either order — this is not the module-first,
+chat-second ordering `adr/0095`'s own registration mechanism uses for a *site's* credential.** Nothing
+here signs an ongoing call with this value the way a channel credential or a JWT does; it only
+authenticates the one HTTP request a grant or revoke makes at the moment it is made. So there is no
+overlap window to protect and no in-flight call to worry about — change chat's own copy and the target
+module deployment's copy, in whichever order is convenient, and roll both. Until both agree, a
+grant/revoke attempt against the deployment whose value has not yet been updated is refused with
+`Module.RegistrationFailed` (the module answers `401`) — a clear, safe failure, not a silent one.
+
+**What breaks during it:** nothing already running. `IModuleProvisioningSecretProvider` reads the
+configured value fresh on every call (`Ago.Chat.Infrastructure.Modules.ConfiguredModuleProvisioningSecretProvider`'s
+own remarks), so there is nothing cached to go stale and no host to restart on chat's side beyond the
+ordinary rollout that changing any `Restart`-class value already needs. A grant or revoke attempted
+mid-rotation, against whichever deployment has not yet been updated, fails cleanly and can be retried
+once both sides agree — never a corrupted row, since both routes call the module before writing their
+own row (`22-11`'s own ordering, unchanged by this item).
+
+**Not yet wired into `ago-deploy`'s `infra-credentials` generation on chat's side** — `secrets.md`'s own
+note on this row. Until it is, an absent value on chat's side is not a rotation in progress, it is the
+ordinary unconfigured state: both owner routes refuse with `503` (`Module.ProvisioningNotConfigured`)
+rather than failing the host to boot, and `module-grant-and-revoke.md`'s own fallback procedure is the
+path until a deployment supplies it.
+
 ## The webhook secret-encryption key — `Webhooks:SecretEncryptionKey`
 
 **Class: breaking, and there is no non-breaking version of it today.** See the open finding in
