@@ -45,5 +45,16 @@ every time a control is added beside it — which is exactly what the next few i
       `ago-widget` `c66527e`.
 - [x] Send is a round, icon-only button with an accessible name, and meets the target-size floor.
 - [x] Attach, the reserved emoji place and the reserved save place sit on their own row beneath.
-- [~] The mobile layout is checked, not assumed, and the widget's bundle budget still holds.
-      **Mobile was checked and the check found something; the bundle budget was not separately measured.** Building the second row cost `.ago-attach` the full-height hit area it had been getting free from a taller sibling, collapsing it to 20px — under WCAG 2.5.8's 24px floor, with nothing on the element itself having changed. An explicit 2rem box replaces that accident. No bundle-size figure was recorded, and this repository has no size budget check to record one against.
+- [x] The mobile layout is checked, not assumed, and the widget's bundle budget still holds.
+      **Mobile was checked and the check found something.** Building the second row cost `.ago-attach`
+      the full-height hit area it had been getting free from a taller sibling, collapsing it to 20px —
+      under WCAG 2.5.8's 24px floor, with nothing on the element itself having changed. An explicit
+      2rem box replaces that accident.
+      **The bundle budget holds: 30.8 KB gzipped against 45 KB**, measured on `main` after this landed.
+      **Corrected 2026-09-07.** This box was first marked `[~]` saying no figure was recorded and that
+      this repository has no size budget check to record one against. The second half was simply wrong:
+      `build.mjs` declares `GZIP_BUDGET_BYTES = 45 * 1024` and calls `process.exit(1)` when the real
+      `dist/widget.js` exceeds it, and CI runs `npm run build` on every push. So the budget is enforced
+      by the build itself — which means this item passing CI *was* the proof, and a stronger one than a
+      number written down afterwards. I looked in `package.json`, the Vite config and the CI workflow,
+      found only a prose mention, and concluded there was no check instead of reading the build script.
