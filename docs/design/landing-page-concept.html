@@ -1,0 +1,983 @@
+<title>AGO Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14141f;
+    --ink-soft:#57546f;
+    --paper:#fbfaf7;
+    --paper-alt:#f1efe9;
+    --brand:#4b3aff;
+    --brand-deep:#3324c9;
+    --brand-tint:#ecebff;
+    --night:#0f0e1a;
+    --night-card:#1c1a33;
+    --night-card-2:#242142;
+    --live:#33d17a;
+    --line:#e5e2da;
+    --line-on-brand:rgba(255,255,255,0.28);
+    --line-on-night:rgba(255,255,255,0.12);
+    --r-lg:28px;
+    --r-md:18px;
+    --r-pill:999px;
+    --shadow-soft:0 1px 2px rgba(20,20,31,0.04), 0 12px 28px -18px rgba(20,20,31,0.35);
+    --shadow-card:0 1px 1px rgba(20,20,31,0.05), 0 20px 44px -24px rgba(20,20,31,0.45);
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Manrope', system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  img,svg{display:block;max-width:100%;}
+  a{color:inherit;}
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding-left:20px;
+    padding-right:20px;
+  }
+  h1,h2,h3{
+    font-family:'Unbounded', 'Manrope', sans-serif;
+    line-height:1.12;
+    margin:0;
+    text-wrap:balance;
+  }
+  p{margin:0;}
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  }
+  .eyebrow .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--live);
+    box-shadow:0 0 0 3px rgba(51,209,122,0.22);
+  }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    border-radius:var(--r-pill);
+    padding:15px 26px;
+    font-family:'Manrope', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    text-decoration:none;
+    border:1.5px solid transparent;
+    cursor:pointer;
+    transition:transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color .18s ease;
+    white-space:nowrap;
+  }
+  .btn:active{transform:translateY(1px) scale(0.99);}
+  .btn-primary{
+    background:var(--brand);
+    color:#fff;
+    box-shadow:0 10px 24px -10px rgba(75,58,255,0.55);
+  }
+  .btn-primary:hover{background:var(--brand-deep); transform:translateY(-2px); box-shadow:0 16px 30px -12px rgba(75,58,255,0.6);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--ink);
+    border-color:var(--line);
+  }
+  .btn-ghost:hover{border-color:var(--ink); transform:translateY(-2px);}
+  .btn-on-brand{
+    background:#fff;
+    color:var(--brand-deep);
+  }
+  .btn-on-brand:hover{transform:translateY(-2px); box-shadow:0 14px 28px -14px rgba(0,0,0,0.35);}
+  .btn-outline-on-brand{
+    background:transparent;
+    color:#fff;
+    border-color:var(--line-on-brand);
+  }
+  .btn-outline-on-brand:hover{border-color:#fff; transform:translateY(-2px);}
+  .btn-sm{padding:11px 20px; font-size:13.5px;}
+
+  /* ---------- nav ---------- */
+  header.nav{
+    position:sticky;
+    top:0;
+    z-index:40;
+    background:rgba(251,250,247,0.86);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px;
+    gap:16px;
+  }
+  .brand-mark{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    text-decoration:none;
+    color:var(--ink);
+  }
+  .brand-mark .glyph{
+    width:34px;height:34px;
+    border-radius:11px;
+    background:var(--brand);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;
+    font-family:'Unbounded', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    flex:none;
+  }
+  .brand-mark .word{
+    font-family:'Unbounded', sans-serif;
+    font-weight:700;
+    font-size:17px;
+    letter-spacing:-0.01em;
+  }
+  .nav-links{
+    display:none;
+    align-items:center;
+    gap:28px;
+    font-weight:600;
+    font-size:14.5px;
+  }
+  .nav-links a{
+    text-decoration:none;
+    color:var(--ink-soft);
+    position:relative;
+    padding-bottom:3px;
+    transition:color .16s ease;
+  }
+  .nav-links a:hover{color:var(--ink);}
+  .nav-links a::after{
+    content:"";
+    position:absolute;
+    left:0;right:100%;
+    bottom:0;
+    height:2px;
+    background:var(--brand);
+    transition:right .2s ease;
+  }
+  .nav-links a:hover::after{right:0;}
+  .nav-cta{display:none;}
+
+  @media (min-width:900px){
+    .nav-links{display:flex;}
+    .nav-cta{display:inline-flex;}
+  }
+
+  /* ---------- section shells ---------- */
+  section{padding:76px 0;}
+  .section-head{
+    max-width:600px;
+    margin-bottom:44px;
+  }
+  .section-head h2{
+    font-size:clamp(28px,4.4vw,40px);
+    margin-top:14px;
+  }
+  .section-head p.lede{
+    margin-top:16px;
+    font-size:17px;
+    color:var(--ink-soft);
+  }
+
+  .on-night{background:var(--night); color:#fff;}
+  .on-night .ink-soft{color:rgba(255,255,255,0.62);}
+  .on-brand{background:var(--brand); color:#fff;}
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:56px 0 64px;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:48px;
+    align-items:center;
+  }
+  .hero h1{
+    font-size:clamp(34px,6.4vw,58px);
+    letter-spacing:-0.01em;
+    margin-top:18px;
+  }
+  .hero h1 .h1-lead{
+    display:inline-block;
+    margin-bottom:0.16em;
+  }
+  .hero .lede{
+    margin-top:20px;
+    font-size:18px;
+    color:var(--ink-soft);
+    max-width:46ch;
+  }
+  .hero-ctas{
+    margin-top:32px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+  }
+  .trust-row{
+    margin-top:40px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    background:var(--brand-tint);
+    color:var(--brand-deep);
+    border-radius:var(--r-pill);
+    padding:9px 14px 9px 12px;
+    font-size:13px;
+    font-weight:700;
+  }
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--brand);}
+
+  @media (min-width:980px){
+    .hero-grid{grid-template-columns:1.05fr 0.95fr; gap:40px;}
+  }
+
+  /* ---------- widget mockup ---------- */
+  .widget-mock{
+    position:relative;
+    justify-self:center;
+    width:100%;
+    max-width:380px;
+  }
+  .widget-window{
+    background:#fff;
+    border-radius:26px;
+    box-shadow:var(--shadow-card);
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .widget-header{
+    background:var(--brand);
+    color:#fff;
+    padding:18px 20px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .widget-avatar{
+    width:36px;height:36px;border-radius:50%;
+    background:rgba(255,255,255,0.18);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Unbounded', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    flex:none;
+  }
+  .widget-header strong{display:block; font-size:15px; font-weight:800;}
+  .widget-status{
+    display:flex;align-items:center;gap:6px;
+    font-size:12.5px;
+    color:rgba(255,255,255,0.85);
+    margin-top:2px;
+  }
+  .widget-status .dot{
+    width:6px;height:6px;border-radius:50%;background:var(--live);
+    box-shadow:0 0 0 3px rgba(51,209,122,0.28);
+  }
+  .widget-body{
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    background:var(--paper-alt);
+    min-height:280px;
+  }
+  .bubble{
+    max-width:82%;
+    padding:11px 14px;
+    border-radius:16px;
+    font-size:13.6px;
+    line-height:1.45;
+  }
+  .bubble-op{
+    align-self:flex-start;
+    background:#fff;
+    border:1px solid var(--line);
+    border-bottom-left-radius:5px;
+  }
+  .bubble-visitor{
+    align-self:flex-end;
+    background:var(--brand);
+    color:#fff;
+    border-bottom-right-radius:5px;
+  }
+  .bubble-file{
+    display:inline-block;
+    margin-top:6px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    background:rgba(255,255,255,0.18);
+    padding:4px 8px;
+    border-radius:8px;
+  }
+  .typing{
+    align-self:flex-start;
+    display:flex;
+    gap:4px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:16px;
+    border-bottom-left-radius:5px;
+    padding:12px 14px;
+  }
+  .typing span{
+    width:6px;height:6px;border-radius:50%;
+    background:#b9b6c9;
+    animation:blink 1.3s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){animation-delay:.18s;}
+  .typing span:nth-child(3){animation-delay:.36s;}
+  @keyframes blink{0%,80%,100%{opacity:.3; transform:translateY(0);} 40%{opacity:1; transform:translateY(-2px);}}
+
+  .widget-input{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    background:#fff;
+    border-top:1px solid var(--line);
+  }
+  .widget-attach{font-size:16px; opacity:.55;}
+  .widget-placeholder{font-size:13px; color:#a5a2b6; flex:1;}
+  .widget-send{
+    font-size:12.5px;
+    font-weight:700;
+    color:#fff;
+    background:var(--brand);
+    padding:8px 14px;
+    border-radius:var(--r-pill);
+  }
+  .widget-launcher{
+    position:absolute;
+    right:-14px;
+    bottom:-14px;
+    width:58px;height:58px;
+    border-radius:50%;
+    background:var(--night);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+    box-shadow:0 14px 30px -10px rgba(15,14,26,0.5);
+    transition:transform .25s ease;
+  }
+  .widget-mock:hover .widget-launcher{transform:scale(1.06) rotate(-4deg);}
+  .launcher-badge{
+    position:absolute;
+    top:-4px;right:-4px;
+    background:var(--live);
+    color:#08300f;
+    font-family:'Manrope', sans-serif;
+    font-size:11px;
+    font-weight:800;
+    width:19px;height:19px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid var(--paper);
+  }
+
+  /* ---------- how it works ---------- */
+  .steps{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:20px;
+  }
+  @media (min-width:860px){
+    .steps{grid-template-columns:repeat(3,1fr);}
+  }
+  .step-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--r-lg);
+    padding:28px 26px 30px;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .step-card:hover{transform:translateY(-4px); box-shadow:var(--shadow-soft);}
+  .step-num{
+    font-family:'Unbounded', sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--brand);
+    background:var(--brand-tint);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:34px;height:34px;
+    border-radius:10px;
+  }
+  .step-card h3{
+    font-size:19px;
+    margin-top:18px;
+  }
+  .step-card p{
+    margin-top:10px;
+    color:var(--ink-soft);
+    font-size:14.5px;
+  }
+  .code-chip{
+    margin-top:16px;
+    background:var(--night);
+    color:#d9d6ff;
+    border-radius:12px;
+    padding:12px 14px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    line-height:1.6;
+    overflow-x:auto;
+    white-space:pre;
+    position:relative;
+  }
+  .code-chip .tag{color:#8f8ac9;}
+  .code-chip .attr{color:#7fd6ff;}
+  .code-chip .val{color:#9df0c0;}
+  .copy-btn{
+    margin-top:10px;
+    border:1px solid var(--line-on-night);
+    background:transparent;
+    color:#d9d6ff;
+    font-family:'Manrope', sans-serif;
+    font-size:11.5px;
+    font-weight:700;
+    padding:6px 12px;
+    border-radius:var(--r-pill);
+    cursor:pointer;
+    transition:border-color .16s ease, color .16s ease;
+  }
+  .copy-btn:hover{border-color:#fff; color:#fff;}
+
+  /* ---------- demos ---------- */
+  .demo-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+  @media (min-width:860px){
+    .demo-grid{grid-template-columns:1fr 1fr;}
+  }
+  .demo-card{
+    border-radius:var(--r-lg);
+    padding:32px 28px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    min-height:300px;
+    transition:transform .22s ease, box-shadow .22s ease;
+  }
+  .demo-card:hover{transform:translateY(-5px);}
+  .demo-card.light{
+    background:#fdfcfa;
+    border:1px solid rgba(255,255,255,0.14);
+    color:var(--ink);
+    box-shadow:var(--shadow-card);
+  }
+  .demo-card.dark{
+    background:linear-gradient(160deg,#132321,#0c1a19 70%);
+    color:#eafffb;
+    border:1px solid rgba(45,211,192,0.25);
+    box-shadow:0 20px 44px -22px rgba(0,0,0,0.7);
+  }
+  .demo-badge{
+    align-self:flex-start;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:6px 11px;
+    border-radius:var(--r-pill);
+  }
+  .demo-card.light .demo-badge{background:var(--brand-tint); color:var(--brand-deep);}
+  .demo-card.dark .demo-badge{background:rgba(45,211,192,0.16); color:#5eead4;}
+  .demo-card h3{font-size:23px;}
+  .demo-card p{font-size:14.5px;}
+  .demo-card.light p{color:var(--ink-soft);}
+  .demo-card.dark p{color:rgba(234,255,251,0.72);}
+  .demo-swatches{display:flex; gap:8px; margin-top:auto;}
+  .swatch{width:22px;height:22px;border-radius:7px;}
+  .demo-foot{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    margin-top:4px;
+  }
+  .demo-url{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    opacity:.7;
+  }
+
+  /* ---------- tech credibility ---------- */
+  .tech-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:2px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:var(--r-lg);
+    overflow:hidden;
+  }
+  @media (min-width:760px){
+    .tech-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media (min-width:1080px){
+    .tech-grid{grid-template-columns:repeat(4,1fr);}
+  }
+  .tech-item{
+    background:#fff;
+    padding:26px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .tech-item .mark{
+    width:38px;height:38px;
+    border-radius:11px;
+    background:var(--night);
+    color:var(--live);
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;
+    font-weight:800;
+    font-family:'Unbounded', sans-serif;
+  }
+  .tech-item h3{font-size:15.5px; margin-top:2px;}
+  .tech-item p{font-size:13.5px; color:var(--ink-soft);}
+
+  /* ---------- final cta ---------- */
+  .cta-band{
+    border-radius:var(--r-lg);
+    padding:56px 40px;
+    text-align:left;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  @media (min-width:860px){
+    .cta-band{
+      flex-direction:row;
+      align-items:center;
+      justify-content:space-between;
+      padding:56px 52px;
+    }
+  }
+  .cta-band h2{font-size:clamp(26px,4vw,36px); max-width:16ch;}
+  .cta-band .ctas{display:flex; flex-wrap:wrap; gap:12px;}
+
+  /* ---------- footer ---------- */
+  footer{
+    background:var(--night);
+    color:rgba(255,255,255,0.72);
+    padding:52px 0 34px;
+  }
+  .footer-top{
+    display:flex;
+    flex-direction:column;
+    gap:32px;
+    padding-bottom:30px;
+    border-bottom:1px solid var(--line-on-night);
+  }
+  @media (min-width:760px){
+    .footer-top{flex-direction:row; justify-content:space-between; align-items:flex-start;}
+  }
+  .footer-brand .word{color:#fff;}
+  .footer-tagline{margin-top:10px; font-size:14px; max-width:32ch;}
+  .footer-links{
+    display:flex;
+    flex-wrap:wrap;
+    gap:28px;
+    font-size:13.5px;
+    font-weight:600;
+  }
+  .footer-links a{text-decoration:none; color:rgba(255,255,255,0.72); transition:color .16s ease;}
+  .footer-links a:hover{color:#fff;}
+  .footer-bottom{
+    margin-top:22px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 20px;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12.5px;
+    color:rgba(255,255,255,0.45);
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  /* ---------- language switch, deliberately quiet ---------- */
+  .lang-switch{
+    display:inline-flex;
+    align-items:center;
+    gap:2px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid var(--line-on-night);
+    border-radius:var(--r-pill);
+    padding:3px;
+  }
+  .lang-switch button{
+    appearance:none;
+    border:none;
+    background:transparent;
+    color:rgba(255,255,255,0.42);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.03em;
+    padding:5px 10px;
+    border-radius:var(--r-pill);
+    cursor:pointer;
+    transition:color .16s ease, background .16s ease;
+  }
+  .lang-switch button:hover{color:rgba(255,255,255,0.75);}
+  .lang-switch button.active{
+    background:rgba(255,255,255,0.12);
+    color:#fff;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+</style>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="brand-mark" href="#top">
+      <span class="glyph">A</span>
+      <span class="word">AGO Chat</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#demos" data-i18n="nav.demos">Live demos</a>
+      <a href="#tech" data-i18n="nav.tech">Under the hood</a>
+    </nav>
+    <a class="btn btn-primary btn-sm nav-cta" href="#demos" data-i18n="nav.cta">Try it live</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow"><span class="dot"></span><span data-i18n="hero.eyebrow">Live on reserve-me.ru right now</span></span>
+        <h1 data-i18n-html="hero.title"><span class="h1-lead">One script tag</span><br>A real conversation<br>on your site</h1>
+        <p class="lede" data-i18n="hero.lede">AGO Chat drops a chat widget onto any page. A visitor asks a question — your team answers instantly. Every conversation automatically routes to the next free operator, with history and files right there in every open tab.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="#demos" data-i18n="hero.cta1">Open a live demo shop</a>
+          <a class="btn btn-ghost" href="#how" data-i18n="hero.cta2">See how it works</a>
+        </div>
+        <div class="trust-row">
+          <span class="chip"><span class="dot"></span><span data-i18n="hero.chip1">Real-time delivery</span></span>
+          <span class="chip"><span class="dot"></span><span data-i18n="hero.chip2">Multi-tenant by design</span></span>
+          <span class="chip"><span class="dot"></span><span data-i18n="hero.chip3">File attachments</span></span>
+        </div>
+      </div>
+
+      <div class="widget-mock">
+        <div class="widget-window">
+          <div class="widget-header">
+            <span class="widget-avatar">A</span>
+            <div>
+              <strong>AGO Chat</strong>
+              <div class="widget-status"><span class="dot"></span><span data-i18n="widget.online">Online now</span></div>
+            </div>
+          </div>
+          <div class="widget-body">
+            <div class="bubble bubble-op" data-i18n="widget.msg1">Hey! Thanks for reaching out — how can I help?</div>
+            <div class="bubble bubble-visitor" data-i18n="widget.msg2">Do you ship to Kazan?</div>
+            <div class="bubble bubble-op" data-i18n="widget.msg3">Yep, 2–3 business days. Want me to check a date for your order?</div>
+            <div class="bubble bubble-visitor"><span data-i18n="widget.msg4">Sure, here's my order</span><span class="bubble-file">📎 order-4471.pdf</span></div>
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="widget-input">
+            <span class="widget-attach">📎</span>
+            <span class="widget-placeholder" data-i18n="widget.placeholder">Type a message…</span>
+            <span class="widget-send" data-i18n="widget.send">Send</span>
+          </div>
+        </div>
+        <div class="widget-launcher">💬<span class="launcher-badge">1</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow" style="color:var(--brand-deep)" data-i18n="how.eyebrow">How it works</span>
+        <h2 data-i18n="how.title">Three steps. No plugin marketplace.</h2>
+        <p class="lede" data-i18n="how.lede">Nothing to install, nothing to provision by hand. The widget, the transport, and the console are all part of the same product.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step-card">
+          <span class="step-num">01</span>
+          <h3 data-i18n="how.step1.title">Add the script</h3>
+          <p data-i18n="how.step1.body">One tag, dropped anywhere in your page. It loads a small widget, isolated from the rest of your site.</p>
+          <div class="code-chip">&lt;<span class="tag">script</span> <span class="attr">src</span>=<span class="val">"https://chat.reserve-me.ru/widget.js"</span>
+  <span class="attr">data-site</span>=<span class="val">"your-site-id"</span> <span class="attr">async</span>&gt;&lt;/<span class="tag">script</span>&gt;</div>
+          <button class="copy-btn" type="button" onclick="agoCopySnippet(this)" data-i18n="how.step1.copy">Copy snippet</button>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">02</span>
+          <h3 data-i18n="how.step2.title">Visitors start talking</h3>
+          <p data-i18n="how.step2.body">A bubble appears in the corner. Messages arrive in real time — no page reloads, no polling delay.</p>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">03</span>
+          <h3 data-i18n="how.step3.title">Your team answers</h3>
+          <p data-i18n="how.step3.body">Operators work from one console: conversation history, file exchange, and presence, kept in sync across every open tab.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE DEMOS -->
+  <section id="demos" class="on-night">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow" style="color:#8f8ac9" data-i18n="demos.eyebrow">Live demos</span>
+        <h2 data-i18n="demos.title">Don't take our word for it. Open one.</h2>
+        <p class="lede ink-soft" data-i18n="demos.lede">Two live shops, two operator teams, completely isolated from each other — running on the same platform, at the same time. This is the actual product, not a screenshot.</p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-card light">
+          <span class="demo-badge" data-i18n="demos.card1.badge">Tenant 01 · Light</span>
+          <h3 data-i18n="demos.card1.title">Demo Shop One</h3>
+          <p data-i18n="demos.card1.body">A bright, minimal storefront with its own widget theme and its own operator login — a separate tenant, start to finish.</p>
+          <div class="demo-swatches">
+            <span class="swatch" style="background:#fdfcfa;border:1px solid #e5e2da;"></span>
+            <span class="swatch" style="background:var(--brand);"></span>
+            <span class="swatch" style="background:#14141f;"></span>
+          </div>
+          <div class="demo-foot">
+            <span class="demo-url">demo-shop1.reserve-me.ru</span>
+            <a class="btn btn-primary btn-sm" href="https://demo-shop1.reserve-me.ru" target="_blank" rel="noopener" data-i18n="demos.open">Open shop ↗</a>
+          </div>
+        </div>
+
+        <div class="demo-card dark">
+          <span class="demo-badge" data-i18n="demos.card2.badge">Tenant 02 · Dark + teal</span>
+          <h3 data-i18n="demos.card2.title">Demo Shop Two</h3>
+          <p data-i18n="demos.card2.body">A dark storefront with a teal accent, deliberately styled to look nothing like Shop One — same platform, fully separate tenant.</p>
+          <div class="demo-swatches">
+            <span class="swatch" style="background:#0c1a19;border:1px solid rgba(94,234,212,0.3);"></span>
+            <span class="swatch" style="background:#2fd3c0;"></span>
+            <span class="swatch" style="background:#eafffb;"></span>
+          </div>
+          <div class="demo-foot">
+            <span class="demo-url" style="color:#7ee9d8;">demo-shop2.reserve-me.ru</span>
+            <a class="btn btn-on-brand btn-sm" style="color:#0c1a19;" href="https://demo-shop2.reserve-me.ru" target="_blank" rel="noopener" data-i18n="demos.open">Open shop ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH CREDIBILITY -->
+  <section id="tech">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow" style="color:var(--brand-deep)" data-i18n="tech.eyebrow">Under the hood</span>
+        <h2 data-i18n="tech.title">Built like it has to stay up.</h2>
+        <p class="lede" data-i18n="tech.lede">AGO Chat runs on its own infrastructure. No black-box SaaS behind it, no shared multi-tenant shortcuts — the isolation between Shop One and Shop Two above is real, not a demo trick.</p>
+      </div>
+
+      <div class="tech-grid">
+        <div class="tech-item">
+          <span class="mark">⚡</span>
+          <h3 data-i18n="tech.item1.title">Real-time delivery</h3>
+          <p data-i18n="tech.item1.body">Messages move over a live connection, not a polling loop — replies land while you're still looking at the screen.</p>
+        </div>
+        <div class="tech-item">
+          <span class="mark">▦</span>
+          <h3 data-i18n="tech.item2.title">Multi-tenant by design</h3>
+          <p data-i18n="tech.item2.body">Every site is its own tenant, enforced end to end — not a filter applied after the fact.</p>
+        </div>
+        <div class="tech-item">
+          <span class="mark">↺</span>
+          <h3 data-i18n="tech.item3.title">Reconnects don't lose messages</h3>
+          <p data-i18n="tech.item3.body">Drop your connection mid-conversation and reconnect — nothing already sent goes missing.</p>
+        </div>
+        <div class="tech-item">
+          <span class="mark">📎</span>
+          <h3 data-i18n="tech.item4.title">Attachments included</h3>
+          <p data-i18n="tech.item4.body">Files move through direct, presigned uploads — never proxied through the chat servers themselves.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="brand-mark" href="#top">
+          <span class="glyph">A</span>
+          <span class="word">AGO Chat</span>
+        </a>
+        <p class="footer-tagline" data-i18n="footer.tagline">Embeddable live chat for real conversations — real-time, multi-tenant, self-hosted.</p>
+      </div>
+      <nav class="footer-links">
+        <a href="#how" data-i18n="nav.how">How it works</a>
+        <a href="#demos" data-i18n="nav.demos">Live demos</a>
+        <a href="#tech" data-i18n="nav.tech">Under the hood</a>
+        <a href="https://console.reserve-me.ru" target="_blank" rel="noopener" data-i18n="footer.login">Operator login ↗</a>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span data-i18n="footer.copy">© 2026 AGO Chat</span>
+      <span>chat.reserve-me.ru · console.reserve-me.ru · auth.reserve-me.ru</span>
+      <span class="lang-switch" role="group" aria-label="Language">
+        <button type="button" id="lang-ru" onclick="agoSetLang('ru')">RU</button>
+        <button type="button" id="lang-en" onclick="agoSetLang('en')">EN</button>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  var AGO_I18N = {
+    en: {
+      'nav.how':'How it works','nav.demos':'Live demos','nav.tech':'Under the hood','nav.cta':'Try it live',
+      'hero.eyebrow':'Live on reserve-me.ru right now',
+      'hero.title':'<span class="h1-lead">One script tag</span><br>A real conversation<br>on your site',
+      'hero.lede':"AGO Chat drops a chat widget onto any page. A visitor asks a question — your team answers instantly. Every conversation automatically routes to the next free operator, with history and files right there in every open tab.",
+      'hero.cta1':'Open a live demo shop','hero.cta2':'See how it works',
+      'hero.chip1':'Real-time delivery','hero.chip2':'Multi-tenant by design','hero.chip3':'File attachments',
+      'widget.online':'Online now',
+      'widget.msg1':'Hey! Thanks for reaching out — how can I help?',
+      'widget.msg2':'Do you ship to Kazan?',
+      'widget.msg3':'Yep, 2–3 business days. Want me to check a date for your order?',
+      'widget.msg4':"Sure, here's my order",
+      'widget.placeholder':'Type a message…','widget.send':'Send',
+      'how.eyebrow':'How it works','how.title':'Three steps. No plugin marketplace.',
+      'how.lede':'Nothing to install, nothing to provision by hand. The widget, the transport, and the console are all part of the same product.',
+      'how.step1.title':'Add the script','how.step1.body':'One tag, dropped anywhere in your page. It loads a small widget, isolated from the rest of your site.','how.step1.copy':'Copy snippet',
+      'how.step2.title':'Visitors start talking','how.step2.body':'A bubble appears in the corner. Messages arrive in real time — no page reloads, no polling delay.',
+      'how.step3.title':'Your team answers','how.step3.body':'Operators work from one console: conversation history, file exchange, and presence, kept in sync across every open tab.',
+      'demos.eyebrow':'Live demos','demos.title':"Don't take our word for it. Open one.",
+      'demos.lede':'Two live shops, two operator teams, completely isolated from each other — running on the same platform, at the same time. This is the actual product, not a screenshot.',
+      'demos.card1.badge':'Tenant 01 · Light','demos.card1.title':'Demo Shop One','demos.card1.body':'A bright, minimal storefront with its own widget theme and its own operator login — a separate tenant, start to finish.',
+      'demos.card2.badge':'Tenant 02 · Dark + teal','demos.card2.title':'Demo Shop Two','demos.card2.body':'A dark storefront with a teal accent, deliberately styled to look nothing like Shop One — same platform, fully separate tenant.',
+      'demos.open':'Open shop ↗',
+      'tech.eyebrow':'Under the hood','tech.title':'Built like it has to stay up.',
+      'tech.lede':'AGO Chat runs on its own infrastructure. No black-box SaaS behind it, no shared multi-tenant shortcuts — the isolation between Shop One and Shop Two above is real, not a demo trick.',
+      'tech.item1.title':'Real-time delivery','tech.item1.body':"Messages move over a live connection, not a polling loop — replies land while you're still looking at the screen.",
+      'tech.item2.title':'Multi-tenant by design','tech.item2.body':'Every site is its own tenant, enforced end to end — not a filter applied after the fact.',
+      'tech.item3.title':"Reconnects don't lose messages",'tech.item3.body':'Drop your connection mid-conversation and reconnect — nothing already sent goes missing.',
+      'tech.item4.title':'Attachments included','tech.item4.body':'Files move through direct, presigned uploads — never proxied through the chat servers themselves.',
+      'footer.tagline':'Embeddable live chat for real conversations — real-time, multi-tenant, self-hosted.',
+      'footer.login':'Operator login ↗','footer.copy':'© 2026 AGO Chat',
+      'copy.copied':'Copied','copy.manual':'Select & copy manually'
+    },
+    ru: {
+      'nav.how':'Как это работает','nav.demos':'Живые демо','nav.tech':'Под капотом','nav.cta':'Попробовать',
+      'hero.eyebrow':'Работает на reserve-me.ru прямо сейчас',
+      'hero.title':'<span class="h1-lead">Единственный скрипт</span><br>Живой диалог<br>на вашем сайте',
+      'hero.lede':'AGO Chat добавляет чат-виджет на любую страницу. Посетитель задаёт вопрос — ваша команда операторов мгновенно отвечает. Диалог автоматически попадает к самому свободному оператору, а история переписки и файлы всегда под рукой в любой вкладке.',
+      'hero.cta1':'Открыть демо-магазин','hero.cta2':'Как это работает',
+      'hero.chip1':'Доставка в реальном времени','hero.chip2':'Мультитенантность по архитектуре','hero.chip3':'Файлы и вложения',
+      'widget.online':'В сети',
+      'widget.msg1':'Привет! Расскажите, чем можем помочь?',
+      'widget.msg2':'А до Казани доставляете?',
+      'widget.msg3':'Да, 2–3 рабочих дня. Проверить дату для вашего заказа?',
+      'widget.msg4':'Да, вот мой заказ',
+      'widget.placeholder':'Введите сообщение…','widget.send':'Отправить',
+      'how.eyebrow':'Как это работает','how.title':'Три шага. Без маркетплейса плагинов.',
+      'how.lede':'Ничего устанавливать, ничего настраивать вручную. Виджет, транспорт и консоль — части одного продукта.',
+      'how.step1.title':'Добавьте скрипт','how.step1.body':'Один тег в любом месте страницы. Загружается небольшой виджет, изолированный от остального сайта.','how.step1.copy':'Скопировать код',
+      'how.step2.title':'Посетители начинают писать','how.step2.body':'В углу появляется значок чата. Сообщения приходят в реальном времени — без перезагрузки страницы и задержек опроса.',
+      'how.step3.title':'Команда отвечает','how.step3.body':'Операторы работают в одной консоли: история переписки, обмен файлами и статус присутствия синхронизированы во всех открытых вкладках.',
+      'demos.eyebrow':'Живые демо','demos.title':'Не верьте на слово — попробуйте сами',
+      'demos.lede':'Два живых магазина, две команды операторов, полностью изолированные друг от друга — на одной платформе, в одно и то же время. Это настоящий продукт, а не скриншот.',
+      'demos.card1.badge':'Тенант 01 · Светлая тема','demos.card1.title':'Демо-магазин 1','demos.card1.body':'Светлый, минималистичный магазин со своей темой виджета и своим входом для оператора — отдельный тенант от начала до конца.',
+      'demos.card2.badge':'Тенант 02 · Тёмная + бирюза','demos.card2.title':'Демо-магазин 2','demos.card2.body':'Тёмный магазин с бирюзовым акцентом, специально оформлен непохожим на первый — та же платформа, полностью отдельный тенант.',
+      'demos.open':'Открыть магазин ↗',
+      'tech.eyebrow':'Под капотом','tech.title':'Построено так, чтобы держаться.',
+      'tech.lede':'AGO Chat работает на собственной инфраструктуре. Никакого чёрного ящика SaaS внутри, никаких общих мультитенантных срезов — изоляция между Магазином 1 и Магазином 2 выше настоящая, а не демо-трюк.',
+      'tech.item1.title':'Доставка в реальном времени','tech.item1.body':'Сообщения идут через живое соединение, а не через опрос — ответ приходит, пока вы ещё смотрите на экран.',
+      'tech.item2.title':'Мультитенантность по архитектуре','tech.item2.body':'Каждый сайт — отдельный тенант, обеспечено на всех уровнях, а не фильтром постфактум.',
+      'tech.item3.title':'Переподключение не теряет сообщения','tech.item3.body':'Разрыв соединения посреди разговора и переподключение — ничего из уже отправленного не потеряется.',
+      'tech.item4.title':'Вложения включены','tech.item4.body':'Файлы идут напрямую через presigned-загрузку — никогда не проксируются через сами серверы чата.',
+      'footer.tagline':'Встраиваемый живой чат для настоящих диалогов — реальное время, мультитенантность, свой сервер.',
+      'footer.login':'Вход для оператора ↗','footer.copy':'© 2026 AGO Chat',
+      'copy.copied':'Скопировано','copy.manual':'Скопируйте вручную'
+    }
+  };
+
+  function agoApplyLang(lang){
+    var dict = AGO_I18N[lang] || AGO_I18N.ru;
+    document.documentElement.setAttribute('lang', lang);
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var key = el.getAttribute('data-i18n');
+      if (dict[key] !== undefined) el.textContent = dict[key];
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el){
+      var key = el.getAttribute('data-i18n-html');
+      if (dict[key] !== undefined) el.innerHTML = dict[key];
+    });
+    var ruBtn = document.getElementById('lang-ru');
+    var enBtn = document.getElementById('lang-en');
+    if (ruBtn && enBtn){
+      ruBtn.classList.toggle('active', lang === 'ru');
+      enBtn.classList.toggle('active', lang === 'en');
+    }
+  }
+
+  function agoSetLang(lang){
+    try { localStorage.setItem('ago-lang', lang); } catch (e) {}
+    agoApplyLang(lang);
+  }
+
+  (function(){
+    var saved = null;
+    try { saved = localStorage.getItem('ago-lang'); } catch (e) {}
+    agoApplyLang(saved === 'en' ? 'en' : 'ru');
+  })();
+
+  function agoCopySnippet(btn){
+    var text = '<script src="https://chat.reserve-me.ru/widget.js" data-site="your-site-id" async><' + '/script>';
+    var lang = document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ru';
+    var dict = AGO_I18N[lang];
+    var done = function(){
+      var original = btn.textContent;
+      btn.textContent = dict['copy.copied'];
+      setTimeout(function(){ btn.textContent = original; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function(){ btn.textContent = dict['copy.manual']; });
+    } else {
+      btn.textContent = dict['copy.manual'];
+    }
+  }
+</script>
