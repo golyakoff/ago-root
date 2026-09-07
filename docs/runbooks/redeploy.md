@@ -253,9 +253,20 @@ until the commit happens. `UNKNOWN` means the comparison itself could not be mad
 **It is advisory, and it is not everything.** The check's own exit code never fails `redeploy.sh` - a
 deploy that already moved images, ran migrations and passed smoke does not become undone by a warning
 printed after it. And it covers Deployments and NetworkPolicies only; a ConfigMap, Secret, Service or
-Certificate can still drift unnoticed, the same as before this item. `deploy.sh` - the more commonly
-used path since `15-06` - has the identical blind spot and does not yet call this check; `adr/0144`
-has the reasoning for both boundaries.
+Certificate can still drift unnoticed, the same as before this item.
+
+**Since `15-23`, `deploy.sh` - the more commonly used path since `15-06` - calls the identical check,
+the same way and at the same point (last step, exit code discarded).** It is not narrowed to the one
+component a given `deploy.sh` invocation moved: the check reports on the whole demo overlay's
+Deployments and NetworkPolicies against the whole live cluster regardless of which script called it,
+the same as it already did for `redeploy.sh` (which does not touch NetworkPolicies either). A cluster
+that has never had this overlay applied at all cannot reach this step through either script - both use
+`kubectl set image`, which refuses outright on a Deployment that does not yet exist, so a genuine
+first install fails earlier, for a clearer reason, before either script's drift check line runs.
+`adr/0144` has the reasoning for both boundaries. **It is left saying `deploy.sh` does not call the
+check, which was true when it was accepted and is no longer true** - an accepted ADR keeps its text
+(`adr-writer`'s own rule, and the shape `adr/0143` used when it found a plainly wrong sentence in
+`adr/0069` and still did not edit it). A decision belongs to the ADR; what is running belongs here.
 
 **The same is true one level further out, for anything under `k8s/backup/`** (`15-02`). Those are
 systemd units on the node, not Kubernetes objects at all, so neither `redeploy.sh` nor
