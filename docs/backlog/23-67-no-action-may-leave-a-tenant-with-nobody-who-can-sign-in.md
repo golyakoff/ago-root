@@ -2,7 +2,9 @@
 
 - **Stage**: 23
 - **Status**: ready
-- **Depends on**: nothing. `23-68` is the other half — this prevents the lockout, that recovers from one.
+- **Depends on**: nothing, but see `23-71`: it removes the reason the action was dangerous, and this
+  rule should be built in terms of it rather than ahead of it. `23-68` recovers from a lockout that
+  happens anyway.
 - **Found**: 2026-09-07, by the author, **during a live demonstration**, on the live deployment.
 
 ## What happened
@@ -33,6 +35,25 @@ what the other forbids.
 **But they are not enough, and this incident is the proof.** Nobody was deleted. A seat was released,
 which is a different action, and neither rule mentions it. The same hole exists for removing your own
 last role.
+
+## What this rule costs, and the half that removes the cost
+
+**Read narrowly, this rule traps the administrator.** Signing in requires a seat, so "you may not
+release the last seat that can manage operators" means the account's administrator must occupy a paid
+operator seat forever, purely to keep the key to their own account. The author caught this on reading
+it, and they are right: it forbids a shop owner from delegating chats to staff and staying a manager.
+
+**The trap is not this rule. It is that a seat is two things at once** — a licence to be routed
+conversations, and the key to sign in. `decisions/0006` never conflated them: *"only the owner **and**
+as many operators as are paid for can sign in."* The implementation did.
+
+`23-71` separates them. Once an administrator can sign in without a seat, releasing your own seat stops
+being dangerous, and this rule stops being a restriction anybody notices — it goes back to guarding the
+case it was written for: **removing the last person who can administer at all.**
+
+**Both are wanted, and in this order.** `23-71` is the one that restores the intent; this one is the
+guard that still has to hold afterwards, because "remove the last administrator" remains reachable no
+matter how sign-in works.
 
 ## The rule that actually covers it
 
