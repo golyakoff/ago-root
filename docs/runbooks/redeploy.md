@@ -235,8 +235,27 @@ of consequence, and pretending otherwise is how a harmless check becomes somebod
 `redeploy.sh` pulls, builds, imports, migrates and restarts. It never runs `kubectl apply -k`. That is
 defensible — a redeploy is usually about new *code*, and applying an overlay that also carries a
 half-finished manifest change is its own hazard — but it means **a change that lives only in
-`ago-deploy/k8s/` does not reach the node through this script**, no matter how many times it is run,
-and nothing in its output says so.
+`ago-deploy/k8s/` does not reach the node through this script**, no matter how many times it is run.
+
+**Since `15-21`/`adr/0144`, its last step says so out loud, for the two resource kinds most of that
+risk lives in.** `check-manifest-drift.sh` renders the overlay and keeps only Deployments and
+NetworkPolicies - which drops the two migrator Jobs along with everything else (they legitimately run
+a different tag than the file between an image move and the operator committing it - `8-08`, and a
+Job's immutable `spec.template` makes a dry-run apply against a changed one error rather than diff).
+What is kept has every image tag neutralised against whatever is actually running (the difference
+`redeploy.sh`'s own closing note and `apply-demo.sh`'s guard already handle), and `kubectl diff` runs
+against what remains. `PASS` means they agree on everything this compares; `DRIFT` prints the diff and
+says what to do about it: commit the tags named above, *then* run `./apply-demo.sh` — that order
+matters, because `apply-demo.sh` refuses while the pins are still behind (`22-24`), which they are
+until the commit happens. `UNKNOWN` means the comparison itself could not be made (no cluster reached,
+`kubectl diff` itself errored) and is reported as exactly that, not folded into a false `PASS`.
+
+**It is advisory, and it is not everything.** The check's own exit code never fails `redeploy.sh` - a
+deploy that already moved images, ran migrations and passed smoke does not become undone by a warning
+printed after it. And it covers Deployments and NetworkPolicies only; a ConfigMap, Secret, Service or
+Certificate can still drift unnoticed, the same as before this item. `deploy.sh` - the more commonly
+used path since `15-06` - has the identical blind spot and does not yet call this check; `adr/0144`
+has the reasoning for both boundaries.
 
 **The same is true one level further out, for anything under `k8s/backup/`** (`15-02`). Those are
 systemd units on the node, not Kubernetes objects at all, so neither `redeploy.sh` nor
