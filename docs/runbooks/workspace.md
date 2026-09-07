@@ -82,6 +82,16 @@ gh run download <run-id> --repo golyakoff/ago-platform -n nupkgs-<version> -D C:
 checkout still sat on 0.15.0, and without a `read:packages` token (the workflow uploads that artifact
 precisely so a reviewer with no package-read access can get the bytes).
 
+## Loss-and-forgot heartbeat log
+
+`C:\git\ago\loss-and-forgot-history.log` — the same shape as `.nuget-feed` above: a plain file,
+sibling to the repositories and outside all of them, so it survives any single repository being
+deleted or recloned and needs no gitignore rule of its own. `tools/run-loss-and-forgot-checks.sh`
+(`25-03`) appends one line to it on every run, whether or not anything was found — see
+`docs/runbooks/loss-and-forgot-checks.md` for what it records and why it exists outside the
+checkouts rather than inside `ago-root`. Nothing needs to exist inside it beforehand; the first run
+creates it.
+
 ## Moving or renaming the tree
 
 1. Move or rename the folders, `.nuget-feed\` included.

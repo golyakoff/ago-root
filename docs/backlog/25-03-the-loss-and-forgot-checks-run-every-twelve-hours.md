@@ -57,16 +57,29 @@ A weekly sweep would have let `23-09`'s two halves sit uncommitted for six more 
 
 ## Done when
 
-- [ ] All three run twice a day without anybody starting them.
-- [ ] A finding reaches the author by email; a clean run is silent.
-- [ ] A run that could not reach a repository says so, and is not reported as clean.
-- [ ] The worktree check still runs somewhere that can see the worktrees.
+- [~] All three run twice a day without anybody starting them. `tools/run-loss-and-forgot-checks.sh`
+      calls all three and is demonstrated end to end (dry run, real repository state,
+      `docs/runbooks/loss-and-forgot-checks.md`); the Windows Task Scheduler registration that makes
+      it actually recurring is written and documented there but **not run** — registering persistent
+      machine configuration is the author's own action, not this change's to take.
+- [~] A finding reaches the author by email; a clean run is silent. The clean-is-silent half is
+      demonstrated for real (see the runbook). Delivery reuses `adr/0045`'s existing node Postfix
+      over SSH rather than inventing a sender — no new secret — but the actual send was not exercised
+      by this change (no live systems touched); `--dry-run` shows the composed message instead.
+- [x] A run that could not reach a repository says so, and is not reported as clean. Demonstrated for
+      real: today's live sweep hit this path unprompted when `ago-deploy` had diverged from
+      `origin/main` mid-session, and reported CANNOT-LOOK rather than a stale clean sweep.
+- [x] The worktree check still runs somewhere that can see the worktrees. By construction — the
+      whole sweep runs on this machine, specifically so it can (see the runbook's "why everything
+      runs here" section).
 
 ## Open questions
 
-- **Where it runs, given the worktree constraint.** A GitHub scheduled workflow reaches every
-  repository and no local disk; the Windows Task Scheduler (which already runs `AGO backup pull`
-  daily) reaches the disk and is off whenever the machine is. Splitting them — the two repository-wide
-  checks in CI, the worktree check locally — is a third shape and costs two places to look.
-- **Whether `ago-root` should gain CI at all for this.** It has none today, which is a fact worth
-  weighing rather than an accident to correct in passing.
+- **Where it runs, given the worktree constraint — settled while implementing this item.** All three
+  checks run on this machine via Windows Task Scheduler; none moved into CI. The reason is the one
+  named below: splitting would have been a third shape costing two places to look, for no offsetting
+  gain, since the other two checks also need the local sibling-repository workspace and a hosted
+  runner would need its own mail credential besides. See `docs/runbooks/loss-and-forgot-checks.md`.
+- **Whether `ago-root` should gain CI at all for this — answered no, for now.** It still has none.
+  The reasoning above is this item's own reason for that, not a claim that the general question is
+  closed for good.
