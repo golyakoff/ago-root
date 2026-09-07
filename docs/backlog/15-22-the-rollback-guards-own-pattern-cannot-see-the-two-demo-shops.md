@@ -1,7 +1,7 @@
 # the rollback guard's own pattern cannot see the two demo shops
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-07), `ago-deploy#163`.
 - **Found**: 2026-09-07, while building `15-21`'s drift check, which hit the identical bug in its own
   first draft and fixed it there.
 - **Decision**: none needed. This is a character class that is one class short.
@@ -40,8 +40,11 @@ mistake that reproduces itself is a shape worth naming, not a typo.
 
 ## Done when
 
-- [ ] `apply-demo.sh`'s manifest-side pattern matches every repository name this overlay actually uses.
-- [ ] The guard is shown refusing a rollback of `ago-demo-shop1` or `ago-demo-shop2` specifically.
+- [x] `apply-demo.sh`'s manifest-side pattern matches every repository name this overlay actually uses.
+- [x] The guard is shown refusing a rollback of `ago-demo-shop1` or `ago-demo-shop2` specifically —
+      and the old script shown *not* refusing on the same inputs, which is the half that proves the
+      defect was real rather than that the fix compiles. It printed *every image the manifest pins is
+      already running* and exited 0.
 
 ## Out of scope
 
