@@ -65,10 +65,13 @@ will produce the same trap for the next fixture, the next proxy rule and the nex
 
 ## Done when
 
-- [ ] The author has chosen among the three readings above, and the choice is recorded.
-- [ ] A component that throws during render no longer blanks the whole console — asserted by a test
+- [~] The author has chosen among the three readings above, and the choice is recorded.
+      **Still the author's, and deliberately not picked by implementing one.** `23-41` shipped readings 1 and 2 — an error boundary that bounds the damage — because that is what the incident needed and what its own scope note allowed. Reading 3 is carried out to `23-99`, which opens with this same choice rather than assuming it.
+- [x] A component that throws during render no longer blanks the whole console — asserted by a test
+      Proven by mutating `getDerivedStateFromError` to record nothing: 10 tests across 3 files fail. `ago-console` `feat/23-41-error-boundaries-v2`.
       that throws on purpose, not by inspection.
-- [ ] The viewer is told something true and something actionable, in their own language.
+- [~] The viewer is told something true and something actionable, in their own language.
+      **Only for the throwing case.** A boundary can catch a `throw`; a field that is simply absent throws nothing, so a screen rendering a legitimately-empty list is still indistinguishable from a real empty account. That half is `23-99`, and saying so is the point of not ticking this.
 - [ ] Whether the two `/api/v1/me/tenancies` routes stay as they are is answered either way.
 
 ## Out of scope
