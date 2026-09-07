@@ -88,10 +88,15 @@ model without `contact_reveals` or `sites.contact_visibility` while the migratio
 because the migration is pure EF output with no hand-written SQL, and the regenerated `Up()` is
 **byte-identical** to the original, which is the check that makes regeneration safe rather than hopeful.
 
-**What is not proven, stated rather than implied.** No test in either repository exercises a real
-RabbitMQ round trip between chat's outbox publish and the calendar's consumer — the same honestly
-stated gap `22-05` left for `RoleAssignmentsChangedConsumer`. Each side is proven in isolation: chat
-stages the envelope in the right transaction, the calendar applies a grant correctly when called
-directly. The wire between them is not. There is also **no console screen** — the item's own text made
-one conditional, and `GetTenantConfigurationHandler` now exposes `WorkerQuota` so a screen has
-something to read once somebody builds it.
+**What is not proven, stated rather than implied — was, and is closed by `23-66`.** No test in either
+repository exercised a real RabbitMQ round trip between chat's outbox publish and the calendar's
+consumer — the same honestly stated gap `22-05` left for `RoleAssignmentsChangedConsumer`. Each side
+was proven in isolation: chat staged the envelope in the right transaction, the calendar applied a
+grant correctly when called directly. The wire between them was not — and, separately, there was no
+route to call at all: `GrantModuleQuantityHandler` existed and was registered in DI, but nothing in
+`Ago.Chat.Api` ever mapped it to an endpoint, so `WorkerQuota` was zero for every tenant that would
+ever exist and no calendar tenant could create their first worker. Neither half was found until
+`23-66` (filed 2026-09-07, while designing `22-08`), which added the platform owner's own route, the
+console screen, and a real-broker integration test proving the wire this item's own report named as
+unproven. **This item's own first Done-when — "results in a calendar the tenant can configure, with no
+manual step anywhere" — was ticked here and was not true until `23-66` shipped**; it is true now.
