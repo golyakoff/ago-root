@@ -580,7 +580,28 @@ it — defeating the feature's own purpose. The two-check shape survives unchang
 party to the conversation containing it, for the first time in this codebase — see that document's
 own note on `18-07` for what this changes about `messages.body`'s exposure.
 
-## Seat assignment blocks sign-in with no new policy code: shipped in `13-03`
+## Seat assignment blocks sign-in with no new policy code: shipped in `13-03`, **narrowed by `23-71`**
+
+**Read this section knowing it describes the world before 2026-09-07.** `23-71` narrowed the rule below
+to an operator who holds no `site:manage_operators` grant of their own, because `decisions/0006` says
+*"only the owner **and** as many operators as are paid for can sign in"* — the owner is additional to the
+paid seats, and making a seat the sign-in gate collapsed that. An administrator was compelled to hold a
+paid operator seat purely to keep the key to their own account, and the author locked themselves out of
+their own tenant that way.
+
+**What changed.** The two resolution queries now filter on `RemovedAt IS NULL` alone. Eligibility moved
+up out of the port and into `ResolveOperatorIdentityHandler`, which composes `IPermissionChecker` with
+`Operator.CanSignIn`: a seat still admits, and so does `site:manage_operators`.
+
+**And what that cost, which is the part worth knowing.** Sign-in and routing had been the same fact —
+only a seated row could ever hold a claim — so every routing decision was seat-gated by accident.
+`23-71` made each one explicit: both assignment claimers, `AnyOnlineForSiteAsync`'s "is anybody covering
+the queue" check, and `AssignConversationHandler`'s self-claim path all gained a `HoldsSeat` filter they
+had previously been getting for free. **A seatless administrator can still set themselves Online by
+connecting a console; the enforcement is at the routing decision, not at every place presence changes.**
+
+The original text follows, unedited, because it is still the correct account of what `13-03` did.
+
 
 `OperatorIdentityClaimsTransformation` needed no code change at all to gain a new sign-in-blocking
 behaviour — the two queries `ResolveOperatorIdentityHandler` resolves a signed-in principal's `sub`
