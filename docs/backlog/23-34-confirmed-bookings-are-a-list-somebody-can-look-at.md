@@ -1,7 +1,7 @@
 # confirmed bookings are a list somebody can look at
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-31` reserves its place (Календарь → Записи)
 - **Decision**: none needed
 
@@ -39,6 +39,9 @@ an error, they just quietly do without.
 
 ## Done when
 
-- [ ] A tenant can see confirmed bookings by day, with master, service and customer.
-- [ ] A masked phone is masked here too, and revealing it writes the same record.
-- [ ] Another tenant's bookings are unreachable, asserted the way the other calendar reads are.
+- [x] A tenant can see confirmed bookings by day, with master, service and customer.
+      `ago-calendar` `e3057db` (PR #48), `ago-console` `d94ca4d` (PR #151). `ConfirmedBookingReadStore` groups by booking and orders `local_date, worker, starts_at`; the screen renders day→worker with counts at each level rather than one flat table, which is the "how full is a day" question this item was actually about.
+- [~] A masked phone is masked here too, and revealing it writes the same record.
+      **Masked correctly; no reveal exists to write a record for.** The screen renders the phone exactly as the server returns it, proven by `ACallerHoldingCustomerRead_SeesTheMaskedPhone_WhenTheTenantsRungCallsForIt`. There is no reveal control here — and none on the sibling «Клиенты» screen either, so this is consistent rather than an omission. `23-30` owns reveal, and **its scope names four screens and not this one**, because this screen did not exist when it was written. See `23-91`.
+- [x] Another tenant's bookings are unreachable, asserted the way the other calendar reads are.
+      `ConfirmedBookingsTests.TheReadStore_IsTenantIsolated`, against real Postgres, asserted the way the other calendar reads are.

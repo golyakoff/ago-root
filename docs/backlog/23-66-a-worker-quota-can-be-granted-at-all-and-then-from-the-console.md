@@ -1,7 +1,7 @@
 # a worker quota can be granted at all, and then from the console
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — **and what remains is one live demonstration, not code**
 - **Depends on**: `23-65` shares the screen but not the promise. `adr/0150` is the decision for the
   console half.
 - **Found**: 2026-09-07, while designing `22-08`, and verified independently before filing.
@@ -55,8 +55,13 @@ together.
 
 ## Done when
 
-- [ ] A platform owner can grant a worker quantity for a tenant, and it reaches `ago_calendar`.
-- [ ] A tenant with the module and a granted quota can create their first worker — end to end, shown.
-- [ ] Lowering a quota states what it will deactivate before it does it.
-- [ ] The projection bound is stated, and the wait is bounded rather than hoped for.
-- [ ] `22-07`'s first Done-when is either true or corrected to what actually shipped.
+- [x] A platform owner can grant a worker quantity for a tenant, and it reaches `ago_calendar`.
+      Proven by `ModuleQuantityGrantedWireTests` in `ago-calendar` — a real Testcontainers broker, the production `RabbitMqEventPublisher`, and this repository's own production consumer started as `Ago.Calendar.Worker` registers it. The one stand-in is chat's own process, which a single repository cannot run.
+- [~] A tenant with the module and a granted quota can create their first worker — end to end, shown.
+      **Not shown, and this item stays open on it.** Everything the path needs is merged and deployed to the stand as of 2026-09-07, but nobody has yet granted a module and created a worker end to end. The same demonstration closes `23-87`'s last box, and neither should be ticked from a passing test suite.
+- [~] Lowering a quota states what it will deactivate before it does it.
+      **Carried out to `23-88`.** Nothing reads the quantity downwards — no confirmation, no count of what exceeds a new number, no statement of what happens to the workers above it.
+- [~] The projection bound is stated, and the wait is bounded rather than hoped for.
+      **Carried out to `23-89`.** The bound is real and unstated: the console writes the grant and returns, nothing says it is not instant, and nothing polls.
+- [x] `22-07`'s first Done-when is either true or corrected to what actually shipped.
+      Corrected rather than made true. `22-07`'s first box claimed a grant results in a calendar the tenant can configure with no manual step anywhere; `WorkerQuota` was zero and nothing could raise it.
