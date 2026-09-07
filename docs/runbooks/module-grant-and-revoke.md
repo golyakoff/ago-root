@@ -1,43 +1,40 @@
 # Granting and revoking a product for a tenant
 
 `23-15`, 2026-09-06. This is the procedure for putting a product — AGO Calendar, AGO FAQ — on a
-tenant's account by hand, checking that it worked, and taking it away again.
+tenant's account, checking that it worked, and taking it away again.
 
-**It is not the ordinary path to having a product.** Tenants buy products themselves. This exists for
-the sales conversation and the support ticket, and `flows.md` 5.2 records that the *only* thing gating
-it is a Keycloak realm role which **no write in this codebase grants** — that is the answer, not an
-omission. If this page starts being used weekly, the thing to build is self-service, not a shortcut.
+**It is not the ordinary path to having a product.** Tenants buy products themselves. This page (and
+the console screen below) exist for the sales conversation and the support ticket, and `flows.md` 5.2
+records that the *only* thing gating either is a Keycloak realm role which **no write in this codebase
+grants** — that is the answer, not an omission.
 
-## Why this is a runbook and not a screen
+## The ordinary route is now the console — this page is the fallback
 
-Both routes require the deployment-wide **provisioning secret in the request body** (`adr/0095`), so a
-console grant screen would put that secret into a browser form. `decisions.md` §6 is where the argument
-lives; the short version is that a secret a person carries in a clipboard stops being a secret at about
-the third use.
+**`23-65`/`adr/0150`: `/owner`'s tenant detail screen grants and revokes a module.** That screen calls
+the identical two routes this page describes, with the identical rules — an expiry has to be chosen,
+revoking a purchase demands `force` and a reason — and it is where a platform owner should do this in
+the ordinary case.
 
-§6 also records what would change that — chat holding the secret in its own configuration, which makes
-the screen possible and is an open amendment to `adr/0095`. Until that is decided, this page describes
-the world as it is.
+**This page still exists for the day the console is unavailable.** The two routes below work exactly
+the same way from a terminal as they do from the screen; nothing here was removed, only made unnecessary
+in the common case. If you can reach `/owner`, use it — reserve this procedure for when you cannot.
+
+**What changed under this page since it was written:** both routes used to require the deployment-wide
+provisioning secret *in the request body*, which is exactly what made a console screen impossible
+(`decisions.md` §6's own argument — a secret a person carries in a clipboard stops being a secret at
+about the third use). `23-65` moved that secret into `Ago.Chat.Api`'s own configuration
+(`secrets.md`, `secret-rotation.md`). **Neither route below takes it from the caller any more** — not
+from the console, and not from this page's own curl calls. The person running this procedure now needs
+only their own platform-owner authorisation, nothing else to fetch or paste.
 
 ## What you need before you start
 
 - The `siteId` of the tenant. Get it from `/owner` in the console, not from a person's memory.
 - The **module key** (`calendar`, `faq`).
-- The **provisioning secret** for the module deployment you are granting.
 - Whether this grant has an end date, and if not, that you have decided it has none.
-
-### Reading the provisioning secret
-
-Read it **at the moment of use, and do not keep it.** It lives in the module deployment's own
-environment; `secrets.md` names it (`ModuleProvisioning:Secret`) and says what rotating it costs.
-
-Do not paste it into a chat message, a ticket, a note or a shell history you keep. If your shell
-records history, read it into a variable in a way your shell does not log, or type it into the request
-at the moment you send it.
-
-**If you believe it has been seen by somebody who should not have seen it, that is
-`secret-rotation.md`, immediately** — a holder of this secret can register, rotate or delete the
-registration for any site that deployment serves.
+- Your own platform-owner bearer token. There is nothing else to hold — the deployment's own
+  provisioning secret is `Ago.Chat.Api`'s own configuration now, never something a caller supplies
+  (`secrets.md`).
 
 ## Granting
 
@@ -53,7 +50,6 @@ Every field is required, deliberately — including the expiry, which is `requir
 | `triggerWords` | what a visitor types to reach the module |
 | `entryPoint` | where the module is reached |
 | `credential` | the module's own per-site credential. Never echoed back |
-| `provisioningSecret` | above |
 | `expiresAt` | an instant, **or explicitly `null`** |
 
 **`expiresAt` is the field this whole page exists to slow you down on.** The endpoint refuses a body
@@ -95,8 +91,8 @@ DELETE /api/v1/owner/sites/{siteId}/modules/{moduleKey}
 because the *tenant bought it*. That distinction decides everything below, and you cannot recover it
 after the row is gone.
 
-**Revoking something we granted** needs only the provisioning secret. Nothing else. Taking back what we
-gave away must not be made harder.
+**Revoking something we granted** needs nothing beyond your own platform-owner authorisation. Taking
+back what we gave away must not be made harder.
 
 **Revoking a tenant's own purchase is refused** unless the request states `force: true` **and** a
 `reason` that is not blank. That asymmetry is the decision in `adr/0118`, and the refusal is not a
@@ -126,9 +122,12 @@ to that question written down somewhere other than one person's memory.
 
 ## Related
 
-- `docs/design/decisions.md` §6 — why this is a runbook rather than a screen, and what would change it
+- `docs/design/decisions.md` §6 — why this used to be a runbook-only path, and the amendment recording
+  that it no longer is
+- `docs/adr/0150-*` — the console calling the owner API and `Ago.Chat.Api` supplying the provisioning
+  secret from its own configuration; the decision that made the console screen possible
 - `docs/design/flows.md` 5.2, 5.3 — the two "must never happen" clauses this procedure serves
-- `docs/adr/0095-*` — the provisioning secret and its blast radius
+- `docs/adr/0095-*` — the provisioning secret and its blast radius, amended by `adr/0150`
 - `docs/adr/0118-*` — the revoke asymmetry and the recorded reason
-- `docs/architecture/secrets.md` — where the secret lives; `docs/runbooks/secret-rotation.md` — rotating it
+- `docs/architecture/secrets.md` — where the secret lives now, on both sides; `docs/runbooks/secret-rotation.md` — rotating it
 - `docs/runbooks/realm-operations.md` — granting the realm role in the first place

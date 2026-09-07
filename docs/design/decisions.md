@@ -318,6 +318,12 @@ openly.
 **It becomes clearly right rather than merely convenient if `22-04` ever makes the secret per-site**:
 chat would then hold a key to one tenant instead of a master key.
 
+**Amended 2026-09-07 (`23-65`/`adr/0150`): the second half happened.** `Ago.Chat.Api` now holds the
+secret in its own configuration (`ModuleProvisioning:Secret`, `secrets.md`), the owner routes stop
+taking it from the caller, and `/owner`'s tenant detail screen grants and revokes a module. The runbook
+this section justified is no longer the ordinary path — `module-grant-and-revoke.md` says so — but it
+still exists, for the day the console does not load.
+
 ---
 
 **`--force` exists, and it is recorded.** Added 2026-09-04.
