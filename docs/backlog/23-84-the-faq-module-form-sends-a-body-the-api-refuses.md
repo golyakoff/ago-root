@@ -1,7 +1,8 @@
 # the FAQ module form sends a body the API refuses
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — **and after the author's answer of 2026-09-07 it is about removing this screen,
+  not repairing it**
 - **Depends on**: nothing. `23-83` is the neighbouring cause.
 - **Found**: 2026-09-07, while building `23-65`, by reading rather than by anybody reporting it.
 
@@ -23,6 +24,17 @@ produces "we thought that was covered".
 It is also a different promise: `23-83` is about who holds a secret; this is about a screen that does
 not do what it appears to do.
 
+## The author's answer changed what this is
+
+*«Теннант не должен мочь что-то прям настраивать себе… его настройки ограничены видами виджета,
+управлением операторами, всё в своей песочнице.»*
+
+So the FAQ module form is not a broken screen to fix. **It is a screen for a capability a tenant should
+not have**, built when `19-03` assumed tenants provision their own modules (`23-83` has the full account).
+That it never worked is the mildest possible version of that mistake.
+
+Fixing it would be building the wrong thing carefully.
+
 ## Scope
 
 - Establish what the route actually requires **after** `23-83`, and make the form send it.
@@ -43,6 +55,7 @@ not do what it appears to do.
 
 ## Done when
 
-- [ ] The FAQ module form's request is accepted by the API, shown over real HTTP.
-- [ ] Whether it ever worked is established and written down.
-- [ ] The console holds no deployment-wide secret, whatever the answer turns out to be.
+- [ ] The console no longer offers a tenant a way to provision a module.
+- [ ] Whatever a tenant should see instead — which products are on their account — is a read and shows it.
+- [ ] Whether the form ever worked is established and written down.
+- [ ] The console holds no deployment-wide secret, which after this is true by having nothing to hold.

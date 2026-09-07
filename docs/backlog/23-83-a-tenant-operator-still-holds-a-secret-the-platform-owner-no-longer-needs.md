@@ -29,15 +29,54 @@ tenant to hold it means either they never can (and the self-service path is dead
 Both readings are bad, and the second is the one worth checking: **find out whether any tenant-facing
 surface has ever supplied this value**, because if one does, that is not a design question.
 
+## The author's answer, 2026-09-07, which changes what this item is
+
+*«Теннант не должен мочь что-то прям настраивать себе. Он может за что-то заплатить и у него включится,
+но не сам. Его настройки ограничены видами виджета, управлением операторами, всё в своей песочнице.»*
+
+**That resolves the contradiction by removing one side of it**, and it means the first draft of this item
+was wrong. It said the self-service routes should take the secret from configuration, the way the owner
+routes now do. **That would have made tenant self-service work — and tenant self-service is the thing
+that should not exist.**
+
+### Where the mistake actually was
+
+`ModuleEndpoints.cs`'s own comment records the origin without knowing it is recording a mistake:
+*"This item needed a real console screen to register the FAQ module for a site, so this is that
+endpoint."* (`19-03`.)
+
+Two incompatible ideas were welded together:
+
+- **a tenant turns a product on for themselves** — a self-service idea, and the reason the route is
+  gated on `site:configure` and lives under `/sites/{siteId}/`;
+- **turning a product on means proving to the module that the platform authorised it** — an
+  infrastructure idea, and the reason it needs `adr/0095`'s deployment-wide secret.
+
+Together they require a tenant to hold a secret that works against every other tenant. The model asked
+for something that cannot exist, which is why nobody could ever supply the field.
+
+**Nobody noticed because the screen never worked.** `23-84` is the proof: the console's FAQ form does not
+send the field at all, so it has always been refused. A feature that does not work produces no
+complaints.
+
 ## Scope
 
-- The self-service routes obtain the secret the same way the owner routes now do — from configuration,
-  never from the caller.
-- **Authorisation stays where it is.** The tenant is still gated on their own permission for their own
-  site; the secret was never the authorisation, which is exactly why removing it changes nothing about
-  who may call.
-- **Check the callers.** `23-84` is one broken caller found the same day; there may be others, and a
-  route whose required field nobody sends is a route nobody has exercised.
+- **Remove the tenant-facing provisioning writes.** `PUT`, `rotate`, `revoke` and `verify` under
+  `/api/v1/sites/{siteId}/modules` stop existing for a tenant. Provisioning is the platform's act, and
+  `23-65` already built the surface for it.
+- **Keep the read.** A tenant seeing which products are on their account is ordinary and carries no
+  secret. `GET` stays.
+- **Say what replaces them.** Rotating a module credential and verifying a registration are real
+  operations that somebody still needs — they move to the owner surface rather than disappearing.
+- **The console's FAQ screen goes or becomes a read** — `23-84`, which is now about removing something
+  rather than fixing it.
+
+## What this does not decide
+
+**How a tenant who pays gets the product turned on.** The author's model is *pay, and it turns on* —
+which is a billing event granting a module, not a person clicking. Nothing does that today: `22-33`
+already found that a lapsed subscription never touches modules, and this is the same seam from the other
+end. It is worth its own number rather than being smuggled in here.
 
 ## Where this is likely to go wrong
 
@@ -50,6 +89,8 @@ surface has ever supplied this value**, because if one does, that is not a desig
 
 ## Done when
 
-- [ ] No tenant-facing route accepts a provisioning secret from its caller.
-- [ ] A value smuggled into the body is ignored, not honoured, asserted by a test over the wire.
-- [ ] Whether these routes have ever been usable by a tenant is established and written down.
+- [ ] No tenant-facing route provisions a module at all — the writes are gone, not re-plumbed.
+- [ ] A tenant can still see which products are on their account.
+- [ ] Rotate and verify exist on the owner surface, so nothing that was possible becomes impossible.
+- [ ] Whether these routes were ever usable by a tenant is established and written down — the answer is
+      almost certainly no, and that is worth stating rather than assuming.
