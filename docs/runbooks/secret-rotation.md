@@ -326,11 +326,22 @@ mid-rotation, against whichever deployment has not yet been updated, fails clean
 once both sides agree — never a corrupted row, since both routes call the module before writing their
 own row (`22-11`'s own ordering, unchanged by this item).
 
-**Not yet wired into `ago-deploy`'s `infra-credentials` generation on chat's side** — `secrets.md`'s own
-note on this row. Until it is, an absent value on chat's side is not a rotation in progress, it is the
-ordinary unconfigured state: both owner routes refuse with `503` (`Module.ProvisioningNotConfigured`)
-rather than failing the host to boot, and `module-grant-and-revoke.md`'s own fallback procedure is the
-path until a deployment supplies it.
+**Where the value lives, since `23-87`:** one key, `MODULE_PROVISIONING_SECRET`, in the overlay's
+gitignored `.env`, reaching `Ago.Chat.Api` and `Ago.Calendar.Api` as an explicit `ModuleProvisioning__Secret`
+env var on each. So a rotation on the demo stand is one edit and two rollouts, not two edits — which
+removes the commonest way the paragraph above goes wrong in practice, namely updating one side and
+believing both were done.
+
+**The hazard to know before rotating: an absent variable does not fail.** Kubernetes `$(VAR)` expansion
+leaves the literal `$(MODULE_PROVISIONING_SECRET)` in place when the key is missing from the Secret. That
+literal is 32 characters, so it satisfies `ModuleProvisioningSecret`'s 16–256 bounds, and **both** hosts
+receive the same literal — so the handshake succeeds, on a string published in `ago-deploy`. Deleting the
+key is therefore not a way to turn provisioning off; it is a way to set it to a public value. To disable
+provisioning, blank the value on the module side, where an empty configured secret is never treated as
+matching (`SharedSecretModuleProvisioningAuthenticator`).
+
+Before `23-87` this key was set in no deployment at all, which is why both owner routes answered `503`
+(`Module.ProvisioningNotConfigured`) and `enabled_modules` held no rows against seventeen sites.
 
 ## The webhook secret-encryption key — `Webhooks:SecretEncryptionKey`
 
