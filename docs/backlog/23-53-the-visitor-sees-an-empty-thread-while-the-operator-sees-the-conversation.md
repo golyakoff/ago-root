@@ -1,7 +1,7 @@
 # the visitor sees an empty thread while the operator sees the whole conversation
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — `ago-widget#60`, `ago-chat#212`, `adr/0141`.
 - **Found**: 2026-09-07, by the author, using the widget on their own site.
 - **Decision**: the author's, 2026-09-07 — show the visitor their own history. The two questions the
   implementation must settle are below; neither is a reason not to build it.
@@ -60,7 +60,14 @@ somebody reads a note they should not have.
 
 ## Done when
 
-- [ ] Reopening the widget shows the visitor the conversation they are already in.
-- [ ] An operator note and a system event in the same conversation are proven not to reach the visitor.
-- [ ] A visitor cannot read another visitor's conversation, or one belonging to another site.
-- [ ] The shared-device question is answered in the change, in one sentence, rather than left implicit.
+- [x] Reopening the widget shows the visitor the conversation they are already in.
+- [x] An operator note and a system event in the same conversation are proven not to reach the visitor.
+      The two halves are not equally strong and the test says so: the note is a real fault injection
+      (unioning its row in reddens the test), the system event holds by construction — nothing writes
+      `ConversationAssigned` to any table the query reads, so there is no row to inject.
+- [x] A visitor cannot read another visitor's conversation, or one belonging to another site.
+      Was already true before this item and is now asserted rather than inferred: the read is scoped by
+      the signed token's own `VisitorId` claim, which is why the server needed no change.
+- [x] The shared-device question is answered in the change, in one sentence, rather than left implicit.
+      Answered in `connection.ts`, `adr/0141` and `personal-data.md`: a second person at the device can
+      now read what they could already continue by writing into it.
