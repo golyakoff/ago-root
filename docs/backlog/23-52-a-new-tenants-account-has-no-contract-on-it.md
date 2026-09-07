@@ -55,6 +55,22 @@ this item makes ordinary rather than special.
 - **Whether refusing is possible.** If a registration requires accepting, refusing means no account —
   which is a product decision about the signup flow, not a technical one.
 
+## One clause the author asked for by name, 2026-09-07
+
+**Acceptable use, and the right to suspend for abusing the service.**
+
+The author's own case: a competitor registers an account — free or paid — and uploads files without
+stopping. *«Погубит меня, и я буду связан в правах удалять его файлы, потому что ему обещано вечное
+хранение.»*
+
+That worry is exactly as true as the contract makes it. A contract promising retention with no
+acceptable-use clause **does** bind us; one that reserves suspension for abuse does not. The clause is
+free to write today and impossible to add quietly once somebody has signed the version without it.
+
+It belongs here rather than in a technical item because it is a term, not a mechanism. The mechanism —
+a storage quota per tenant — is `23-76`, and the tier decision now says plainly that *"forever"* is a
+period and not a volume.
+
 ## Done when
 
 - [ ] A newly registered tenant's account carries the deployment's own documents, with an acceptance
@@ -62,6 +78,8 @@ this item makes ordinary rather than special.
 - [ ] A deployment that configures none produces none, and that is visible rather than silent.
 - [ ] The tenant can read what is on their account, including a superseded version.
 - [ ] `compliance-checklist.md` says whether this closes any of its lines.
+- [ ] The contract carries an acceptable-use clause and the right to suspend for abuse, so that a
+      retention promise is not an unlimited one.
 
 ## Out of scope
 
