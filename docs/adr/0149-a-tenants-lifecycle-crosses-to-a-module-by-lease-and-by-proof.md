@@ -1,7 +1,7 @@
 # ADR-0149: A tenant's lifecycle crosses to a module by a lease and by a proof, never by a fire-and-forget event
 
-- **Status**: Proposed — 2026-09-07. Two parameters are the author's and are named in *What this ADR
-  does not settle*; it moves to Accepted when they are filled in.
+- **Status**: Accepted — 2026-09-07. The two parameters were the author's and they answered both the
+  same day; see *The two parameters, answered*.
 - **Date**: 2026-09-07
 - **Stage**: 22 (`22-08`, `22-30`, `22-31`, `22-32`)
 - **Qualifies**: ADR-0098's "a grant's expiry binds chat only; the module is never told" — see
@@ -167,21 +167,29 @@ precisely the failure `ModuleKey`'s own remarks describe for the enum it refuses
   works — into "a prepared transaction is holding locks and nobody knows why". The honest answer to
   "both, atomically" is that it is not available, and rule 2 is what replaces it.
 
-## What this ADR does not settle
+## The two parameters, answered
 
-Two parameters. Both are the author's, both are in `22-08`'s Open questions, and neither can be
-derived from anything measurable in this deployment:
+Both were the author's, and both were answered on 2026-09-07. They are recorded here as answers rather
+than left in the section that asked them, because an ADR whose open questions are closed should read as
+a decision and not as a form.
 
-- **L, the lease length.** The recommendation is **24 hours, renewed at 12**, on the argument that a
-  non-payer taking one more day of bookings costs one day of a product they already had, while a payer
-  whose bookings stop because AGO's broker was down costs a client. That argument depends entirely on
-  the next question.
-- **What a suspension is for, and whether it is account-wide or add-on-only.** `adr/0073` already
-  answers non-payment with a downgrade, so suspension's real motivating case is `decisions.md` §6's —
-  a tenant who has to be stopped. If that is the case, L is minutes and fail-closed is obviously
-  right. If suspension is a commercial lever, L is long. Choosing L without choosing this is choosing
-  it by accident.
+**Suspension is a commercial lever.** Not `decisions.md` §6's stop-the-abuser case, which was the other
+reading. That was the load-bearing choice: the ADR argued that choosing L without choosing this is
+choosing it by accident, and this is the half that sets it.
 
-**No number here was measured.** This deployment has no recorded broker-outage distribution and
-inventing one would be exactly the invented figure `CLAUDE.md` forbids; the argument above is from the
-asymmetry of costs, which is the only ground available.
+**L is 24 hours, renewed at 12** — the ADR's own recommendation, which follows from the answer above.
+The argument stands as written and is worth keeping visible because no part of it was measured: a
+non-payer taking one more day of bookings costs one day of a product they already had, while a payer
+whose bookings stop because AGO's broker was down costs a client. The asymmetry is the ground; there is
+no recorded broker-outage distribution in this deployment and inventing one would be the invented figure
+`CLAUDE.md` forbids.
+
+**What follows, and is flagged rather than assumed.** A commercial lever sits beside `adr/0073`, which
+already answers non-payment with a **downgrade rather than a stop**. So the natural reading is that a
+commercial suspension is **add-on-only** — it takes away what was bought, not the account. That is an
+inference from two decisions rather than a third answer, and it is written here so it can be contradicted
+in one sentence rather than discovered in an implementation. `22-08` is where it becomes real.
+
+**No number here was measured.** This deployment has no recorded broker-outage distribution and inventing
+one would be exactly the invented figure `CLAUDE.md` forbids; the argument above is from the asymmetry of
+costs, which is the only ground available.

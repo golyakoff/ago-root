@@ -1,7 +1,10 @@
 # the provisioning secret crosses the cluster in clear text
 
 - **Stage**: 23
-- **Status**: ready — **and the first question in it is whether this is acceptable, not how to fix it**
+- **Status**: ready — **the question is answered; what remains is the work**
+- **Decided**: the author's, 2026-09-07 — **encrypt it**. `22-24`'s internal CA already exists and
+  `ago-calendar-api` already serves 8443, so the gap is chat trusting the CA. The other two readings
+  below are kept for the record, not as live options.
 - **Depends on**: `23-87` configured the secret; `23-92` establishes the address that makes it travel.
 - **Found**: 2026-09-07, while establishing what a module entry point should contain.
 
