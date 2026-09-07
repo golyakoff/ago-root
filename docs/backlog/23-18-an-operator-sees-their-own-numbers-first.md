@@ -69,13 +69,35 @@ whether operators can predict their own numbers before seeing them.
 
 ## Done when
 
-- [ ] An operator with none of the gating permissions reaches the screen and sees their own figures.
-- [ ] Those figures equal that operator's row in the tenant's own report for the same range —
-      asserted, not eyeballed.
-- [ ] The endpoint cannot return another operator's figures, including when an operator id is
-      supplied in the request: a tenant-isolation test and a same-tenant-different-operator test.
-- [ ] `23-16`'s rules hold on every rate this screen prints.
-- [ ] The nav shows the entry to an operator holding no `site:configure`.
+- [x] An operator with none of the gating permissions reaches the screen and sees their own figures. —
+      three layers, each proven: the route is `RequireOperatorIdentity` and nothing else
+      (`ago-chat@8cb5453`, `ConversationsEndpoints.cs`); `/analytics/me` is the one route in the
+      analytics group with no `site:configure` check inside the page (`ago-console@d69c3fa`,
+      `App.tsx`); and `MyNumbersPage.test.tsx`'s *"loads and renders with no permissions check at all"*
+      asserts it.
+- [x] Those figures equal that operator's row in the tenant's own report for the same range —
+      asserted, not eyeballed. — `HandleAsync_OwnAnalyticsRow_EqualsTheOperatorsOwnRowInTheTenantReport`
+      and `HandleAsync_OwnConversionFigures_EqualTheOperatorsOwnRowInTheConversionReport`. Structural
+      as well: `OperatorAnalyticsMerge` was extracted rather than reimplemented, so there is one
+      computation, not two that happen to agree.
+- [~] The endpoint cannot return another operator's figures, including when an operator id is
+      supplied in the request: a tenant-isolation test and a same-tenant-different-operator test. —
+      **both named tests exist**, at the Application layer:
+      `HandleAsync_PassesTheCallersOwnSiteId_NeverAnother_ToEveryStore` and
+      `HandleAsync_ReturnsOnlyTheCallersOwnRow_NeverAnotherOperatorsInTheSameSite`. The
+      *"including when an operator id is supplied"* clause is met by shape rather than by a test:
+      `GetOwnAnalyticsForOperator` carries no operator-id field, so there is nothing an HTTP parameter
+      could bind a second identity into, and no over-the-wire test with two signed-in operators was
+      written. This item's own Outcome already said so — "structurally impossible is an argument, not a
+      test" — and it is recorded on the box rather than left in prose. (`23-55`, 2026-09-07.)
+- [x] `23-16`'s rules hold on every rate this screen prints. — the screen prints exactly one rate, the
+      conversion rate, and `MyNumbersPage.tsx`'s `formatRateWithFraction` pairs it with its own
+      numerator and denominator, citing `23-16` where it does so; asserted as `66.7% (2 of 3)` by
+      *"shows the conversion figures with the rate paired to its own fraction"*.
+- [x] The nav shows the entry to an operator holding no `site:configure`. —
+      `permissionGating.test.tsx` grants only `conversation:read` and expects **My numbers** at
+      position 2 of the nav, and absent from `mutedNavLabels`, which is the stronger of the two claims:
+      present *and* not drawn as a thing somebody could withhold.
 
 ## Open questions
 

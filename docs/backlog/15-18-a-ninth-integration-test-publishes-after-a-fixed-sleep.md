@@ -39,6 +39,15 @@ emission and is **absent, not zero**, for several seconds after a queue is decla
 
 ## Done when
 
-- [ ] This test waits for its subscription to be observable rather than for a duration, using whatever
-      `15-17` established.
-- [ ] A grep proves there is no tenth — the same search that missed this one, run again after the fix.
+- [x] This test waits for its subscription to be observable rather than for a duration, using whatever
+      `15-17` established. — `ago-chat@713635b`: `WidgetConfigCacheInvalidationEndToEndTests` now uses
+      `RabbitMqSubscriptionTestHelpers`, waiting on a consumer actually attached for both of the modes
+      it races (`Competing` for `SiteSettingsChanged`, `Broadcast` for `CacheInvalidated`).
+- [~] A grep proves there is no tenth — the same search that missed this one, run again after the fix.
+      — **the search was run, and it did not prove that; it found two more.** Deliberately by shape
+      rather than by literal — `Task.Delay` with any argument, `Thread.Sleep`,
+      `CancellationTokenSource(TimeSpan)` — across all 19 `Task.Delay` call sites in the project, each
+      read in context. `UnreadCounterEndToEndTests` and `AttachmentThumbnailEndToEndTests` both slept
+      **two** seconds rather than 500 ms, which is exactly why the original literal grep never saw
+      them. They were carried out to `15-20` rather than folded in here, and are fixed on `main`
+      (`ago-chat@86129d9`). Getting a non-empty answer is what the box was for. (`23-55`, 2026-09-07.)

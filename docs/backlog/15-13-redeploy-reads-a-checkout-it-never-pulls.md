@@ -47,6 +47,18 @@ themselves on the next run. Landing would not have.
 
 ## Done when
 
-- [ ] `redeploy.sh` pulls every checkout whose commit it reads.
-- [ ] Proven by leaving a checkout deliberately behind and showing the run corrects it rather than
-      building from it.
+- [x] `redeploy.sh` pulls every checkout whose commit it reads. — and by construction rather than by
+      the one-word fix alone (`ago-deploy@0cb2e2c`). `ago-landing` joined `PULLED_DIRS`, and every
+      `*_SHA=` now goes through `read_sha()`, which refuses to read a commit for a directory absent
+      from that array — so adding a component to one list without the other fails the run instead of
+      quietly reading history. The two directories pulled without being read (`ago-platform`,
+      `ago-deploy`) are named with their reasons; the gate only refuses the other direction, which is
+      the failure this item is about.
+- [~] Proven by leaving a checkout deliberately behind and showing the run corrects it rather than
+      building from it. — **I could not establish that this run happened.** The record proves the
+      *gap* live ("the node's `ago-landing` was 14 commits behind", 2026-09-03) and proves the fix by
+      reading the script, but nothing anywhere records a deliberate-lag run afterwards. What was
+      delivered instead is stronger than that one-off would have been and is checkable at any time:
+      `read_sha()` makes the mismatch unrepresentable rather than merely absent today, so the property
+      holds for the next component added as well as for `ago-landing`. Recorded as an unmet empirical
+      proof rather than ticked. (`23-55`, 2026-09-07.)

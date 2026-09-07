@@ -65,13 +65,27 @@ assertion sends whoever reads it looking for a bug that is not there — the sam
 
 ## Done when
 
-- [ ] No integration test publishes on the strength of a fixed sleep — each waits for its subscription
-      to be observable, and that wait fails with a message saying the subscription never landed.
-- [ ] No test's success depends on a wait shorter than a recovery window its own configuration can
-      open, and the relationship between the two numbers is stated where they are set.
-- [ ] Receiving nothing, receiving some, and receiving a split read as three different findings.
-- [ ] Whatever replaces the sleep is used by all eight. This failed because the pattern was copied,
-      and a fix in one place would be copied just as unevenly.
+- [x] No integration test publishes on the strength of a fixed sleep — each waits for its subscription
+      to be observable, and that wait fails with a message saying the subscription never landed. —
+      true for the eight files this item names from `ago-chat@485487b`, and true of the whole project
+      once `15-18` (the ninth) and `15-20` (the tenth and eleventh) landed. The remaining
+      `Task.Delay`s in the suite were read one by one at `23-55`: they wait for something *not* to
+      happen *after* publishing (a reply that must not arrive, a duplicate row that must not appear),
+      which is a different shape and not what this box forbids.
+- [x] No test's success depends on a wait shorter than a recovery window its own configuration can
+      open, and the relationship between the two numbers is stated where they are set. —
+      `WebhookDispatchTestHarness.AssertBreakDurationFitsWithinWait`, called where the numbers are set,
+      throws unless the wait is at least twice `BreakDuration`. A hard throw rather than a comment,
+      deliberately: a comment is what the project already had, and it did not stop the drift.
+- [x] Receiving nothing, receiving some, and receiving a split read as three different findings. —
+      `WebhookDispatchSharedQueueRegressionTests` now distinguishes all three in its own assertion
+      messages: 0 received is a lost publish, a partial non-split count is the wait timing out (most
+      likely a still-recovering breaker), and only a split total is the `5-11` defect the test is named
+      for.
+- [x] Whatever replaces the sleep is used by all eight. This failed because the pattern was copied,
+      and a fix in one place would be copied just as unevenly. — verified by reading the tree rather
+      than the report: all eight named files reference `RabbitMqSubscriptionTestHelpers`, as do the
+      three `15-18`/`15-20` added afterwards.
 
 ## Worth knowing before starting
 

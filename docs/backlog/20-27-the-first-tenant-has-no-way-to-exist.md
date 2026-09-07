@@ -2,7 +2,8 @@
 
 - **Stage**: 20
 - **Status**: done (2026-09-03) — the mechanism exists and is merged. **No tenant has been created
-  yet**, and the owner's first sign-in — the whole point — is still owed.
+  yet**, and the owner's first sign-in — the whole point — is still owed; carried out to `20-30` by
+  `23-55` on 2026-09-07.
 - **Found**: 2026-09-03, while writing a walkthrough of the calendar console. The walkthrough could
   not get past the first screen.
 
@@ -56,11 +57,19 @@ It would also have meant generalising from zero callers.
       occurrences of `WebApplication`, `MapGet`, `MapPost`, `Kestrel` or `UseUrls`. Reaching it means
       running a container inside the cluster with the real connection string — the trust boundary
       `Ago.Calendar.Migrator` already occupies, and that one alters schema.
-- [ ] **A tenant exists in `ago_calendar` on the live node.** Not yet: it needs the shop's real name
-      and the owner's real email, which are inputs a session cannot invent.
-- [ ] **Its owner signs in and reaches a screen with their own data on it.** This is the one that
+- [~] **A tenant exists in `ago_calendar` on the live node.** Not yet: it needs the shop's real name
+      and the owner's real email, which are inputs a session cannot invent. — **carried out to
+      `20-30`,** together with the box below; the two are one promise and neither is worth anything
+      alone. Still genuinely unmet, not overtaken: `Ago.Calendar.Provisioner` is still on `main` and
+      still the only path, and nothing since has created a tenant. (`23-55`, 2026-09-07.)
+- [~] **Its owner signs in and reaches a screen with their own data on it.** This is the one that
       matters. Every layer beneath it has been proven individually, and today has repeatedly shown
-      that is not the same thing.
+      that is not the same thing. — **carried out to `20-30`.** One thing changed that the new item
+      has to say differently: `22-06` retired `ago-calendar-console`, so the screen the owner reaches
+      is now `ago-console` at `office.reserve-me.ru`, not this product's own console. `22-06`'s own
+      first Done-when is the same wall from the other side — settled `[~]` there as "needs a person
+      signing in", with every mechanical part proven and no human reaching them. (`23-55`,
+      2026-09-07.)
 
 ## Out of scope
 
