@@ -1,7 +1,7 @@
 # the drift check can report PASS because its own filter failed
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-07), `ago-deploy#160`. Filed and closed the same morning it was found.
 - **Depends on**: nothing. `15-21` built the script; this is a hole in it.
 - **Found**: 2026-09-07, reading `check-manifest-drift.sh` while doing `15-23`.
 
@@ -50,8 +50,13 @@ real and the behaviour is deliberate), or say plainly in the script that its exi
 
 ## Done when
 
-- [ ] A failure inside the script reports `UNKNOWN`, never `PASS`, and is shown doing so.
-- [ ] The exit-code intent is either implemented or stated.
+- [x] A failure inside the script reports `UNKNOWN`, never `PASS`, and is shown doing so — for the
+      `awk` filter and the `sed` normalisation separately, and re-proven at landing against the
+      **old** script, which prints `PASS` and exits 0 under the identical broken `awk`.
+- [x] The exit-code intent is either implemented or stated — implemented: `PASS` 0, `DRIFT` 1,
+      `UNKNOWN` 2, matching `check-theme-tokens.sh` and `deploy.sh` in the same directory. Neither
+      caller changes; advisory-never-fatal is `adr/0144`'s decision. The `|| true` now swallows a
+      real status rather than one that could never have been anything else.
 
 ## Out of scope
 
