@@ -1,7 +1,7 @@
 # a visitor can introduce themselves while somebody is online
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-09` — the form itself, which exists and is reused rather than rebuilt.
 - **Decision**: the author's, 2026-09-07, four answers recorded below.
 
@@ -44,9 +44,11 @@ one-item shortcut. Three fields is the point at which that stops being reasonabl
 
 ## Done when
 
-- [ ] A visitor writing while an operator is online sees «Представиться…» under their own first message.
-- [ ] Clicking it opens the same form the out-of-hours path opens — one control, one set of fields.
-- [ ] The control disappears once a contact has been left, and does not come back in that conversation.
-- [ ] Name, phone and e-mail are each required, and the e-mail is stored as its own kind rather than
+- [x] A visitor writing while an operator is online sees «Представиться…» under their own first message.
+      `ago-widget` `f90f1d7`.
+- [x] Clicking it opens the same form the out-of-hours path opens — one control, one set of fields.
+- [x] The control disappears once a contact has been left, and does not come back in that conversation.
+- [x] Name, phone and e-mail are each required, and the e-mail is stored as its own kind rather than
+      `ago-chat` `408d39b` — 62 lines of handler tests, because a required field enforced only in the widget DOM is not required. An empty name and an empty e-mail are now refused over the visitor path, and an e-mail stores as its own kind rather than riding as `Other`.
       riding as `Other`.
-- [ ] The out-of-hours entry point still works and shows the same three fields.
+- [x] The out-of-hours entry point still works and shows the same three fields.

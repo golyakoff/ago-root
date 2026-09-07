@@ -1,7 +1,7 @@
 # the compose area gives the text the whole width
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing
 - **Decision**: the author's, 2026-09-07, describing the layout they want.
 
@@ -41,7 +41,9 @@ every time a control is added beside it — which is exactly what the next few i
 
 ## Done when
 
-- [ ] The text field occupies the full width of the compose area.
-- [ ] Send is a round, icon-only button with an accessible name, and meets the target-size floor.
-- [ ] Attach, the reserved emoji place and the reserved save place sit on their own row beneath.
-- [ ] The mobile layout is checked, not assumed, and the widget's bundle budget still holds.
+- [x] The text field occupies the full width of the compose area.
+      `ago-widget` `c66527e`.
+- [x] Send is a round, icon-only button with an accessible name, and meets the target-size floor.
+- [x] Attach, the reserved emoji place and the reserved save place sit on their own row beneath.
+- [~] The mobile layout is checked, not assumed, and the widget's bundle budget still holds.
+      **Mobile was checked and the check found something; the bundle budget was not separately measured.** Building the second row cost `.ago-attach` the full-height hit area it had been getting free from a taller sibling, collapsing it to 20px — under WCAG 2.5.8's 24px floor, with nothing on the element itself having changed. An explicit 2rem box replaces that accident. No bundle-size figure was recorded, and this repository has no size budget check to record one against.

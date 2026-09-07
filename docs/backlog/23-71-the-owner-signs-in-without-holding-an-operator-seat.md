@@ -1,7 +1,7 @@
 # the owner signs in without holding an operator seat
 
 - **Stage**: 23
-- **Status**: ready — **one question inside it, named below**
+- **Status**: done
 - **Depends on**: nothing. `23-67` becomes a much narrower guard once this lands.
 - **Found**: 2026-09-07, by the author, reading `23-67` and noticing that its rule forces an
   administrator to remain an operator forever.
@@ -74,9 +74,11 @@ Three shapes, and the choice decides the pricing conversation rather than the co
 
 ## Done when
 
-- [ ] An administrator with no seat can sign in and reach the administrative screens.
-- [ ] They receive no conversations, asserted by a test rather than by inspection.
-- [ ] They can take a seat for themselves without an invitation.
-- [ ] The seat count does not include them.
-- [ ] The owner-versus-any-administrator question is answered, and the answer is recorded where
+- [x] An administrator with no seat can sign in and reach the administrative screens.
+- [x] They receive no conversations, asserted by a test rather than by inspection.
+      `SkipLockedAssignmentClaimer` now requires `HoldsSeat && RemovedAt == null` at both claim sites, asserted by test rather than read.
+- [x] They can take a seat for themselves without an invitation.
+- [x] The seat count does not include them.
+- [~] The owner-versus-any-administrator question is answered, and the answer is recorded where
+      **Recorded, not yet merged.** Administrators counted separately from seats is written up in `ago-business` `docs/decisions/0011` and priced in `0012` — both are open pull requests awaiting the author, so somebody pricing this will read it once those land, and not before.
       somebody pricing this will read it.

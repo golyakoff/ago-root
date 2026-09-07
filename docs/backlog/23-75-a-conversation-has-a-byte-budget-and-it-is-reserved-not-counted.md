@@ -1,7 +1,7 @@
 # a conversation has a byte budget, and it is reserved rather than counted
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `5-13` did the per-file half.
 - **Decision**: the author's, 2026-09-07 — 10 MB per file, **100 MB per active conversation**, the same
   in both directions.
@@ -53,9 +53,13 @@ mechanism.
 
 ## Done when
 
-- [ ] A conversation cannot accumulate more than the budget, whoever uploads.
-- [ ] Ten simultaneous presign requests cannot together exceed it, proven rather than reasoned.
-- [ ] An unused slot returns its reservation, and the pending sweep is what does it.
-- [ ] The refusal says how much is left.
-- [ ] `file-storage.md`'s claim that a per-conversation ceiling exists becomes true, or is corrected —
+- [x] A conversation cannot accumulate more than the budget, whoever uploads.
+- [x] Ten simultaneous presign requests cannot together exceed it, proven rather than reasoned.
+      **With one caveat worth keeping.** The concurrency test passes with all three `FOR UPDATE` clauses removed, so it proves the budget holds under ten simultaneous presigns but does *not* prove the row lock is what makes it hold. Either the lock is redundant here or the test cannot see its absence; whichever it is, this test will not guard a future edit that removes it.
+- [x] An unused slot returns its reservation, and the pending sweep is what does it.
+      Delete and release are two CTEs of one statement, so there is no window in which a crash leaks budget.
+- [x] The refusal says how much is left.
+      `ConversationErrors.AttachmentConversationBudgetExceeded(declaredSizeBytes, reservation.RemainingBytes)` — the refusal carries what was asked for and what is left.
+- [x] `file-storage.md`'s claim that a per-conversation ceiling exists becomes true, or is corrected —
+      Corrected rather than made true: the per-conversation ceiling `file-storage.md` described had never existed.
       today it is simply false.
