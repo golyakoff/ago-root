@@ -83,8 +83,37 @@ Three things follow, and they are scope rather than commentary:
 
 ## Done when
 
-- [ ] Releasing the last seat that can manage operators is refused, server-side, with a message saying why.
-- [ ] Removing the last such operator is refused the same way.
-- [ ] Removing the last role that grants it is refused the same way.
-- [ ] Two simultaneous attempts cannot both succeed, proven rather than reasoned.
-- [ ] A tenant with two admins can still do all three to themselves.
+- [~] Releasing the last seat that can manage operators is refused, server-side, with a message saying
+      why. **No refusal exists, and none is added** — checked against `ToggleOperatorSeatHandler`
+      rather than assumed: since `23-71`, `Operator.CanSignIn` is `HoldsSeat || holdsManageOperatorsPermission`,
+      and the permission half is resolved from a role assignment this handler never touches. So for the
+      one operator this rule is about (a non-removed `site:manage_operators` holder), `CanSignIn` cannot
+      go from true to false by releasing a seat - a count-based guard here would read a fact this handler
+      cannot move and could never refuse. `adr/0152` has the full trace and the alternatives considered;
+      `OperatorSignInEligibilityTests.CanSignInAsync_TheSoleManager_SurvivesReleasingTheirOwnLastSeat`
+      (`ago-chat`) proves it by reverting `23-71` locally and watching the test fail.
+- [x] Removing the last such operator is refused the same way. **Already shipped, by `23-26`
+      (`be4e65f`, 2026-09-05), before this item was filed.** Since `23-71`, "non-removed
+      `site:manage_operators` holder" and "can sign in and manage operators" are the same set, so
+      `23-26`'s transactional last-manager count already is this invariant.
+      `OperatorSignInEligibilityTests.CanSignInAsync_TheSurvivingManagerAfterARefusedSelfRemoval_CanStillSignIn`
+      (`ago-chat`) adds the one check nothing before this item made: that the holder the count leaves
+      behind can actually sign in, not merely that the count is nonzero.
+- [~] Removing the last role that grants it is refused the same way. **Nothing to guard: this action does
+      not exist in the product.** Role assignment is written exactly twice (site registration, invite
+      redemption) and never afterward; role permissions are seeded once and have no editor. `adr/0152`
+      records that whoever builds operator-role editing must apply this same invariant to it then.
+- [x] Two simultaneous attempts cannot both succeed, proven rather than reasoned. Proven on real
+      Postgres for removal by `RemoveOperatorConcurrencyTests` (pre-existing, from `23-26`). Seat
+      release carries no refusal to race, by the finding above, so there is nothing left to prove
+      concurrent-safe for that route.
+- [x] A tenant with two admins can still do all three to themselves. True by construction for both
+      routes that exist (neither guard keys off self vs. other); the role-removal route is not
+      applicable, per above.
+
+**Verified, not merely argued** (`ago-chat`, worktree `ago-chat-23-67`): `dotnet format` clean,
+`dotnet build -c Release` 0 warnings/0 errors, `dotnet test -c Release` green across all six
+`Ago.Chat.*` test assemblies including `Ago.Chat.Concurrency.Tests` and `Ago.Chat.Integration.Tests`
+against real Postgres. See `adr/0152` for the fails-before demonstration (reverting `23-71`, and
+separately weakening `23-26`'s guard, each makes the relevant new test fail; restored, suite green
+again).
