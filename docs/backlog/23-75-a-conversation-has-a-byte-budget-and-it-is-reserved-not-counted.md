@@ -61,5 +61,5 @@ mechanism.
 - [x] The refusal says how much is left.
       `ConversationErrors.AttachmentConversationBudgetExceeded(declaredSizeBytes, reservation.RemainingBytes)` — the refusal carries what was asked for and what is left.
 - [x] `file-storage.md`'s claim that a per-conversation ceiling exists becomes true, or is corrected —
-      Corrected rather than made true: the per-conversation ceiling `file-storage.md` described had never existed.
       today it is simply false.
+      Corrected rather than made true: the per-conversation ceiling `file-storage.md` described had never existed.

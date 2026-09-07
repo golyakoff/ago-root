@@ -49,12 +49,12 @@ reusing its *message* are separate choices.
       against a real API server through either script, so "is reported" is a mechanism in place
       rather than a thing observed. This closes with the same event `15-21`'s third box waits on.
 - [x] A first install, and an ordinary image bump, both stay quiet — the first half proven rather
-      than argued: `kubectl set image` two steps earlier refuses on a Deployment that does not exist,
       so a genuine first install dies under `set -euo pipefail` before the check is reached, traced
+      than argued: `kubectl set image` two steps earlier refuses on a Deployment that does not exist,
       with `bash -x`. The image-bump half rests on the tag normalisation `15-21` built and shares
       that item's unproven-against-a-cluster caveat.
 - [x] The reuse-or-not question is answered in the change rather than implied by it: reuse the script
-      **and** the message, unwrapped, and do not narrow the report to the component a given
       invocation moved — the check answers a standing question that does not become less true for
+      **and** the message, unwrapped, and do not narrow the report to the component a given
       the parts a run left alone, and narrowing it needs a filter it cannot express for a
       NetworkPolicy. Written into `deploy.sh` itself and the runbook, not only here.

@@ -53,5 +53,5 @@ person whose job it is. An administrator sees a muted link to it; an operator se
 - [x] The hidden-versus-muted rule is stated once and followed by every calendar entry.
       Stated once in `calendarPermissions.ts` and followed by every calendar entry, rather than each entry deciding for itself.
 - [x] A test asserts the operator case, not only the administrator one — the existing nav tests
-      `permissionGating.test.tsx` grew 137 lines asserting the operator case — the gap that let this survive was that the existing tests asserted only what an administrator sees.
       assert what an admin sees, which is why this survived.
+      `permissionGating.test.tsx` grew 137 lines asserting the operator case — the gap that let this survive was that the existing tests asserted only what an administrator sees.

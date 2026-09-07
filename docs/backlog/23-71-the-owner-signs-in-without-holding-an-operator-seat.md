@@ -79,6 +79,10 @@ Three shapes, and the choice decides the pricing conversation rather than the co
       `SkipLockedAssignmentClaimer` now requires `HoldsSeat && RemovedAt == null` at both claim sites, asserted by test rather than read.
 - [x] They can take a seat for themselves without an invitation.
 - [x] The seat count does not include them.
-- [~] The owner-versus-any-administrator question is answered, and the answer is recorded where
-      **Recorded, not yet merged.** Administrators counted separately from seats is written up in `ago-business` `docs/decisions/0011` and priced in `0012` — both are open pull requests awaiting the author, so somebody pricing this will read it once those land, and not before.
+- [x] The owner-versus-any-administrator question is answered, and the answer is recorded where
       somebody pricing this will read it.
+      `ago-business` `docs/decisions/0011` (administrators counted separately from operator seats) and
+      `0012` (the tier grid that prices them), both merged 2026-09-07 at 12:02 UTC.
+      **Corrected the same day.** This box was first marked `[~]` with a note saying the two were open
+      pull requests awaiting the author. They had merged six hours earlier; I asserted their state
+      without looking at them.

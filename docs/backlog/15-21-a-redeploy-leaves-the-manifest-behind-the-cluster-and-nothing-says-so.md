@@ -64,8 +64,8 @@ cluster**, not merely a stale tag.
 ## Done when
 
 - [x] A manifest change made in this repository reaches the cluster by an ordinary deploy, or the
-      `check-manifest-drift.sh`, called as the last step of both `redeploy.sh` and `deploy.sh`, with a three-outcome contract — `PASS`, `DRIFT`, `UNKNOWN` — that never folds a tool failure into `PASS` (`15-24` fixed a path that did).
       deploy says out loud that it did not.
+      `check-manifest-drift.sh`, called as the last step of both `redeploy.sh` and `deploy.sh`, with a three-outcome contract — `PASS`, `DRIFT`, `UNKNOWN` — that never folds a tool failure into `PASS` (`15-24` fixed a path that did).
 - [~] The pins and the cluster cannot drift apart silently.
       **Not closed, and carried out to `23-90`.** The check normalises image tags away before diffing, deliberately (`adr/0144`), so the one kind of drift that actually accumulates is invisible to it. Proven on 2026-09-07: eleven of twelve `newTag` values were stale and the check printed `PASS`. Closing this needs an answer to *when are tags meant to disagree*, which is a decision rather than a fix.
 - [x] Whatever notices is shown noticing, against a real drift.

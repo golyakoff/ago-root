@@ -49,6 +49,6 @@ one-item shortcut. Three fields is the point at which that stops being reasonabl
 - [x] Clicking it opens the same form the out-of-hours path opens — one control, one set of fields.
 - [x] The control disappears once a contact has been left, and does not come back in that conversation.
 - [x] Name, phone and e-mail are each required, and the e-mail is stored as its own kind rather than
-      `ago-chat` `408d39b` — 62 lines of handler tests, because a required field enforced only in the widget DOM is not required. An empty name and an empty e-mail are now refused over the visitor path, and an e-mail stores as its own kind rather than riding as `Other`.
       riding as `Other`.
+      `ago-chat` `408d39b` — 62 lines of handler tests, because a required field enforced only in the widget DOM is not required. An empty name and an empty e-mail are now refused over the visitor path, and an e-mail stores as its own kind rather than riding as `Other`.
 - [x] The out-of-hours entry point still works and shows the same three fields.
