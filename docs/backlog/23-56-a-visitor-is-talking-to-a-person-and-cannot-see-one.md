@@ -1,7 +1,8 @@
 # a visitor is talking to a person and cannot see one
 
 - **Stage**: 23
-- **Status**: ready — **and it carries product questions the author should answer before it is built**
+- **Status**: ready. The three product questions were answered by the author on 2026-09-07 and are
+  recorded below; one assumption is named rather than buried.
 - **Depends on**: `24-04` (the operator's own lawful basis and what they are shown at first sign-in)
   is the natural place for the consent this needs. It is open. See "The dependency worth arguing about".
 - **Decision**: the author's, 2026-09-07 — an operator has a photo and the visitor sees it. Their
@@ -53,18 +54,48 @@ done:
   widget renders a stored URL or resolves it live, and say which, because they behave differently the
   day somebody asks to be removed.
 
-## The questions, and they are the author's
+## The three questions, answered by the author 2026-09-07
 
-1. **Does the tenant's admin get to see, replace or remove an operator's photo?** There is a real
-   argument for yes — it is the shop's own storefront and an unsuitable photograph is their problem
-   — and a real argument for no, since it is the operator's own face and their own consent. This
-   decides whether the feature is one screen or two.
-2. **Is a photo shown for a bot or an auto-reply?** `14-04`'s offline auto-reply and `23-39`'s machine
-   answers both write into the same transcript. Showing a human's face above a machine's words is a
-   small lie that compounds; showing nothing there is inconsistent. Neither is obviously right.
-3. **Does the tenant get a fallback of their own** — a shop logo where an operator has no photo —
-   or is the absence always neutral? This is the difference between an empty-looking widget and a
-   branded one, and it changes what the tenant expects to configure.
+The three answers turn out to be one design, so they are written together rather than as a list.
+
+**A tenant holds stand-in portraits, and they are AI-generated.** The author's reasoning: a generated
+portrait uses nobody's likeness, so the tenant can put a friendly, business-looking face where a real
+one is missing or unsuitable.
+
+- **An operator who declines is told what will stand in their place**, before they decide. That is the
+  whole difference between a choice and a default: refusing stays free, and it is not a surprise
+  afterwards.
+- **The tenant may remove a real photo and replace it with a stand-in** — not only when an operator
+  refuses, but when a real photograph is unsuitable for the shop's own storefront. The tenant may
+  never upload a *real* photograph of somebody else. That is the line, and it is where the consent
+  argument actually bites.
+- **Machine replies are a tenant setting.** The tenant uploads a picture for the machine and chooses
+  whether auto-replies and machine answers carry it or keep the operator's own. Neither is forced.
+- **The empty case is the tenant's to fill.** No photo and no stand-in is a legitimate state.
+
+### What this has to be honest about, and it is not the operator's side
+
+The operator's consent story is now clean: asked, told what happens if they say no, and saying no
+costs them nothing.
+
+**The exposed party is the visitor.** A synthetic face above a real person's name tells a customer they
+are looking at Pavel, and they are not. It infringes nobody's likeness and it is still a
+misrepresentation — a product decision rather than a technical one. The author has taken it; this
+paragraph exists so nobody later believes the question was never asked. Two things must not be decided
+by omission:
+
+- **Whether the widget says anywhere that a portrait is illustrative.** A line of small text is cheap
+  and changes what the visitor was told. Not having one is also a position — take it deliberately.
+- **A stand-in must never be presented as evidence.** If a transcript is exported, printed or shown
+  back as a record of who said what, the face in it must not read as identifying a person.
+
+### One thing the answers leave open, and the assumption being proceeded on
+
+The tenant *chooses* a stand-in. **Assumption: the tenant uploads the image**, through the same
+presigned path as every other file, and this product generates nothing and ships no gallery.
+Generating portraits ourselves means a vendor, its terms, a cost per image and a new outbound
+dependency — a separate decision, and probably a separate item. If a small built-in set was the
+intent, this changes shape.
 
 ## Out of scope
 
@@ -81,4 +112,7 @@ done:
 - [ ] An operator with no photo produces a deliberate-looking widget, not a broken one.
 - [ ] `personal-data.md` says what is held, where, on what basis, and how it is removed.
 - [ ] Removing an operator removes the photo, proven by a test rather than by inspection.
-- [ ] The three questions above are answered in the change rather than settled by implication.
+- [x] The three questions above are answered — by the author, 2026-09-07, recorded above.
+- [ ] An operator is told, before choosing, what will stand in their place if they decline.
+- [ ] A tenant can place a stand-in and can never upload a real photograph of another person.
+- [ ] Whether the widget marks a portrait as illustrative is decided in the change, not by omission.
