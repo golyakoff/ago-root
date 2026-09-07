@@ -1,7 +1,8 @@
 # a service has a price and a description — or it deliberately does not
 
 - **Stage**: 23
-- **Status**: ready. **Answered by the author, 2026-09-06: a service has a price and a description.**
+- **Status**: done (2026-09-07), `ago-calendar#47`, `ago-console#141`, `adr/0142`. Was: **answered by
+  the author, 2026-09-06: a service has a price and a description.**
   It is work now, not a question.
 - **Depends on**: `23-31` moves the service dictionary onto its own screen
 - **Decision**: **open.** The author raised it 2026-09-06; the commercial half is not decided
@@ -56,8 +57,11 @@ must maintain; internal it is a note.
 
 ## Done when
 
-- [ ] The author has picked one of the three readings, and it is written down.
-- [ ] Whatever was picked is built, or the item is closed as not-planned with the reasoning kept.
+- [x] The author has picked one of the three readings, and it is written down — `adr/0142`, which also
+      settles the two questions the answer left open: what a price means when it varies, and whether it
+      is repeated in a confirmation.
+- [x] Whatever was picked is built, or the item is closed as not-planned with the reasoning kept.
+      Built and deployed: the migration is on the stand as of 2026-09-07, smoke 46/0.
 
 ## Open questions
 

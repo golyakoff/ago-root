@@ -1,7 +1,8 @@
 # whether in-cluster traffic is encrypted was never decided, and something is waiting on the answer
 
 - **Stage**: 22
-- **Status**: ready. **Answered by the author, 2026-09-06: TLS between services.** Reading B, not A.
+- **Status**: done (2026-09-07), `adr/0137`, `ago-chat`/`ago-deploy`. Was: **answered by the author,
+  2026-09-06: TLS between services.** Reading B, not A.
 - **Depends on**: nothing. Carried out of `22-18`, which named it and correctly refused to answer it.
 - **Decision**: none taken. The readings are below and the choice is the author's.
 
@@ -52,11 +53,21 @@ right answer all along.
 
 ## Done when
 
-- [ ] The author has chosen, and the choice is recorded where somebody reading about the deployment
+- [x] The author has chosen, and the choice is recorded where somebody reading about the deployment
       will find it — `architecture/edge.md` or an ADR, not only here.
-- [ ] If A, the reasoning is written down as a decision rather than left as a default.
-- [ ] If B, in-cluster certificates have an expiry story and something notices before they lapse.
-- [ ] `compliance-checklist.md`'s F row points at the answer.
+- [~] If A, the reasoning is written down as a decision rather than left as a default. **Not
+      applicable: the answer was B.** `adr/0137` records it, including that the scope is one hop and
+      that doing one while implying all of them is how a compliance line gets ticked falsely.
+- [~] If B, in-cluster certificates have an expiry story and something notices before they lapse.
+      **Half true, and the half that is missing is named rather than glossed.** The leaf needs no new
+      alert — `TlsCertificateRenewalOverdue` has no per-certificate matcher, proven with a real
+      `promtool` run. **The root's expiry has no automated alert at all**, because pointing a
+      cert-manager `Certificate` at that Secret would make it reissue over an offline root.
+- [~] `compliance-checklist.md`'s F row points at the answer. **It cannot yet, and the reason is not
+      ours to fix.** The F rows are the personal-data protection level: F4 is *the measures the level
+      requires are implemented and evidenced*, and it reads **cannot start before F1** — the level
+      determination, which is a lawyer's document. TLS between services is a measure that will be
+      evidenced there once F1 exists; until then the record of it is `adr/0137`.
 
 ## Out of scope
 

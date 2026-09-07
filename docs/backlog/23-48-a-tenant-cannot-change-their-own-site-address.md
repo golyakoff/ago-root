@@ -1,7 +1,8 @@
 # a tenant cannot change their own site address without asking us
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-07), `ago-chat#0673402`, `ago-console`. The author chose: the platform
+  owner, and nobody else.
 - **Depends on**: nothing. `23-46` made the absence honest; this removes it.
 - **Decision**: the author's, 2026-09-06 — **only the platform owner may edit a tenant's site address.
   Nobody else.** The question this item held open is answered; the surface it lives on is sketched.
@@ -73,9 +74,15 @@ they are separate promises with their own arguments (`23-36` already owns channe
 ## Done when
 
 - [x] The author has chosen who may edit it — the platform owner, and nobody else.
-- [ ] A tenant's site address can be changed without anyone writing SQL.
-- [ ] A value that is not an origin is refused with a message naming what is wrong with it.
-- [ ] The change takes effect immediately, proven against the cache rather than assumed.
+- [x] A tenant's site address can be changed without anyone writing SQL — the owner's site-detail
+      screen carries the editor.
+- [x] A value that is not an origin is refused with a message naming what is wrong with it
+      (`SiteInvalidOrigin(originError)`), and an empty list is refused too — storing one would lock
+      every visitor out, which the item did not ask for and nobody would have meant.
+- [x] The change takes effect immediately, proven against the cache rather than assumed —
+      `SiteAllowedOriginsCacheInvalidationEndToEndTests`. The first version of this proof argued two of
+      the three cache shapes "by construction"; it was sent back and the argument replaced by an
+      assertion, which then had to be made load-bearing.
 
 ## Out of scope
 
