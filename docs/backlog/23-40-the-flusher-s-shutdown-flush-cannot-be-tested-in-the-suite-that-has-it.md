@@ -1,7 +1,7 @@
 # the flusher's final flush on shutdown has no test, because the one written for it is right half the time
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-07), `ago-chat#215`. Test only — no production file changed.
 - **Depends on**: nothing. `23-07` is merged; this is the one Done-when it could not close honestly.
 - **Decision**: none needed. This is a defect in our own ability to prove something, not a product question.
 
@@ -68,12 +68,25 @@ line in a report.
 
 ## Done when
 
-- [ ] The final flush on shutdown has a test that passes in the full project, repeatedly — **at least
-      ten consecutive full-project runs**, not one.
-- [ ] `23-07`'s first Done-when clause is honestly covered, or this item records why it cannot be and
-      what stands instead.
-- [ ] If the cause turns out to be a real race rather than a test artefact, it gets its own item —
-      that would be a defect in the flusher, not in the test.
+- [x] The final flush on shutdown has a test that passes in the full project, repeatedly — **at least
+      ten consecutive full-project runs**, not one. Ten runs of the whole `Ago.Chat.Integration.Tests`
+      project, unfiltered, 952 of 952 each, zero failures — the exact condition under which the
+      dropped predecessor failed about half the time.
+- [x] `23-07`'s first Done-when clause is honestly covered, or this item records why it cannot be and
+      what stands instead. Covered, and by a task-completion guarantee rather than a wait:
+      `StopAsync(CancellationToken.None)` can only return through the task that runs the final flush,
+      because the token-tied half of its own `Task.WhenAny` never completes. The dropped predecessor
+      passed a *bounded* token, which is exactly how it could return early and lose.
+- [~] If the cause turns out to be a real race rather than a test artefact, it gets its own item —
+      that would be a defect in the flusher, not in the test. **No item filed, and the reason is
+      evidence rather than confidence.** One failure with this assertion's signature appeared in an
+      ad-hoc fifty-iteration loop and could not be reproduced in sixty-one further runs; that loop
+      left `testhost` processes alive between iterations, which no real run does. Against that: the
+      mechanism is a completion guarantee with no timing window to lose, and ten full-project runs —
+      the historically flaky condition — were clean. **No diagnostics were captured for that one run
+      and none can be now**, so this is the weight of evidence, not a closed investigation. If it
+      ever recurs, that recurrence is the item, and this box is where the first occurrence is
+      written down so nobody has to rediscover it.
 
 ## Out of scope
 
