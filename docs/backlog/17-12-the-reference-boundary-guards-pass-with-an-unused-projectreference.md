@@ -44,10 +44,23 @@ Correct as a fails-before for the rule as written; it just does not cover the ca
 
 ## Done when
 
-- [ ] Adding a forbidden `ProjectReference` to either host fails its guard **whether or not anything
-      uses it** — proven by adding one and nothing else.
-- [ ] Both guards say what they actually check, in their own remarks. If a reference-level check is
+- [x] Adding a forbidden `ProjectReference` to either host fails its guard **whether or not anything
+      uses it** — proven by adding one and nothing else. — proven separately on each host rather than
+      once and generalised: `ago-chat@ad5df4d` for the migrator ("the same test now fails on that
+      state and passes once the reference is gone") and `ago-chat@fee53a3` for the backfill host
+      ("adding that reference and rebuilding puts `Ago.Chat.Module.dll` in `bin/` while the name
+      appears zero times in the host's own metadata"). The proof is also permanent, not only a
+      one-off: `SchemaMigrationTests.TheRule_FlagsAForbiddenNamePresentOnlyInTheRestoreGraph` keeps it
+      in the suite.
+- [x] Both guards say what they actually check, in their own remarks. If a reference-level check is
       not worth building, that is a legitimate outcome and the comments must stop claiming otherwise.
+      — a reference-level check *was* worth building, so the remarks now describe a stronger thing
+      rather than a weaker one. Both name `obj/project.assets.json` — NuGet restore's resolved graph —
+      and `ReferenceBoundaryRule`'s own remarks carry the full argument, including why it beat parsing
+      the `.csproj` (blind to `Directory.Build.props`) and `.deps.json` (path varies, and a class
+      library produces none). The class-level claim `17-12` called out as false — that the guard fails
+      on a `PackageReference` that quietly reintroduces a dependency — is true of the new check, since
+      the assets file lists packages and projects alike.
 
 ## The choice, weighed rather than assumed
 

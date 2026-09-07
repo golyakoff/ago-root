@@ -2,7 +2,8 @@
 
 - **Stage**: 22
 - **Status**: done (2026-09-04), `ago-chat#162`. Its reference guard was blind and is fixed in `17-12`'s
-  second half; the backfill still has to be *run* on the node, which is part of the next deploy
+  second half. The run on the node turned out to be three defects rather than a step (`22-26`,
+  `22-27`), and the count this item asked for was never taken — carried out to `22-28` by `23-55`
 - **Found**: 2026-09-04, immediately after `22-05` was deployed and verified — by the author trying
   to open a calendar screen with their own account and finding nothing there.
 
@@ -56,9 +57,24 @@ the permission before `22-05` still would not.
 
 ## Done when
 
-- [ ] Every pre-existing tenant whose account-side roles carry calendar permissions has them in
+- [~] Every pre-existing tenant whose account-side roles carry calendar permissions has them in
       `role_assignment_projections` — verified by count against `ago_chat`, not by running the tool
-      and assuming.
-- [ ] Running it twice changes nothing the second time, proven by doing it.
-- [ ] Whichever shape was chosen, the reason is recorded — this is the last moment where
-      "republish through the real path" is cheap.
+      and assuming. — **carried out to `22-28`.** The tool exists and its behaviour is proven
+      (`ago-chat@2e5fec6`), but the count this box asks for is a live one, and nothing in the record
+      shows it was ever taken. What the record *does* show is the opposite: running the backfill on
+      2026-09-04 found three separate reasons it could not run at all — a missing `COPY` in the
+      Dockerfile (`22-26`), absence from `build-images.sh`, and absence from the `postgres-ingress`
+      NetworkPolicy (`22-27`, `ago-deploy@bc55af0`). Those were fixed and `k8s/run-backfill.sh` was
+      written, and there the trail stops. The counting is the remainder, so it gets a number.
+      (`23-55`, 2026-09-07.)
+- [x] Running it twice changes nothing the second time, proven by doing it. —
+      `RoleAssignmentProjectionBackfillTests.RunningTheBackfillTwice_StagesTheIdenticalFactsBothTimes_RealBeforeAndAfterCounts`,
+      against a real database with real before-and-after counts. Idempotent by construction underneath
+      that, not only by observation: the event carries a complete current snapshot and the consumer
+      replaces rather than merges, so a second run restages identical values.
+- [x] Whichever shape was chosen, the reason is recorded — this is the last moment where
+      "republish through the real path" is cheap. — republish through the real outbox was chosen, and
+      the reasoning is in `ago-chat@2e5fec6`'s message: `22-05` shipped without a single test
+      exercising a real broker round trip, so a run through the real path proves publish-to-consume
+      across thirty tenants at once instead of only fixing data. The message also records the ordering
+      argument and the one window `SELECT ... FOR UPDATE` does not close.

@@ -1,9 +1,10 @@
 # Mobile navigation becomes a drawer, in both consoles
 
 - **Stage**: 11
-- **Status**: half done — `ago-console` shipped 2026-09-03 (`ago-console#90`). `ago-calendar-console`
-  has **not** got a drawer; `15-12` closed its overflow with two CSS rules instead, so its nav wraps
-  onto a second row rather than collapsing. `ago-calendar-console#25` carries that half.
+- **Status**: done. `ago-console` shipped 2026-09-03 (`ago-console#90`); `ago-calendar-console#25`
+  shipped the same day (`ago-calendar-console@726f0b2`), which this line missed by hours — see the
+  Done-when boxes, settled by `23-55` on 2026-09-07. `22-06` has since retired that console into
+  `ago-console`, so "both consoles" is now one.
 - **Raised by**: the author, 2026-09-02, after `15-11`'s gate made the current state measurable.
 - **Touches**: `ago-console`, `ago-calendar-console`. Deliberately **not** a shared component — see
   Open questions.
@@ -73,8 +74,14 @@ than one change.
 
 ## Done when
 
-- [ ] Both consoles show a hamburger and a left drawer at 375px, with items in a column and the
-      current one marked. — **`ago-console` only.** The calendar console's nav wraps instead.
+- [x] Both consoles show a hamburger and a left drawer at 375px, with items in a column and the
+      current one marked. — **the note this box used to carry went stale within hours.**
+      `ago-calendar-console#25` shipped its drawer the same day (`ago-calendar-console@726f0b2`,
+      closed COMPLETED), after this file was last edited: a `<nav class="nav-drawer__list">` of
+      `NavLink`s — so the current item is marked by `aria-current` from the router, not by hand — and
+      `ux-gate/navDrawer.spec.ts` exercises it in a real Chromium, skipping itself above 40rem where
+      the hamburger has no box. That console has since retired into `ago-console` (`22-06`), so
+      "both consoles" is now one. (`23-55`, 2026-09-07.)
 - [x] The drawer is dismissable three ways — backdrop, `Escape`, choosing an item — each proven by a
       test rather than by eye.
 - [x] Focus enters the drawer on open, is trapped while open, and returns to the hamburger on close.
@@ -89,10 +96,18 @@ than one change.
       Closed by `15-12` **without** a drawer: `flex-wrap` on the nav row. That run also found the
       overflow was *two* independent causes, the second being a seven-column table wider than its
       panel, which a nav-only fix would have left failing on five screens.
-- [ ] `ago-calendar-console`'s navigation is a data list, not inline markup.
-- [ ] No screen becomes unreachable on a narrow viewport — including the analytics and settings items
-      that are hardest to reach today. — true in `ago-console`; unverified in the calendar console,
-      where a wrapped two-row nav is reachable but was not tested for it.
+- [x] `ago-calendar-console`'s navigation is a data list, not inline markup. — `src/nav/navItems.ts`'s
+      `buildNavItems(strings)` replaced the six inline `<NavLink>`s, and the bar and the drawer map
+      over a single call to it in the same render, which `App.test.tsx`'s *"the drawer's items match
+      the bar's items exactly, in the same order"* asserts. Deliberately unfiltered, unlike
+      `ago-console`'s `buildTenantNavItems`: this console gated nothing on navigation, and a filter
+      that always returned everything would have been a shape pretending to a guarantee. (`23-55`,
+      2026-09-07.)
+- [x] No screen becomes unreachable on a narrow viewport — including the analytics and settings items
+      that are hardest to reach today. — true in `ago-console`, and no longer unverified next door:
+      the drawer renders the same array the bar does, and `navDrawer.spec.ts`'s *"choosing an item
+      closes the drawer, navigates, and returns focus to the hamburger"* proves the route is actually
+      reachable at 375px rather than merely drawn. (`23-55`, 2026-09-07.)
 
 ## What shipped, and what the split means
 

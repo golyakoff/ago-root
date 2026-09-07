@@ -52,13 +52,34 @@ Stage 22 does not wait on it.
 
 ## Done when
 
-- [ ] A freshly registered site can invite a second operator without paying, proven by doing it.
-- [ ] A third is refused, with the refusal readable rather than a 500.
-- [ ] Free-tier messages older than two months are pruned and a paid tier's of the same age are not —
-      proven with two tiers, since one proves nothing about a per-class mechanism.
-- [ ] The disk floor still holds: no tier's window can push the partition count past what
-      `RetentionHorizonMonths` was protecting.
-- [ ] The 17 existing sites are migrated, not left on the old default.
+- [x] A freshly registered site can invite a second operator without paying, proven by doing it. —
+      `OperatorInviteEndpointTests.Invite_OnAFreshFreeTierSite_ASecondOperatorIsAdmittedWithoutRaisingTheSeatLimitOrPaying`
+      (`ago-chat@f2bf0b8`).
+- [x] A third is refused, with the refusal readable rather than a 500. —
+      `Invite_OnAFreshFreeTierSite_AThirdOperatorIsRefused_WithAReadableErrorNotA500`. The boundary
+      moved at both ends so the two lists still meet: `Site.SeatLimit` 1 → 2 and
+      `SubscriptionTierBands.MinSeats` 2 → 3, so the paid bands start at the first seat count that adds
+      anything over free.
+- [x] Free-tier messages older than two months are pruned and a paid tier's of the same age are not —
+      proven with two tiers, since one proves nothing about a per-class mechanism. —
+      `MessagePartitionPruneJobTests.PruneAsync_WithTwoRetentionClasses_PrunesTheExpiredFreeTierRow_AndLeavesThePaidTierRowOfTheSameAge`,
+      which is exactly the two-tier shape the box demands.
+- [x] The disk floor still holds: no tier's window can push the partition count past what
+      `RetentionHorizonMonths` was protecting. — `EffectiveHorizonMonths` returns `Math.Min` of the
+      class's window and that ceiling, so the floor cannot be configured past, and
+      `PruneAsync_WhenAClassIsConfiguredPastTheCeiling_TheCeilingWinsAndTheRowIsStillPruned` proves it.
+      Both the prune job and the archive job compute their cutoffs from that one method, so they cannot
+      drift against each other.
+- [~] The 17 existing sites are migrated, not left on the old default. — **the migration is proven; the
+      live count of 17 was never re-read.** `Stage13RaiseFreeTierSeatLimit` backfills with
+      `UPDATE sites SET seat_limit = 2 WHERE tier = 'free' AND seat_limit < 2` — scoped so no paid row
+      can match, idempotent if it runs twice — and
+      `Stage13RaiseFreeTierSeatLimitMigrationTests.Migrate_ExistingFreeTierRowsStillAtTheOldDefault_AreRaisedToTwo_AndPaidTierRowsAreUntouched`
+      proves it against a real Postgres. It cannot have been skipped on the node either, since every
+      `ago-chat` migration after it applies in order behind it. What is missing is only the act of
+      counting the node's rows afterwards, which no record shows. Not given a number: the deliverable
+      shipped, and the number 17 was a description of the day the item was written rather than a thing
+      still owed. (`23-55`, 2026-09-07.)
 
 ## Context
 

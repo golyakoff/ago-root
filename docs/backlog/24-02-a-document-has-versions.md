@@ -44,10 +44,28 @@ is not evidence of what somebody agreed to last year. Two promises, and each lan
 
 ## Done when
 
-- [ ] A document has a version identifier that an acceptance record can point at.
-- [ ] The current version is readable without an account.
-- [ ] A superseded version is still readable, and a test proves publishing a new one does not remove it.
-- [ ] Changing the text is a described procedure with a named owner, not an edit somebody makes.
+- [x] A document has a version identifier that an acceptance record can point at. — `v{sequence}`,
+      derived from the aggregate's own counter and never supplied by a caller (`ago-chat@07b202d`,
+      `Document.cs`). The join itself is proven, not assumed:
+      `AnAcceptanceRecordsDocumentVersion_ResolvesToTheTextItActuallyPointsAt` takes a real
+      `AcceptanceRecord`'s `DocumentVersion` and resolves it to the text it points at.
+- [x] The current version is readable without an account. — `/api/v1/documents` is one
+      `MapGroup(...).AllowAnonymous()` group (`DocumentEndpoints.cs`), and
+      `GetDocumentVersionHandler_AnswersBothCurrentAndASpecificVersion_WithNoCallerIdentityAtAll`
+      asserts both reads succeed with no caller identity at all.
+- [x] A superseded version is still readable, and a test proves publishing a new one does not remove it.
+      — `PublishingASecondVersion_LeavesTheFirstReadableAtItsOwnIdentifier`. Structural on top of that:
+      neither `Document` nor `PublishedDocumentVersion` carries an update, rename or delete method, and
+      `IDocumentRepository` has no delete either, so a correction can only be a new version.
+- [~] Changing the text is a described procedure with a named owner, not an edit somebody makes. —
+      **the owner half shipped; the described-procedure half did not.** Publishing is
+      `POST /api/v1/owner/documents` behind `RequirePlatformOwner`, and `adr/0114` records who makes
+      that call and when — "one authenticated HTTP call the platform owner makes after `ago-business`
+      and a lawyer sign off". What does not exist is a procedure a person can follow: no runbook, and
+      no surface to call the endpoint from. That remainder is already carried by `24-16`, in its own
+      words — *"a surface for publishing a document version, or a written statement that `curl`
+      against `24-02`'s existing endpoint is the intended procedure and where it is documented"* — so
+      it is settled here against that number rather than given a new one. (`23-55`, 2026-09-07.)
 
 ## Open questions
 

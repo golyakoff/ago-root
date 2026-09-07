@@ -71,13 +71,29 @@ rather than a neighbour. A failing assertion in a gate whose exit code nothing r
 
 ## Done when
 
-- [ ] A screen rendered in Russian with Cyrillic fixtures shows no Latin-script interface text, in
+- [x] A screen rendered in Russian with Cyrillic fixtures shows no Latin-script interface text, in
       both consoles, at both viewports — and the assertion is **proven to fail first** against a
-      deliberately untranslated label.
-- [ ] `/owner` is exempt, and the exemption is a named list a reader can audit — not a pattern.
-- [ ] A failing assertion **fails the run**: the gate exits non-zero and something reads that exit
-      code in `ago-calendar-console` (`#26`), not only in `ago-console`.
-- [ ] `15-11`'s existing three assertions stay green in every repository they are green in today.
+      deliberately untranslated label. — both halves shipped, and both carry their own
+      `ux-gate/fails-before.spec.ts`: `ago-console@c5638d6` here, and
+      `ago-calendar-console@f6d2e8a` as `11-19`, the half this item's own file did not follow up on.
+      Neither passed on day one, which is the useful part: two real defects here (a hardcoded `en-GB`
+      in `time/format.ts` and one screen bypassing it) and three next door (raw `toLocale*` calls in
+      four screens), none exempted away.
+- [x] `/owner` is exempt, and the exemption is a named list a reader can audit — not a pattern. —
+      `/owner` is exempt at the screen level (`11-11` settled it as always English); element-level
+      exemptions are an enumerated list — the product name, external channel brands, keyboard key
+      names, the ID/hex loanwords `ru.ts` already uses, URLs — with `<pre>`/`<code>` excluded
+      structurally by tag. The calendar console derived its own four-phrase list by running the
+      assertion for real rather than copying this one, which is what the item asked for.
+- [x] A failing assertion **fails the run**: the gate exits non-zero and something reads that exit
+      code in `ago-calendar-console` (`#26`), not only in `ago-console`. — `npm run ux-gate` was a
+      plain step with no `continue-on-error` in both CI workflows; `15-12` removed the
+      `continue-on-error: true` this box was written against, and the comment left in its place says
+      exactly why. Read against the world as it was: `22-06` has since retired that console and its
+      workflow, so today the one console's blocking gate is the whole of it.
+- [x] `15-11`'s existing three assertions stay green in every repository they are green in today. —
+      the gate runs blocking on every `main` build, so this is continuously enforced rather than
+      checked once; `ago-console`'s CI is green on `main` as of 2026-09-07.
 
 ## Open questions
 

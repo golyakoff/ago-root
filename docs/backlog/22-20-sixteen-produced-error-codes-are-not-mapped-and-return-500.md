@@ -74,9 +74,19 @@ this item.
 
 ## Done when
 
-- [ ] Every code any handler constructs has a mapping, and the status chosen for each is argued where
-      the argument is not obvious.
-- [ ] `recut.forbidden` returns 403 and `recut.worker_not_found` returns 404, proven over real HTTP
-      rather than at the switch — the endpoint is what a person meets.
-- [ ] The set-mismatch is checked by something that runs, or the decision not to check it is recorded
-      with its reason.
+- [x] Every code any handler constructs has a mapping, and the status chosen for each is argued where
+      the argument is not obvious. — `ago-calendar@a2b844d` maps all sixteen, each argued in
+      `ErrorExtensions.cs` against its producer. One of the item's own suggestions was overruled with
+      its reasoning stated: `recut.not_a_regression` is 400 rather than 409, because
+      `From >= schedule.MaterializeFrom` is a deterministic comparison and a retry fails identically —
+      nothing detects a change, so it belongs with the bounds checks.
+- [x] `recut.forbidden` returns 403 and `recut.worker_not_found` returns 404, proven over real HTTP
+      rather than at the switch — the endpoint is what a person meets. —
+      `ConsoleEndpointTests.RecutPreview_WithoutTheConfigurePermission_Returns403NotAServerError` and
+      `RecutPreview_ForAWorkerThatDoesNotExist_Returns404NotAServerError`, against the running host.
+- [x] The set-mismatch is checked by something that runs, or the decision not to check it is recorded
+      with its reason. — checked, and in both directions:
+      `ErrorCodeInventoryTests.EveryConstructedErrorCode_IsMappedInErrorExtensions` (this item) and
+      `.EveryMappedErrorCode_HasAProducer` (`22-15`'s mirror image). It reads IL rather than source,
+      because `Error` is a record struct and every construction lowers to the same `newobj`, including
+      the five ad hoc `new Error(...)` sites a scan of the `*Errors.cs` factories would miss.

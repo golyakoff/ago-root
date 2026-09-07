@@ -1,7 +1,7 @@
 # twelve closed items still carry an unsettled Done-when
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done (2026-09-07)
 - **Depends on**: nothing. Carried out of `23-50`, whose fourth Done-when this is.
 - **Decision**: none needed. The rule is already decided; this is the backlog it created.
 
@@ -57,9 +57,36 @@ line too.
 
 ## Done when
 
-- [ ] All twelve carry only settled boxes, and `queue-audit.sh` reports no `UNSETTLED`.
-- [ ] Every box settled as `[~]` says *what shipped instead*, not merely that it did not.
-- [ ] Any box that turns out to be genuinely undone gets its own number rather than a tick.
+- [x] All twelve carry only settled boxes, and `queue-audit.sh` reports no `UNSETTLED`.
+- [x] Every box settled as `[~]` says *what shipped instead*, not merely that it did not. — seven
+      boxes ended `[~]`, and each names the thing that exists in place of the thing asked for: an
+      existing item already carrying the remainder (`24-02`, `22-16`, `20-27`), a stronger structural
+      guarantee than the empirical proof requested (`15-13`, `23-18`), or a search that returned a
+      non-empty answer where the box expected an empty one (`15-18`).
+- [x] Any box that turns out to be genuinely undone gets its own number rather than a tick. — two
+      new items: `20-30` (`20-27`'s last two boxes — the calendar has no tenant and nobody has signed
+      in) and `22-28` (`22-16`'s count against `ago_chat`, which the record shows was never taken).
+
+## What the reading actually found
+
+Thirty-nine boxes, and **the twelve were not one shape**. Twenty-eight were simply true and had a
+named test, commit or CI run behind them that nobody had gone back to write down — which is the
+cheerful half. The other eleven split three ways, and only the third kind is a defect:
+
+- **Stale by hours, not wrong.** `11-14` was the clearest: its file says the calendar console "has
+  **not** got a drawer", and `ago-calendar-console#25` had shipped one the same day, before `22-06`
+  retired that console entirely. All three of its boxes were met and none of them looked it.
+- **Overtaken or already carried.** `24-02`'s publishing procedure sits in `24-16`'s scope verbatim;
+  `11-16`'s calendar half shipped as `11-19`. Neither needed a number; both needed a sentence.
+- **Genuinely owed.** Two, and both are live-system verifications nobody performed: the backfill count
+  (`22-28`) and the calendar's first sign-in (`20-30`). That is the pattern worth noticing — **every
+  box this pass could not settle was one that needed somebody to look at the running system.** Not one
+  of the twenty-eight code-level claims turned out to be false.
+
+Two adjacent findings, outside this item's twelve and reported rather than fixed here: `15-20` shipped
+(`ago-chat@86129d9`) but its file still says `ready` and it has no `ago-root` issue, and `22-26` and
+`22-27` exist only as commits — no backlog file, no issue — which is precisely the shape `22-21`
+describes as making a used number read as free.
 
 ## Out of scope
 

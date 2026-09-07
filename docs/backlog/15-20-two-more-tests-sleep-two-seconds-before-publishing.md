@@ -1,7 +1,10 @@
 # two more tests sleep two seconds before publishing
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done (2026-09-05), `ago-chat@86129d9` — *wait for a consumer to attach, not a fixed 2s
+  sleep, in two more tests*. Found still saying `ready` on 2026-09-07 while doing `23-55`. It has no
+  issue in `ago-root` at all, so nothing in the queue was claiming it; a file left saying `ready` is
+  work offered to the next session to pick up and re-do.
 - **Found**: 2026-09-04, by `15-18`'s shape-based search — the one its own Done-when demanded
   instead of re-running the grep that had already missed something.
 
