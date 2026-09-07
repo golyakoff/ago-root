@@ -660,6 +660,48 @@ if [ -n "$closed" ]; then
   done <<< "$closed"
 fi
 
+# **A number named in a commit's own scope with no backlog file at all - not even an issue.** Every
+# check above starts from a GitHub issue, open or closed, and asks something about its file. `22-26`
+# and `22-27` (`22-29`) had neither: they exist only as `fix(22-26): ...` / `fix(22-27): ...` commits,
+# with no issue ever filed in either repository. Walking issues cannot find a number that was never
+# an issue - this is the one check here that does not start from one.
+#
+# The project's own commit convention is the mechanical foothold: a subject line's leading
+# `type(NN-NN[, NN-NN...]):` names the item(s) a commit belongs to. This reads *subject lines only*,
+# never bodies - `NN-NN` appears constantly in commit-message prose ("the identical failure `8-08`'s
+# migrator hit", "cited by `20-21`"), and matching that would cry wolf on nearly every commit in this
+# project. The scope position does not: checked against every subject on `origin/main` in every
+# repository this script already reads while building this, it produced exactly three hits, all real
+# - `22-25`, `22-26`, `22-27` - and zero from prose.
+#
+# Ground truth is a backlog *file*, not an issue, unlike every check above - matching against issues
+# was tried first and is nearly useless here: the per-item-issue convention began at `ago-root#312` on
+# 2026-09-02, so every item from the stages before that has commits naming it and no issue at all, and
+# checking issues flagged well over a hundred of them. A file is the one record that has existed since
+# the start of the project, so it is what "this number is taken" actually means.
+#
+# `origin/main` only, not `--all`: a long-lived feature branch repeats its own commits under fresh
+# hashes every rebase, and `sort -u` on subjects already collapses what a cherry-pick or rebase-merge
+# leaves duplicated - `origin/main` is both cheaper and what "shipped" means everywhere else here.
+#
+# No `gh` call: this needs nothing but the local clones the rest of the script already has, so it
+# still runs when GitHub does not answer.
+for scoperepo in "$primary_root" $(printf '%s\n' $MIRROR_REPOS | sed "s|^|$workspace/|"); do
+  [ -e "$scoperepo/.git" ] || continue
+  while IFS= read -r subj; do
+    [ -n "$subj" ] || continue
+    scope=$(printf '%s' "$subj" | sed -nE 's/^[a-z]+\(([^)]+)\):.*/\1/p')
+    [ -n "$scope" ] || continue
+    for scope_item in $(printf '%s' "$scope" | tr ',' '\n' | sed -E 's/^ +| +$//g'); do
+      printf '%s' "$scope_item" | grep -qE '^[0-9]+-[0-9]+$' || continue
+      find docs/backlog -maxdepth 1 -name "${scope_item}-*.md" 2>/dev/null | grep -q . && continue
+      echo "ORPHAN   $scope_item named in a commit scope in $(basename "$scoperepo") but has no backlog file at all:"
+      echo "         $subj"
+      flagged=$((flagged + 1))
+    done
+  done < <(git -C "$scoperepo" log --oneline origin/main --format='%s' 2>/dev/null | sort -u)
+done
+
 echo
 echo "$rows queue issues checked across $(( $(printf '%s\n' $MIRROR_REPOS | wc -l) + 1 )) repositories, $flagged flagged."
 
