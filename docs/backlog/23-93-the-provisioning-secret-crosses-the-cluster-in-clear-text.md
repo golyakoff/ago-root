@@ -54,6 +54,23 @@ Three readings, and this item should not pretend the first is settled:
   `network-policies.yaml` names ingress allowances for Postgres, Redis, RabbitMQ, MinIO and the static
   sites, and the calendar API is not among them.
 
+## The coupling with `23-92`, stated so it is not discovered
+
+`23-92` takes the entry point out of the form and into deployment configuration. It lands first,
+deliberately: the field disappears the moment the address is configured, whatever scheme that address
+uses, whereas doing this item first would leave the field on the form while the CA is mounted and the
+leg proved.
+
+**So `23-92` will configure `http://ago-calendar-api`, and this item changes it to
+`https://ago-calendar-api:443`.** Those two changes are one operation and must ship together:
+
+- **Mount the CA first, prove the leg, then change the value.** Changing the value first produces a
+  certificate failure that presents as a broken calendar — exactly the confusion `23-92` exists to end.
+- **The value lives in one place after `23-92`**, so this is a single configured string plus a rollout,
+  not a hunt. That is the point of having moved it.
+- **Nobody using the console sees either value**, before or after. The scheme change is invisible to the
+  platform owner, which is why doing it in two steps costs them nothing.
+
 ## Done when
 
 - [ ] Whether clear text is acceptable here is decided, and written where `adr/0095`'s blast radius is read.
