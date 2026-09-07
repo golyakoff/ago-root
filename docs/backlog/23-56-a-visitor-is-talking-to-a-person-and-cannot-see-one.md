@@ -89,6 +89,48 @@ by omission:
 - **A stand-in must never be presented as evidence.** If a transcript is exported, printed or shown
   back as a record of who said what, the face in it must not read as identifying a person.
 
+### The machine says what it is, in words the tenant owns
+
+Decided 2026-09-07. **The machine's name is a text field with a default of «Электронный помощник»**, and
+the tenant may change it to whatever they like, on their own responsibility.
+
+That is a better answer than a badge we design, and for a reason worth keeping: a name is read, a badge
+is skimmed. *«Электронный помощник»* above a machine's reply tells a customer what they are talking to
+in the same glance that a human's name would. It also removes the need to decide, on our side, how a
+machine ought to look — the tenant decides, and owns the consequence of calling it something
+misleading.
+
+**This settles the machine half of the misrepresentation question and not the human half.** A stand-in
+portrait above a real operator's real name still tells a visitor they are looking at that person. The
+name field does nothing about that, because the name there is correct — it is the face that is not.
+Whether the widget marks such a portrait as illustrative is still open, and is still the one thing this
+must not decide by omission.
+
+### Who answers for an uploaded face
+
+The author's position, 2026-09-07: generating a stand-in is the tenant's business, and if a tenant
+uploads a celebrity's photograph instead, that is the tenant's problem in court.
+
+**As an allocation of responsibility between us and the tenant, that is ordinary and right** — it is a
+warranty-and-indemnity clause, and `23-52` is already building the contract it belongs in.
+
+**It is not immunity, and the item should not pretend otherwise.** Under `ст. 152.1 ГК РФ` the person
+depicted can demand that whoever is *disseminating* their image stop, and the thing serving those bytes
+to visitors is our infrastructure. A clause gives us recourse against the tenant and a defence; it does
+not stop the demand arriving here. What actually protects the deployment is cheap and is not legal
+text:
+
+- **A record of who uploaded which image and when.** Without it, "the tenant did this" is an assertion
+  rather than something we can show.
+- **A takedown path we can execute quickly** — remove a specific image, on complaint, without a deploy
+  and without touching anything else.
+- **Never claiming, in our own words, that we generated it.** Marketing copy that says AGO supplies
+  portraits would move the answer, and the tenant's warranty would not save it.
+
+None of that is a lawyer's opinion, and it is not offered as one — it is the shape the build has to
+support so that a lawyer's clause has something to stand on. **The clause itself goes to the lawyer
+reviewing `23-52`'s contract**, not into this item.
+
 ### One thing the answers leave open, and the assumption being proceeded on
 
 The tenant *chooses* a stand-in. **Assumption: the tenant uploads the image**, through the same
@@ -116,3 +158,6 @@ intent, this changes shape.
 - [ ] An operator is told, before choosing, what will stand in their place if they decline.
 - [ ] A tenant can place a stand-in and can never upload a real photograph of another person.
 - [ ] Whether the widget marks a portrait as illustrative is decided in the change, not by omission.
+- [ ] The machine's name is a tenant-editable field, defaulting to «Электронный помощник».
+- [ ] An uploaded image records who uploaded it and when.
+- [ ] A single image can be taken down on complaint without a deploy, shown working.
