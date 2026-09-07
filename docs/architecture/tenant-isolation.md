@@ -571,6 +571,9 @@ is exactly what makes it interesting. See *The guard* below.
 | `GET`/`PUT /api/v1/sites/{siteId}/widget-config` | `RequireOperatorIdentity` | **client-supplied** |
 | `GET /api/v1/sites/{siteId}/installation` | `RequireOperatorIdentity` | **client-supplied**; `10-06` |
 | `GET`/`PUT /api/v1/sites/{siteId}/offline-auto-reply` | `RequireOperatorIdentity` | **client-supplied** |
+| `POST /api/v1/sites/{siteId}/consent-documents/{purpose}` | `RequireOperatorIdentity` | **client-supplied**; `24-05` — never added here at the time, found and added by `23-37` |
+| `GET /api/v1/sites/{siteId}/consent-documents` | `RequireOperatorIdentity` | **client-supplied**; `23-37` |
+| `GET /api/v1/sites/{siteId}/consent-documents/{purpose}/acceptances` | `RequireOperatorIdentity` | **client-supplied**; `23-37` |
 | `POST`/`GET /api/v1/sites/{siteId}/webhooks` | `RequireOperatorIdentity` | **client-supplied** |
 | `DELETE /api/v1/sites/{siteId}/webhooks/{id}` | `RequireOperatorIdentity` | **client-supplied** |
 | `GET /api/v1/sites/{siteId}/webhooks/{id}/deliveries` | `RequireOperatorIdentity` | **client-supplied** |
