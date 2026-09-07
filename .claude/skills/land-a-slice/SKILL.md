@@ -13,9 +13,41 @@ every step below exists because skipping it has already cost this project someth
 
 ## 1. Verify independently, before anything else
 
-A worker's report is evidence, not proof. Re-run the repository's own command set (CLAUDE.md's
-*Commands*) and read the counts yourself. If the work touched a live system, check the live system
-rather than the claim about it.
+A worker's report is evidence, not proof. **But "independent" means checking the claims, not running
+the same command a third time** — amended 2026-09-07, and the reasoning is in *What independent
+verification is for*, below.
+
+**Do, every time:**
+
+- **Re-run one of the worker's fails-before entries yourself.** This is the highest-value check there
+  is, because it is the one a worker can most easily overstate, and a test that does not bite proves
+  nothing about the code under it.
+- **Read the diff.** Not the report about the diff. Judgements a worker made that the item did not
+  specify live here, and they are what the author is trusting the managing session to catch.
+- **Build, and run the projects the change actually touches.** A compile error or a broken neighbouring
+  test should never reach CI; those are cheap to find and embarrassing to push.
+- **Check any claim about a live system against that system**, never against the claim. This one does
+  not delegate to CI at all — CI cannot see the cluster.
+
+**Leave to CI:** the full suite, on the pushed branch, as the gate before merge. CI green is already
+one of rule 9's four merge preconditions, so nothing is being trusted that was not already load-bearing.
+
+### What independent verification is for
+
+The failure mode to watch for is **overstatement, not fabrication**: "both overlays build" when one of
+them cannot be rendered off-node; an ADR written but never added to its index; a control described as
+protective that refuses nothing; a fails-before table with an entry that was never run. Ask of each
+headline claim: *what would I see if this were false?* Then go look at **that** — which is a different
+activity from re-running `dotnet test`.
+
+Re-running the full suite locally catches the same class of thing CI catches, an hour earlier and at
+the cost of ten to fifteen minutes per item. On 2026-09-07 that duplication ran three times per item —
+worker, managing session, CI — and the one time it paid (two real failures in `23-83`) CI would have
+caught them on the next cycle anyway.
+
+**What it does not catch is the thing that actually costs**: a worker reporting a fails-before entry it
+never ran, a scope decision nobody asked for, or a claim about the cluster made from a manifest. Those
+need reading and probing, and the time freed by not re-running the suite is what pays for them.
 
 The failure mode to watch for is overstatement, not fabrication: "both overlays build" when one of
 them cannot be rendered off-node; an ADR written but never added to its index; a control described

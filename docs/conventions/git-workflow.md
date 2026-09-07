@@ -16,8 +16,20 @@ The current split, which is deliberately not "the agent may write history":
 - **A background worker may not.** A worker spawned to implement a slice hands back a commit-prep
   block for the managing session to review and execute. It never runs `git commit` or `git push`
   itself, whatever its own reasoning concludes.
-- **Merging is always the author's action**, with no exception. Opening a PR is not merging it, and
-  nothing about the delegation above changes who presses the button.
+- **Merging a PR that carries only implementation may be done by the managing session** — amended
+  2026-09-05 in `CLAUDE.md` rule 9, and corrected here on 2026-09-07 because this line still read
+  *"merging is always the author's action, with no exception"* while that had stopped being true.
+  A convention that contradicts the rule it describes is worse than a slow process: the next session
+  reads this file, concludes the managing session has been overstepping, and reinstates the per-PR ask
+  that was deliberately removed.
+  Four preconditions, all of them, every time: CI green; the managing session's own independent
+  verification done rather than a worker's report accepted; `merge-base` equal to `origin/main` at
+  merge time; and `open-pr.sh`'s checks passed.
+  **The test is not size, it is whether the change contains a judgement the author has not seen.**
+  `docs/design/decisions.md`, `docs/roadmap.md`, `CLAUDE.md`, any **new** ADR, newly sliced backlog
+  items and any change to product behaviour the author did not agree to all wait, however small and
+  however green. Deploying is separate and is always asked for. **Say what merged**, in the session,
+  at the time — the author reads after the fact instead of before, and that has to remain possible.
 - **Never push to `main` directly.** Every change reaches `main` through a PR the author merges.
 - **History rewriting on an already-pushed branch stays the author's exclusively**: `git push
   --force`, `git commit --amend`, `git rebase` on a branch that has been pushed. See the rule below
