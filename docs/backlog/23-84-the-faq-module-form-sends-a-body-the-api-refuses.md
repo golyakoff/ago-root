@@ -37,12 +37,21 @@ Fixing it would be building the wrong thing carefully.
 
 ## Scope
 
-- Establish what the route actually requires **after** `23-83`, and make the form send it.
-- **Show the screen working end to end**, over real HTTP, rather than asserting the request shape. A
-  form whose body matches a record definition can still be refused for a reason nothing in the console
-  can see.
-- **Say plainly, in the item's Outcome, whether this ever worked.** If it did not, that is worth knowing
-  when somebody asks how long FAQ self-service has been available.
+- **The console stops offering a tenant a way to provision a module.** Remove the form; do not repair it.
+- **A tenant still sees which products are on their account** — that is a read, it carries no secret, and
+  `23-83` keeps the `GET` it needs.
+- **Establish whether the form ever worked**, and write the answer down. It matters when somebody asks
+  how long FAQ self-service has been available: the honest answer is likely *never*, and that is a fact
+  about the product rather than a bug report.
+
+## Why the earlier scope was wrong
+
+The first draft of this item said to find out what the route requires and make the form send it. That was
+written before the author's answer, and it would have been **building the wrong thing carefully** — a
+working screen for a capability a tenant should not have.
+
+Recorded rather than quietly replaced, because the mistake is the informative part: a defect report can
+be correct about the symptom and wrong about the remedy, and the remedy is the half that costs work.
 
 ## Where this is likely to go wrong
 
