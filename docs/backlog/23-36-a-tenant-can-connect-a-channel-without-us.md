@@ -1,7 +1,8 @@
 # a tenant can connect a channel without us
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: built and merged (2026-09-07) — `ago-chat#213`, `ago-console#142`, `adr/0143`.
+  **Open on one box only**: a real message through a real bot, which needs the author.
 - **Depends on**: `23-31` reserves the places (Каналы → Бот MAX, Бот Telegram, Другие каналы)
 - **Decision**: `adr/0069` already decided how a channel credential is stored and encrypted
 
@@ -53,9 +54,20 @@ Two consequences that shape the screen rather than decorate it:
 ## Done when
 
 - [ ] A tenant connects a Telegram bot from the console and a real message arrives.
-- [ ] A wrong token is refused at entry with what the provider said, not accepted and silently dead.
-- [ ] No credential is ever rendered back after it is saved, asserted by a test.
-- [ ] Disconnecting stops delivery and leaves `adr/0116`'s foreign key intact.
+      **The one box left, and it is the author's to close.** Everything up to it is built and merged;
+      this needs a real bot token and a real message, which nobody here has. The screen will tell the
+      truth about the token either way — that is what the live `getMe` is for — but "a message
+      arrived" is a different claim and no test in this repository can make it.
+- [x] A wrong token is refused at entry with what the provider said, not accepted and silently dead.
+      And on every later read, not only at entry: a token that stops being valid afterwards is the
+      case a check at entry cannot see (`adr/0143`).
+- [x] No credential is ever rendered back after it is saved, asserted by a test — at two levels, both
+      fault-injected: the response type is structurally incapable of carrying a token (a reflection
+      test fails when a `Token` property is added), and the console DOM test fails when the token is
+      deliberately leaked into the connected view.
+- [x] Disconnecting stops delivery and leaves `adr/0116`'s foreign key intact — unchanged from
+      `14-02`, which built it; this item added the screen that reaches it, with the consequence
+      stated in the confirmation rather than discovered afterwards.
 
 ## Open questions
 
