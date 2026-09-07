@@ -873,6 +873,28 @@ here unchanged**. What follows is only what is specific to this product.
 - `services` - `id`, `tenant_id`, `name`, `duration_minutes int`. Whole minutes in an integer rather
   than a Postgres `interval`: the domain's own invariant is already "a whole number of minutes", and
   an integer column stays trivially comparable for `20-02`'s availability queries.
+  **`description text NULL`, `price_minor_units int NULL`, `price_currency_code varchar(3) NULL` and
+  `price_is_from boolean NOT NULL DEFAULT false` added in `23-35`**
+  (`Stage23AddServicePriceAndDescription`, additive/reversible, `adr/0142`). Null-with-no-backfill on every
+  existing row - the same `first_seen_at`/`created_at` reasoning this page states above for `sites`:
+  a stamped default would invent a price for a service that never had one, and `null` already means
+  the true thing ("nothing stated"). `price_minor_units` is kopecks, not a `decimal` - the identical
+  "an integer is exact and trivially comparable" argument this bullet's own first sentence already
+  makes for `duration_minutes`, extended to money by `Ago.Calendar.Domain.Money` (`23-35`). The two
+  price columns are one EF Core complex property (`Money?`), not two independently-settable ones, for
+  the same "two columns that must agree are two columns that can disagree" reason this page gives
+  `sites.demo_expires_at`/`is_demo` below: an amount with no currency is not a state the aggregate can
+  construct. `price_currency_code` is always `'RUB'` today - `Money`'s own remarks explain why v1
+  accepts exactly one currency rather than a column nothing yet reads two ways. `price_is_from`
+  answers "what does this number mean when the real cost depends on the master or the job" - true
+  means the stored amount is a floor a renderer prefixes with "от" ("from"), decided per service by
+  the tenant rather than by one global rule; meaningless (and always `false`) while
+  `price_minor_units` is null, which `Service`'s own constructor enforces so the two can never
+  disagree. **Read by the visitor-facing embed surface, decided the same day**: `20-06`'s booking
+  widget and its chat-channel equivalent (`BookableServiceRow`, `ModuleStepFactory`) both show the
+  price and the description before a booking is made, scoped through `EmbedScopeResolver` exactly like
+  every other embed read - never carried into `BookingConfirmedResponse`, which states only what a
+  customer needs to identify the appointment (see that type's own remarks).
 - `calendars` - `id`, `tenant_id`, `name`, `time_zone` (**IANA id as text, never an offset**),
   `buffer_minutes`, `is_published`, `created_at`. `buffer_minutes` is per calendar, not per service or
   per worker (the product spec's own decision), and is consumed by `20-02`; nothing reads it yet.
