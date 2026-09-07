@@ -20,12 +20,27 @@ console's strings context reloads more than it should during development.
 `golyakoff/ago-console#146` is the Dependabot pull request, left open rather than closed so the bump
 lands with the fix.
 
-## Why this is worth a number rather than a one-line fix inside the batch
+## The seam this item named was the wrong one — corrected 2026-09-08 at landing
 
-Because the fix is a refactor, not a version bump: the hook moves to its own file and **every import
-moves with it**. That is a diff across many files whose only visible justification, if it rode inside a
-dependency batch, would be a patch version number in `package.json`. Nobody reviewing that would know
-what they were looking at.
+This item said to move `useStrings` out. **That does not satisfy the rule**, and it was established by
+trying it rather than by reading: with the hook elsewhere, the raw context has to be exported beside the
+Provider so the hook can reach it, and the rule fires again with a different message — *"Move your React
+context(s) to a separate file."* A component export and a raw context export cannot share a file either.
+
+**The working split is the reverse: the Provider moves out alone**, and the context object and the hook
+stay together, neither being a component. That is also what `AuthContext` and `OperatorConnectionContext`
+already do here, their own doc comments citing this same Fast Refresh reason — so the codebase had the
+answer and this item did not consult it.
+
+## Why this is worth a number rather than a line inside the batch
+
+The original reasoning was that **every import moves with the hook** — a diff across many files whose
+only visible justification inside a dependency batch would be a patch version number.
+
+**That reasoning was wrong along with the seam.** Seventy files import `useStrings` and none of them
+move; two import `StringsProvider` and both change. The item is still worth its own number — a source
+refactor riding a patch bump is unreviewable regardless of size, and the *investigation* of which seam
+works is the substance — but not for the reason given.
 
 ## The thing worth remembering from how this was found
 
