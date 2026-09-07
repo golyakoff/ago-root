@@ -143,6 +143,34 @@ test that a different operator at the same site cannot pull it for a conversatio
 the rows this handler reads from the same cascade as every other read path, so there is nothing new
 to delete, only a new way the same rows could have been read before they were.
 
+### `23-53` widens what a returning visitor's own device can read
+
+A different note on the same shape: not a new *who*, but a browser that already had standing to
+*write* into a conversation gaining standing to *read* it too. Before this item, reopening the widget
+showed nothing — a client-side defect (`ago-widget`'s `VisitorConnection.start()` asked the server to
+resume from a stored cursor on every fresh page load, not only on a genuine reconnect, and a visitor
+who had already read everything got an empty answer into a page that had rendered nothing yet) meant
+a returning visitor's own words and the operator's replies were, in practice, unreadable from a second
+page load even though the same token could already extend the same conversation by sending into it.
+The fix (`adr/0141`) removes that defect rather than adding a new read path: `GetConversationHistoryHandler.
+HandleAsVisitorAsync` — the same handler `18-07`'s cross-conversation panel sits beside, scoped by the
+signed visitor token's own `VisitorId` claim and never by anything a caller supplies — already answered
+correctly; only the client's own choice of when to call it changed.
+
+**The consequence worth stating plainly, per `adr/0141`:** a shared device now shows more than it did.
+Whoever next opens the widget on a browser holding another visitor's still-valid token reads that
+visitor's own conversation, not merely the ability to add to it. Accepted rather than bounded to the
+current browser session — `adr/0141`'s own reasoning is that the token already carried that reach on
+the write side, so a read-side bound would not close the exposure, only delay it by one message a
+second person could send and then read the reply to. The token's own lifetime (`realtime.md`, `adr/0048`)
+is the only bound on how long a shared device carries this: a token that keeps renewing keeps the
+conversation it can read growing with it, which is a pre-existing property of the stored credential
+`17-07` already made indefinite for a returning browser, not a new one `23-53` introduces.
+
+`16-02`'s erasure guarantees are unaffected the same way `18-07`'s own note above states: erasing a
+conversation removes the rows this read serves from the same cascade every other read path already
+relies on, so there is nothing new to delete, only a fixed path to the same rows.
+
 ### `20-12` widens who can read `customers`
 
 Another note on a new *who*, this time in **AGO Calendar** rather than AGO Chat. Before this item,
