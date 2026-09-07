@@ -1,7 +1,8 @@
 # AGO Calendar still has no tenant, and nobody has ever signed in to one
 
 - **Stage**: 20
-- **Status**: ready
+- **Status**: ready — **and it is one live sitting, not code**. `20-30`, `23-66`'s second box and
+  `23-87`'s third are all closed by the same demonstration: grant, sign in, create a first worker.
 - **Depends on**: nothing new. `20-27` built the path; `22-06` moved the screens. Both shipped.
 - **Carried out of**: `20-27`, whose last two Done-when boxes this is. Filed under CLAUDE.md rule 14 —
   a remainder gets its own number rather than sitting inside a finished item.
@@ -41,13 +42,25 @@ reaching them signed in."*
 
 ## Done when
 
-- [ ] A tenant exists in `ago_calendar` on the live node, created through `Ago.Calendar.Provisioner`
-      rather than by hand-written SQL.
+- [ ] A tenant exists in `ago_calendar` on the live node, created by the system rather than by
+      hand-written SQL.
+      **Amended 2026-09-07.** This box named `Ago.Calendar.Provisioner` as the mechanism, and that
+      wording is stale: `22-17`/`adr/0098` shipped after `20-27` was written and made
+      `RegisterChatModuleHandler` **auto-provision a missing `Tenant`** via
+      `Tenant.AutoProvisionForChatModule` the moment a platform owner grants the calendar module to a
+      site, with `TenantId` set to the site's own account id. So the first calendar tenant now comes
+      into existence as a side effect of the grant `23-65` built.
+      The standalone tool is also the harder path today rather than the sanctioned one: `ago-deploy`
+      carries no Job or manifest that runs it in-cluster at all. The requirement the box was written to
+      express — *by the system, not by somebody typing SQL* — is unchanged and is what it now says.
 - [ ] Its owner signs in through the `ago-console` client and reaches a calendar screen showing that
       tenant's own data — not a fixture, and not an empty state that would look identical if the
       account did not exist.
 - [ ] Whatever it took is written down where the next tenant's setup will look for it, so the second
       one is a procedure rather than a rediscovery.
+      What it will say differs from this item's original assumption: not *run the provisioner*, but
+      *grant the calendar module to the site*, plus `23-92`'s entry-point value and whichever way
+      `23-93` was decided.
 
 ## Out of scope
 

@@ -1,7 +1,9 @@
 # module provisioning has never been configured in any deployment
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — **the wiring is merged and deployed; what is left is one live check**.
+  `ago-deploy` `1e8d00f` set the key for both hosts and the value is generated on the node; the last
+  Done-when needs the grant screen to actually answer something other than `503`, against the stand.
 - **Depends on**: `adr/0095` created the secret; `adr/0150` moved it into configuration. This is the
   step neither of them took: putting a value there.
 - **Found**: 2026-09-07, while trying to grant the calendar to a real account on the demo stand.
