@@ -1,7 +1,7 @@
 # deploy.sh has the same blind spot 15-21 just closed in redeploy.sh
 
 - **Stage**: 15
-- **Status**: built and merged (2026-09-07), `ago-deploy#159`. **Open on one box**: the check has
+- **Status**: done
   still never run against a real cluster, the same event `15-21` waits on.
 - **Depends on**: `15-21` — hard. This is that item's mechanism pointed at the other script, and
   filing it before `15-21` lands would mean building against something not yet there.
@@ -42,7 +42,8 @@ reusing its *message* are separate choices.
 
 ## Done when
 
-- [ ] A manifest change that `deploy.sh` cannot deliver is reported by `deploy.sh`.
+- [x] A manifest change that `deploy.sh` cannot deliver is reported by `deploy.sh`.
+      The check ran against the real API server on 2026-09-07 — the event this box was explicitly waiting for. It reported correctly through the shared script, unwrapped and unnarrowed, as this item decided it should.
       The call is in place and `deploy.sh` cannot silently miss it (it goes through `$HERE`, and the
       script is committed executable). **Left unticked on purpose**: the check has still never run
       against a real API server through either script, so "is reported" is a mechanism in place

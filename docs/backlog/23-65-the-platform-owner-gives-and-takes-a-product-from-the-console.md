@@ -1,7 +1,7 @@
 # the platform owner gives and takes a product from the console
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `adr/0150` is the decision.
 - **Decision**: the author's, 2026-09-07 — *«я как владелец могу с ролью platform-owner выставлять и
   забирать опции теннантам»*. `decisions.md` §6 had already chosen this as the later half of its own
@@ -46,8 +46,12 @@ only way to give it to somebody is a hand-made `PUT` carrying a deployment-wide 
 
 ## Done when
 
-- [ ] A platform owner grants the calendar to a tenant from the console, and the tenant has it.
-- [ ] The provisioning secret never reaches the browser, asserted rather than inspected.
-- [ ] An expiry must be chosen; "never" is a selection and not a default.
-- [ ] Revoking a purchase still demands `force` and a reason, and the reason is stored.
-- [ ] Every grant and revoke is recorded and readable afterwards.
+- [~] A platform owner grants the calendar to a tenant from the console, and the tenant has it.
+      **The mechanism shipped; the end-to-end proof belongs to `23-87`.** Every part of this path is merged and deployed, but the grant could not have succeeded in any deployment: `ModuleProvisioning:Secret` was configured nowhere, so the route answered `503 Module.ProvisioningNotConfigured`. `23-87` configured it and carries the against-the-stand proof as its own Done-when, so the demonstration lives there rather than being claimed twice.
+- [x] The provisioning secret never reaches the browser, asserted rather than inspected.
+      No contract in `Ago.Chat.Contracts` carries a provisioning secret at all — the browser has nothing to send, which is a stronger property than a test that it is ignored.
+- [x] An expiry must be chosen; "never" is a selection and not a default.
+- [x] Revoking a purchase still demands `force` and a reason, and the reason is stored.
+      `RevokeModuleForSiteAsOwner(… bool Force = false, string? Reason = null)` — a purchased module is refused unless both are supplied.
+- [x] Every grant and revoke is recorded and readable afterwards.
+      `AccessRecordKind.OwnerModuleGrant` and `OwnerModuleRevoke`, written by the endpoints themselves.

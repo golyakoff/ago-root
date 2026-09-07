@@ -1,7 +1,7 @@
 # an operator may confirm a booking and cannot reach one
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `23-34` works around it for one screen; this is the gap itself.
 - **Found**: 2026-09-07, while building `23-34`, and verified independently before filing.
 
@@ -48,7 +48,10 @@ person whose job it is. An administrator sees a muted link to it; an operator se
 
 ## Done when
 
-- [ ] An operator holding only the booking permissions can reach the queue and act on it.
-- [ ] The hidden-versus-muted rule is stated once and followed by every calendar entry.
-- [ ] A test asserts the operator case, not only the administrator one — the existing nav tests
+- [x] An operator holding only the booking permissions can reach the queue and act on it.
+      `ago-console` `0fac74b` — `calendarPermissions.ts` is new, and both calendar pages plus `consoleNav.ts` route through it.
+- [x] The hidden-versus-muted rule is stated once and followed by every calendar entry.
+      Stated once in `calendarPermissions.ts` and followed by every calendar entry, rather than each entry deciding for itself.
+- [x] A test asserts the operator case, not only the administrator one — the existing nav tests
+      `permissionGating.test.tsx` grew 137 lines asserting the operator case — the gap that let this survive was that the existing tests asserted only what an administrator sees.
       assert what an admin sees, which is why this survived.
