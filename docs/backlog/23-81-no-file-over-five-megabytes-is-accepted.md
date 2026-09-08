@@ -1,7 +1,7 @@
 # no file over five megabytes is accepted
 
 - **Stage**: 23
-- **Status**: ready — **and most of it already works; this is a number and its consequences**
+- **Status**: done
 - **Depends on**: nothing.
 - **Decision**: the author's, 2026-09-07 — 5 MB is enough for a photograph or a document.
 
@@ -44,8 +44,20 @@ authority by being newer.
 
 ## Done when
 
-- [ ] A file over 5 MB is refused, at presign and by storage, on a deployment that configures nothing.
-- [ ] The widget says so before the upload rather than after.
-- [ ] The gateway's own body-size limit does not contradict it.
-- [ ] Attachments already stored above the new limit are untouched and still downloadable.
-- [ ] `file-storage.md` carries the new number.
+- [x] `AttachmentOptions.MaxSizeBytes` default: 10 MiB to 5 MiB. Two layers, both already proven
+      against real MinIO since `5-13`: `CreateAttachmentHandler`'s presign check, and the exact
+      declared length signed into the presigned PUT itself. The demo overlay sets no
+      `Attachments__MaxSizeBytes`, checked again for this item, so the code default governs it.
+- [x] `COURTESY_MAX_SIZE_BYTES` in `ago-widget`'s `attachments.ts`: 10 MiB to 5 MiB, matching the
+      server. The pre-upload courtesy check an earlier item already built; a visitor is refused
+      before the upload starts, not after a progress bar has run.
+- [x] Confirmed rather than assumed: `ago-chat-gateway-body-size` caps at `1m`, smaller than 5 MiB -
+      but an attachment PUT goes browser to object storage directly on a presigned URL and never
+      crosses this gateway (`adr/0008`), checked against the routing table. The two ceilings answer
+      different questions and were never in tension.
+- [x] `MaxSizeBytes` is read in exactly one place - `CreateAttachmentHandler`'s presign check on a
+      *new* upload, confirmed by grep across `src/`. `ConfirmAttachmentHandler` and every
+      download/query path never compare against it, so a `ready` row already above 5 MB is
+      structurally untouched.
+- [x] Landed with the reasoning, the gateway check, and the not-retroactive guarantee stated
+      explicitly rather than left implicit.
