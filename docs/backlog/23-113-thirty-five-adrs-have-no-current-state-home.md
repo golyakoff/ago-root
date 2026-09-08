@@ -1,7 +1,7 @@
 # thirty-five ADRs have no current-state home
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `adr/0156`, which established the split this closes the gap in.
 - **Found**: 2026-09-08, measured while accepting `adr/0156`.
 
@@ -62,6 +62,20 @@ The grouping matters, because they are not one kind of work:
 
 ## Done when
 
-- [ ] `tools/queue-audit.sh` reports no ADR without a current-state home.
-- [ ] Each reference is a sentence saying what holds, citing the ADR for why — not a bare link.
-- [ ] Where a group had no page that could own it, the page exists and is named here.
+- [x] `tools/queue-audit.sh` reports no ADR without a current-state home. **The count started at 35
+      and was wrong**: the check looked only at `architecture/` and `conventions/`, so it called 15
+      correctly-placed ADRs orphans - `adr/0144` lives in `runbooks/redeploy.md` and `adr/0136` in
+      `roadmap.md`, which are exactly the right homes. Widened to all of `docs/` except `adr/` (they
+      cite each other) and `backlog/` (an item is a proposal, and nearly every ADR is cited by the
+      item that produced it, so counting those would make the check pass universally). Real number: 18.
+- [x] Each reference is a sentence saying what holds, citing the ADR for why. The clearest case is
+      `adr/0002`: it had always pointed *at* `clean-architecture.md` ("the what-goes-where table lives
+      there") and the document had never pointed back, so the link ran one way and the reader arriving
+      at the document learned nothing about where the rule came from.
+- [x] Two groups had no owner and now have one page between them:
+      `docs/architecture/entitlements-and-subscriptions.md`, carrying `adr/0151` (entitlement is the
+      platform's, configuration is the tenant's) and `adr/0073` (the renewal job, `PastDue` versus
+      `Lapsed`, and why the idempotence key is deterministic). They are one page because they are one
+      question at two moments - *may this account do this* and *is it still paid for* - and both were
+      scattered across five documents that each mentioned them and none of which owned them.
+      Prices and tiers stay out: they are `ago-business`'s, and private.

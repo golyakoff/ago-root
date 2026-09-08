@@ -14,6 +14,13 @@
   numbers, no `OFFSET` (`data-model.md`).
 - Timestamps are ISO-8601 with offset (`date-and-time.md`).
 
+### A refusal that must not become a probe
+
+**A module call's refusal answers a flat `401` on the wire, whatever the actual reason was**
+([`adr/0099`](../adr/0099-a-module-calls-refusal-reason-lives-in-the-log.md)). Each product's validator classifies the refusal into a `ModuleCallRefusalReason` and
+logs it, structured, before returning - so an operator can tell an expired credential from a wrong one
+from a revoked module, and a caller cannot.
+
 ## Outbound webhooks
 
 The tenant-facing half of the HTTP surface, and the only place this system sends a request to a server

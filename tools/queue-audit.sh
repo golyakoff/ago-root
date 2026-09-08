@@ -882,7 +882,18 @@ orphan_adrs=""
 for adr in "$audit_root"/docs/adr/[0-9][0-9][0-9][0-9]-*.md; do
   [ -e "$adr" ] || continue
   n=$(basename "$adr"); n=${n%%-*}
-  if ! grep -rqE "adr/$n|ADR-$n" "$audit_root"/docs/architecture/ "$audit_root"/docs/conventions/ 2>/dev/null; then
+  # A "current-state document" is anything under docs/ that says how things are **now**: architecture,
+  # conventions, runbooks, design notes, the roadmap. Two directories are excluded and both exclusions
+  # matter. `docs/adr/` is excluded because ADRs cite each other constantly and would satisfy this
+  # check without giving any reader a current-state home. `docs/backlog/` is excluded because an item
+  # is a *proposal* - nearly every ADR is cited by the item that produced it, so counting those would
+  # make the check pass universally and mean nothing.
+  #
+  # The first version of this check looked only at architecture/ and conventions/, and was wrong in a
+  # way worth recording: `adr/0144` is cited by `runbooks/redeploy.md` and `adr/0136` by `roadmap.md`,
+  # which are exactly the right homes for a deploy-script decision and a queue-tooling one. It counted
+  # two correctly-placed ADRs as orphans on its first run.
+  if ! grep -rqE "adr/$n|ADR-$n" "$audit_root"/docs/        --exclude-dir=adr --exclude-dir=backlog 2>/dev/null; then
     orphan_adrs="$orphan_adrs  $n  ($(basename "$adr"))
 "
   fi

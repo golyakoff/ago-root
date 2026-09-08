@@ -400,6 +400,14 @@ either directly. `Away` is the one state the hub never *chooses*; it only has to
   own connection reports "connected", so its away control never renders a value a prior reconnect has
   already made stale.
 
+**A deliberate `Away` survives a reconnect and is cleared only by the operator** ([`adr/0110`](../adr/0110-a-deliberate-away-survives-a-reconnect-and-only-the-operator-clears-it.md)). A
+connection existing or not existing never changes it - which is the whole point, since an operator who
+marked themselves away and then lost Wi-Fi has not become available.
+
+**A greeting is drawn in the panel and exists nowhere else** ([`adr/0148`](../adr/0148-a-greeting-is-drawn-not-sent-and-nothing-exists-until-the-visitor-writes.md)). It is not a message:
+no author, no identifier, no row, no event, nothing sent to the server. A conversation begins when the
+visitor writes, so a page that was merely opened leaves nothing behind for anybody to answer or store.
+
 ## Failure behaviour
 
 | Failure | Effect |

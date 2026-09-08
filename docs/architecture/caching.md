@@ -169,6 +169,15 @@ overrides deferred until an admin API exists to set them.
 Ingress-level rate limiting also exists (`overview.md`) but is a blunt instrument: it protects the
 cluster, while this protects a tenant.
 
+**Phone-verification sends carry a fourth bucket, keyed on the caller's own IP and checked first** -
+before phone, before visitor, before site ([`adr/0082`](../adr/0082-per-ip-rate-limiting-for-phone-verification-sends.md)). Same reasoning as everywhere else here: the
+cheapest, coarsest check rejects a bad caller before any dearer one runs.
+
+**Widget configuration is fresh within a day, and that is deliberate rather than inherited**
+([`adr/0140`](../adr/0140-widget-config-freshness-is-a-day-not-the-identity-tokens-window.md)). `VisitorSessionManager.start()` renews when *either* the identity token enters its own
+renewal window *or* the configuration is a day old, so a colour, a position, a locale or a module
+grant reaches a page nobody has touched within that window - and no sooner.
+
 ## Failure behaviour
 
 Every cache call is wrapped so that a Redis outage means "cache miss", never an error surfaced to a

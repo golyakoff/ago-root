@@ -276,6 +276,14 @@ widget appearance specifically, the same `resource:action` naming judgment `adr/
 elsewhere. Both callers are still `IPermissionChecker`-checked the ordinary way; nothing about this
 widens who holds the permission - only the "Admin" role, seeded the same way as before.
 
+### Releasing a seat needs no guard of its own
+
+**The sign-in-and-manage invariant is already closed**, and no runtime guard was added for it
+([`adr/0152`](../adr/0152-the-sign-in-and-manage-invariant-is-already-closed-releasing-a-seat-needs-no-guard.md)). Removing the last operator who can sign in and manage operators was closed by `23-26`
+and `23-71` before the question was asked again; adding a third check would have been a second
+mechanism enforcing an invariant one already holds, and two mechanisms for one rule is how they drift
+apart.
+
 ## And a third: shipped in `14-04`
 
 `Permission.SiteConfigure` gains its third pair of callers - `GetOfflineAutoReplyHandler`/

@@ -130,6 +130,7 @@ If a request would violate a rule above, say so before writing code, and propose
 | Ingress, load balancing, deploys, probes | `docs/architecture/edge.md` |
 | Timeouts, retries, circuit breakers, bulkheads | `docs/architecture/resilience.md` |
 | Who can do what — current gap, open decision | `docs/architecture/authorization.md` |
+| What an account is entitled to, and the subscription that sustains it | `docs/architecture/entitlements-and-subscriptions.md` |
 | What personal data is held, where, and how it is removed | `docs/architecture/personal-data.md` |
 | Which secrets exist, who holds them, what rotating one costs | `docs/architecture/secrets.md` |
 | Which repository, package boundary, cross-repo changes | `docs/architecture/repositories.md` |
