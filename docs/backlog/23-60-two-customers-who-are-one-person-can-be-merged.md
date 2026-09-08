@@ -1,7 +1,7 @@
 # two customers who are one person can be merged
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-59` — it is what creates the duplicates this fixes.
 - **Decision**: `adr/0147` chose not to merge automatically; this is the other half of that choice.
 
@@ -32,7 +32,13 @@ different road.
 
 ## Done when
 
-- [ ] A tenant can see that two customer records share a phone or an e-mail.
-- [ ] They can merge them, and the bookings of both end up on one record.
-- [ ] The merge is recorded with who and when, and is visible afterwards.
-- [ ] Whether it can be undone is decided in the change and written down either way.
+- [x] The contacts screen shows a duplicate-phone badge (`ContactsReadStore` computes
+      `DuplicatePhoneCustomerIds` in-memory from the same query it already runs). Detection is
+      phone-only, stated in `ADR-0161`: `Customer` has no e-mail field on any row today.
+- [x] `MergeCustomersHandler`/`CustomerMergeStore` reassign every `events.customer_id` row
+      to the survivor in one transaction, tombstoning the loser (`ago-calendar#52`,
+      `ago-console#175`). Proven by `CustomerMergeTests` against real Postgres, not asserted.
+- [x] `customer_merges` (real FKs, cascades with the tenant), surfaced on the new
+      `CalendarCustomerMergesPage` audit trail.
+- [x] `ADR-0161`: no undo, ever. `Customer.MarkMergedInto` throws on a second call - stated as
+      a real cost, not a footnote, in the ADR and in the console's own confirmation copy.
