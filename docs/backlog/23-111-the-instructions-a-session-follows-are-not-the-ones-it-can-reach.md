@@ -1,7 +1,7 @@
 # the instructions a session follows are not the ones it can reach
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `#733` already landed the first half.
 - **Found**: 2026-09-08, by the author, asking why the same two mistakes keep happening.
 
@@ -83,8 +83,20 @@ public; no `Co-Authored-By` trailer.
 
 ## Done when
 
-- [ ] Every skill that carries procedure is reachable from something that fires — a brief, a script,
-      or a line in `CLAUDE.md`.
-- [ ] `CLAUDE.md`'s architectural rules are no longer a rounding error in their own file.
-- [ ] Nothing that moved lost the reasoning that makes it stick, and the four always-true rules did
-      not move at all.
+- [x] Every skill that carries procedure is reachable from something that fires. Three that carried
+      none gained frontmatter and were registered immediately; the seven implementation skills gained
+      a routing table in `background-worker-brief`; `commit-prep` was absorbed into `commit-guard`
+      rather than left beside it; `context-resume`'s one always-true claim became a line in
+      `CLAUDE.md`; and `queue-audit.sh` now refuses to let a skill be born invisible again.
+- [x] `CLAUDE.md` went from 4,307 words to 1,992. Rules 1-8 and 11 were 5% of it and are now roughly
+      a fifth, without a word of them changing - the file shrank around them.
+- [x] Of 74 sentences of 60 characters or more in the moved text, 70 were found byte-for-byte in
+      their destinations and the remaining 4 confirmed by hand - the automated check was mangling
+      em-dashes and line wraps, not finding losses. Every rule kept its number, because they are cited
+      from ADRs and half the backlog. The four always-true prohibitions did not move.
+- [x] The same lesson was applied to what the rules *asked for*: `finish-an-item` had told anyone
+      reading it to delete merged branches and worktrees since it was written, and the workspace still
+      held 158 GB, of which 147 GB was `bin/` and `obj/` in worktrees merged weeks earlier. Four
+      scripts and a triage skill replaced the asking. First run: **158 GB to 59 GB**, 152 worktrees
+      removed, 92 remote branches deleted, and six of the seven survivors correctly identified as work
+      that had reached `main` by another route rather than as work anybody lost.

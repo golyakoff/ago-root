@@ -27,6 +27,7 @@ and in `docs/`.
 | `workspace-cleanup` | `C:\git\ago` has grown large, or periodically — remove worktrees/branches whose work already merged. |
 | `dependabot-sweep` | Working through a repository's open Dependabot PRs — package bumps and CI-less infra image bumps alike. |
 | `user-story-writer` | Turning what the product does into what a person is trying to get out of it, for a design pass. Carries this product's per-role objectives and the honesty and anti-manipulation rules that bound them. |
+| `leftover-branch-triage` | Something survived a cleanup sweep. Deciding whether it is work that reached `main` by another route or work nobody has — the two look identical to `git cherry`, and six of seven survivors on the first real run were duplicates. |
 
 ## How they relate
 
@@ -54,6 +55,8 @@ that reminds:
 | `.claude/skills/commit-guard/commit.sh <message-file>` | Committing — takes a **file**, never an inline `-m`, so shell quoting cannot mangle the message. |
 | `.claude/skills/commit-guard/open-pr.sh <title> <body-file>` | Opening a PR — same reason, and backticks in a body have destroyed it three separate times when passed inline. |
 | `tools/after-merge-cleanup.sh <repo> <item>` | Reclaiming a finished item — deletes the remote branch, removes the worktree, deletes the local branch, and refuses on uncommitted work or on a commit missing from `origin/main` *by content*. Reports by default; `--yes` acts. |
+| `tools/worktree-sweep.sh <report-file>` | Reclaiming *every* finished item at once — enumerates task worktrees and hands each to the script above, which does all the deciding. Reports by default; `--yes` acts. |
+| `tools/prune-merged-remote-branches.sh <repo>` | Deleting remote branches already in `origin/main` **by content** — ancestry is useless here, because Rebase and merge rewrites every SHA. Never touches `main` or a branch with an open PR. |
 
 `tools/queue-audit.sh` is the same idea applied to the queue, and since 2026-09-08 it also checks that
 every skill carries frontmatter.
