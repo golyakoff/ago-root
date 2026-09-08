@@ -58,7 +58,7 @@ together.
 - [x] A platform owner can grant a worker quantity for a tenant, and it reaches `ago_calendar`.
       Proven by `ModuleQuantityGrantedWireTests` in `ago-calendar` — a real Testcontainers broker, the production `RabbitMqEventPublisher`, and this repository's own production consumer started as `Ago.Calendar.Worker` registers it. The one stand-in is chat's own process, which a single repository cannot run.
 - [~] A tenant with the module and a granted quota can create their first worker — end to end, shown.
-      **Not shown, and this item stays open on it.** Everything the path needs is merged and deployed to the stand as of 2026-09-07, but nobody has yet granted a module and created a worker end to end. The same demonstration closes `23-87`'s last box, and neither should be ticked from a passing test suite.
+      **Half shown, 2026-09-08, and the remaining half is blocked.** The grant happened and the calendar auto-provisioned its tenant, which closed `23-87`. Creating a first worker was not reached, for two reasons found in that order: the tenant's own roles carry no calendar permission (`23-102`), and `worker_quota` is **0** for that tenant, so this item's own route has still never been exercised against a real grant.
 - [~] Lowering a quota states what it will deactivate before it does it.
       **Carried out to `23-88`.** Nothing reads the quantity downwards — no confirmation, no count of what exceeds a new number, no statement of what happens to the workers above it.
 - [~] The projection bound is stated, and the wait is bounded rather than hoped for.

@@ -1,7 +1,7 @@
 # AGO Calendar still has no tenant, and nobody has ever signed in to one
 
 - **Stage**: 20
-- **Status**: ready — **and it is one live sitting, not code**. `20-30`, `23-66`'s second box and
+- **Status**: ready — **the grant half is proven; the sign-in half is blocked on `23-102`**
   `23-87`'s third are all closed by the same demonstration: grant, sign in, create a first worker.
 - **Depends on**: nothing new. `20-27` built the path; `22-06` moved the screens. Both shipped.
 - **Carried out of**: `20-27`, whose last two Done-when boxes this is. Filed under CLAUDE.md rule 14 —
@@ -42,7 +42,8 @@ reaching them signed in."*
 
 ## Done when
 
-- [ ] A tenant exists in `ago_calendar` on the live node, created by the system rather than by
+- [x] A tenant exists in `ago_calendar` on the live node, created by the system rather than by
+      **Proven 2026-09-08.** `ago_calendar` holds exactly one tenant, `01a06262-d4f0-7fb6-94e0-9ff702db8a43`, "АГО тест теннант", created 06:17:47 UTC by the platform owner's grant — auto-provisioned by `RegisterChatModuleHandler`, not typed. `enabled_modules` carries the matching row with `granted_by_owner = t`.
       hand-written SQL.
       **Amended 2026-09-07.** This box named `Ago.Calendar.Provisioner` as the mechanism, and that
       wording is stale: `22-17`/`adr/0098` shipped after `20-27` was written and made
@@ -53,10 +54,13 @@ reaching them signed in."*
       The standalone tool is also the harder path today rather than the sanctioned one: `ago-deploy`
       carries no Job or manifest that runs it in-cluster at all. The requirement the box was written to
       express — *by the system, not by somebody typing SQL* — is unchanged and is what it now says.
-- [ ] Its owner signs in through the `ago-console` client and reaches a calendar screen showing that
+- [~] Its owner signs in through the `ago-console` client and reaches a calendar screen showing that
+      **Not reached, and blocked on `23-102`.** The owner signed in and got a truthful refusal: their account holds both seeded roles and neither carries a calendar permission, because `22-05` added them to the seeded sets and roles are seeded once at registration. Four of ten sites on the stand are in that state.
+      A second obstacle sits behind it and would have stopped the same attempt anyway: `worker_quota` is **0** for this tenant, so even with the permission there is no worker to show. Raising it is `23-66`'s own route, a separate grant of a quantity.
       tenant's own data — not a fixture, and not an empty state that would look identical if the
       account did not exist.
-- [ ] Whatever it took is written down where the next tenant's setup will look for it, so the second
+- [x] Whatever it took is written down where the next tenant's setup will look for it, so the second
+      Written into `docs/runbooks/module-grant-and-revoke.md` — the grant, the entry point, and the two things that stop a tenant using what was granted.
       one is a procedure rather than a rediscovery.
       What it will say differs from this item's original assumption: not *run the provisioner*, but
       *grant the calendar module to the site*, plus `23-92`'s entry-point value and whichever way

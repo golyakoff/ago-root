@@ -81,6 +81,29 @@ reaches it another way. If you are granting a trial and somebody asks "what happ
 is the honest answer, and it is worth saying at the point of granting rather than at the point of
 disappointment.
 
+## What a grant does not give — read this before telling a tenant it is ready
+
+**Done once, on 2026-09-08, and both of these were found by doing it rather than by reading.** A grant
+that succeeds completely still leaves a tenant unable to use what was granted, for two independent
+reasons.
+
+**The site's roles may carry no calendar permission.** `22-05` added `booking:*` and `customer:*` to
+the seeded Operator set and `calendar:configure` to Admin — but **roles are seeded once, at
+registration, and never revisited**, so that reached every site registered after it and none before.
+The tenant then opens the calendar and is told, truthfully, that they lack the permission and should
+ask an administrator — while *being* the administrator, who has no way to grant it. Four of the ten
+sites on the demo stand were in that state the day this was written. `23-102` is the item; it is filed
+as a question, and until it is answered the only remedies are a hand-written row or re-registration.
+
+**`worker_quota` starts at 0.** The module grant creates the tenant in `ago_calendar`
+(auto-provisioned by `RegisterChatModuleHandler`, `adr/0098`) with a quota of zero, so even a tenant
+holding every permission cannot create a first worker. Raising it is a **separate** grant of a
+quantity — `23-66`'s own route on the `/owner` screen — and nothing about the module grant implies it.
+
+**So the check that a grant worked is not that the screen said so.** It is: a row in
+`enabled_modules`, a tenant row in `ago_calendar`, a quota above zero, and somebody who holds a
+booking permission. The first two now happen by themselves; the last two do not.
+
 ## Verifying
 
 **Verify against the read, not against the write's own response.** A `200` from the grant tells you
