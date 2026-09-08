@@ -76,6 +76,31 @@ is **two `Ago.Chat.Worker` replicas independently deciding the same row is due o
 deterministic key turns that race into the provider returning one payment's result twice, which is
 cheaper and more honest than putting a row lock on a job whose real cadence is daily.
 
+## An option is its own subscription
+
+**Each purchased option is a `BillingSubscription` of its own, and its period is the account's rather
+than one starting at purchase** ([`adr/0159`](../adr/0159-an-option-is-its-own-subscription-aligned-to-the-account-s-base-period.md)).
+`CurrentPeriodEnd` is copied from the base when the option is bought, and the first charge covers the
+**remaining** days - so both renew on one date, and the annual discount applies to the whole set at
+that moment rather than to each row separately.
+
+**Failure is per subscription, and that is the point.** An option that cannot be charged runs its own
+`PastDue` window and lapses on its own; the tier does not notice. Lines inside one subscription would
+have made a declined charge for a cheap option put a paid tier into `PastDue`, because a single charge
+either succeeds or fails - and partial-payment semantics are not something to invent in the least
+forgiving place this system has.
+
+**The renewal job needs no knowledge of any of this.** `ListDueForRenewalAsync` selects on
+`(status, current_period_end)` across all rows, so options renew, retry and lapse through the same code
+that already does it for tiers.
+
+**One read has to stay narrow.** `GetBillingStatusHandler` means *the site's base subscription*; handed
+the newest row instead, it would show a tenant their channel where their tier belongs. It is the only
+reader with that assumption.
+
+**What happens to an option when the *base* lapses is not decided** - `22-33` holds it, and it is a
+commercial question rather than a technical one.
+
 ## What this page does not decide
 
 **Prices, tiers and packaging are not here and are not public.** They live in the private

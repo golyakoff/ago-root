@@ -2,6 +2,13 @@
 
 - **Stage**: 22
 - **Status**: ready — **and the decision inside it is commercial, not technical**
+- **Sharpened 2026-09-08 by `adr/0159`**: an option is now its own subscription with its own period, so
+  an option's *own* non-payment lapses it and that half is `23-86`'s ordinary work. What is left here is
+  the harder question and it is entirely commercial: **when the base lapses, what happens to an option
+  that is still being paid for?** The author has said a channel is meaningless without chat — which is
+  an argument, not yet a decision, and the two readings below still stand. AGO Calendar is the same
+  question with a different likely answer, because `ago-business/0008` made it a separate product with
+  its own subscription rather than an add-on to this one.
 - **Depends on**: nothing to find it. `22-08` (suspension) is where the mechanism would live.
 - **Found**: 2026-09-07, while designing `22-08`.
 
