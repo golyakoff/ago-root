@@ -1,7 +1,7 @@
 # the chat button asks to be noticed
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing
 - **Decision**: the author's, 2026-09-07 — a setting, off unless the tenant turns it on.
 
@@ -40,8 +40,15 @@ can leave it off.
 
 ## Done when
 
-- [ ] A tenant can turn «Привлекать внимание» on, and it is off until they do.
-- [ ] The launcher draws attention while closed and stops when opened or dismissed.
-- [ ] It stops on its own after a bounded number of attempts, and the bound is stated in the code.
-- [ ] `prefers-reduced-motion` disables it whatever the setting says, asserted by a test.
-- [ ] The widget's bundle budget still holds.
+- [x] `WidgetConfigPage` gets an `attractAttention` checkbox, off by default, sibling to
+      `requireContactConsent`. Stored as a plain `bool` (no `[JsonRequired]` counterpart) - an
+      omitted flag binding to `false` is not a security regression here, unlike the consent gate.
+- [x] `ui/widget.ts` schedules the pulse only while the launcher is closed and cancels scheduling
+      the moment the panel opens or the launcher is dismissed - there is deliberately no path that
+      clears it later than the moment it is checked.
+- [x] `MAX_ATTRACT_ATTEMPTS = 3` in `ui/styles.ts`, named in code rather than left to iterate
+      until dismissed.
+- [x] Checked at the moment scheduling is attempted and wins unconditionally over the tenant's
+      own setting, asserted in `ui/widget.test.ts`.
+- [x] Proved by the build that enforces it, run on the exact base this landed against:
+      **31.8 KB gzipped against the 45 KB budget** (`npm run build`).
