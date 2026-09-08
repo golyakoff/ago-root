@@ -1,7 +1,7 @@
 # a tenant operator still holds a secret the platform owner no longer needs
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-65`, which removed the secret from the owner's own routes. This is the other half.
 - **Found**: 2026-09-07, while building `23-65`.
 
@@ -89,8 +89,15 @@ end. It is worth its own number rather than being smuggled in here.
 
 ## Done when
 
-- [ ] No tenant-facing route provisions a module at all — the writes are gone, not re-plumbed.
-- [ ] A tenant can still see which products are on their account.
-- [ ] Rotate and verify exist on the owner surface, so nothing that was possible becomes impossible.
-- [ ] Whether these routes were ever usable by a tenant is established and written down — the answer is
-      almost certainly no, and that is worth stating rather than assuming.
+- [x] Shipped 2026-09-07, `ago-chat@36a0cf9`: `ModuleEndpoints.cs` maps only `GET` now; `PUT`,
+      rotate, revoke, verify are gone from the tenant surface, not re-plumbed to read from
+      configuration. A tenant PUT gets 405 (route exists, verb does not) - the collection path itself
+      is still real, deliberately, so 404 does not read as "unauthenticated".
+- [x] `GET` unchanged, still gated on `Permission.SiteConfigure`, unchanged test coverage.
+- [x] `OwnerModuleEndpoints.cs`: `POST /{moduleKey}/rotate`, `POST /{moduleKey}/verify`, both gated
+      on `RequirePlatformOwner`, both tested for success, "not enabled" and missing-secret cases.
+- [x] **No.** The only caller that ever existed - the FAQ form - sent `moduleKey`/`triggerWords`/
+      `entryPoint` but never `credential` or `provisioningSecret`; both were required and
+      `ModuleCredential`'s constructor rejects a null credential before any module is contacted. Every
+      submit got a deterministic 400 from the day it shipped (`19-03`), which `23-84` found
+      independently and this confirms.
