@@ -37,7 +37,7 @@ different road.
       phone-only, stated in `ADR-0161`: `Customer` has no e-mail field on any row today.
 - [x] `MergeCustomersHandler`/`CustomerMergeStore` reassign every `events.customer_id` row
       to the survivor in one transaction, tombstoning the loser (`ago-calendar#52`,
-      `ago-console#175`). Proven by `CustomerMergeTests` against real Postgres, not asserted.
+      `ago-console#176`). Proven by `CustomerMergeTests` against real Postgres, not asserted.
 - [x] `customer_merges` (real FKs, cascades with the tenant), surfaced on the new
       `CalendarCustomerMergesPage` audit trail.
 - [x] `ADR-0161`: no undo, ever. `Customer.MarkMergedInto` throws on a second call - stated as
