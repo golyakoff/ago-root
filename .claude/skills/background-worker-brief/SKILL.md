@@ -147,7 +147,7 @@ Workers may finish in any order; their PRs go up in one order, each cut from the
 contains the last. §5's one-open-PR-at-a-time rule for the shared index generalises to every PR.
 
 Nothing else changes: workers still never spawn anything (rule 12), never run `git commit`/`git push`
-(rule 9), and end at a commit-prep block the managing session executes.
+(rule 9), and end at a commit block the managing session executes (`commit-guard`).
 
 ## 0.8. A worker implements. It does not organise.
 
@@ -196,8 +196,10 @@ it becomes close-the-PR-and-rebuild. See `git-workflow.md`.
 
 **No history writing.** A worker never runs `git commit`, `git push`, or opens a PR — CLAUDE.md
 rule 9 delegates those to the *managing session only*, and explicitly not to workers. The worker
-ends with a commit-prep block per repository, each a shell script beginning with an explicit `cd`
-(see the `commit-prep` skill). No `Co-Authored-By` trailer for an AI session.
+ends with a commit block per repository, each a shell script beginning with an explicit `cd`, writing
+the message to a file and calling `commit-guard`'s `commit.sh` - never `git commit` directly, so the
+managing session cannot paste a trailer in by executing somebody else's block. No `Co-Authored-By`
+trailer for an AI session.
 
 **No spawning.** A worker never spawns another agent — CLAUDE.md rule 12. Say it in the brief in
 those words, and say what to do instead: *if you think this warrants delegation, say so in your
@@ -260,6 +262,39 @@ The standing rules are the floor. The brief earns its keep in what only the mana
 - **What must be demonstrated rather than asserted.** Pick the one claim that would be worthless as
   an assertion and say it must be shown biting.
 - **What is out of scope**, especially repositories the worker must not touch.
+- **Which skills this item's work calls for, named explicitly.** A worker starts cold and sees the
+  skill list, but a list is not a route: nothing in a backlog item says "this is a schema change, so
+  read `db-migration` first". Naming them is one line in the brief and it is the difference between a
+  skill existing and a skill being used.
+
+### The routing table, because leaving it to judgement is what failed
+
+Seven skills carrying real procedure — ordered checklists, not restatements of `docs/` — had **never
+been invoked once**, measured across every session transcript on the machine on 2026-09-08. The reason
+was not quality and not forgetfulness. It is that the managing session does not implement (it
+delegates), and this file named **no implementation skill at all**: only `commit-guard` and
+`land-a-slice`. The audience existed and the route did not.
+
+So name every row that applies, in the brief, by name:
+
+| If the item touches | The brief names |
+|---|---|
+| A new use case, endpoint, hub method or consumer — any feature end to end | `vertical-slice` (the spine; it calls the rest) |
+| Where a type or file belongs, a new port, a dependency that looks illegal | `clean-architecture-guard` |
+| Schema, an EF migration, an index, partitioning, a Dapper read store | `db-migration` |
+| An integration event, a publisher, a consumer, the outbox | `messaging-contract` |
+| Threads, channels, background services, locks, ordering, cancellation, shutdown | `concurrency-review` |
+| Deciding what level to test at, or chasing a flaky test | `testing-guide` |
+| The script that runs on third-party sites | `embeddable-widget` |
+| A performance claim, or tuning batch sizes or worker counts | `load-test` |
+| Running the stack on **this machine** — compose, Docker Desktop Kubernetes | `local-cluster` (never the live stand; that is k3s on the VPS and belongs to the runbooks) |
+
+**More than one row usually applies, and naming all of them is the point.** An item that adds an
+endpoint which publishes an event and needs a migration is three rows, not a judgement call about
+which is most important.
+
+Two are already standing rules rather than routing, and stay where they are: every worker ends at the
+commit block `commit-guard` describes, and the managing session follows `land-a-slice` with it.
 
 ## 3. What to ask for in the report
 

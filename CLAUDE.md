@@ -64,7 +64,7 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
    managing Claude Code session**, without asking first each time, once a slice's own done-when
    criteria are verified and the local build/test suite is green. This delegation is narrow:
    - It does not extend to background workers spawned to implement a slice — a worker still hands
-     back a commit-prep block for the managing session to review and execute; it never runs
+     back a commit block for the managing session to review and execute; it never runs
      `git commit`/`git push` itself.
    - **Never push directly to `main`.** Every change reaches `main` through a PR — that is unchanged
      and is not negotiable.
@@ -155,7 +155,7 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
       indexes; under this rule it applies to every PR, and holds all the harder now that lanes are
       refilled independently rather than finishing together.
     - Everything else stands unchanged: workers still never spawn anything (rule 12), never write
-      history (rule 9), and hand back commit-prep blocks the managing session executes.
+      history (rule 9), and hand back commit blocks the managing session executes.
     (Agreed 2026-09-02 as a per-request ceiling of three, phrased around the author saying "го по
     жире". Amended 2026-09-05 into a continuous three, with one lane reserved for migrations: the
     per-wave phrasing had become a per-wave *stall*, and the author had by then asked for the lanes to

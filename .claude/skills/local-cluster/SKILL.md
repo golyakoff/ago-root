@@ -5,6 +5,13 @@ description: Run AGO Platform locally - docker-compose inner loop and the Docker
 
 # Running it locally
 
+> **This is the loop on your own machine, and only that.** It describes docker-compose and Docker
+> Desktop's Kubernetes. **The live stand is k3s on a VPS** and is reached only through
+> `docs/runbooks/redeploy.md` and `k8s-local.md`'s sibling procedures - a bare local `kubectl` talks
+> to `docker-desktop` and will cheerfully answer questions about the wrong cluster, which has already
+> cost a session a wrong conclusion about a database. Nothing here applies to the stand.
+
+
 Authoritative sources: `docs/runbooks/local-dev.md`, `docs/runbooks/k8s-local.md`,
 `docs/architecture/edge.md`.
 
