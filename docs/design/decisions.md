@@ -576,3 +576,26 @@ The full argument, including what this costs relative to `23-21`'s own fix, is `
 section is left standing rather than rewritten**, because it remains the correct record of what was
 decided and why on 2026-09-05; `adr/0129` is the record of what changed, one day later.
 
+
+## Validating an API response: only where absence looks like emptiness (`23-99`, 2026-09-08)
+
+`23-41` named three readings and deliberately left the choice open; `23-99` carried it and opened with
+it. **The author chose reading 2**: validate presence at the boundary only where a missing field and a
+genuinely empty account render identically — not every response.
+
+The reasoning for choosing it over the alternatives:
+
+- **Reading 1, validate everything**, is the only one that fully closes the hole, and it was declined
+  on cost rather than on principle: a schema per response, plus a decision about what a failed check
+  should do on every screen. The gap this leaves is *stated* rather than unstated, which was the
+  actual complaint.
+- **Reading 3, let each empty state carry the distinction**, needs no schema at all but depends on
+  every screen remembering — the failure mode it is meant to fix, relocated.
+
+**The bound that makes this honest is that the gap is written down**, below. Three call sites are
+guarded today, out of 115 exported API functions across 29 modules. The remainder is not a defect
+list — most of those responses are single objects whose absence throws or renders visibly wrong
+rather than empty, and the reading deliberately does not reach them.
+
+**What this does not catch, by construction:** a field whose *type* changes shape while staying
+present. `assertHasKeys` checks presence, which is what the chosen reading asks for.

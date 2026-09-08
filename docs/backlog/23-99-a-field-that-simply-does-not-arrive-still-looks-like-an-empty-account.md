@@ -1,7 +1,7 @@
 # a field that simply does not arrive still looks like an empty account
 
 - **Stage**: 23
-- **Status**: ready — **and the first thing in it is a choice, not work**
+- **Status**: done
 - **Depends on**: `23-41` closed the throwing half and named this as the other one.
 - **Found**: 2026-09-08, carried out of `23-41` at landing rather than left implied by a closed ticket.
 
@@ -50,20 +50,50 @@ the three readings* — is still unticked for exactly this reason.
 
 ## Done when
 
-- [ ] **Not settled, and this is the item's own central failure.** This file says in bold *"Do not
-      pick one by implementing it"*, and reading 2 was implemented anyway; the commit and
-      `shapeGuard.ts`'s doc comment both assert "the chosen reading" while **no record of the author
-      choosing exists anywhere** - not here, not in `docs/design/decisions.md`, not on the issue. The
-      shipped work is defensible and is the option this file itself calls the cheaper one, but the
-      choice is the author's and has not been made. Dispatching this overnight was the managing
-      session's error: the standing instruction was to proceed only *where there are no new
-      questions*, and this item opens with one.
+- [x] **Chosen by the author on 2026-09-08: reading 2** - validate only where absence and emptiness
+      look the same - and recorded in `docs/design/decisions.md`, with why readings 1 and 3 lost.
+      Worth keeping on the record that this file's own instruction was broken before the choice was
+      made: it says in bold *"Do not pick one by implementing it"*, and reading 2 was implemented
+      first, with the commit and `shapeGuard.ts` both asserting "the chosen reading" while no record
+      of a choice existed. The author has since confirmed that reading, so nothing is reverted - but
+      it was confirmed after the fact, which is not the same as chosen. Dispatching an item that
+      opens with a question was the managing session's error against a standing instruction to
+      proceed only where there are none.
 - [x] Three endpoints validate presence at the boundary: `GET /confirmed-bookings` (this file's own
       exemplar) and the two feeding `PermissionsProvider`, where a dropped `enabledModules` turned
       "we were not told" into "this tenant has zero modules" and the calendar nav vanished exactly as
       it would for a tenant that genuinely has none. `requiredKeysOf` derives the key set from the
       DTO interface with a mapped type, so a new required field stops every call compiling until it
       is listed - the drift guard this file asked for.
-- [ ] **Not settled.** The uncovered screens - about thirty - were named only in the implementing
-      worker's report, which is not a durable place; nothing in the repository lists them.
-      `shapeGuard.ts`'s doc comment names what *is* covered, which is the other half of the sentence.
+- [x] The gap is written down below, in this file, derived from the tree rather than remembered -
+      the worker's report named it and reports are not a durable place.
+
+## What is guarded, and what is not (2026-09-08)
+
+Three call sites carry `requiredKeysOf`, out of **115 exported functions across 29 API modules**:
+
+| Guarded | Why this one |
+|---|---|
+| `calendarApi.getConfirmedBookings` | This item's own exemplar - the incident `23-41` was carved from |
+| `operatorsApi.fetchMyPermissions` | Decides which sections of the console exist at all; a dropped `enabledModules` made the calendar nav vanish exactly as it would for a tenant with none |
+| `tenanciesApi` (`TenancyDto`) | `PermissionsProvider`'s other input, same consequence |
+
+**Everything else is unguarded, and that is the stated gap.** It is not a defect list: the chosen
+reading reaches only responses where absence and emptiness look the same, and most of the remainder
+are single-object reads whose absence throws (which `23-41`'s boundary catches) or renders visibly
+wrong rather than plausibly empty.
+
+The modules where the reading *does* apply and nothing is guarded yet, by how many array-valued DTO
+fields each carries - the shape that renders as a list or a count:
+
+`calendarApi` (13 more, beyond the one guarded), `ownerApi` (6), `modulesApi` (2),
+`calendarTenanciesApi`, `installationApi`, `offlineAutoReplyApi`, `operatorTeamApi`,
+`siteConsentDocumentsApi` (1 each), plus the eight functions that return a bare array:
+`cannedResponsesApi.fetchCannedResponses`, `channelDeliveriesApi.fetchChannelDeliveries`,
+`channelIdentitiesApi.fetchChannelIdentities`, `contactDetailsApi.fetchContactDetails`,
+`documentsApi.getRequiredDocuments`, `notesApi.fetchConversationNotes`, `tagsApi.fetchTags` and
+`tagsApi.fetchConversationTags`.
+
+Each is a small addition now that `shapeGuard.ts` exists - `requiredKeysOf` plus one `validate`
+argument - which is why they are listed rather than carried out as their own item. Adding one is
+ordinary work inside whatever item next touches that screen.
