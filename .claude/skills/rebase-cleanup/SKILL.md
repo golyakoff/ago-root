@@ -14,7 +14,7 @@ with nothing else going on. This is the single most common source of confusing b
 project - not a sign anything went wrong. Never delete or force-push a branch to "fix" confusing state
 before running the diagnosis below.
 
-**Better than diagnosing it after the fact: catch it before it happens.** `commit-prep`'s step 0 runs
+**Better than diagnosing it after the fact: catch it before it happens.** `commit-guard`'s step 0 runs
 `git fetch origin && git diff --stat origin/main..HEAD` before adding any new commit to a branch that
 already existed - if that turns up more than the new work being added, `origin/main` has already
 absorbed this branch and step 2 below is what to run before committing anything further on top.
@@ -89,6 +89,6 @@ fix (23 lines) was real, the rest was the already-merged content showing up agai
 merge-base with `origin/main` was still the pre-1-06 commit, not the rebase-merged one. Fixed with
 `git reset --soft origin/main` + one clean commit + `git push --force-with-lease`, then merged
 cleanly via Rebase and merge again. It recurred a second time in the same session before
-`commit-prep` step 0 existed - that step exists specifically so the fetch-and-diff check happens
+`commit-guard`'s step 0 existed - that step exists specifically so the fetch-and-diff check happens
 *before* committing onto an existing branch, not only when GitHub's ahead/behind counter already
 looks wrong.

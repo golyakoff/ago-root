@@ -5,7 +5,8 @@ description: The managing session's own procedure for turning finished work into
 
 # Landing a slice
 
-`commit-prep` is the *worker's* side: it ends at a drafted command block. This is the other side.
+`commit-guard` covers the worker's side, which ends at a drafted command block, and the mechanism
+that executes it. This is the other side: what the managing session does with that block.
 CLAUDE.md rule 9 lets the managing session run those commands directly on a feature branch, and
 every step below exists because skipping it has already cost this project something specific.
 

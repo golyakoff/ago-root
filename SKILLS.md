@@ -18,8 +18,7 @@ and in `docs/`.
 | `adr-writer` | A decision was made between real alternatives, or a rule was deliberately bent. |
 | `embeddable-widget` | Any change to the script that runs on third-party sites. |
 | `finish-an-item` | **The moment the last PR for an item merges.** Merging the code feels like finishing and is not: the documentation half, the issue closed *with a reason*, the remote branch, the worktrees, the audit. Six checks, one minute. Written after the same session dropped this three times in one day. |
-| `commit-guard` | **Every commit and every PR, in every repository.** Refuses a `Co-Authored-By` trailer before git or `gh` runs, plus a stale base, an unpushed branch and being on `main`. Called from wherever the work is. |
-| `commit-prep` | A slice of work is finished and ready for commit and push. |
+| `commit-guard` | **Every commit and every PR, in every repository.** The whole path: verify, read the diff, stage precisely, write the message to a file, then commit and open the PR through scripts that refuse a `Co-Authored-By` trailer, a stale base, an unpushed branch and being on `main`. Absorbed `commit-prep` on 2026-09-08 — the two described one moment and contradicted each other on the only question that mattered. |
 | `land-a-slice` | The managing session is turning finished work into merged commits: verify, base check, PR order, queue sweep. |
 | `take-a-backup` | Taking an encrypted backup of the live databases on demand - before a migration, a new database, or whenever one is asked for. |
 | `background-worker-brief` | About to delegate a backlog item to a background worker — including deciding whether it deserves one. |
@@ -37,7 +36,7 @@ others are situational.
 
 Three of them describe one loop and are best read as a sequence rather than alternatives.
 `background-worker-brief` decides whether to delegate an item at all and, if so, what the worker
-must be told. `commit-prep` is where any finished work stops — a worker hands its block back there
+must be told. `commit-guard` is where any finished work stops — a worker hands its block back there
 and goes no further. `land-a-slice` is what the managing session does with that block: verify
 independently, check the base, open the PRs in the right order, sweep the queue. The split matters
 because `CLAUDE.md` rule 9 grants the managing session something it deliberately does not grant a

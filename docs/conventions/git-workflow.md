@@ -13,7 +13,7 @@ The current split, which is deliberately not "the agent may write history":
 - **The managing session may** `git commit`, `git push`, and open a PR on a **feature branch**, once
   the slice's own done-when criteria are verified and the local build and test suite are green. No
   per-commit ask.
-- **A background worker may not.** A worker spawned to implement a slice hands back a commit-prep
+- **A background worker may not.** A worker spawned to implement a slice hands back a commit
   block for the managing session to review and execute. It never runs `git commit` or `git push`
   itself, whatever its own reasoning concludes.
 - **Merging a PR that carries only implementation may be done by the managing session** — amended
