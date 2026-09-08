@@ -107,6 +107,29 @@ chat history render of 20 images is one round trip's worth of signing, not 20.
   there is no ceiling at all** - this line said there was one from the day it was written, and
   `CreateAttachmentHandler` compares one declared size against one constant and sums nothing.
   `23-75` builds it; corrected here on 2026-09-07 rather than left reading as shipped.
+  **`23-81`: the number is 5 MiB** (`AttachmentOptions.MaxSizeBytes`'s default, down from 10), on a
+  deployment that configures nothing — checked again for this item, the demo overlay still sets no
+  `Attachments__MaxSizeBytes` anywhere in `ago-deploy`, so the code default is what governs it. A
+  judgement about what a photograph or an invoice needs, not a measurement — stated in
+  `AttachmentOptions`'s own doc comment rather than left to acquire authority by being the newer
+  number, the same honesty this document already owes `MaxConversationBytes` above.
+  The widget mirrors it client-side (`ago-widget`'s `attachments.ts`, `COURTESY_MAX_SIZE_BYTES`) so a
+  visitor is refused before the upload starts rather than after a progress bar has run — a courtesy
+  check only, per the embeddable-widget skill's Uploads section; the two layers below are what
+  actually enforce it.
+  **The gateway's own body-size ceiling does not contradict this.** `ago-deploy`'s
+  `ago-chat-gateway-body-size` `ClientSettingsPolicy` caps requests to `ago-chat-gateway` at `1m` —
+  smaller than 5 MiB, and it would make the widget's own check unreachable if attachment bytes ever
+  crossed it. They do not: per `adr/0008`, an attachment PUT goes browser → object storage directly
+  on a presigned URL, never through this gateway at all, so the two ceilings answer different
+  questions (a JSON request body; a file) and were never in tension. Unrelated, and not this item's
+  to fix: nothing in `ago-deploy` currently routes a public hostname to MinIO at all, so no presigned
+  upload URL is reachable from outside the cluster on this deployment today — a pre-existing gap, not
+  new here (see "Still open" below).
+  **A ceiling on what is accepted is never retroactive.** Nothing in this item's own change path
+  touches `attachments.size_bytes` or an existing row's `state` - lowering `MaxSizeBytes` changes what
+  a *new* `CreateAttachmentHandler` call accepts, and nothing else; an attachment already `ready`
+  above the new number keeps its row, its object, and its presigned-GET download path untouched.
   **Two layers since `5-13`, and they answer different questions.** The ceiling itself is the
   application's (`CreateAttachmentHandler` vs `AttachmentOptions.MaxSizeBytes`) — storage cannot know a
   product's quota. What storage now enforces is that the upload is *the size it declared*: the declared
