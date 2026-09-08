@@ -1,7 +1,7 @@
 # a locked-out tenant can be let back in without a database
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-67` prevents the lockout; this recovers from one. Neither replaces the other.
 - **Found**: 2026-09-07, by needing it. A tenant locked itself out during a live demonstration and the
   only way back was an `UPDATE` against the live database, typed by hand.
@@ -47,8 +47,23 @@ customer who cannot be helped.
 
 ## Done when
 
-- [ ] A platform owner can restore a locked-out operator's ability to sign in, from the console.
-- [ ] The action is recorded and readable afterwards.
-- [ ] The seat-limit interaction is decided in the change rather than discovered.
-- [ ] The runbook carries the procedure for when the console is not available.
-- [ ] The role case is either handled or explicitly named as not handled.
+- [x] `/owner`'s tenant detail screen (`23-65`) gets an Operators section with a per-row Restore
+      seat action, calling `POST /api/v1/owner/sites/{siteId}/operators/{operatorId}/restore-seat`
+      (`ago-chat#240`, `ago-console#174`) - gated on the existing platform-owner realm role, same as
+      every other owner surface.
+- [x] Every restore writes an `AccessRecord` (who, when, tenant, operator) - the same audit
+      mechanism every other owner action already uses (`24-12`), proven by
+      `OwnerOperatorsEndpointsTests`.
+- [x] Decided: mirrors `adr/0118`'s revoke-override asymmetry. Within the paid seat limit,
+      restoring needs no ceremony; past it, refused (`409`) unless `force: true` with a non-blank
+      `reason`, recorded verbatim in a new `operator_seat_restore_overrides` table - an unconditional
+      refusal would defeat this item's own purpose (the tenant's own remedy is unreachable while
+      locked out), a silent override would violate "states plainly that it is overriding it and why."
+- [x] `docs/runbooks/seat-restore.md`, mirroring `module-grant-and-revoke.md`'s structure -
+      including a body-less `curl` for the ordinary case.
+- [x] Explicitly not handled, stated in three places (handler doc comment, the console's own
+      empty-role warning on the operators table, and the runbook): restoring a seat makes
+      `Operator.CanSignIn` true regardless of role, but grants no role back. An operator who
+      stripped their own last role can sign back in with no permission once inside - matches the
+      shape of the real 2026-09-07 incident this item was filed from (role intact, only the seat
+      released).
