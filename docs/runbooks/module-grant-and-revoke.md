@@ -27,10 +27,18 @@ about the third use). `23-65` moved that secret into `Ago.Chat.Api`'s own config
 from the console, and not from this page's own curl calls. The person running this procedure now needs
 only their own platform-owner authorisation, nothing else to fetch or paste.
 
+**`23-92`/`adr/0154` removes a second field the identical way.** The grant used to also take
+`entryPoint` — where the module is reached — as a caller-supplied URL. That value is the deployment's
+own fact, not the person granting's: it is now resolved server-side from `ModuleEntryPoints:<moduleKey>`
+(`secrets.md`'s neighbouring configuration, `ago-deploy`'s own manifest), and a module this deployment
+has not declared an address for is refused outright, naming the missing key, rather than accepted and
+failing later against whatever address you happened to type.
+
 ## What you need before you start
 
 - The `siteId` of the tenant. Get it from `/owner` in the console, not from a person's memory.
-- The **module key** (`calendar`, `faq`).
+- The **module key** (`calendar`, `faq`) — this is also the *only* thing that decides where the module
+  is reached; there is no address for you to look up or supply.
 - Whether this grant has an end date, and if not, that you have decided it has none.
 - Your own platform-owner bearer token. There is nothing else to hold — the deployment's own
   provisioning secret is `Ago.Chat.Api`'s own configuration now, never something a caller supplies
@@ -48,9 +56,14 @@ Every field is required, deliberately — including the expiry, which is `requir
 |---|---|
 | `moduleKey` | `calendar`, `faq` |
 | `triggerWords` | what a visitor types to reach the module |
-| `entryPoint` | where the module is reached |
 | `credential` | the module's own per-site credential. Never echoed back |
 | `expiresAt` | an instant, **or explicitly `null`** |
+
+There is no `entryPoint` field any more — see `adr/0154`. If you send one anyway (an old note, a stale
+script), it is silently ignored; the address actually used always comes from this deployment's own
+`ModuleEntryPoints:<moduleKey>` configuration. A `503 Module.EntryPointNotConfigured` here means exactly
+that: this deployment has not declared where that module lives yet, a `ago-deploy` manifest gap, not
+something you can work around by typing an address.
 
 **`expiresAt` is the field this whole page exists to slow you down on.** The endpoint refuses a body
 that omits it entirely, so you cannot forget it by accident — but you can still send `null` without
@@ -126,6 +139,8 @@ to that question written down somewhere other than one person's memory.
   that it no longer is
 - `docs/adr/0150-*` — the console calling the owner API and `Ago.Chat.Api` supplying the provisioning
   secret from its own configuration; the decision that made the console screen possible
+- `docs/adr/0154-*` — the identical reasoning applied to the module's own entry point; removes
+  `entryPoint` from the grant body entirely
 - `docs/design/flows.md` 5.2, 5.3 — the two "must never happen" clauses this procedure serves
 - `docs/adr/0095-*` — the provisioning secret and its blast radius, amended by `adr/0150`
 - `docs/adr/0118-*` — the revoke asymmetry and the recorded reason

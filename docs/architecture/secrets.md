@@ -92,6 +92,13 @@ tracked `.env` anywhere.
 
 Notes that change what a reader would otherwise assume:
 
+- **`ModuleEntryPoints:calendar` (`k8s/base/api.yaml`) is not in this table, deliberately — it is not a
+  secret.** `23-92`/`adr/0154` moved a module's entry point out of the platform owner's grant request
+  the identical way `23-65`/`adr/0150` moved the provisioning secret above, but an in-cluster Service
+  DNS name (`http://ago-calendar-api`) carries no confidentiality to protect — it is a plain `value:` in
+  the manifest, the same as `Keycloak__Authority` a few lines above it, not routed through `.env` or a
+  Secret. A reader who came here looking for it after reading `adr/0154` should find this line instead
+  of a gap.
 - **The internal CA's key is the one row in this table whose rotation reaches outside the cluster
   entirely.** Every other `Coordinated` row here is two or more *deployment-side* places changing
   together. This one is not: the public half is committed source in **two repositories**, and one of
