@@ -48,6 +48,21 @@ again.
 
 That is the pressure, and the eviction is its symptom.
 
+## A second instance, found 2026-09-08
+
+`build-images.sh` builds `Ago.Chat.RoleAssignmentBackfill`. **`redeploy.sh`'s import loop does not
+import it** — that loop names `ago-chat-api`, `ago-chat-worker`, `ago-chat-webhooks` and
+`ago-chat-migrator`, and stops there. So the image is built on every deploy and has never reached
+containerd at any tag but one stale copy from 2026-09-04.
+
+`run-backfill.sh` picks the tag `ago-chat-api` is currently running, deliberately, so that the backfill
+runs the same commit as the hosts. That is the right choice and it is exactly what turns this omission
+into a failure: the tag it picks is the one that was never imported, so the Job cannot start.
+
+Found by needing the backfill to repair `23-104` — imported by hand to unblock a live tenant. **This is
+the same defect as the migrator's, not a second one**: an image that is built, never imported, and only
+discovered when somebody tries to run it.
+
 ## Scope
 
 - **Reclaim, and keep reclaiming.** A build host that never prunes will cross the threshold again
