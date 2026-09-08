@@ -868,6 +868,36 @@ else
   echo "Every skill carries frontmatter and can actually be invoked."
 fi
 
+# `adr/0156`: an architecture or convention document is authoritative for **what holds now**; an ADR is
+# authoritative for **why it was decided**. That split only works if every ADR is reachable from a
+# current-state document - an ADR nobody's document mentions is a decision that can only be found by
+# reading all 129 of them and reasoning about which are still live, which is the 237,000-token
+# reconstruction this split exists to stop.
+#
+# It is also the failure mode that makes the split *dangerous* rather than merely slow: a
+# current-state document that silently omits a decision gives a confident wrong answer, which is worse
+# than a slow correct one. So this check is not an optional extra on the convention - it is the half
+# that makes it safe to rely on.
+orphan_adrs=""
+for adr in "$audit_root"/docs/adr/[0-9][0-9][0-9][0-9]-*.md; do
+  [ -e "$adr" ] || continue
+  n=$(basename "$adr"); n=${n%%-*}
+  if ! grep -rqE "adr/$n|ADR-$n" "$audit_root"/docs/architecture/ "$audit_root"/docs/conventions/ 2>/dev/null; then
+    orphan_adrs="$orphan_adrs  $n  ($(basename "$adr"))
+"
+  fi
+done
+
+echo
+if [ -n "$orphan_adrs" ]; then
+  echo "ADRs no architecture or convention document mentions:"
+  printf "$orphan_adrs"
+  echo "  Each is a decision with no current-state home, so answering \"how is this done now\" means"
+  echo "  reading the ADR corpus instead of one document. Reference it from the document it governs."
+else
+  echo "Every ADR is reachable from a document that says what holds now."
+fi
+
 # Flagged entries are for a human to resolve, so this is not an error exit - it is a report. A CI job
 # that failed on this would train people to close issues to make it green, which is the opposite of
 # the point.

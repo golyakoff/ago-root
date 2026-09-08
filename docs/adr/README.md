@@ -4,6 +4,22 @@ One file per decision a reviewer could reasonably argue with. Numbered, and immu
 a decision that changes gets a **new** ADR superseding the old one, and the old one stays with its
 status updated. Rewriting history here destroys the only artefact showing how the design was reasoned about.
 
+**These files say _why_. They are not where you look up how the system behaves now** (`adr/0156`).
+That question is answered by `docs/architecture/*` and `docs/conventions/*`, which are authoritative
+for current state - one document on a topic instead of reconstructing a chain across 129 files, and
+correct by construction rather than by careful reading.
+
+**"Immutable" is now enforced rather than stated.** The only edit an accepted ADR may receive is its
+`Status` line gaining a supersession or amendment pointer. **Appending an amendment to the body is
+forbidden** - it is what made this corpus unreadable, because a file can then look current and carry
+its own reversal several screens down, and no index built over it can be trusted. An amendment is a
+new ADR.
+
+**Every ADR is referenced from at least one current-state document, in the change that accepts it.**
+`tools/queue-audit.sh` names any that is not. That check is not tidiness: without it, a document that
+silently omits a decision gives a confident wrong answer, which is worse than the slow reconstruction
+this split replaced.
+
 Write an ADR when a technology is chosen over an alternative, a guarantee is weakened or strengthened,
 a boundary is crossed deliberately, or a reviewer would ask "why on earth". Do not write one for
 naming, formatting, or anything a convention doc already covers.
@@ -142,3 +158,4 @@ naming, formatting, or anything a convention doc already covers.
 | 0153 | A key-shaped console field generates its own value in the browser | Accepted - `23-94`. The grant form's Credential field had nothing producing a value, and `ModuleCredential`'s length floor cannot tell a random key from a typed one, so a person without a terminal types something and it passes. `crypto.getRandomValues`, 32 bytes, base64 - the shape `openssl rand -base64 32` already produced. Client-side despite this codebase's server-side convention for minting secrets, because every one of those mints a value the server itself must own or verify and this one is accepted as opaque input either way; a route would only push the secret across the network before the owner has decided to submit it |
 | 0154 | A module's entry point is configuration, not a caller-supplied field | Accepted - `23-92`, applying `adr/0150`'s reasoning to the field beside the one it moved. `EntryPoint` was free text because the model makes it a per-(site, module) coordinate - the shape wanted if one tenant's calendar lived on a different deployment, which AGO has no case for. `IModuleEntryPointProvider` resolves whatever key a caller names against what the deployment declares, so no literal module name enters `Ago.Chat.*` and the architecture guard still holds. An undeclared key is refused by name rather than left blank to fail later as a 404 |
 | 0155 | A tenant erasure reaches a module over the provisioning channel, and a module revoke tombstones rather than deletes | Accepted - `22-30`, qualifying `adr/0149` rule 2's own 'credentialed per-site channel' phrase. That channel is exactly what a revoked tenant lacks, because revoke stops the per-site credential authenticating by design (`22-11`) - so erasure uses the deployment-wide provisioning secret, on its own route, since folding it into revoke's would give one HTTP verb two irreversible meanings. Revoke now stamps `RevokedAt`, because the row it used to delete is chat's only record that a site ever had the module at all. Named cost: a revoke-then-re-enable cycle leaves two rows, and no uniqueness constraint on (SiteId, ModuleKey) existed before this either |
+| 0156 | A current-state document is authoritative for what holds; an ADR says why | Accepted - 129 ADRs, 178,000 words, and both "how is this done now" and "how did we get here" were being answered by reading the chain and reconstructing. The first question is asked every session and the second rarely, so the expensive path was being spent on the cheap question - and unreliably, since exactly **one** ADR carries a machine-readable supersession link while 25 discuss it in prose, and amendments were being appended inside accepted ADRs, so a file can look current and contain its own reversal. `docs/architecture/*` now answers what holds; the ADR answers why. Named cost: a document that silently omits a decision gives a confident wrong answer, which is why `queue-audit.sh` checks every ADR has a home rather than leaving it a convention |
