@@ -43,8 +43,29 @@ independently, check the base, open the PRs in the right order, sweep the queue.
 because `CLAUDE.md` rule 9 grants the managing session something it deliberately does not grant a
 worker.
 
+## When a script is better than a skill
+
+A skill is prose, and prose gets paraphrased. Where the same three checks have to be true every time
+and getting one wrong is expensive, the procedure belongs in a script that refuses, not in a paragraph
+that reminds:
+
+| Script | Replaces the paragraph about |
+|---|---|
+| `tools/new-worktree.sh <repo> <item> <type> <slug>` | Creating a task worktree — fetches origin, proves the base equals `origin/main`, refuses a directory or branch that is already taken, and prints the `cd`. |
+| `.claude/skills/commit-guard/commit.sh <message-file>` | Committing — takes a **file**, never an inline `-m`, so shell quoting cannot mangle the message. |
+| `.claude/skills/commit-guard/open-pr.sh <title> <body-file>` | Opening a PR — same reason, and backticks in a body have destroyed it three separate times when passed inline. |
+
+`tools/queue-audit.sh` is the same idea applied to the queue, and since 2026-09-08 it also checks that
+every skill carries frontmatter.
+
 ## Rules for skills themselves
 
+- **Every `SKILL.md` opens with YAML frontmatter carrying `name:` and `description:`.** Without it the
+  skill is never registered, so it can never be offered and never invoked — it is a file, not a skill.
+  Three were found in that state on 2026-09-08, `commit-guard` among them: written specifically to
+  stop the shell-quoting failures and the forbidden trailer, listed in this table as mandatory, and
+  bypassed every single time for two weeks because nothing could see it. The index said it existed and
+  the runtime disagreed, and nothing compared the two until `queue-audit.sh` was taught to.
 - A skill describes **procedure and judgement**, not facts. Facts (schema, topics, targets, layer
   rules) live in `docs/` and are linked, never duplicated — two copies of a rule become two different
   rules within a month.

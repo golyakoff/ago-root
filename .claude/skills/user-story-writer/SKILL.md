@@ -1,3 +1,8 @@
+---
+name: user-story-writer
+description: Turn what the product does into what a person is trying to get out of it, in the form a designer can work from. Use when preparing a design pass or writing user stories for a screen or flow.
+---
+
 # Writing user stories for the design pass
 
 Turns what the product *does* into what a person is *trying to get out of it*, in a form a designer
