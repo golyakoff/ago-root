@@ -1,7 +1,7 @@
 # whether a shop bought the calendar is written on the shop's own page
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `adr/0151` is the decision it contradicts.
 - **Found**: 2026-09-08, by the author, on the first working calendar grant.
 
@@ -66,6 +66,13 @@ should meet two embed snippets at all.*
 
 ## Done when
 
-- [ ] Granting the calendar makes booking appear on an untouched page.
-- [ ] The setup screen stops asking a tenant to change their site.
-- [ ] A page asserting `data-booking="true"` without a grant gets no booking.
+- [x] Granting the calendar makes booking appear on an untouched page. Proven end to end by
+      `ux-gate/booking-module.spec.ts`: its fixture page (`demo/booking.html`) now carries nothing
+      about booking at all, and the chip renders only because the stubbed handshake reports
+      `enabledModules: ["calendar"]`.
+- [x] The setup screen stops asking a tenant to change their site. `CalendarSetupPage` emits no
+      embed snippet, and a test asserts the rendered screen contains no `data-booking`, so it
+      cannot come back unnoticed.
+- [x] A page asserting `data-booking="true"` without a grant gets no booking - the attribute is
+      unread rather than merely undocumented. `config.test.ts` proves `readConfig` returns an
+      identical config with it, without it, and with a real-looking calendar key as its value.

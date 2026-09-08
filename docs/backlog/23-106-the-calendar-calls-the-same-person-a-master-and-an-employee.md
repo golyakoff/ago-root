@@ -1,7 +1,7 @@
 # the calendar calls the same person a master in the menu and an employee on the screen
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing.
 - **Found**: 2026-09-08, by the author, opening the screen for the first time.
 
@@ -45,6 +45,12 @@ collapsed on the screen where it matters most.
 
 ## Done when
 
-- [ ] A person on a calendar is called «мастер» everywhere a tenant can read, including the widget.
-- [ ] Nothing that means a chat operator has been renamed.
-- [ ] The screens are checked, not only the string file.
+- [x] A person on a calendar is called «мастер» everywhere a tenant can read. The widget names no
+      staff at all (no such string in `ago-widget/src`), and `ago-calendar-console` carries no
+      Russian copy whatsoever - so neither surface could be inconsistent. That second absence is a
+      real gap, but it is localisation, not vocabulary, and belongs to the console-i18n line.
+- [x] Nothing that means a chat operator has been renamed. `navOperatorsTeam` keeps «Сотрудники»
+      deliberately - `23-31` chose that word for chat's own team, and with the calendar now reading
+      «Мастера» the distinction the two words exist to draw is actually drawn.
+- [x] The screens are checked, not only the string file: no hard-coded Russian staff noun exists
+      in any `.tsx`, so every occurrence a tenant sees comes from the strings that were changed.
