@@ -98,8 +98,16 @@ that already does it for tiers.
 the newest row instead, it would show a tenant their channel where their tier belongs. It is the only
 reader with that assumption.
 
-**What happens to an option when the *base* lapses is not decided** - `22-33` holds it, and it is a
-commercial question rather than a technical one.
+**A paid option is not cancelled by the lapse of the tier beneath it**
+([`adr/0160`](../adr/0160-a-paid-option-outlives-the-tier-that-lapsed-under-it.md)). The account falls
+to the free tier and the option keeps working for as long as it is paid for - the same generous
+direction `adr/0073` chose for the tier itself, and already true by construction, since the two rows
+have no relationship a charge can traverse. **An implementation that checks the base's status to decide
+an option's fate has misread this.**
+
+So **an account can be on the free tier and paying**, and that is a normal state rather than an odd
+one. Everything downstream reads entitlements rather than inferring them from a tier name, and "free
+account" stops meaning "brings no revenue".
 
 ## What this page does not decide
 
