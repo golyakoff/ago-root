@@ -38,6 +38,22 @@ would hand the next item a half-mechanism to reason about.
   `adr/0154` set for entry points and `23-102` for permissions. The deployment declares *what an option
   turns on*; it never declares what one costs.
 
+## The three awkward cases, kept from this item's first draft
+
+Whichever item owns the join owns these, and they are worth naming rather than discovering. They were
+dropped when this file was rewritten on 2026-09-08 and are restored here — the rewrite was right about
+the shape and careless about what it replaced.
+
+- **A payment arrives for something already granted by hand.** The owner gave a trial; the tenant then
+  pays. Two grants for one capability, and the expiry of one must not silently end the other.
+- **The grant carries where it came from.** `/owner` already distinguishes *we granted this* from *the
+  tenant bought it*, and `adr/0118` depends on that distinction to decide whether a revoke needs a
+  reason. A system grant must be as legible as a manual one.
+- **A refund or a chargeback.** ЮKassa has no balance concept (`adr/0073`), so there is no credit to
+  reverse — but there is a capability that is on, and something has to decide. `adr/0160` settled the
+  neighbouring case (a base lapse does not touch a paid option) and deliberately did not settle this
+  one.
+
 ## Where this is likely to go wrong
 
 - **`GetBillingStatusHandler` becomes wrong silently, and it is the only such reader.** It calls
@@ -61,3 +77,5 @@ would hand the next item a half-mechanism to reason about.
 - [ ] Nothing that reads "the site's subscription" can be handed an option instead.
 - [ ] The deployment declares what an option turns on, and no price of any kind enters a public
       repository.
+- [ ] Each of the three awkward cases above is answered in the change or explicitly carried out to
+      its own number.
