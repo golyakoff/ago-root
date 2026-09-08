@@ -1,7 +1,7 @@
 # an invitation is something you can send somebody
 
 - **Stage**: 23
-- **Status**: ready — **the link is work; the e-mail is a decision, named below**
+- **Status**: done
 - **Depends on**: nothing for the link half.
 - **Found**: 2026-09-07, by the author using the screen: *«Я ждал хотя бы ссылки или поля ввода для
   почты, куда она отправится. А что делать с этим инвайтом?»*
@@ -53,7 +53,12 @@ inside an invitation screen.
 
 ## Done when
 
-- [ ] Creating an invitation produces a link a person can send, with an obvious way to copy it.
-- [ ] The screen says what to do with it and that it will not be shown again.
-- [ ] A colleague opening the link sees what they are joining and when it expires.
-- [ ] The e-mail question is recorded as its own decision rather than answered by implication here.
+- [x] `ago-console#168`: the invite dialog builds `${origin}/invite/{code}`, a "Copy link" button
+      with a "Copied to clipboard" confirmation.
+- [x] "shown here only once" wording, kept from the bare-token screen and now said about the link.
+- [x] `/invite/:code` (`InvitePreviewPage`), unauthenticated, backed by `ago-chat#234`'s
+      `POST /api/v1/operator-invites/preview` - which shop, from whom, and the expiry; an expired or
+      already-redeemed code says so plainly rather than 404-ing.
+- [x] Recorded by this item itself: the e-mail half was named a decision the author holds and
+      deliberately not built. Nothing in the shipped code sends anything or implies an address field
+      that might.
