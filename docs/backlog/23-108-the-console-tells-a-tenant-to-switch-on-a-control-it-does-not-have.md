@@ -1,7 +1,7 @@
 # the console tells a tenant to switch on a control it does not have
 
 - **Stage**: 23
-- **Status**: ready — **the gap is established; which way to close it is not**
+- **Status**: done
 - **Depends on**: nothing. Found while sweeping `23-107`'s guidance strings.
 - **Found**: 2026-09-08, sweeping every string that tells a tenant to go somewhere.
 
@@ -55,6 +55,20 @@ makes, not the implementer.
 
 ## Done when
 
-- [ ] The reading is chosen by the author and recorded where a reader will find it.
-- [ ] No screen instructs a tenant to operate a control the console does not offer.
-- [ ] Whether `RequireContactConsent` is reachable by a site owner at all is settled either way.
+- [x] **Reading 1**, chosen by the author: the console gains the control. Recorded in the change
+      itself - `WidgetConfigPage`'s new field, and the doc comment on
+      `UpdateWidgetConfigRequest` explaining what a gate is and why only this field is required.
+      Reading 2 was declined because it decides what publishing a consent document *means*, which is a
+      product and legal question rather than an implementer's.
+- [x] The control exists, on the widget screen the sentence already named, and the sentence now
+      carries a real `<Link>` to it rather than the screen's name in prose - `23-107`'s rule. A test
+      asserts that link, bound to the nav's own string so a rename cannot make the sentence wrong
+      again; it caught my own assumption, since the menu reads "Website widget" and not "Widget
+      appearance".
+- [x] Reachable. **And the item was filed a defect short**, which is the part worth recording:
+      `WidgetConfigDto` carried no `requireContactConsent` while the server's request took a
+      non-nullable `bool`, and the page serialises that object as the *entire* PUT body - so an absent
+      property bound to `false` and **saving a colour would have silently switched off a consent gate
+      the API genuinely enforces**. It had no symptom only because nothing could turn the gate on:
+      the same defect from the other side, and fixing the control alone would have shipped a setting
+      that cleared itself on the next save. Both halves are closed, each with a test shown biting.
