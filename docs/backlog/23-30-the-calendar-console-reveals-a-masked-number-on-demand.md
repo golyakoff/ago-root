@@ -1,7 +1,7 @@
 # the calendar console reveals a masked number on demand
 
 - **Stage**: 23
-- **Status**: ready — **repository corrected below; the promise is the same one`23-12` always implied**
+- **Status**: done
 - **Depends on**: `23-12` (hard — the backend, the `Masked` flag and the three endpoints)
 - **Corrected 2026-09-09**: this item named `ago-calendar-console` throughout. That repository was
   retired by `22-06` on 2026-09-04 — two days before `23-12`'s own backend shipped — and every screen
@@ -66,7 +66,16 @@ something real to call from the day it starts.
 
 ## Done when
 
-- [ ] All four screens show a masked number as masked, and reveal one on demand.
-- [ ] A test proves the real number is never in the rendered output before a reveal.
-- [ ] The two verification facts are distinguishable on the contacts report.
-- [ ] A caller without `CalendarConfigure` sees a refusal on the audit view, not an empty list.
+- [x] All four screens (`CalendarQueuePage`, `CalendarContactsPage`, `CalendarWorkerSlotsPage`,
+      `CalendarWorkerRecutPage`) render a masked phone with a Reveal button beside it, following
+      `23-11`'s `ContactDetailsPanel` precedent - the row is replaced by the server's own unmasked
+      response, nothing computed client-side (`ago-console#173`).
+- [x] Each screen's `"shows the masked value and a Reveal button, never the real number, before
+      reveal"` test asserts `container.textContent` excludes the real number outright. Independently
+      spot-read, not just trusted.
+- [x] Two separate badges on `CalendarContactsPage` - SMS-verified (`phoneVerifiedAt`) and
+      operator-confirmed (`phoneConfirmedByOperatorAt`) - proven never merged into one state by a
+      dedicated test, per `decisions.md` §5's own warning.
+- [x] `CalendarPhoneRevealsPage` (new) renders `CalendarAccessRefusal` for a caller lacking
+      `calendar:configure`, proven distinguishable from the genuinely-empty state - the forbidden
+      branch never calls `getPhoneReveals` and never shows the empty-state sentence, and vice versa.
