@@ -1,14 +1,33 @@
 # the calendar console reveals a masked number on demand
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — **repository corrected below; the promise is the same one`23-12` always implied**
 - **Depends on**: `23-12` (hard — the backend, the `Masked` flag and the three endpoints)
+- **Corrected 2026-09-09**: this item named `ago-calendar-console` throughout. That repository was
+  retired by `22-06` on 2026-09-04 — two days before `23-12`'s own backend shipped — and every screen
+  it named moved to `ago-console`, rewritten against `adr/0030`'s closed component set rather than
+  carried over as-is. Found by a worker that stopped rather than build against a repository with no
+  source left in it, checked independently before this correction: `ago-calendar-console`'s
+  `origin/main` tip is `5a24862`, and its four pages exist in `ago-console` as
+  `CalendarQueuePage.tsx`, `CalendarContactsPage.tsx`, `CalendarWorkerSlotsPage.tsx`,
+  `CalendarWorkerRecutPage.tsx`. The promise below is unchanged; only the repository and the
+  component system it is built against are.
 - **Decision**: `docs/adr/0123-*` (both sides of the ladder), and `decisions.md` §5 behind it
 
 ## Goal
 
 An operator on a tenant whose account is set to `MaskedWithReveal` sees a masked number, can reveal one
 when they need it, and can see that the reveal was recorded.
+
+## The precedent to copy, not invent
+
+`23-11` (`ago-console`, merged 2026-09-06) already built this exact pattern for chat's own contacts:
+a `masked` boolean on the row, a **Reveal** button beside it, a call that replaces the whole row with
+the server's own unmasked response rather than computing anything client-side
+(`src/workspace/ContactDetailsPanel.tsx`, and its own doc comment names the reasoning). Its test
+proves a caller without the permission sees no panel at all, not an empty one — the same
+forbidden-vs-empty distinction this item's own Done-when asks for on the audit view. Follow this
+shape; do not design a new one.
 
 ## Why this is its own item
 
