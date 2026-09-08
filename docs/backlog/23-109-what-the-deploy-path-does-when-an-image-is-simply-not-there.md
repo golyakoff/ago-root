@@ -1,7 +1,7 @@
 # what the deploy path does when an image is simply not there
 
 - **Stage**: 23
-- **Status**: ready — **and it opens with a choice, not with work**
+- **Status**: done
 - **Depends on**: nothing. Carried out of `23-98`, whose first box shipped and whose other two are these.
 - **Found**: 2026-09-08, carried out at landing rather than left implied by a closed ticket.
 
@@ -62,7 +62,20 @@ them would leave each half unable to close green on its own, which is rule 15's 
 
 ## Done when
 
-- [ ] The reading for an evicted local-only image is chosen by the author and recorded.
-- [ ] A `Job` that can never start does not block the following apply, and a `Job` that is genuinely
-      running still does.
-- [ ] Whatever distinguishes the two is proved against both cases, not only the broken one.
+- [x] Chosen by the author, and **the question was narrowed first because three of its four readings
+      rested on a false premise**. `23-98`'s "built locally, never pushed, unrecoverable" was an
+      inference: both CI workflows publish their migrator, the packages are public, `imagePullPolicy:
+      Never` is gone since `15-06`, and GHCR resolves an arbitrary `ago-chat-migrator` tag anonymously
+      out of 101. An evicted image whose tag is published is re-pulled unaided. The author chose, out
+      of the two live options, that the build should **pull what the registry has and build only what
+      it lacks** - `adr/0158`.
+- [x] Both, and proved against a real unstartable pod rather than argued. A scratch Job with an
+      unresolvable image reported **`1 active pod(s)`** - exactly what the old guard read, and would
+      have refused on forever - while its container reported **`ImagePullBackOff`**, which is what the
+      new check reads. Anything not in that set keeps the old refusal untouched.
+- [x] `registry_has` was exercised for all three of its answers on the node: a published tag (0), a
+      tag that never existed (1), and a repository that is not there (2, "could not ask" - which the
+      caller treats as *build it*, so a network failure cannot be read as "the registry has it").
+      The per-image decision was then measured end to end: seven of eight backend images pull, and
+      `ago-chat-roleassignmentbackfill` builds - the one image CI genuinely does not publish, and the
+      exact trap that skipping a repository wholesale would have fallen into.
