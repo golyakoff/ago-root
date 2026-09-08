@@ -1,7 +1,7 @@
 # guidance names a screen without saying how to reach it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `23-106` is the neighbouring copy problem on the same screen.
 - **Found**: 2026-09-08, by the author, following the instruction and not knowing where to go.
 
@@ -55,6 +55,12 @@ is not a path**, and the person reading it is by definition somebody who does no
 
 ## Done when
 
-- [ ] A tenant told to go somewhere can get there without knowing the product.
-- [ ] The guidance is not the least prominent element of the screen it appears on.
-- [ ] Other guidance strings naming a destination are found and listed, whether or not all are fixed.
+- [x] A tenant told to go somewhere can get there without knowing the product: the sentence is
+      split so the destination is a real `<Link>` carrying the menu's own label, rather than prose
+      naming a screen.
+- [x] The guidance is not the least prominent element of the screen it appears on - it is an
+      `Alert` rendered *above* the disabled button it explains, not `ago-meta` text below it.
+- [x] Other guidance strings naming a destination were swept and listed. Fixed alongside:
+      `calendarWeeklyHoursNote` (same «Настройка» screen) and the two over-seats alerts on
+      `OperatorsTeamPage`, which now link to «Оплата». Deliberately left: the allowed-origins hint,
+      which points at a section *on the same screen* («ниже») and so is already self-locating.
