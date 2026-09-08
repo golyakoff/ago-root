@@ -554,6 +554,22 @@ denial.
   keyset-paged read; pruned past 365 days by `ContactRevealPruneJob`, the shape `access_records`' own
   prune job already establishes.
 
+- `role_change_records` (**added in `23-72`**) - `id` (uuid v7), `site_id`, `changed_by_operator_id`,
+  `changed_operator_id`, `previous_role_names` (`text[]` - the operator's *whole* previous role set,
+  since an operator can hold more than one at once, the account's own founder from registration
+  onward), `new_role_name`, `changed_at`. One row per role change an administrator makes to a
+  colleague's assignment (`ChangeOperatorRoleHandler`) - the backlog item's own Scope, "every role
+  change is recorded", verbatim. **Real `ON DELETE CASCADE` FKs to `sites` and to `operators` twice**
+  (`changed_by_operator_id`, `changed_operator_id`) - unlike `access_records`, this is ordinary
+  tenant-owned data with no reason to survive the tenant's own erasure, the same reasoning
+  `team_message_removals` already gives for its own two real FKs. Written through the ambient
+  `AgoChatDbContext`/transaction the role swap itself uses (raw `ExecuteSqlInterpolatedAsync`, not
+  change-tracked - `RoleChangeRecordRepository`'s own remarks), so it commits or rolls back atomically
+  with the swap and the `RoleAssignmentsChanged` event that swap enqueues (rule 4). Write-only today -
+  `ix_role_change_records_site_id_changed_at` is reserved for a future browsing screen nobody has asked
+  for yet, the same "index the columns a keyset read would use together" reasoning `access_records`'
+  own index states.
+
 ## Keys and indexes
 
 - Ids are **UUID v7** (time-ordered). Random UUIDs fragment B-tree inserts; a bigint sequence leaks
