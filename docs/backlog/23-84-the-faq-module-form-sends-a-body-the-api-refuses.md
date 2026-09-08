@@ -1,7 +1,7 @@
 # the FAQ module form sends a body the API refuses
 
 - **Stage**: 23
-- **Status**: ready — **and after the author's answer of 2026-09-07 it is about removing this screen,
+- **Status**: done
   not repairing it**
 - **Depends on**: nothing. `23-83` is the neighbouring cause.
 - **Found**: 2026-09-07, while building `23-65`, by reading rather than by anybody reporting it.
@@ -64,7 +64,18 @@ be correct about the symptom and wrong about the remedy, and the remedy is the h
 
 ## Done when
 
-- [ ] The console no longer offers a tenant a way to provision a module.
-- [ ] Whatever a tenant should see instead — which products are on their account — is a read and shows it.
-- [ ] Whether the form ever worked is established and written down.
-- [ ] The console holds no deployment-wide secret, which after this is true by having nothing to hold.
+- [x] The module-registration form is gone from `FaqModulePage`; the screen has no write at all
+      now, and a test asserts no submit control exists for a permitted operator - the stronger
+      statement than the one it replaced.
+- [x] `fetchModules` is what the panel calls now: whether the module is on this account, and its
+      trigger words. A tenant seeing which products they have is ordinary and carries no secret. The
+      knowledge-base panel is untouched - it is that product's own data, which `adr/0151` keeps the
+      tenant's.
+- [x] Established: **it never worked.** It sent `moduleKey`, `triggerWords` and `entryPoint` while
+      the endpoint also required a credential and a provisioning secret, and `ModuleCredential`'s
+      constructor rejects null before any module is contacted - so every submit it could make was
+      refused from the day it shipped. Nobody reported it because a feature that does not work
+      produces no complaints.
+- [x] True by having nothing to hold: `provisioningSecret` is gone from the server's own shape, not
+      merely unset in the console - `ownerApi.ts`'s remarks record the omission at each of the three
+      call sites that used to carry it.

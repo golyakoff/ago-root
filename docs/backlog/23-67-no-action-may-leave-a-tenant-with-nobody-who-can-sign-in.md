@@ -1,7 +1,7 @@
 # no action may leave a tenant with nobody who can sign in
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing, but see `23-71`: it removes the reason the action was dangerous, and this
   rule should be built in terms of it rather than ahead of it. `23-68` recovers from a lockout that
   happens anyway.

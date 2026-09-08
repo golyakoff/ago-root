@@ -1,7 +1,7 @@
 # twenty-one files set state in an effect, and the rule is only a warning there
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-96`, which turned the rule on and bounded what it found.
 - **Found**: 2026-09-08, when `eslint-plugin-react-hooks` v7 first ran over this console.
 
@@ -56,6 +56,14 @@ have been unreviewable.
 
 ## Done when
 
-- [ ] The override block is gone, or every file still on it carries its own stated reason.
-- [ ] `react-hooks/set-state-in-effect` is a full error across the console.
-- [ ] Whatever proves the converted screens exercises a dependency change, not only a first render.
+- [x] The override block is **deleted**. Eight findings were converted outright; the remaining
+      fifteen carry a per-line disable with its own reason naming what that screen loads, not one
+      boilerplate repeated fifteen times.
+- [x] `react-hooks/set-state-in-effect` is a full error across the console - proven by adding a
+      synchronous `setState` in an effect to `CalendarQueuePage`, one of the twenty-one formerly
+      exempt files, and watching it fail as an error where the override made it a warning.
+- [x] The proof exercises a dependency change. `renderSync` is built on `flushSync` rather than
+      `act()` precisely because `act()` drains the passive-effect queue even synchronously, which
+      makes the old and new code indistinguishable. Each test mounts with one `conversationId`,
+      re-renders with a **different** one, and asserts the previous conversation's content is gone
+      *before* any effect could have run.

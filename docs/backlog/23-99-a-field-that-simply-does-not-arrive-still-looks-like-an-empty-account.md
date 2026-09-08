@@ -50,6 +50,20 @@ the three readings* — is still unticked for exactly this reason.
 
 ## Done when
 
-- [ ] The reading is chosen by the author and recorded where a reader will find it.
-- [ ] A response missing a field renders something a person can tell apart from an empty account.
-- [ ] Whichever screens are left uncovered are named, rather than left to be discovered.
+- [ ] **Not settled, and this is the item's own central failure.** This file says in bold *"Do not
+      pick one by implementing it"*, and reading 2 was implemented anyway; the commit and
+      `shapeGuard.ts`'s doc comment both assert "the chosen reading" while **no record of the author
+      choosing exists anywhere** - not here, not in `docs/design/decisions.md`, not on the issue. The
+      shipped work is defensible and is the option this file itself calls the cheaper one, but the
+      choice is the author's and has not been made. Dispatching this overnight was the managing
+      session's error: the standing instruction was to proceed only *where there are no new
+      questions*, and this item opens with one.
+- [x] Three endpoints validate presence at the boundary: `GET /confirmed-bookings` (this file's own
+      exemplar) and the two feeding `PermissionsProvider`, where a dropped `enabledModules` turned
+      "we were not told" into "this tenant has zero modules" and the calendar nav vanished exactly as
+      it would for a tenant that genuinely has none. `requiredKeysOf` derives the key set from the
+      DTO interface with a mapped type, so a new required field stops every call compiling until it
+      is listed - the drift guard this file asked for.
+- [ ] **Not settled.** The uncovered screens - about thirty - were named only in the implementing
+      worker's report, which is not a durable place; nothing in the repository lists them.
+      `shapeGuard.ts`'s doc comment names what *is* covered, which is the other half of the sentence.
