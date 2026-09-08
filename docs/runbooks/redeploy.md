@@ -138,6 +138,26 @@ this way on 2026-09-02.
 
 ## Building from source on the node
 
+**It asks the registry before it builds** ([`adr/0158`](../adr/0158-the-registry-is-asked-before-building-and-a-job-that-cannot-start-is-not-a-migration.md)).
+Per image, not per repository: a name and tag GHCR already holds is pulled, and only what the registry
+lacks is built - with a line saying that image now exists **only on this node**. At `main`'s tip that
+is seven of eight backend images pulled and one built.
+
+The one that is built is `ago-chat-roleassignmentbackfill`, and it is the only genuinely node-only
+image in this deployment: CI publishes the other four chat images and all three calendar ones, the
+packages are public, and `imagePullPolicy: Never` is gone everywhere since `15-06` - so **an evicted
+image whose tag is in GHCR is re-pulled by the kubelet with nobody doing anything**. `23-98`'s note
+that the migrators were unrecoverable was an inference and is wrong; GHCR holds 101 tags of
+`ago-chat-migrator`.
+
+**A migrator `Job` whose image does not resolve no longer blocks the next apply.** `apply-demo.sh`
+reads the container's waiting reason, and `ImagePullBackOff` means the pod will never start rather
+than that a migration is running - so the Job is deleted and the apply recreates it at the pinned tag.
+A pod that is genuinely working still stops the apply, because killing a long migration is worse than
+waiting.
+
+
+
 ```bash
 cd ~/ago/ago-deploy/k8s && ./redeploy.sh
 ```
