@@ -306,6 +306,7 @@ build time regardless of what is written here. Reconciling the rows is `24-17`.
 | `RemoveOperatorHandler` | **route segment** | `site:manage-operators` | n/a — the operator being removed is looked up by the same `SiteId`; `13-03` |
 | `GetSeatAssignmentSummaryHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `13-03` |
 | `GetOperatorTeamHandler` | **route segment** | `site:manage-operators` | n/a — the site *is* the object; `23-22` |
+| `ChangeOperatorRoleHandler` | **route segment** | `site:manage-operators` | n/a — the operator whose role is changing is looked up by the same `SiteId`; `23-72` |
 | `TransferConversationHandler` | operator claim | `conversation:assign` | `conversation.OperatorId == command.FromOperatorId`; target looked up by `(OperatorId, SiteId)` so a cross-site target is structurally impossible, not merely refused; `18-02` |
 | `AddConversationNoteHandler` | operator claim | `conversation:note_write` | `readStore.GetByIdAsync` is scoped by `command.SiteId`; a different site's conversation is `NotFound`, not `Forbidden`; `18-04` |
 | `GetConversationNotesHandler` | operator claim | `conversation:read` | same site-scoped conversation lookup as the write side; `18-04` |

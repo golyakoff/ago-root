@@ -1,7 +1,7 @@
 # a tenant can appoint another administrator
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing to build. `23-71` is what makes a seatless administrator meaningful.
 - **Found**: 2026-09-07, by the author asking how a tenant admin adds another one. They had not missed
   it — there is no way.
@@ -54,7 +54,21 @@ appointing the second is impossible.
 
 ## Done when
 
-- [ ] An administrator can invite a colleague as an administrator.
-- [ ] An administrator can change a colleague's role, and the change is recorded.
-- [ ] The change that would leave nobody able to administer is refused server-side.
-- [ ] An operator cannot reach any of it.
+- [x] `CreateOperatorInviteHandler` already took a `RoleName` at invite time (`13-01`); the console
+      now offers the choice in the invite dialog, gated exactly like every other write on
+      `Permission.SiteManageOperators`. An admin invite is not exempt from the seat-limit check - the
+      row it creates is an ordinary `operators` row, unchanged since `13-03`.
+- [x] `ChangeOperatorRoleHandler` replaces a colleague's whole role assignment with exactly one
+      named role. Every change writes a `role_change_records` row (who, from which roles, to which
+      one, when) in the same transaction as the swap, and publishes `RoleAssignmentsChanged` through
+      the outbox so the cross-product projection learns - the identical shape `22-05`/`adr/0093`
+      already established for invite redemption and removal.
+- [x] Reuses `23-26`'s own invariant - `IPermissionChecker.CountNonRemovedHoldersAsync` inside the
+      identical site-row-locked transaction `RemoveOperatorHandler` already takes - rather than a
+      second mechanism. **Proven on real Postgres, not asserted**:
+      `ChangeOperatorRoleConcurrencyTests` has a site's last two administrators concurrently demote
+      each other; independently re-run with the guard disabled, both demotions succeeded and the site
+      was left with zero administrators (`successes=2`), confirming the test bites.
+- [x] Gated on `Permission.SiteManageOperators`, which only the `Admin` role holds - the same check
+      every other write on this page uses. An ordinary Operator invite and an ordinary Operator role
+      change are both refused before either reaches the handler's own logic.

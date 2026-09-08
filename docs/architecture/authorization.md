@@ -178,11 +178,13 @@ alongside every other local-dev password (`repositories.md` - "no secrets, ever"
 `Permission.AttachmentDelete` (`"attachment:delete"`) all exist now (`Ago.Chat.Domain.Permission`,
 matching `adr/0016`'s `resource:action` naming convention exactly). A second built-in role,
 `"Admin"`, holds all three - seeded the same way `1-05`'s `"Operator"` role was
-(`deploy/seed/create-demo-tenant.sh`), granted only via that script. **Who can grant a role is still
-answered only by the seed script** - this item considered and explicitly rejected building a
-role-assignment surface now: `adr/0016`'s Consequences already named a general role-editor UI as
-future work, not a Stage 5 deliverable, and nothing in this item's own scope forced the question open
-sooner. The demo tenant now seeds two operators - `demo-operator` (`"Operator"` only) and
+(`deploy/seed/create-demo-tenant.sh`), granted only via that script. **Who can grant a role was
+answered only by the seed script until `23-72`** - this item considered and explicitly rejected
+building a role-assignment surface then: `adr/0016`'s Consequences already named a general role-editor
+UI as future work, not a Stage 5 deliverable, and nothing in this item's own scope forced the question
+open sooner. See `23-72`'s own section below for the tenant-facing surface that answers it now - a
+site's own administrator, not only the seed script. The demo tenant now seeds two operators -
+`demo-operator` (`"Operator"` only) and
 `demo-admin` (`"Operator"` + `"Admin"`, so it can also be assigned conversations and exercise
 `attachment:delete` on its own thread, not just view the site-wide list) - specifically so "an admin
 sees every conversation for a site, an ordinary operator does not" is something a session can verify
@@ -283,6 +285,51 @@ widens who holds the permission - only the "Admin" role, seeded the same way as 
 and `23-71` before the question was asked again; adding a third check would have been a second
 mechanism enforcing an invariant one already holds, and two mechanisms for one rule is how they drift
 apart.
+
+## A tenant can appoint another administrator: shipped in `23-72`
+
+**Shipped in `23-72`** - the gap this file's `5-08` section named ("who can grant a role is still
+answered only by the seed script") is closed for the two roles that exist. `ChangeOperatorRoleHandler`
+(`Ago.Chat.Application.UseCases.ChangeOperatorRole`) lets an existing administrator replace a
+colleague's whole role assignment with exactly one named role, gated on the identical
+`Permission.SiteManageOperators` check every other write on this permission already uses - an ordinary
+Operator cannot reach it, the same "the gate is a permission, not a special case" shape this file
+states for every other write on this page. `CreateOperatorInviteHandler` already took a `RoleName` at
+invite time (`13-01`); the console simply never offered the choice before this item, which is the gap
+`23-72`'s own backlog item found.
+
+**The last-administrator guard is `23-26`'s own invariant, reused rather than duplicated.** Demoting a
+site's only `site:manage_operators` holder to a role that does not grant it is refused by the identical
+`IPermissionChecker.CountNonRemovedHoldersAsync` check, inside the identical `sites`-row-locked
+transaction `RemoveOperatorHandler` already takes - two independent write paths sharing one invariant
+and one lock, not two invariants that could drift apart. Proven on real Postgres the same way
+`23-26`'s own race was (`RemoveOperatorConcurrencyTests`): `ChangeOperatorRoleConcurrencyTests` has a
+site's last two administrators concurrently demote each other, and exactly one succeeds - never zero
+remaining, never both. Promoting somebody to administrator takes no lock at all and is never refused
+for capacity - see the next paragraph for why that is a considered decision, not an oversight.
+
+**An administrator is a role, not a purchase, and this item does not couple the two.** A draft of this
+handler once added a tier-priced ceiling on how many administrators a site could have, modelled on an
+`ago-business` pricing document this session could not actually read. That coupling was found and
+removed before landing: `adr/0151` keeps entitlement and permission apart, and `RegisterSiteHandler`
+seeds a site's roles with no reference to billing at all - a real per-tier administrator limit, if one
+is ever wanted, is a new, separately-scoped item built against the actual pricing decision, not
+something inferred here. The seat-limit check an administrator invite goes through is unchanged by this
+item: `OperatorInviteRedemptionRepository`'s refusal has counted every active `operators` row
+regardless of role since `13-03`, and `23-72` does not carve out an exception for an administrator
+invite - the row it creates is an ordinary row.
+
+**Every role change is recorded**, write-only, in `role_change_records` (who changed whom, from which
+roles to which one, and when) - a deliberately separate table from `access_records`, because a role
+change inside an administrator's own tenant, gated by the same `IPermissionChecker` every ordinary
+write already goes through, crosses no tenant boundary `access_records` exists to police
+(`IRoleChangeRecordRepository`'s own remarks).
+
+**Publishes the same way every other role-assignment write does.** `22-05`/`adr/0093`'s cross-product
+projection learns the changed operator's new permission set through the identical `RoleAssignmentsChanged`
+outbox event `RegisterSiteHandler`, invite redemption and `RemoveOperatorHandler` already publish -
+staged in the same transaction as the role swap and the audit record, never a request-handler-side
+publish (rule 4).
 
 ## And a third: shipped in `14-04`
 
