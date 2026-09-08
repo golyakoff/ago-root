@@ -1,7 +1,7 @@
 # module provisioning has never been configured in any deployment
 
 - **Stage**: 23
-- **Status**: ready — **the wiring is merged and deployed; what is left is one live check**.
+- **Status**: done
   `ago-deploy` `1e8d00f` set the key for both hosts and the value is generated on the node; the last
   Done-when needs the grant screen to actually answer something other than `503`, against the stand.
 - **Depends on**: `adr/0095` created the secret; `adr/0150` moved it into configuration. This is the
@@ -62,8 +62,13 @@ somebody tries to use it, which happened for the first time today.
 
 ## Done when
 
-- [ ] `ModuleProvisioning__Secret` is set on `Ago.Chat.Api` and `Ago.Calendar.Api` from one source.
-- [ ] `.env.example` documents the key and how to generate it, and holds no value.
-- [ ] The platform owner's grant screen no longer returns `Module.ProvisioningNotConfigured` on the
+- [x] `ModuleProvisioning__Secret` is set on `Ago.Chat.Api` and `Ago.Calendar.Api` from one source.
+      `ago-deploy` `aa8cdb4`/`1e8d00f` — one `MODULE_PROVISIONING_SECRET` in the overlay's gitignored `.env`, reaching both hosts as an explicit `ModuleProvisioning__Secret`.
+- [x] `.env.example` documents the key and how to generate it, and holds no value.
+      Both `.env.example` files, with the generation command and the warning that an absent key is worse than a wrong one.
+- [x] The platform owner's grant screen no longer returns `Module.ProvisioningNotConfigured` on the
+      **Proven on the stand, 2026-09-08.** The platform owner granted the calendar to site `01a06262` and the grant succeeded: `enabled_modules` carries its row and the calendar provisioned its own tenant. The `503` is gone.
+      What the tenant hit next — no permission to open the calendar — is `23-102`, a different gap on the other side of `adr/0151`'s line.
       demo stand — checked against the stand, not against a manifest.
-- [ ] What rotating this costs is written down where a rotation would be read.
+- [x] What rotating this costs is written down where a rotation would be read.
+      `secret-rotation.md`, including the hazard found while wiring it: deleting the key does not disable provisioning, because the unexpanded literal passes the length bounds and is identical on both hosts.
