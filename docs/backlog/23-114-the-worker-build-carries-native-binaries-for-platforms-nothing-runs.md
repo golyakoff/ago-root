@@ -1,7 +1,7 @@
 # the worker build carries native binaries for platforms nothing runs
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing.
 - **Found**: 2026-09-08, by the author, from memory of an early rule while the workspace was being reclaimed.
 
@@ -61,8 +61,20 @@ rest) arrives with the packages regardless and is a separate question from the W
 
 ## Done when
 
-- [ ] A `Release` build of `Ago.Chat.Worker` no longer writes native binaries for platforms that
-      neither this machine nor the container can load, and the new size is recorded next to the 440 MB
-      above.
-- [ ] The published image's contents and size are unchanged, checked rather than assumed.
-- [ ] The thumbnail tests still exercise Skia for real on both this machine and CI.
+- [x] **440 MB to 97 MB**, `win-x64` only. And the number above understated it: **four** projects in
+      the repository reach SkiaSharp transitively - the Worker plus the Architecture, Concurrency and
+      Integration test projects - so a built worktree carried **1.76 GB**, now 388 MB.
+      That is why the target lives in `Directory.Build.props` rather than in `Ago.Chat.Worker.csproj`,
+      and it was found by measuring rather than reasoning: placed beside the only `PackageReference`
+      it looked right and did take the Worker to 97 MB, while the integration tests still wrote all
+      440 MB. Native assets resolve per project.
+- [x] Checked. Publishing for `linux-x64` with and without the change gives **72 files and 31 MB
+      either way, with identical file lists**. The target's condition is an empty `RuntimeIdentifier`,
+      so it cannot run on the image path even by accident - which is also why the registry's
+      `ago-chat-worker` was already 67 MB with no `runtimes/` tree: a RID-qualified publish resolves
+      one platform on its own. **The author's early rule about the image was never lost**; only the
+      local build was affected, and nobody was watching it.
+- [x] The four `AttachmentThumbnailGeneratorTests` pass against the trimmed output on this machine,
+      so `libSkiaSharp.dll` is found and executed rather than merely present. CI is Linux and keeps
+      every `linux-*` variant by the same rule. Full suite green across all six assemblies -
+      557 / 968 / 21 / 43 / 70 / 1008, 2667 tests, 0 failed.
