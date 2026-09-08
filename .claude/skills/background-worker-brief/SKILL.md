@@ -244,6 +244,84 @@ will check.
 **Teaching mode.** For every file placement, interface and layer choice, state which principle drove
 it and what the alternative would have been (CLAUDE.md). In the report, not as code comments.
 
+## 1b. The standing block — paste it, do not recall it
+
+Section 1 says to copy the standing rules rather than restate them, and restating them is exactly what
+keeps happening. On 2026-09-08 three briefs were written from memory and **two of the three workers
+stopped mid-task waiting for their own background test run** — the failure this file has documented
+since 2026-09-04, when it happened four times in one day. The rule was on this page the whole time and
+none of the three briefs carried it.
+
+So it stops being a list to remember and becomes a block to paste. **Copy everything between the rules
+below into every brief, verbatim**, then add section 2's item-specific part after it.
+
+---
+
+### Your worktree — create it with the script, never by hand
+
+```
+cd C:/git/ago/ago-root
+bash tools/new-worktree.sh <repo> <item> <feat|fix|docs|chore|test> <kebab-slug>
+```
+
+It fetches, proves the base equals `origin/main`, and refuses a directory or branch already taken.
+Work only in the directory it prints. One worktree per repository you change.
+
+### Never wait for your own background run
+
+A completion notification goes to the **managing session, not to you**. A turn that ends with "I will
+resume when the suite finishes" has *stopped*, not paused, and costs a round trip to wake. The tool
+result that started the run gave you an output path — read that path. If the run produced no summary,
+run it again in the **foreground** and wait for it there.
+
+### What a truncated run looks like, because it is invisible otherwise
+
+- `dotnet test` can abort part way, print a pass line for every assembly it *did* finish, and still
+  exit 0. **Read which assemblies are missing**, not the failure count. `ago-chat` has six:
+  `Domain`, `Application`, `Architecture`, `FakeCrm`, `Concurrency`, `Integration`.
+- `dotnet build … | tail -3 && dotnet test` takes its exit status from `tail`, so a failed build is
+  stepped straight over.
+- **Report only what you have watched finish.** Two workers in one day reported a clean format check
+  that was not clean, having written the report before their own run completed.
+
+### Fails-before is not optional
+
+Every new test is shown failing against the code without its own check: delete or invert that
+production code, rebuild, capture the failure, restore. **Restore from a copy you made first** —
+never `git checkout -- <file>`, which restores from the index and discards the uncommitted work
+around it — and **re-run the full suite after restoring**, not before mutating. Report it as a table.
+
+### You never write history, and you never delegate
+
+No `git commit`, no `git push`, no PR: `CLAUDE.md` rule 9 delegates those to the managing session and
+explicitly not to workers. End with a commit block per repository — a shell script beginning with an
+explicit `cd`, writing the message to a file and calling `commit-guard`'s `commit.sh`, never
+`git commit` directly. No `Co-Authored-By` trailer for an AI session.
+
+You never spawn another agent (rule 12). If you believe the task warrants delegation, say so in your
+report and stop.
+
+### The two shared indexes are off limits
+
+Never edit `docs/roadmap.md` or `docs/adr/README.md`. Report any row you need as text; the managing
+session writes it once, at merge.
+
+### Everything is public
+
+No secret, token, real endpoint or personal data in any repository — including in a fixture, a test,
+an example log line, or a commit meant to be fixed later. The VPS address is written `<node-ip>`.
+
+### Teaching mode
+
+For every file placement, interface and layer choice, state which principle drove it and what the
+alternative would have been — in your report, not as code comments.
+
+---
+
+**Verification is once, green, and counted.** Run the repository's own command set (`CLAUDE.md`'s
+*Commands*) once and report exact per-project counts. A worker that runs the full suite five times has
+spent four suites proving nothing; the managing session re-verifies independently anyway.
+
 ## 2. What the brief must add on top
 
 The standing rules are the floor. The brief earns its keep in what only the managing session knows:
