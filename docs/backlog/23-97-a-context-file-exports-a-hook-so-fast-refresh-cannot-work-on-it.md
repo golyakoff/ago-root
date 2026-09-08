@@ -1,7 +1,7 @@
 # a context file exports a hook, so Fast Refresh cannot work on it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `23-96` is its sibling from the same batch and is a different kind of problem.
 - **Found**: 2026-09-07, by a **patch** release of a lint plugin.
 
@@ -69,5 +69,11 @@ lock-only change. Reading each was what separated them.
 
 ## Done when
 
-- [ ] `eslint-plugin-react-refresh` 0.5.6 is in, and `npm run lint` is clean without a suppression.
-- [ ] Whether other files share the shape is established and written down.
+- [x] `^0.5.6` is in, and lint is clean without a suppression: **294 files, 0 errors, 0 warnings**,
+      measured 2026-09-08. The fix is a split, not a silence - `StringsProvider` moved out of
+      `StringsContext.tsx`, the same shape `AuthContext` and `OperatorConnectionContext` already use.
+- [x] Established: every other `createContext` call site was checked - `AuthContext`,
+      `PermissionsContext` and `OperatorConnectionContext` - and all three already have this shape,
+      so there is no remainder to carry out. Worth recording that the item's own prescription (move
+      the *hook* out) does not work: with the hook elsewhere the raw context has to be exported beside
+      the Provider and the rule fires again with a different message.

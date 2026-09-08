@@ -1,7 +1,7 @@
 # seeding a permission publishes nothing, so the calendar never learns
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-102`, which introduced the write no publisher covers.
 - **Found**: 2026-09-08, on the first tenant sign-in after the first successful grant.
 
@@ -61,6 +61,16 @@ and no amount of correctness on chat's side substitutes.
 
 ## Done when
 
-- [ ] Seeding a module's permissions makes the calendar's own copy agree, without anybody running a tool.
-- [ ] Every operator holding the role is covered, not only the one who triggered it.
-- [ ] The tenant this was found on can open the calendar, checked against the stand.
+- [x] Seeding now enqueues `RoleAssignmentsChanged` in the same transaction as the permissions
+      write (rule 4), so the projection learns without `run-backfill.sh`. Proven by test with a
+      fails-before; **the first grant on the stand since this deployed is the field proof, and it has
+      not happened yet** - the code went live 2026-09-08, shortly before this was written.
+- [x] One event per currently-linked operator holding the affected role, each carrying that
+      operator's full permission union across every role they hold - the account owner holds two and
+      would otherwise have received half their own permissions. Candidates are re-checked under
+      `SELECT ... FOR UPDATE` so a removal committing in the gap is caught rather than inherited
+      from a stale list.
+- [x] Checked against the stand on 2026-09-08: that tenant's row in
+      `ago_calendar.role_assignment_projections` carries `booking:confirm`, `booking:reject`,
+      `booking:cancel`, `booking:mark_no_show`, `customer:read`, `customer:edit` and
+      `calendar:configure`, and the author confirmed the calendar sections opened.

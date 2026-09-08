@@ -1,7 +1,7 @@
 # the react-hooks lint plugin cannot be upgraded without migrating the config
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing.
 - **Found**: 2026-09-07, while combining the console's Dependabot pull requests.
 
@@ -53,6 +53,14 @@ difference**.
 
 ## Done when
 
-- [ ] `npm run lint` runs, on v7, over no fewer files than before — the number recorded, not assumed.
-- [ ] What the rule set gained or lost between v5 and v7 is written down.
-- [ ] Anything newly flagged is fixed, or deferred with its own reason.
+- [x] `npm run lint` runs on v7.1.1 over **294 files, 0 errors, 0 warnings** - measured, and equal
+      to the 294 lintable files on disk, so coverage is complete rather than merely larger. The
+      number before was **zero**: v7's bare `recommended-latest` export is legacy-shaped, ESLint 9
+      refused it outright, and lint exited without linting a single file.
+- [x] What the rule set gained is written down: **2 rules to 17**, because v6 folded the React
+      Compiler's static analyzer into this plugin and enabled it at `recommended-latest`. That is why
+      this was never a version bump - it ran the codebase through an analyzer it had never met.
+- [x] All 46 findings are accounted for: 11 `react-hooks/refs` fixed outright; 3
+      `preserve-manual-memoization` turned off once with a written reason rather than scattered
+      per-callsite; 30 `set-state-in-effect` split into 7 fixed here and 23 carried out to `23-100`,
+      which has since converted or individually justified every one.

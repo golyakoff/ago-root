@@ -1,7 +1,7 @@
 # the "loss and forgot" checks run every twelve hours, and email is enough
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. The checks already exist; nothing calls them.
 - **Decision**: the author's, 2026-09-06 — **every 12 hours, not weekly**, and **email is enough**:
   *"главное здесь — исправить, мне не важно, что было неправильно, если исправил"*

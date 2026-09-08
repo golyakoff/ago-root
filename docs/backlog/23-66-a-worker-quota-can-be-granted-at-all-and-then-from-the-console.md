@@ -1,7 +1,7 @@
 # a worker quota can be granted at all, and then from the console
 
 - **Stage**: 23
-- **Status**: ready — **and what remains is one live demonstration, not code**
+- **Status**: done
 - **Depends on**: `23-65` shares the screen but not the promise. `adr/0150` is the decision for the
   console half.
 - **Found**: 2026-09-07, while designing `22-08`, and verified independently before filing.

@@ -1,7 +1,7 @@
 # a locally-built image the cluster evicts cannot be pulled back
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — narrowed to what shipped; the two decisions are `23-109`
 - **Depends on**: nothing. `15-21`/`adr/0144` built the drift check that cannot see this, and `23-90` is
   the neighbouring blindness in the same mechanism.
 - **Found**: 2026-09-08, by a deploy stopping. **Cause established 2026-09-08** — the first draft of this
@@ -86,6 +86,14 @@ discovered when somebody tries to run it.
 
 ## Done when
 
-- [ ] The node has headroom, and something keeps it that way rather than a one-off cleanup.
-- [ ] What happens to an evicted migrator image is decided and written down.
-- [ ] A `Job` that can never start does not block the following apply.
+- [x] The node is at **36% used, 49 GB free**, down from 86%. What keeps it that way is a retention
+      prune of the BuildKit cache run after the import inside `redeploy.sh`, not a one-off sweep -
+      and the import loop now derives from what `build-images.sh` actually built, so an image added
+      to the build is imported the day it is added rather than the day somebody remembers to edit a
+      second hand-written list.
+- [→] Carried out to **`23-109`**, as the question rather than an answer. It needs a decision -
+      rebuild on demand, publish the migrators to the registry, or pin them against containerd's GC -
+      and deciding it by implementing one is what rule 14 exists to stop.
+- [→] Carried out to **`23-109`** with the box above: the two are one promise about what the deploy
+      path does when an image is missing, and splitting them would leave each half unable to close
+      green on its own.

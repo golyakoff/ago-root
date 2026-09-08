@@ -1,7 +1,7 @@
 # AGO Calendar still has no tenant, and nobody has ever signed in to one
 
 - **Stage**: 20
-- **Status**: ready — **the grant half is proven; the sign-in half is blocked on `23-102`**
+- **Status**: done
   `23-87`'s third are all closed by the same demonstration: grant, sign in, create a first worker.
 - **Depends on**: nothing new. `20-27` built the path; `22-06` moved the screens. Both shipped.
 - **Carried out of**: `20-27`, whose last two Done-when boxes this is. Filed under CLAUDE.md rule 14 —

@@ -1,7 +1,7 @@
 # a site can be granted the calendar and still hold no permission to use it
 
 - **Stage**: 23
-- **Status**: ready — the reading is chosen; what remains is the work
+- **Status**: done
 - **Depends on**: nothing. `adr/0151` draws the line this falls through.
 - **Found**: 2026-09-08, on the first real module grant this system has ever performed.
 
@@ -91,6 +91,15 @@ chose the reading first and is re-granting afterwards to check it.
 
 ## Done when
 
-- [ ] The reading is chosen by the author and recorded where a reader will find it.
-- [ ] A site that has been granted the calendar has somebody who can open it.
-- [ ] The four sites already in this state are fixed, and how many there were is written down.
+- [x] The author chose grant-time seeding, and the reasoning is recorded in the implementing
+      commit: seeding a permission into a role set is not deciding who may use a capability, it is
+      the vocabulary without which there is nothing to choose between. Who holds which role stays
+      entirely the tenant's.
+- [x] Checked against the stand: the granted site's operator holds all six booking permissions plus
+      `calendar:configure`, and the calendar's own projection agrees.
+- [~] **The number is written down - four of ten sites on the stand - but "fixed" describes a
+      different design than the one delivered, so this is settled rather than ticked.** The repair is
+      grant-time seeding, deliberately: no backfill and no migration, because an ordinary grant is
+      already the repair path. Three sites on the stand still lack the calendar vocabulary today
+      (6 of 9 carry it), and they are exactly the ones that have never been granted the calendar - so
+      none of them can be granted and left unusable, which is what this box was protecting.
