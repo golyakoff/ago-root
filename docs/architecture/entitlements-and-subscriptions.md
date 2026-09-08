@@ -50,6 +50,18 @@ per-site one, since a revoked tenant no longer has a per-site credential
 The visitor handshake reports the site's live module keys as opaque strings, so a widget that was
 pasted once and never touched again gains a capability the moment it is granted (`23-105`).
 
+**A grant that comes from a payment is narrower than that, deliberately.** Writing an `enabled_modules`
+row needs an entry point, a credential and a **synchronous registration call to the module** before the
+row means anything — none of which belongs inside a background job's own transaction, seconds after it
+charged a card. A billing grant therefore writes a quantity grant, which is a durable row plus one
+outbox event and no network call at all.
+
+The consequence has to be stated rather than discovered: **a billing grant is not yet sufficient to
+turn on a module that requires registration**, `calendar` and `faq` being the two that do. Pointing an
+option at one of those would leave chat believing the module is granted while nothing routes to it.
+Widening the billing grant to drive real registration, or keeping the two mechanisms apart on purpose,
+is an open question and not decided here.
+
 ## The subscription that sustains it
 
 [`adr/0073`](../adr/0073-subscription-lifecycle-recurring-charge-retry-cancellation-seats.md) is the
