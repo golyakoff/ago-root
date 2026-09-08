@@ -1,7 +1,7 @@
 # the only way to roll forward is a flag named rollback
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: nothing. `22-24` added the guard this is about, and the guard is right to exist.
 - **Found**: 2026-09-08, deploying the day's accumulated work to the demo stand.
 
@@ -67,7 +67,15 @@ all:
 
 ## Done when
 
-- [ ] A deliberate roll-forward can be performed without typing a word that says the opposite.
-- [ ] The protection against an accidental rollback is no weaker than it is today, shown rather than
-      asserted.
-- [ ] `check-manifest-drift.sh` and `apply-demo.sh` still agree on what counts as drift.
+- [x] A roll-forward now needs no flag at all, so there is no word to type. The script classifies
+      each introduced tag by asking the cluster what it has already run, and only a detected rollback
+      reaches `--force-rollback` - which makes that name true rather than merely tolerable.
+- [x] Shown, against the live cluster, with nothing applied - `--check-only` was added for exactly
+      this and the guard had never been provable before. Five cases: an unchanged manifest passes; a
+      never-run tag moves forward at exit 0 where it used to be refused; a previously-run tag is
+      refused at exit 1; the same with `--force-rollback` continues; and an apply carrying both
+      directions refuses on its rollback half.
+- [x] They agree. The drift checker's advice said apply refuses "while the committed pins are behind
+      the cluster", which stopped being true; it now says apply refuses a *rollback*, and that a
+      manifest deliberately ahead is a roll-forward needing no flag. The two scripts already had to
+      share an image-name regex (`15-22`); this is a second coupling and both files say so.
