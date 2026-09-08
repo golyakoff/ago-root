@@ -252,6 +252,20 @@ At-least-once, everywhere, in both directions. Therefore:
   unique-violation is "detected, skipped, acked" realized without a broker, because there is no broker
   in this path to realize it with. See `adr/0071`.
 
+### Two facts that cross products, and both cross here
+
+Neither product reads the other's tables (`adr/0093`), so anything one needs from the other arrives as
+an event through this outbox and inherits at-least-once delivery with it.
+
+- **A contact collected in chat reaches the calendar** by chat publishing and the calendar consuming
+  ([`adr/0147`](../adr/0147-a-contact-collected-in-chat-reaches-the-calendar-without-either-product-reading-the-other.md)) - never by a join, and never by either side calling the other synchronously.
+- **The calendar add-on's worker quota is granted by chat and enforced by the calendar**, propagated
+  by its own integration event; the calendar owns both the enforcement and the downgrade rule inside
+  its own transaction ([`adr/0125`](../adr/0125-calendar-add-on-quota-crosses-through-the-outbox.md)).
+
+Both are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same as
+usable on the calendar's, and only the consumer's own copy decides what a tenant can do.
+
 ## Outbox dispatcher
 
 Runs in `Worker`. Claims unpublished rows with `FOR UPDATE SKIP LOCKED` in batches, publishes,

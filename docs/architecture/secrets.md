@@ -235,6 +235,15 @@ escrow and no recovery. Rotating it does not re-encrypt existing artifacts, so a
 archive at a date and both keys must be kept for as long as the older half is wanted. The runbook says
 so where the procedure is.
 
+### A key-shaped console field generates its own value in the browser
+
+**The module Credential field mints its own value client-side** - `crypto.getRandomValues`, 32 bytes,
+base64, the shape `openssl rand -base64 32` already produced ([`adr/0153`](../adr/0153-a-key-shaped-console-field-generates-its-own-value-in-the-browser.md)). It is the one
+deliberate exception to this project's server-side minting convention, and the reason is specific:
+every other secret this deployment mints is one the **server** must own or verify, while this one is
+accepted as opaque input either way - so a route would only push the secret across the network before
+its owner had decided to submit it.
+
 ## F. Secrets this system generates for its tenants
 
 | Name | Where | Rotation |

@@ -1178,6 +1178,15 @@ structured content. Four `contentKind`s:
 - **`confirmation_card`** — an optional bold title and a set of label/value rows
   (`justify-content: space-between`), then the action buttons.
 - **`form`** — one label, one text input, one "Continue" submit button. One field per message.
+- **`escalate`** — the fifth and last member of the vocabulary, added by
+  [`adr/0081`](../adr/0081-a-reachable-but-unsure-module-escalates-through-a-fifth-primitive.md) for a
+  module that is reachable but unsure. It is a **primitive, not a new signal**: a module that cannot
+  answer hands the visitor back to a person through the same closed vocabulary chat already owns,
+  rather than inventing a channel of its own that every renderer would then have to learn.
+
+**The vocabulary is closed, and that is the design.** Chat owns these five and a module may use them;
+a module may not extend them. That is what keeps `Ago.Chat.*` ignorant of what any particular product
+does, which is `adr/0065`'s guard.
 
 Choosing an option disables every control in that message and sends the chosen label back as a normal
 visitor message. Unknown kinds render nothing at all — the bubble shows only its text body.

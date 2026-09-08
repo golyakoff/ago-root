@@ -478,6 +478,23 @@ never authors a default. The lawyer's confirmation of this split is still the op
 says so plainly, and is superseded rather than edited if that confirmation lands differently; see "What
 is not decided here" below, unchanged by this ADR.
 
+### Four decisions this map depends on
+
+- **An operator's name and email are a copy**, rewritten from the validated token's own claims on
+  every sign-in, never a live query to Keycloak ([`adr/0104`](../adr/0104-an-operators-name-is-a-copy-refreshed-at-every-sign-in.md)). So this deployment holds a
+  second copy of two identity fields, and it is stale by at most one sign-in - which is why they
+  appear in the map above rather than being treated as living only in Keycloak.
+- **A visitor's consent gates every write of a contact detail**, checked inside
+  `RecordVisitorContactDetailHandler` immediately before the row is built, on both entry points and
+  never earlier ([`adr/0127`](../adr/0127-a-visitors-consent-gates-every-write-of-a-contact-detail.md)). There is no path that records a phone or an email without it.
+- **The tenant's own "who accepted" screen omits the client IP and user agent**, which the acceptance
+  record does hold ([`adr/0146`](../adr/0146-a-tenants-consent-acceptances-screen-omits-the-ip-and-user-agent.md)). Held for the tenant's evidential need, not shown, because showing it would
+  hand one tenant a visitor's network identity for no purpose the screen serves.
+- **A tenant erasure reaches a module over the deployment-wide provisioning channel**, not the
+  per-site credential channel - because a revoked tenant no longer has one - and a module revoke
+  **tombstones rather than deletes**, since the row was chat's only record that the site ever held the
+  module ([`adr/0155`](../adr/0155-erasure-reaches-a-module-over-the-provisioning-channel-and-a-revoke-tombstones.md)).
+
 ## What is unestablished
 
 Written down rather than guessed, because a map is most dangerous where it is confident and wrong.

@@ -3,6 +3,11 @@
 This file is the arbiter for "where does this code go". When a session is unsure, it reads this file
 and states the rule it applied.
 
+**Four layers, source dependencies pointing inwards only, enforced by `Ago.Chat.Architecture.Tests`
+rather than by review** — that is what holds, and it has held since 2026-08-20. The reasoning, and the
+three alternatives it beat, are [`adr/0002`](../adr/0002-clean-architecture-layering.md); this file is
+authoritative for the rule itself and for where each kind of file goes (`adr/0156`).
+
 ## Two orthogonal splits
 
 There are **two** boundaries in this codebase, and confusing them is the most likely way to make a
@@ -21,6 +26,11 @@ Infrastructure".
 
 **Source-code dependencies point inwards only.** Inner layers know nothing about outer ones - not
 the type, not the namespace, not the NuGet package.
+
+**It is a build failure, not a convention.** `Ago.Chat.Architecture.Tests` asserts it, which is
+`adr/0002`'s own choice: a layering rule kept by review discipline is one that erodes on the first
+deadline. The cost it accepted is stated there too — more projects, more indirection, and a real risk
+of ceremony — and the mitigation is that deliberate deviations get recorded rather than hidden.
 
 ```
         Hosts (Platform.Api, Platform.Worker)   composition root, DI wiring, endpoints/hubs
@@ -126,6 +136,11 @@ Rules:
   and makes the adapter unreplaceable, which defeats the entire point.
 - Read queries may bypass the aggregate through a dedicated read port (`IConversationReadStore`)
   returning DTOs. See `adr/0004`.
+- **A read port is split when its reads are windowed independently, not when they return different
+  shapes.** `IOperatorLoadReportReadStore` is its own port rather than a fifth method on
+  `IOperatorAnalyticsReadStore` ([`adr/0107`](../adr/0107-an-operators-load-is-a-second-read-over-the-same-intervals.md)),
+  because it reads the same intervals over a different window - and a port whose methods answer for
+  different periods forces every caller to know which of them it is talking to.
 - Expected failures (not found, forbidden, capacity full) return `Result<T>`. Exceptions are for bugs
   and infrastructure faults.
 

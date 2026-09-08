@@ -460,6 +460,12 @@ bar as mechanism A (`RedisLockAssignmentConcurrencyTests`) and fail-closed for r
 (`RedisLockAssignmentContainerFailureTests`: a stopped Redis assigns nothing, never throws, never a
 false-positive claim).
 
+**Capacity gates the auto-assigner only.** A deliberate take by an operator charges capacity
+unconditionally and never compares it ([`adr/0105`](../adr/0105-capacity-gates-the-auto-assigner-only-a-deliberate-take-charges-it-uncompared.md)): `IOperatorCapacity.ClaimAsync` beside the
+existing `TryClaimAsync`. An operator who deliberately picks up a conversation is making a decision the
+system has no business overruling; the auto-assigner is making a guess, and a guess is what a limit is
+for.
+
 ## Rules for every async code path
 
 - `CancellationToken` accepted, honoured, and passed down. A loop without a token is a hang.

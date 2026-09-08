@@ -22,6 +22,26 @@ produces a confidently wrong answer rather than an obviously incomplete one.
 is never edited to match. If the document is right and the decision genuinely changed, the change
 needed a new ADR and did not get one; write it.
 
+## Why there are ADRs at all
+
+**Every decision a reviewer could reasonably argue with gets a numbered file in `docs/adr/`, written
+from `_template.md`, and code contradicting an accepted ADR without a superseding one is treated as a
+defect.** That is [`adr/0001`](../adr/0001-record-architecture-decisions.md), and it is the oldest
+decision in the project.
+
+Its reason is worth restating here because it shapes everything on this page: **code shows what was
+built and never what was rejected**, and *"why not X"* is the first question a senior reviewer asks.
+The second reason is this project's own working conditions — the decisions have to survive being
+implemented across many separate sessions that share no memory, and a rationale that lives only in
+somebody's head does not.
+
+`adr/0001` also rejected the two obvious alternatives, and both rejections are still load-bearing:
+**comments in code** are invisible at design level and rot beside what they justify, and **one big
+design document** becomes a wall of text where superseded reasoning is quietly edited out. That second
+one is precisely the failure `adr/0156` found happening anyway, in a different form — amendments
+appended inside accepted ADRs — which is why the immutability rule below is now checked rather than
+stated.
+
 ## The three rules that keep this true
 
 1. **An accepted ADR is immutable.** The only edit it may receive is its `Status` line gaining a
