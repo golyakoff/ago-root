@@ -79,6 +79,14 @@ tag written there. After a deploy that is meant to stick, update the `newTag` va
 seven now, three hosts and four frontends — and commit. `deploy.sh` prints the exact value;
 `smoke.sh` fails if the running image tag and the commit inside the artifact disagree, for all seven.
 
+**`apply-demo.sh` tells a roll-forward from a rollback by asking the cluster what it has already
+run** ([`adr/0157`](../adr/0157-forward-is-told-from-rollback-by-asking-the-cluster-what-it-has-run.md)).
+A tag that appears in ReplicaSet history is a rollback and needs `--force-rollback`; a tag the cluster
+has never seen is a roll-forward and needs no flag. Before this, both looked identical to the guard, so
+**an ordinary forward deploy had to be spelled `--force-rollback`** — which put a false statement into
+the shell history somebody later reconstructs an incident from. `--check-only` runs the direction check
+and stops, so the guard can be exercised without deploying.
+
 **And when you apply that committed record, use `./apply-demo.sh` rather than `kubectl apply -k`**
 (`8-12`). Following the instruction above is what breaks the next apply: `8-08` ties both migrators'
 image tags to their hosts', a `Job`'s `spec.template` is immutable, so `apply -k` refuses with
