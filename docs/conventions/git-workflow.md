@@ -234,3 +234,29 @@ Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`, `build`. Scop
 - If the item spans repositories, every PR in the group is `MERGEABLE` with its checks green before
   any of them merges - and `ago-root` merges last.
 - No commented-out code, no `TODO` without an issue or backlog file reference.
+
+---
+
+# Moved here from `CLAUDE.md` on 2026-09-08
+
+`CLAUDE.md` loads in full at the start of every session; a skill loads when it is invoked. The rules
+below apply **at a specific moment** rather than always, and that moment is when this file opens - so
+keeping them in the always-loaded file bought nothing and cost 66%% of it. The measurement is in
+`docs/backlog/23-111-*.md`.
+
+**Their reasoning travelled with them, unedited.** A rule stripped of the post-mortem that produced
+it gets argued with again within the month, so the dated parentheticals are part of the rule and are
+not summaries of it. `CLAUDE.md` keeps each rule's number and its always-true core, and points here.
+
+
+## Work happens on a feature branch, rebased onto main's tip at push time (`CLAUDE.md` rule 10)
+
+**Work happens on a feature branch**, one branch per slice/backlog item. An MR is the branch
+*rebased onto `main`* with the full suite green **after** the rebase — never `main` merged into
+the branch (`docs/conventions/git-workflow.md`). "Rebased onto `main`" means `main`'s tip **at
+push time**, not at branch-cut time: `git fetch` and confirm `git merge-base HEAD origin/main`
+equals `git rev-parse origin/main` **before the first push**, and rebase while the branch is
+still local if it does not. After the branch is pushed a stale base is no longer rebasable by
+anyone but the author — it becomes close-the-PR-and-rebuild — so the check is cheapest exactly
+once, just before pushing.
+

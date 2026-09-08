@@ -53,9 +53,16 @@ that reminds:
 | `tools/new-worktree.sh <repo> <item> <type> <slug>` | Creating a task worktree — fetches origin, proves the base equals `origin/main`, refuses a directory or branch that is already taken, and prints the `cd`. |
 | `.claude/skills/commit-guard/commit.sh <message-file>` | Committing — takes a **file**, never an inline `-m`, so shell quoting cannot mangle the message. |
 | `.claude/skills/commit-guard/open-pr.sh <title> <body-file>` | Opening a PR — same reason, and backticks in a body have destroyed it three separate times when passed inline. |
+| `tools/after-merge-cleanup.sh <repo> <item>` | Reclaiming a finished item — deletes the remote branch, removes the worktree, deletes the local branch, and refuses on uncommitted work or on a commit missing from `origin/main` *by content*. Reports by default; `--yes` acts. |
 
 `tools/queue-audit.sh` is the same idea applied to the queue, and since 2026-09-08 it also checks that
 every skill carries frontmatter.
+
+The last of those has a measured reason. On 2026-09-08 the workspace held **158 GB**, of which
+**147 GB was `bin/` and `obj/`** inside worktrees whose work had merged weeks earlier — `node_modules`
+was 12 GB and every `.git` in the workspace together was **66 MB**. `finish-an-item` had said to remove
+them since it was written. It was read as a suggestion, which is what an instruction without a
+mechanism becomes.
 
 ## Rules for skills themselves
 

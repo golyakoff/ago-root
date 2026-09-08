@@ -310,3 +310,77 @@ overstatement, not omission.
 
 Verify independently before landing. Re-run the suite; re-check any claim about a live system
 against that system. Then follow `land-a-slice`.
+
+---
+
+# Moved here from `CLAUDE.md` on 2026-09-08
+
+`CLAUDE.md` loads in full at the start of every session; a skill loads when it is invoked. The rules
+below apply **at a specific moment** rather than always, and that moment is when this file opens - so
+keeping them in the always-loaded file bought nothing and cost 66%% of it. The measurement is in
+`docs/backlog/23-111-*.md`.
+
+**Their reasoning travelled with them, unedited.** A rule stripped of the post-mortem that produced
+it gets argued with again within the month, so the dated parentheticals are part of the rule and are
+not summaries of it. `CLAUDE.md` keeps each rule's number and its always-true core, and points here.
+
+These two open at the moment this brief is being written, which is the moment they govern.
+
+## A background worker never spawns another agent (`CLAUDE.md` rule 12)
+
+**A background worker never spawns another agent.** The managing session may spawn workers; a
+worker may not spawn anything. A worker that believes its task warrants delegation **says so in
+its report and stops** — that decision belongs to the author, not to the worker and not to the
+managing session, and it is made by the author saying so explicitly rather than inferred from a
+worker's plan.
+(Decided 2026-09-02, after two briefs in one day produced agents that *organised* the work
+instead of doing it. One of them had already spawned a child the managing session did not know
+about, concluded nothing was running from the absence of a worktree, and told it to implement the
+task itself — putting two agents in the same worktrees at once. `ListAgents` answers "is
+something already running"; an empty directory does not. Cost is the other half of the reason:
+every spawn pays a full cold start rediscovering repository structure, and one measured wave of
+three workers cost roughly 840,000 tokens.)
+
+
+## Three lanes, held continuously - not waves (`CLAUDE.md` rule 13)
+
+**Three lanes, held continuously — not waves.** The managing session keeps **three** background
+workers running on `sonnet`, each in its own isolated worktree, and **refills a lane the moment it
+frees** rather than batching the next three together. Their pull requests still open **strictly one
+at a time**. No request is needed to start or continue this; it is the normal state.
+- **One of the three is the migration lane.** Only items needing an EF migration go in it, and only
+  one at a time. The other two take items that need none. This is not caution about migrations —
+  it is that `AgoChatDbContextModelSnapshot.cs` holds the *whole* model and every migration's
+  `Designer.cs` embeds a copy, so two concurrent `ef migrations add` rewrite the same file from
+  different bases. The visible part is a conflict; the dangerous part is resolving it by taking one
+  side, which drops the other branch's columns from the model state — and EF then generates the
+  *next* migration as a diff against a snapshot that is a lie. That breaks two items later, not at
+  the merge.
+- **Refilling beats batching for a specific reason.** A wave stalls on its slowest lane: two workers
+  finish, and their capacity sits idle until the third reports. Refilling one lane at a time also
+  makes collision-checking easier, because there is one new item to place against two known ones
+  rather than three against each other.
+- **Non-interference is still the precondition, and judging it is the managing session's job before
+  spawning anything**: the same repository *file*, the same shared index, or one item's output being
+  the other's input all mean two items do not run together. Sharing a repository is not a collision;
+  sharing a file is. When in doubt, run two.
+  Two collisions on 2026-09-05 came from checking topics rather than files — `23-21` and `23-23` met
+  on two calendar screens, `23-21` and `23-02` on the same `/operators/me` response — so the check
+  is: what files will this item plausibly touch, against what the running lanes already hold.
+- **Sequential PRs are the half that is easy to skip.** Two branches cut from the same `main` and
+  opened at once means the second goes stale the moment the first merges, and a pushed branch with
+  a stale base is close-the-PR-and-rebuild rather than a rebase (rule 10). Land one, then cut the
+  next from the `main` that now contains it. `land-a-slice` already required this for the shared
+  indexes; under this rule it applies to every PR, and holds all the harder now that lanes are
+  refilled independently rather than finishing together.
+- Everything else stands unchanged: workers still never spawn anything (rule 12), never write
+  history (rule 9), and hand back commit blocks the managing session executes.
+(Agreed 2026-09-02 as a per-request ceiling of three, phrased around the author saying "го по
+жире". Amended 2026-09-05 into a continuous three, with one lane reserved for migrations: the
+per-wave phrasing had become a per-wave *stall*, and the author had by then asked for the lanes to
+be refilled four separate times in one day. The migration lane was the author's own call, taken
+over the alternative of running migration items in parallel and regenerating them in a planned
+order at landing — declined because there is one Docker Desktop, so parallel migration branches
+would queue for the same containers at verification anyway, buying little and adding the snapshot
+hazard above.)
+

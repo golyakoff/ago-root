@@ -203,3 +203,62 @@ change's problem regardless of who typed it.
 
 State what is verified, what is merged, and what is still open — including any Done-when left unmet
 and why. Never call a PR done without having read `mergeable` for it.
+
+---
+
+# Moved here from `CLAUDE.md` on 2026-09-08
+
+`CLAUDE.md` loads in full at the start of every session; a skill loads when it is invoked. The rules
+below apply **at a specific moment** rather than always, and that moment is when this file opens - so
+keeping them in the always-loaded file bought nothing and cost 66%% of it. The measurement is in
+`docs/backlog/23-111-*.md`.
+
+**Their reasoning travelled with them, unedited.** A rule stripped of the post-mortem that produced
+it gets argued with again within the month, so the dated parentheticals are part of the rule and are
+not summaries of it. `CLAUDE.md` keeps each rule's number and its always-true core, and points here.
+
+This one opens at the moment work is being committed, pushed and merged.
+
+## Who may commit, push, open a PR and merge (`CLAUDE.md` rule 9)
+
+**Ordinary commits, pushes, and opening PRs on feature branches may be done directly by the
+   managing Claude Code session**, without asking first each time, once a slice's own done-when
+   criteria are verified and the local build/test suite is green. This delegation is narrow:
+   - It does not extend to background workers spawned to implement a slice — a worker still hands
+ back a commit block for the managing session to review and execute; it never runs
+ `git commit`/`git push` itself.
+   - **Never push directly to `main`.** Every change reaches `main` through a PR — that is unchanged
+ and is not negotiable.
+   - **The managing session may merge a PR that carries only implementation of an item the author has
+ already approved** (amended 2026-09-05; see the sub-rule below for what that excludes). Four
+ preconditions, all of them, every time: CI green; the managing session's own **independent**
+ verification done, not the worker's report accepted; `merge-base` equal to `origin/main` at merge
+ time; and `open-pr.sh`'s checks passed.
+   - **The test for "implementation" is not size. It is whether the change contains a judgement the
+ author has not seen.** These always wait for the author, however small and however green:
+ `docs/design/decisions.md`, `docs/roadmap.md`, this file, any **new** ADR (an index row for one
+ the author already approved is not a new ADR), newly sliced backlog items, and any change to
+ product behaviour the author did not agree to. **Deploying is separate and always asked for.**
+ When in doubt, it waits — a PR held for an hour costs an hour; a decision that landed unseen
+ costs the next argument about it.
+   - **Say what merged.** The author reads after the fact instead of before, so that has to be
+ possible: name each merged PR and what it changed, in the session, at the time.
+ (Amended 2026-09-05, at the author's request and with the boundary they chose. The reasoning is
+ worth keeping: pressing merge was the last point a human saw a change, and giving it up means the
+ same judgement that made a mistake is the one clearing it — three times on 2026-09-05 alone the
+ managing session pushed onto a stale base or resolved a conflict wrongly. What caught those was
+ mechanical: the build, `queue-audit.sh`, `ux-gate`, CI. What the *author* caught that day was
+ different in kind — a dead link on the demo pages, a wrong premise in a ticket, the framing of a
+ stage — and none of it came from pressing a button. It came from reading, which still works
+ afterwards. That asymmetry is the whole argument, and it stops holding the moment a merge carries
+ a decision rather than an implementation.)
+   - `git push --force`, `git commit --amend`, `git rebase` on an already-pushed branch, and
+ anything else that rewrites history remain the author's exclusively — unchanged.
+   - Draft commit messages never carry a `Co-Authored-By` trailer for an AI session — whoever is
+ named in the local git identity is the author of record, regardless of who typed the command.
+   (Decided 2026-08-23, after this had been running as a manager-session-drives-background-workers
+   workflow for a while and the per-commit ask had become the actual bottleneck; scope is deliberately
+   the managing session only, not every session or every worker. The merge half stayed manual for
+   another two weeks and was amended above on 2026-09-05, for the same reason and after the same
+   thing happened to it: the per-PR ask had become the bottleneck in its turn.)
+
