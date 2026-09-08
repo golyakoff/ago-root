@@ -22,9 +22,19 @@ When in doubt, ask whether you could argue the other side for two minutes. If ye
 ## Rules
 
 1. **Number sequentially**, never reuse a number, and add the row to `README.md` in the same change.
-2. **Immutable once accepted.** A changed decision is a *new* ADR marked "Supersedes ADR-NNNN"; the
-   old one gets "Superseded by ADR-NNNN" and keeps its original text. Editing accepted reasoning
-   destroys the record's only value.
+2. **Immutable once accepted, and this is enforced now.** A changed decision is a *new* ADR marked
+   "Supersedes ADR-NNNN"; the old one gets "Superseded by ADR-NNNN" and keeps its original text. The
+   **only** edit an accepted ADR may receive is that `Status` line.
+   **Never append an amendment to the body.** It was being done - one ADR records being "amended three
+   times... all three amendments are appended below" - and it is what made the corpus unreadable:
+   once a body can change, an ADR's number and status guarantee nothing, a file can look current and
+   carry its own reversal several screens down, and any index built over it inherits that. `adr/0156`.
+
+2a. **Say which current-state document this changes, and change it in the same commit.** An ADR says
+   *why*; `docs/architecture/*` and `docs/conventions/*` say *what holds now* (`adr/0156`), and that
+   split only works if every ADR is reachable from one of them. `tools/queue-audit.sh` names any ADR
+   with no such home. This is the half that makes the split safe rather than merely fast: a
+   current-state document that silently omits a decision gives a confident wrong answer.
 3. **Context contains no solutions** - only the forces: load characteristics, constraints, earlier
    decisions this must live with.
 4. **Consequences must include the negative ones.** An ADR listing only benefits is marketing. State

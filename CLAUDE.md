@@ -134,7 +134,9 @@ If a request would violate a rule above, say so before writing code, and propose
 | Which secrets exist, who holds them, what rotating one costs | `docs/architecture/secrets.md` |
 | Which repository, package boundary, cross-repo changes | `docs/architecture/repositories.md` |
 | Target numbers / SLOs | `docs/architecture/nfr.md` |
-| Why a decision was made | `docs/adr/` |
+| **How something works now** | the architecture or convention doc for that topic - authoritative (`adr/0156`) |
+| Why a decision was made, and what it replaced | `docs/adr/` - the history, never the current state |
+| Which file to trust when two disagree | `docs/conventions/documentation.md` |
 | Style, naming, errors, logging | `docs/conventions/coding-style.md` |
 | Branches, MRs, rebase rules | `docs/conventions/git-workflow.md` |
 | Anything involving a timestamp | `docs/conventions/date-and-time.md` |
