@@ -267,6 +267,14 @@ bash tools/new-worktree.sh <repo> <item> <feat|fix|docs|chore|test> <kebab-slug>
 It fetches, proves the base equals `origin/main`, and refuses a directory or branch already taken.
 Work only in the directory it prints. One worktree per repository you change.
 
+**If it refuses because the directory already exists, stop and report it. Never work in a directory
+you did not create.** A worktree that survives cleanup does so *because it holds uncommitted work* —
+somebody else's, from a session that ended without landing it. On 2026-09-08 a worker inherited one
+that way and found a tier-priced administrator cap built against a pricing document it could not read,
+which `adr/0151` forbids outright; it recognised the trap and removed it, but the next one might
+extend it instead. Working in an occupied directory is how two sessions' work becomes one
+indistinguishable diff.
+
 ### Never wait for your own background run
 
 A completion notification goes to the **managing session, not to you**. A turn that ends with "I will
