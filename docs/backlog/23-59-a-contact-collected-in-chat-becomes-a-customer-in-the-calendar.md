@@ -1,7 +1,7 @@
 # a contact collected in chat becomes a customer in the calendar
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done
 - **Depends on**: `23-58` (the contact is collected), `22-07` (the module grant). `adr/0147` is the
   decision.
 - **Decision**: `adr/0147`, from the author's answers of 2026-09-07.
@@ -43,9 +43,21 @@ and is not an engineering decision.
 
 ## Done when
 
-- [ ] A contact recorded in chat appears as a customer in the calendar, for a tenant that has it.
-- [ ] The same contact arriving twice produces one customer.
-- [ ] Granting the module carries over contacts collected before the grant, shown working on a tenant
+- [x] `ago-chat#238`: `RecordVisitorContactDetailHandler` enqueues `ContactCollected` through the
+      outbox, in the same transaction as the write, from both entry points. `ago-calendar#51`:
+      `ContactCollectedConsumer` upserts into `Customer` (`Source = Chat`) when the tenant has been
+      granted the module - checked locally, no cross-database read.
+- [x] The upsert conflict target is `(tenant_id, source_contact_id)`, a partial index scoped to
+      chat-sourced rows. Independently re-proved: pointing it at the Booking-only index instead
+      produces a real Postgres 23505 duplicate-key error.
+- [x] `EnableModuleForSiteAsOwnerHandler` stages a carry-over request on every grant;
+      `ContactCarryoverBackfill` drains it in batches through a persisted cursor, run automatically by
+      `ContactCarryoverJob`.
       with pre-existing contacts.
-- [ ] A failed carry-over can be re-run without re-granting anything.
-- [ ] Neither product queries the other's schema, asserted by a test rather than by inspection.
+- [x] The cursor is the request's own row, not tied to the grant. Independently re-proved: suppressing
+      cursor advancement fails `AnInterruptedCarryover_ResumesFromItsOwnCursor_WithNoSecondRequest`
+      (2 successes instead of 1 - a second request would have been needed); restoring returns it to
+      green.
+- [x] `ContactCollectedCustomerStoreTests`, the mirror of `RoleAssignmentProjectionDemonstrationTests`'s
+      own check: this schema holds no connection string or credential for the other database, so there
+      is nothing here for a cross-product read to reach even if a future change tried.
