@@ -1,7 +1,7 @@
 # a site can be granted the calendar and still hold no permission to use it
 
 - **Stage**: 23
-- **Status**: ready — **and the first question in it is where the permission should come from**
+- **Status**: ready — the reading is chosen; what remains is the work
 - **Depends on**: nothing. `adr/0151` draws the line this falls through.
 - **Found**: 2026-09-08, on the first real module grant this system has ever performed.
 
@@ -44,9 +44,24 @@ between them nobody has had to look at until a grant actually succeeded.
 **A grant creates the entitlement. Nothing creates the permission.** So the platform owner can sell
 the calendar, the tenant can pay for it, and no human being can open it.
 
-## The question this opens with
+## Decided, 2026-09-08: at grant time
 
-Three readings, and it is not obvious which is right:
+**Enabling a module for a site seeds that module's permissions into the site's own roles** — the same
+act `RegisterSiteHandler` performs at registration, performed at the moment the module arrives instead.
+
+**The apparent tension with `adr/0151` dissolves on inspection, and saying why is part of this item.**
+That ADR keeps *configuration* in the tenant's sandbox: what the capability does for them, and who may
+use it. Seeding a permission into a role set is neither. It is the vocabulary without which there is
+nothing to choose between — a role that cannot express `booking:confirm` at all does not give the tenant
+a choice, it removes one. **Who holds which role stays entirely the tenant's**, unchanged.
+
+**It also closes the recurrence, which is the reason it beats a backfill.** A backfill fixes the four
+sites that exist today; the next module with new permissions reopens the identical hole for every site
+registered before *it*. Seeding at grant time is the only reading where that cannot happen again.
+
+The other two readings are kept below as rejected rather than deleted.
+
+## The readings, and why the other two lost
 
 - **Grant-time.** Enabling a module for a site ensures that site's roles carry the permissions the
   module needs. Closest to the moment the need becomes true, and it means a purchase is usable
@@ -60,8 +75,9 @@ Three readings, and it is not obvious which is right:
   role's permissions**, and `23-72` added changing which role an operator holds, not what a role
   carries. This reading is only available if that screen is built.
 
-**Do not pick one by implementing it.** The stand has a live tenant blocked on this, so the temptation
-to write the rows and move on is real; doing that answers the question in the dark.
+**The temptation this item was filed to resist**: the stand had a live tenant blocked on it, and
+writing the rows by hand would have answered the question in the dark. It was not done; the author
+chose the reading first and is re-granting afterwards to check it.
 
 ## Where this is likely to go wrong
 
