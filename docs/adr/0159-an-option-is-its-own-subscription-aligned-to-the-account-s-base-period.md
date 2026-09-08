@@ -53,10 +53,21 @@ relationship a charge can traverse. That is the whole argument for this shape ov
 subscription, where "partially failed charge" would have to be invented — and a partially failed charge
 is the worst possible place to invent something.
 
-**The renewal machinery already works for options, unchanged.** `SubscriptionRenewalJob` asks
-`ListDueForRenewalAsync` for every row whose period has ended, not for one row per site, so option
-subscriptions renew, retry and lapse through exactly the code that already does it for tiers. This was
-the largest single reason to expect this decision to be expensive, and it turned out to be free.
+**The renewal machinery's *selection* works for options unchanged; its *pricing* does not.**
+`SubscriptionRenewalJob` asks `ListDueForRenewalAsync` for every row whose period has ended, not for
+one row per site, so option subscriptions are picked up, retried and lapsed by exactly the code that
+already does it for tiers — which is the part that was expected to be expensive and is free.
+
+**The charge amount is not.** `ProcessSubscriptionRenewalHandler` computes it as
+`PricePerSeatRub * RequestedSeats`, which is the base's own pricing and is meaningless for an option:
+an option has no seats, so the arithmetic silently produces a **zero-rouble charge**. This paragraph
+originally claimed the whole machinery was free and it was wrong — found by implementing it, and
+corrected here before this ADR was accepted rather than superseded afterwards.
+
+So an option's *renewal price* is a second gap, distinct from the first charge's price that `23-115`
+owns, and neither is closed by this decision. Until one of them is, an option subscription cannot be
+renewed for real money by anything in this codebase, and the implementation refuses loudly rather than
+charging nothing.
 
 **One existing read becomes wrong and must be narrowed.** `GetBillingStatusHandler` calls
 `GetLatestForSiteAsync` and means *the site's subscription*. With options in the same table it would
