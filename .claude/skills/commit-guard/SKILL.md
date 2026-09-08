@@ -1,3 +1,8 @@
+---
+name: commit-guard
+description: Commit and open a PR through the two scripts that take message and body FILES, never inline strings. Use for EVERY git commit and EVERY gh pr create in any AGO repository - it is what stops the shell-quoting failures and the forbidden Co-Authored-By trailer.
+---
+
 # Committing and opening a PR
 
 **Every commit and every pull request in every repository of this workspace goes through these two

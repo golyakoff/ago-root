@@ -840,6 +840,34 @@ else
   echo "Every ADR file has a row in docs/adr/README.md."
 fi
 
+# A skill without YAML frontmatter is never registered, so it can never be offered and can never be
+# invoked - it is a file, not a skill. Nothing said so until 2026-09-08, when three were found in that
+# state at once: `user-story-writer`, `finish-an-item`, and `commit-guard` - the last written
+# specifically to stop the shell-quoting failures and the forbidden trailer, and bypassed every single
+# time for two weeks because it could not be seen. SKILLS.md listed all three, correctly, which is
+# what made it invisible: the index said the skill existed and the runtime disagreed, and nothing
+# compared them.
+#
+# This is the cheapest possible check for the most expensive possible failure - a control that is
+# believed to be running and is not.
+headerless=""
+for skill in "$audit_root"/.claude/skills/*/SKILL.md; do
+  [ -e "$skill" ] || continue
+  if [ "$(head -1 "$skill")" != "---" ]; then
+    headerless="$headerless  $(basename "$(dirname "$skill")")
+"
+  fi
+done
+
+echo
+if [ -n "$headerless" ]; then
+  echo "Skills with no YAML frontmatter (they are never registered, so they can never be used):"
+  printf "$headerless"
+  echo "  Add 'name:' and 'description:' between --- fences at the top of SKILL.md."
+else
+  echo "Every skill carries frontmatter and can actually be invoked."
+fi
+
 # Flagged entries are for a human to resolve, so this is not an error exit - it is a report. A CI job
 # that failed on this would train people to close issues to make it green, which is the opposite of
 # the point.

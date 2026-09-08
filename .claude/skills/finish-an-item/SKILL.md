@@ -1,3 +1,8 @@
+---
+name: finish-an-item
+description: The six checks that run at the moment an item's last code PR merges - close every mirror, settle every Done-when box, sweep the queue, remove the worktrees. Use immediately after merging, because merging the code feels like finishing and is not.
+---
+
 # Finishing an item
 
 `land-a-slice` gets a change verified and its PRs open. This is the part after that, and it is the
