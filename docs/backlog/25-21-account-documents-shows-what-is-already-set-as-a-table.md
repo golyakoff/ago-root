@@ -1,7 +1,7 @@
 # 25-21 · `/account/documents` shows what is already set as a table, not a form
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console@f6de87f`
 - **Depends on**: `23-37` built this screen; this corrects its shape once real data exists
 - **Found**: 2026-09-09, the author using the screen with documents already configured
 
@@ -41,7 +41,17 @@ tenant is about to fill in; it does not belong once the screen's job is showing 
 
 ## Done when
 
-- [ ] A document that is already set renders as a card/table, not a form, by default.
-- [ ] "Show who accepted" expands a card listing acceptances for that specific version, for both
+- [x] A document that is already set renders as a card/table, not a form, by default.
+- [x] "Show who accepted" expands a card listing acceptances for that specific version, for both
       document kinds.
-- [ ] `documentsPageIntro`'s "AGO не пишет текст" sentence is removed.
+- [x] `documentsPageIntro`'s "AGO не пишет текст" sentence is removed.
+
+## Outcome
+
+`ago-console@f6de87f` (the author's own commit, direct to `main`, 2026-09-09). Publishing a new
+version is a deliberate action a toggle reveals (`ConsentDocumentPanel`'s `formOpen`/`formVisible`);
+the form stays the default only when nothing has been published yet. "Who accepted" is
+`VersionAcceptancesToggle`, one per version — `fetchSiteConsentAcceptances` already returns
+`documentVersion` on the wire, filtered client-side rather than a new endpoint. Reuses `25-22`'s
+`formatAbsolute` for the timestamp shape. `25-24` (bundled with this item for the same file/theme)
+built on top of this once it landed.
