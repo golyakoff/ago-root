@@ -1,7 +1,7 @@
 # the provisioning secret crosses the cluster in clear text
 
 - **Stage**: 23
-- **Status**: ready — **the question is answered; what remains is the work**
+- **Status**: done
 - **Decided**: the author's, 2026-09-07 — **encrypt it**. `22-24`'s internal CA already exists and
   `ago-calendar-api` already serves 8443, so the gap is chat trusting the CA. The other two readings
   below are kept for the record, not as live options.
@@ -73,6 +73,45 @@ leg proved.
 
 ## Done when
 
-- [ ] Whether clear text is acceptable here is decided, and written where `adr/0095`'s blast radius is read.
-- [ ] If it is not, the leg is encrypted and proven, and `23-92`'s documented entry point follows it.
-- [ ] Either way, `adr/0095` no longer implies transport was considered when it was not.
+- [x] Whether clear text is acceptable here is decided, and written where `adr/0095`'s blast radius is read.
+      Decided: encrypt it. `docs/adr/0164-the-module-provisioning-secret-is-encrypted-in-transit.md`,
+      amending `adr/0095` (its own `Amended` line now points here). `adr/0095`'s body is untouched -
+      README's own immutability rule forbids editing an Accepted ADR's body, so the amendment is a new
+      number, not a paragraph appended in place.
+- [x] If it is not, the leg is encrypted and proven, and `23-92`'s documented entry point follows it.
+      **Two of the three sub-steps were already done, found while starting this item**: `Ago.Chat.Api`'s
+      own image has trusted `22-24`'s internal CA since `ac22b8f` (2026-09-06, one day before this item
+      was found) - `HttpModuleRegistrationGateway` is a plain `HttpClient` with no certificate handling
+      of its own, so the whole trust decision already lived in the Dockerfile, not in application code,
+      and there was nothing left to "mount" on the `Ago.Chat.*` side. What remained:
+      - **Proved**: `ago-chat`'s new `Ago.Chat.Integration.Tests.ModuleRegistrationGatewayInternalTlsTests`
+        - a real Kestrel host, a real TLS handshake, a throwaway root/leaf (never the real
+        `internal-ca.key`, which is deliberately uncommitted anywhere) - proves the unmodified
+        production gateway class is refused against an untrusted root and succeeds against a trusted
+        one.
+      - **Switched**: `ago-deploy`'s `ModuleEntryPoints__calendar` now reads `https://ago-calendar-api:443`
+        - but only in `k8s/overlays/demo/kustomization.yaml`, as a strategic-merge patch, not in
+        `k8s/base/api.yaml` unconditionally. Investigation found `k8s/overlays/local/` has no
+        cert-manager, no internal CA, and no 8443 listener on `ago-calendar-api` at all - switching the
+        shared base value would have broken local development with a connection failure, not solved a
+        certificate-trust question. `base/api.yaml` keeps `http`, correctly, for local; the demo overlay
+        is where the encrypted listener actually exists, so that is where the scheme switches. Both
+        overlays verified with `kubectl kustomize` (no CI exists in `ago-deploy` to run instead).
+      - **Corrected**: `base/api.yaml`'s own comment, written by `23-92` after a live probe, claimed
+        `https://ago-calendar-api:443` "would fail TLS since this host carries no internal-CA trust
+        material" - true on 2026-09-07, false since `22-24` landed the day before, left unrevisited
+        until this item found it.
+- [x] Either way, `adr/0095` no longer implies transport was considered when it was not.
+      `adr/0095`'s own `Amended` line now names `adr/0164`. `docs/architecture/edge.md`'s existing
+      `adr/0137` section (which already described the CA/listener mechanism as built) gained the
+      follow-through paragraph noting the entry point itself had not yet been switched to use it -
+      the exact gap this item closes.
+
+## Outcome
+
+`ago-chat#253`, `ago-deploy#188`. Fails-before pairing: the two new integration tests share one
+throwaway CA/leaf and one real Kestrel host — one proves the call is refused untrusted, the other
+proves the identical call succeeds trusted. Independently re-verified after rebasing onto `25-29`:
+Domain 603/603, Application 1052/1052, FakeCrm 21/21, Architecture 44/44, Concurrency 73/75 (2
+pre-existing unrelated skips), Integration 1075/1075. No third repository touched, no migration
+added, matching this item's own stated expectation.
