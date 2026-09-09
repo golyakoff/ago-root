@@ -1,7 +1,7 @@
 # lowering a worker quota says nothing about what it will deactivate
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — **all three open questions answered by the author, 2026-09-10, recorded below**
 - **Depends on**: `23-66`, which built the grant this lowers.
 - **Found**: 2026-09-07, carried out of `23-66` at landing rather than left inside it.
 
@@ -29,22 +29,64 @@ people's accounts with no idea which three, and the tenant finds out when somebo
 - **Before the write, say what it will do.** How many workers exceed the new quota, and which ones.
 - **The tenant's own workers are the calendar's rows, not chat's.** `adr/0093`: two schemas, two
   databases, neither product reads the other's tables. So the count comes from the calendar, over the
-  boundary that already exists, or the screen cannot honestly state it — that constraint is the whole
-  design problem in this item and it should be settled before any UI is drawn.
-- **Decide what deactivation means, and write it down.** Is a worker above the quota deleted,
-  suspended, or merely unable to be assigned? `22-08` is the neighbouring question for tenants and
-  `adr/0031`'s retention reasoning is the nearest precedent — a downgrade that destroys nothing.
+  boundary that already exists — **but not as a live synchronous call, decided below.**
+- **Decided: deactivation means the worker simply cannot be assigned a new booking.** Nothing is
+  deleted or suspended — the worker's own row, history and existing bookings are untouched; they are
+  merely excluded from whatever the assignment/booking path already treats as "bookable" once they sit
+  above the tenant's own quota. The closest existing precedent for "a downgrade that destroys nothing"
+  is `adr/0031`'s own retention reasoning, restated here for a different resource.
+
+## Decided: build the general async mechanism, not a one-off synchronous call
+
+**The author's own reasoning, 2026-09-09:** today, lowering a quota is the platform owner's own manual
+act, and nothing about it depends on the calendar being reachable — the grant is written in `ago-chat`
+and delivered over the outbox, exactly like `23-66`/`23-89`'s own mechanism. A live, synchronous
+cross-product call made only to answer "how many workers does this affect" would introduce a
+dependency that does not exist today: an owner could no longer lower a quota at all while the calendar
+happens to be unreachable, which is a real regression against `adr/0093`'s own product-independence
+guarantee, not a narrow, harmless exception the way `22-11`'s registration RPC is.
+
+**It also cannot be a synchronous call for a second, stronger reason.** `ModuleQuantityGrant` (the
+mechanism a quota grant already rides) is the same primitive `23-86` already wired an *automatic*
+grant/revoke into on a subscription's own lapse — today only for options (channels), not yet for
+worker quota, but the same infrastructure. If lowering a quota is ever triggered automatically by
+non-payment rather than only by an owner's click, that trigger fires from an unattended background
+job with no human session to show a count to or wait on a confirmation from — a synchronous call is
+not merely undesirable there, it is structurally impossible. Building this item's own answer as an
+async mechanism from the start means the eventual automatic path (if one is ever built) needs no
+second design, rather than redoing this item's own answer later.
+
+**The shape this implies:** the owner-facing "how many, which ones" statement is itself an
+asynchronous round trip to the calendar (request, wait for the calendar's own answer, then show it —
+the same "outbox out, real answer back" shape `23-89` already established elsewhere, not a live
+request/response pair blocking on the calendar's uptime). The actual deactivation decision is not
+taken from that earlier, possibly-stale answer at all: it is recomputed fresh, inside the calendar's
+own database, at the moment the lowered quota is actually applied there — whichever path applied it,
+an owner's confirmed write today or an automatic non-payment trigger later.
 
 ## Where this is likely to go wrong
 
-- **A confirmation dialog is not the mechanism.** If the count is computed in the browser and the write
-  is unguarded, two owners acting at once still produce a surprise. Whatever states the consequence
-  must be what the write consults.
-- **The number can change between the statement and the write.** Say whether that is tolerated or
-  rejected, rather than discovering it.
+- **A confirmation dialog is not the mechanism.** If the count is computed once and shown, and the
+  write is unguarded, two owners acting at once (or an owner confirming against a stale count) still
+  produce a surprise. Whatever states the consequence must be what the write consults.
+- **Decided (owner-confirmed path): recompute at write time, and refuse rather than silently apply a
+  different outcome than what was shown.** The number the owner saw is fetched once, asynchronously;
+  when they confirm, the write recomputes the live count fresh against the calendar's own database
+  (`CLAUDE.md` rule 8 — never let a write decision trust a cached read) and compares it to what was
+  shown. A match applies normally. A mismatch refuses the write and sends the owner back to see the
+  current, correct count before they can confirm again — never applies a quota change against a
+  consequence they never actually saw.
+- **An automatic future trigger (non-payment) has no prior shown count to compare against at all** —
+  it never showed anyone anything, so "diverges from what was shown" does not apply to it; it simply
+  acts on the live count at the moment it fires. Named here so whoever eventually builds that path
+  does not go looking for a comparison this item's own answer never intended for it.
 
 ## Done when
 
-- [ ] Lowering a quota states how many workers exceed the new number before it is applied.
-- [ ] What happens to those workers is decided and written down, not left to the reader.
-- [ ] The count crosses the product boundary the way `adr/0093` allows, or the item says why it cannot.
+- [ ] Lowering a quota states how many workers exceed the new number before it is applied, fetched
+      asynchronously — never a live synchronous call to the calendar.
+- [x] What happens to those workers is decided and written down: nothing is deleted or suspended, they
+      simply cannot be assigned a new booking while above the tenant's own quota.
+- [ ] The count crosses the product boundary the way `adr/0093` allows (async, over the existing
+      outbox shape), and the write recomputes it fresh rather than trusting the earlier shown value —
+      refusing rather than silently diverging from what the owner confirmed against.
