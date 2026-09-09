@@ -250,6 +250,15 @@ denial.
   (`integer`, default `1`) - nothing in `13-01`'s own scope changes either away from its default; that
   is `13-02`'s job once a real payment exists to drive it.
 
+  **`sites.admin_limit`** (`integer`, default `1`, `25-25`) is `seat_limit`'s sibling for the
+  Administrator role rather than a caller-supplied number: 1 for `tier = 'free'`, 2 for any paid tier
+  (`ago-business` decisions `0011`/`0012`), derived from `tier` alone by `SubscriptionTierBands
+  .ResolveAdminLimit` wherever `tier` is set, never threaded through as its own constructor or
+  checkout parameter. Enforced the identical way `seat_limit` is - a `SELECT ... FOR UPDATE` row lock
+  on `sites`, counting real `operators` rows filtered to the `"Admin"` role inside that lock - and
+  independent of it: granting or revoking an Administrator seat does not move the Operator count `sites
+  .seat_limit` governs, or the reverse.
+
   **The seat-limit check is a `SELECT ... FOR UPDATE` row lock on `sites`, not a denormalized counter
   like `active_chats` above it - a deliberate contrast, not an oversight.** `active_chats` uses an
   atomic `UPDATE ... WHERE ... < capacity` because operator *assignment* is a high-frequency, contended

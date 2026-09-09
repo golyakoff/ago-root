@@ -1,7 +1,7 @@
 # 25-25 · Administrator seats have no limit of their own
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#248`
 - **Depends on**: `ago-business` decision `0011` is the decision this item finishes implementing.
   `23-71`/`23-72`/`23-67` are the prerequisites `0011` itself names — check each is actually done
   before assuming this item can proceed cleanly on top of them.
@@ -44,9 +44,20 @@ rather than inventing a second number nothing backs.
 
 ## Done when
 
-- [ ] A site's Administrator seat count is gated against its own limit, independent of the Operator
+- [x] A site's Administrator seat count is gated against its own limit, independent of the Operator
       limit, proven by a test that grants/revokes each role and confirms the other's count is
       unaffected.
-- [ ] The limit values match `ago-business 0012`'s own grid per tier.
-- [ ] `25-18`'s invite message can now show the correct per-role count/limit — either finished in this
+- [x] The limit values match `ago-business 0012`'s own grid per tier.
+- [x] `25-18`'s invite message can now show the correct per-role count/limit — either finished in this
       same change or explicitly handed back to a console-side follow-up, stated either way.
+
+## Outcome
+
+`ago-chat#248`. `Site.AdminLimit` is a pure function of `Tier` (1 free, 2 paid — `ago-business`
+0011/0012), never a caller-supplied number, unlike `SeatLimit`. Enforced at the two write paths that
+grow the "Admin"-role count: an invite redemption and an existing colleague's promotion, both under
+the same `sites` row lock `SeatLimit`'s own check already takes. **A real, pre-existing bug fixed
+along the way**: an invited Administrator previously counted against `SeatLimit` and defaulted to
+`HoldsSeat = true`, contradicting the decision this item implements — the seat count now filters to
+`HoldsSeat == true`. `25-18`'s console box is handed back as a named follow-up — the backend has what
+it needs, but the console screen to show it doesn't exist yet.
