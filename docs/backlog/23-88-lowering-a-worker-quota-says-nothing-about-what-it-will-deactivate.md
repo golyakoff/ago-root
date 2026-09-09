@@ -1,7 +1,8 @@
 # lowering a worker quota says nothing about what it will deactivate
 
 - **Stage**: 23
-- **Status**: ready — **all three open questions answered by the author, 2026-09-10, recorded below**
+- **Status**: in progress — `ago-chat` half landed (`ago-chat#254`, `adr/0165`); `ago-calendar` half
+  (the actual answer) still needed — see Outcome below for the exact shape
 - **Depends on**: `23-66`, which built the grant this lowers.
 - **Found**: 2026-09-07, carried out of `23-66` at landing rather than left inside it.
 
@@ -83,10 +84,82 @@ an owner's confirmed write today or an automatic non-payment trigger later.
 
 ## Done when
 
-- [ ] Lowering a quota states how many workers exceed the new number before it is applied, fetched
+- [~] Lowering a quota states how many workers exceed the new number before it is applied, fetched
       asynchronously — never a live synchronous call to the calendar.
+      **The `ago-chat` half is fully built; the `ago-calendar` half that actually answers is not.**
+      `POST .../modules/{moduleKey}/quantity/impact` starts the question (stages
+      `ModuleQuantityImpactRequested` on chat's own outbox, never blocks); `GET` on the identical
+      route reads back a three-state answer (never asked / asked, not yet answered / answered - "how
+      many, and their display names"). No module product publishes a reply yet, so on a real
+      deployment this sits "asked, not yet answered" forever until `ago-calendar` ships its own
+      answering half - see Outcome below for exactly what that half needs to do.
 - [x] What happens to those workers is decided and written down: nothing is deleted or suspended, they
       simply cannot be assigned a new booking while above the tenant's own quota.
-- [ ] The count crosses the product boundary the way `adr/0093` allows (async, over the existing
+      Confirmed already fully built, not touched by this pass: `adr/0125`/`ago-calendar`'s own
+      `ModuleQuantityGrantedConsumer` + `WorkerQuotaPolicy` deactivate the most-recently-created active
+      workers first, inside the transaction that applies the grant, every time - unconditionally, with
+      no dependency on anything this item adds.
+- [~] The count crosses the product boundary the way `adr/0093` allows (async, over the existing
       outbox shape), and the write recomputes it fresh rather than trusting the earlier shown value —
       refusing rather than silently diverging from what the owner confirmed against.
+      **The crossing reuses the identical outbox mechanism `23-89` proved for the grant itself** - a
+      new `ModuleQuantityImpactRequested` event, the same shape as `ModuleQuantityGranted`
+      (`adr/0125`'s own precedent), not a new kind of channel. **The write-time refusal is real and
+      tested, but is a narrower guarantee than "recomputes fresh inside the calendar's own database"
+      literally reads**: `GrantModuleQuantityAsOwnerHandler`/`GrantModuleQuantityHandler` compare the
+      owner's confirmation against chat's own stored copy of the module's last answer (never a live
+      call to the calendar - rule 8 forbids that at this write, unchanged), and refuse
+      (`Module.QuantityImpactStale`, HTTP 409) on any mismatch or missing answer. The unconditional
+      safety net stays exactly where it already was: `adr/0125`'s own live lock-and-count on the
+      calendar's side, which this item does not touch and does not need to - no *wrong* deactivation
+      was ever possible regardless of what chat sends. What this box's own literal wording asks for
+      beyond that - the calendar's own consumer re-validating the expected count against its live read
+      and reporting a mismatch back - needs `ago-calendar` code this pass could not reach (no worktree
+      assigned); see Outcome.
+
+## Outcome (this pass)
+
+`ago-chat` branch `feat/23-88-quota-lowering-states-deactivation`: the owner-facing half of the async
+preview round trip, complete and tested - `ModuleQuantityImpactPreview` (Domain, one row per
+site/module, the identical snapshot shape `ModuleQuantityGrant` already uses), `ModuleQuantityImpactRequested`
+(Contracts, the outbound question, riding chat's existing outbox exactly like `ModuleQuantityGranted`
+does), `IModuleQuantityImpactPreviewStore`/`ModuleQuantityImpactPreviewStore` (Application/Infrastructure,
+one migration, `Stage23AddModuleQuantityImpactPreviews`), two new owner routes
+(`POST`/`GET .../modules/{moduleKey}/quantity/impact`), a `Ago.Chat.Worker` consumer
+(`ModuleQuantityImpactComputedConsumer`) ready to receive a reply nothing sends yet, and the write-time
+guard on both `GrantModuleQuantityAsOwnerHandler` and `GrantModuleQuantityHandler`
+(`ExpectedAffectedCount`, optional, backward-compatible - `null` preserves every existing caller's
+behaviour unchanged).
+
+**What `ago-calendar` needs, precisely, to complete the loop** (not built this pass - no worktree
+assigned, and this item's own instructions were explicit: report rather than guess):
+
+- A new consumer on `ModuleQuantityImpactRequested` (topic name literal `"ModuleQuantityImpactRequested"`,
+  filtered by `ModuleKey == "calendar"`, the identical shape `ModuleQuantityGrantedConsumer` already
+  establishes for its sibling topic).
+- A read-only computation: how many of the tenant's own active workers exceed the requested candidate
+  quantity, and their display names - no lock needed (nothing is written), unlike the grant's own
+  `FOR UPDATE` application.
+- A reply published on calendar's own outbox to a topic named `"ModuleQuantityImpactComputed"` (a
+  literal `ago-chat`'s own `ModuleQuantityImpactComputedConsumer` already subscribes to and is ready
+  for), carrying `SiteId`, `ModuleKey`, `RequestedQuantity`, `AffectedCount`, `AffectedItemDisplayNames`,
+  `CorrelationId`, `OccurredAt` - the exact shape `ago-chat`'s own
+  `ModuleQuantityImpactComputedWireContract` (`Ago.Chat.Worker`) already specifies and is waiting to
+  deserialize.
+
+This is additive on the calendar side (a new consumer + a new outbound topic), not a change to
+`adr/0125`'s own existing enforcement - the two mechanisms are independent, and the belt-and-suspenders
+version of the write-time guard (calendar's own consumer re-validating the expected count against its
+live read, reported back) is a further, optional refinement on top of what's specified here, not a
+prerequisite for it.
+
+Fails-before: the write-time guard's two refusal tests (`HandleAsync_WithExpectedAffectedCountDisagreeing...`,
+`HandleAsync_WithExpectedAffectedCountButNoPreviewEverRequested_Refuses`) were run against the handler
+with the guard block temporarily removed - both failed (asserted `IsFailure`, got `IsSuccess`) while
+every other test in the same file stayed green; restored, all pass.
+
+Verification (`ago-chat`): `dotnet format --verify-no-changes` clean; `dotnet build -c Release` 0
+warnings/0 errors; exact test counts in this item's own worker report. Migration applied and verified
+against a real local Postgres before being included (`dotnet ef database update`, table inspected with
+`psql`). No `ago-deploy` or `ago-console` change - this item's own scope stayed inside `ago-chat`, with
+`ago-calendar`'s own remaining half specified above rather than guessed at.
