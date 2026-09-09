@@ -100,11 +100,17 @@ supposed to prevent.
 
 A separate product with a separate broker vhost and a separate database (`adr/0027`); listed on this
 page because the delivery semantics, the outbox rule and the versioning rule are the platform's and
-are identical. Nothing here is consumed by AGO Chat and nothing there is consumed here.
+are identical.
+
+**Until `23-88`/`adr/0165`, nothing here was consumed by AGO Chat and nothing there was consumed
+here** - that sentence was true of every topic below it until the async worker-quota impact preview
+needed the first reply in the opposite direction. It stays true of `BookingConfirmed`: that row is
+still calendar-internal only.
 
 | Event | Key | Consumers |
 |---|---|---|
 | `BookingConfirmed` (`20-04`) | `event_id` | `20-05`'s SMS delivery. None wired yet |
+| `ModuleQuantityImpactComputed` (`23-88`/`adr/0165`) | `site_id` | `Ago.Chat.Worker.ModuleQuantityImpactComputedConsumer` - the reply to chat's own `ModuleQuantityImpactRequested` (below). No module product publishes to this topic yet; `ago-chat`'s own consuming half ships ahead of any publisher, the same "mechanism first, caller later" shape `GrantModuleQuantity` itself once shipped in |
 
 `BookingConfirmed` is a past-tense fact: the operator veto window closed with nobody acting (or an
 operator confirmed early), and the visit is on. Staged to the outbox in the **same transaction** as
@@ -252,7 +258,7 @@ At-least-once, everywhere, in both directions. Therefore:
   unique-violation is "detected, skipped, acked" realized without a broker, because there is no broker
   in this path to realize it with. See `adr/0071`.
 
-### Two facts that cross products, and both cross here
+### Facts that cross products
 
 Neither product reads the other's tables (`adr/0093`), so anything one needs from the other arrives as
 an event through this outbox and inherits at-least-once delivery with it.
@@ -262,9 +268,15 @@ an event through this outbox and inherits at-least-once delivery with it.
 - **The calendar add-on's worker quota is granted by chat and enforced by the calendar**, propagated
   by its own integration event; the calendar owns both the enforcement and the downgrade rule inside
   its own transaction ([`adr/0125`](../adr/0125-calendar-add-on-quota-crosses-through-the-outbox.md)).
+- **How many workers a candidate quota would exceed crosses back the other way** - chat asks
+  (`ModuleQuantityImpactRequested`), the calendar answers on its own outbox
+  (`ModuleQuantityImpactComputed`), never a live synchronous call in either direction
+  ([`adr/0165`](../adr/0165-the-quota-impact-preview-is-the-first-reply-the-calendar-sends-chat.md)) -
+  the first crossing to run calendar-to-chat rather than the other way, reusing the identical
+  mechanism rather than inventing a second one.
 
-Both are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same as
-usable on the calendar's, and only the consumer's own copy decides what a tenant can do.
+All three are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same
+as usable on the calendar's, and only the consumer's own copy decides what a tenant can do.
 
 ## Outbox dispatcher
 
