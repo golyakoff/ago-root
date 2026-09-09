@@ -1,8 +1,9 @@
 # a tenant can see and publish their own documents
 
 - **Stage**: 23
-- **Status**: ready, **narrowed 2026-09-06** after the author corrected what this item assumed.
-  It is the tenant's *own* documents only; the two other audiences below are `23-52` and a question.
+- **Status**: done — `ago-chat#214`, `ago-console#150`. **Narrowed 2026-09-06** after the author
+  corrected what this item assumed. It is the tenant's *own* documents only; the two other audiences
+  below are `23-52` and a question.
 - **Depends on**: `23-31` reserves the place (Администрирование → Документы). `24-02` built the store.
 - **Decision**: `adr/0114` — a document's text is data; only publishing and reading it is code
 
@@ -47,10 +48,17 @@ every legal correction.
 
 ## Done when
 
-- [ ] A tenant sees their documents and every version, with dates.
-- [ ] Publishing a new version works from the console and the old version stays readable.
-- [ ] A tenant can answer "which version did this person accept, and when" without asking us.
-- [ ] Nothing in the console offers to edit a published version in place.
+- [x] A tenant sees their documents and every version, with dates.
+- [x] Publishing a new version works from the console and the old version stays readable.
+- [x] A tenant can answer "which version did this person accept, and when" without asking us.
+- [x] Nothing in the console offers to edit a published version in place.
+
+## Outcome
+
+`ago-chat#214` reads a tenant's own consent documents and who accepted them; `ago-console#150` is the
+screen. Both merged 2026-09-07. `25-21` (in progress separately) reshapes this same screen to show
+current state as a card/table by default rather than always a form — a display refinement on top of
+this item's own mechanism, not a redo of it.
 
 ## The author's correction, 2026-09-06 — and it is not a detail
 

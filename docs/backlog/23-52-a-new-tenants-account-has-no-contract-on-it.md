@@ -74,9 +74,12 @@ period and not a volume.
 ## Done when
 
 - [ ] A newly registered tenant's account carries the deployment's own documents, with an acceptance
-      record naming the version.
+      record naming the version. — blocked on `24-16` (`required_documents` ships empty in every
+      deployment; nothing exists yet for a registration to bind).
 - [ ] A deployment that configures none produces none, and that is visible rather than silent.
-- [ ] The tenant can read what is on their account, including a superseded version.
+- [x] The tenant can read what is on their account, including a superseded version. — `ago-chat#211`
+      (merged 2026-09-07): `GET /api/v1/sites/{siteId}/agreements`. This one box is done; the other
+      four are not, and remain genuinely open below.
 - [ ] `compliance-checklist.md` says whether this closes any of its lines.
 - [ ] The contract carries an acceptable-use clause and the right to suspend for abuse, so that a
       retention promise is not an unlimited one.

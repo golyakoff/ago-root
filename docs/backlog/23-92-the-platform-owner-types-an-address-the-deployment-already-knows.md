@@ -1,7 +1,7 @@
 # the platform owner is asked to type an address the deployment already knows
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — `ago-chat#224`, `ago-console#156`, `ago-deploy#168`; `adr/0154`
 - **Depends on**: `adr/0150` is the decision this applies to the neighbouring field. `23-87` made
   provisioning work at all, which is what exposed this.
 - **Found**: 2026-09-07, by the author trying to grant the calendar on the demo stand — and then asking
@@ -75,6 +75,17 @@ ignorant while the deployment supplies the mapping. That is structurally identic
 
 ## Done when
 
-- [ ] Granting a declared module needs no address typed, and no literal module name enters `Ago.Chat.*`.
-- [ ] A module the deployment has not declared is refused with a message naming what is missing.
-- [ ] Whether a stored entry point or configuration wins is decided and written down.
+- [x] Granting a declared module needs no address typed, and no literal module name enters `Ago.Chat.*`.
+- [x] A module the deployment has not declared is refused with a message naming what is missing.
+- [x] Whether a stored entry point or configuration wins is decided and written down.
+
+## Outcome
+
+The Entry point field is gone from the platform owner's grant form entirely. `IModuleEntryPointProvider`
+resolves whatever key the caller supplies against what `ago-deploy` declares — no literal module name
+enters `Ago.Chat.*`, checked by `Ago.Chat.Architecture.Tests`. An undeclared key is refused by name
+(`Module.EntryPointNotConfigured`) rather than left blank to fail later as a 404. `ago-deploy` declares
+`http://ago-calendar-api` — **deliberately and temporarily plain HTTP**, not yet the intended
+`https://ago-calendar-api:443`, because `ago-chat-api` mounts no volume carrying `22-24`'s internal CA
+yet. `23-93` is the item that closes that gap; this configured string becomes `https://` only after
+`23-93` lands and the leg is proved, never before. Decided in `adr/0154`.
