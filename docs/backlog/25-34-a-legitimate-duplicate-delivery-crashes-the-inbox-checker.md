@@ -1,8 +1,7 @@
 # 25-34 · Module-task routing bypasses the conversation's own retry-on-conflict pattern
 
 - **Stage**: 25
-- **Status**: ready — **corrected after further investigation; the first write-up misidentified where
-  the fix belongs. Read this version, not the title's own first impression.**
+- **Status**: done — `ago-chat#245`
 - **Depends on**: nothing
 - **Found**: 2026-09-09, live, continuing the author's own booking-flow test right after `25-32` fixed
   the previous step
@@ -111,18 +110,33 @@ exception, just a quieter one.
 
 ## Done when
 
-- [ ] `RouteConversationToModuleHandler`'s own module-task-routing path retries once on a genuine
+- [x] `RouteConversationToModuleHandler`'s own module-task-routing path retries once on a genuine
       `Conversation` concurrency conflict, matching `CloseConversationHandler`'s established shape,
       rather than letting a raw EF exception propagate to `ModuleTaskConsumer` and silently drop the
       delivery.
-- [ ] A test drives two genuinely concurrent deliveries against the same conversation through this
+- [x] A test drives two genuinely concurrent deliveries against the same conversation through this
       real handler (not just `EfInboxChecker` in isolation) and asserts both succeed correctly (one
       message added and the other's retry either succeeds too or lands the outcome the retry policy
       promises) with no unhandled exception.
-- [ ] The inbox/idempotency guarantee still holds after the fix — a genuinely duplicate delivery (not
+- [x] The inbox/idempotency guarantee still holds after the fix — a genuinely duplicate delivery (not
       a concurrency race, an actual redelivery of an already-fully-processed message) is still
       recognised and skipped, proven by a test.
-- [ ] Re-verified against the live reproduction: picking a worker in the booking flow (site
+- [x] Re-verified against the live reproduction: picking a worker in the booking flow (site
       `01a06262-d4f0-7fb6-94e0-9ff702db8a43`, calendar `01a084eb-16be-7865-bcc1-7109fda9c9d9`, worker
       `01a084ec-0c41-78c9-b959-04cb7c1bebf9`) reaches the time-picker step instead of the "a person will
       take over" fallback.
+
+## Outcome
+
+Every call site in `RouteConversationToModuleHandler` now builds an `Action<Conversation>
+applyMutations` delegate; `AddSystemMessageAndSaveAsync` records the inbox entry first, alone, then
+applies the mutation and saves through `IConversationRepository.SaveAsync` — retrying once on
+`ConversationConcurrencyConflictException`, matching `CloseConversationHandler`'s own shape. A second,
+related conflict surfaced by the same reproduction — two different triggers racing the same active task
+can hit `messages`' own `(conversation_id, sequence, site_id)` unique index before the `xmin` check
+ever runs — was fixed by having `ConversationRepository.SaveAsync` translate that constraint violation
+into the same `ConversationConcurrencyConflictException`, matched by name suffix since `messages` is
+partitioned. New test `RouteConversationToModuleConcurrencyTests
+.TwoDifferentTriggersForTheSameActiveTask_...BothSucceedViaTheRetry` failed 5/5 runs before the fix
+(silent message loss) and passes after. Re-verified live on `golyakov.net`, same conversation this item
+names: the flow now reaches "Pick a time:" with a real slot list instead of the fallback message.

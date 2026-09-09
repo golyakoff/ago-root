@@ -1,7 +1,7 @@
 # 25-32 · The time-picker step offers zero slots despite real availability
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#55`
 - **Depends on**: `25-31` (the widget-side send bug) is fixed and deployed — this is the next thing
   the booking flow hits once a reply can actually reach the server at all
 - **Found**: 2026-09-09, live, continuing the author's own test of the calendar booking flow on
@@ -49,8 +49,27 @@ resolve first** — whichever of the two explanations is true changes where the 
 
 ## Done when
 
-- [ ] The worker-choice-skip is explained with certainty — which code path actually produced the
+- [x] The worker-choice-skip is explained with certainty — which code path actually produced the
       observed transition, named and read, not inferred.
-- [ ] "Pick a time:" offers real slots for a calendar that genuinely has them, proven against the same
+- [x] "Pick a time:" offers real slots for a calendar that genuinely has them, proven against the same
       live conversation/site this item names, not only a fresh test fixture.
-- [ ] A regression test exists for whichever handler was actually at fault, with a fails-before proof.
+- [x] A regression test exists for whichever handler was actually at fault, with a fails-before proof.
+
+## Outcome
+
+Neither symptom was a separate bug in `GetOpenSlotsHandler` or a skipped step in
+`ReplyToModuleTaskHandler`. `ModuleResiliencePipelines.IsRetryWorthy` retries **any** exception on
+`SubmitReplyAsync`, including a timeout on a request Calendar had already committed — so the same
+service-choice value was delivered twice. `AwaitingServiceChoice` and `AwaitingWorkerChoice` both read
+an incoming reply as a `choice_list` answer, so the replayed service id was silently applied as the
+*worker* choice: it consumed the worker-choice step (which is why it never appeared to the visitor)
+and then fed a service id into `GetOpenSlotsHandler` as a worker id, which genuinely has zero slots for
+that key — the observed empty picker.
+
+Fixed by giving `ChatBookingTask` (`ago-calendar/src/Ago.Calendar.Domain/ChatBookingTask.cs`) a
+`LastAppliedValue`, set by every state-advancing method. `ReplyToModuleTaskHandler` now checks that
+value before dispatching: a reply matching what already produced the current state replays the step
+that value already produced, rather than advancing again on a duplicate delivery. Regression test
+`ChatModuleTaskHandlerTests.ARetriedServiceChoiceReply_ReplaysTheWorkerChoiceStep_RatherThanCorruptingIt`
+proved this fails without the fix. Re-verified live against the same conversation this item names, and
+again later the same day continuing straight through to a real slot list.
