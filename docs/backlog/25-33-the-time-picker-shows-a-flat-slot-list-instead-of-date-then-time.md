@@ -1,7 +1,7 @@
 # 25-33 · The time picker shows a flat slot list instead of date, then time
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#57`
 - **Depends on**: `25-32` (real slots have to reach this step before its own shape is worth
   redesigning)
 - **Found**: 2026-09-09, the author's own request, testing the booking flow live
@@ -46,9 +46,23 @@ a requirement."* The `SlotOption`/`OpenSlotRow` shape already carries `startsAt`
 
 ## Done when
 
-- [ ] A visitor picks a date first, from dates that actually have availability, then picks a time
+- [x] A visitor picks a date first, from dates that actually have availability, then picks a time
       within that date.
-- [ ] A calendar with more than one worker offers a way to choose one, and the item states where that
+- [x] A calendar with more than one worker offers a way to choose one, and the item states where that
       choice sits relative to the date/time picker (before, after, or folded into it).
-- [ ] The shape works within the existing four-primitive vocabulary, or the item names exactly why a
+- [x] The shape works within the existing four-primitive vocabulary, or the item names exactly why a
       fifth is unavoidable and gets that decision recorded as its own ADR before building it.
+
+## Outcome
+
+Fits entirely inside the existing `date_time_picker` kind as two rounds, exactly as anticipated — no
+fifth primitive, no wire-contract change, no `ago-widget` change. `ModuleStepFactory.DateChoice`
+groups a worker's open slots by `OpenSlotRow.LocalDate` and offers up to 10 distinct dates;
+`SlotChoice` is now day-scoped, times only. One new domain state (`AwaitingDateChoice`) and one
+persisted field (`ChatBookingTask.SelectedDate`) — the one migration this item carries. The date round
+and the time round share one wire kind safely because their reply values live in disjoint formats (an
+ISO date string vs. an `EventId` GUID) — proven by a dedicated regression test, the same class of bug
+`25-32` fixed for service/worker choice. Worker choice keeps its existing, unconditional placement
+immediately before the date round, per the item's own instruction not to build it from scratch.
+`SlotPageSize` was genuinely revisited: split into a query limit and two page bounds (`DatePageSize`,
+`TimeSlotPageSize`), each re-justified for its own new reason rather than just renumbered.
