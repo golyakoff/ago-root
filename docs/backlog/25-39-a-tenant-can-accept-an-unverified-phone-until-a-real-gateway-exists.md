@@ -22,11 +22,21 @@ changes, `RequiresVerifiedPhone: true` doesn't protect anything — it just make
 ## Scope
 
 - A tenant-level setting (alongside `Site.WidgetConfig.RequireContactConsent`'s own pattern —
-  `ago-chat`'s `WidgetConfig`, surfaced from the console) that a tenant can turn on for their own site:
-  bookings through the chat-driven module proceed with a self-reported, unverified phone number,
-  instead of refusing at `ReplyToModuleTaskHandler.HandlePhoneProvidedAsync`'s `RequiresVerifiedPhone:
-  true`.
-- **Off by default.** A tenant who never touches the setting keeps today's guarantee unchanged.
+  `ago-chat`'s `WidgetConfig`, surfaced from the console) that a tenant can turn on for their own site.
+- **With it on, the flow does not stop to ask at all.** The point is not merely "accept an unverified
+  phone if one is typed in" — it is that a visitor who already gave a phone number earlier in the same
+  conversation (`25-38`'s own subject) sees the booking complete the moment they pick a slot.
+  `ReplyToModuleTaskHandler.HandleSlotChosenAsync` currently always returns `ModuleStepFactory.PhoneForm()`
+  next (`ReplyToModuleTaskHandler.cs:181`); with the setting on and a phone already known from the
+  conversation, it should instead call straight through to what `HandlePhoneProvidedAsync` does today,
+  passing that already-known number with `phoneVerifiedAt: null` — no form step rendered, no
+  `VerifiedPhoneForm` shown, nothing for the visitor to type.
+- **If no phone is known yet at all** (a visitor who reached booking without ever going through chat's
+  own contact capture), the setting does not invent one — the phone step still has to be shown, just
+  without the verification requirement (`RequiresVerifiedPhone: false` instead of skipped entirely).
+  Name this second case explicitly in the implementation; it is the fallback, not the common path.
+- **Off by default.** A tenant who never touches the setting keeps today's guarantee, and today's
+  step-by-step flow, unchanged.
 - **The booking record itself must say the phone was never verified** — not silently treated as
   equivalent to a verified one. Whatever reads `customers.phone_verified_at` downstream (operator
   console, any future no-show/reminder logic) must be able to tell the two cases apart.
@@ -50,8 +60,12 @@ changes, `RequiresVerifiedPhone: true` doesn't protect anything — it just make
 ## Done when
 
 - [ ] A tenant can turn the setting on for their own site, off by default.
-- [ ] With it on, a booking through the chat-driven flow completes with a self-reported phone and no
-      verification code sent or required.
+- [ ] With it on and a phone already known from earlier in the conversation, picking a slot completes
+      the booking directly — no phone-form step is shown at all, proven by a test asserting the reply
+      to `HandleSlotChosenAsync` is a completion/confirmation step, not `PhoneForm`.
+- [ ] With it on and no phone known yet, the phone step still appears, but without the verification
+      requirement — proven by a test.
+- [ ] With it off (default), both of the above are unchanged from today's behaviour.
 - [ ] The booking/customer record distinguishes an unverified phone accepted this way from a genuinely
       verified one, proven by a test.
 - [ ] The console states plainly, next to the setting, why it exists and that it is temporary.
