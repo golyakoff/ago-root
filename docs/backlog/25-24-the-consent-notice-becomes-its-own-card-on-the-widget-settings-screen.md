@@ -1,9 +1,7 @@
 # 25-24 · The consent notice becomes its own card on the widget settings screen
 
 - **Stage**: 25
-- **Status**: ready — **blocked in practice, not on another item's number**: `WidgetConfigPage.tsx` is
-  being actively edited by an in-flight worker landing `23-64` (the auto-open greeting) as this is
-  filed. Do not start this until that lands — same file, real conflict, not a hypothetical one.
+- **Status**: done — `ago-console#190`
 - **Depends on**: `16-04` built the notice text and its checkbox; this only reorganises how they are
   shown.
 - **Found**: 2026-09-09, the author using the widget settings screen
@@ -36,6 +34,17 @@ reads as if they are the same setting.
 
 ## Done when
 
-- [ ] The consent notice is shown in its own card, separate from the `requireContactConsent` checkbox.
-- [ ] The card shows the current text truncated to 10 lines with a working "show fully" expansion.
-- [ ] Nothing about how the notice text is authored or saved changes — display only.
+- [x] The consent notice is shown in its own card, separate from the `requireContactConsent` checkbox.
+- [x] The card shows the current text truncated to 10 lines with a working "show fully" expansion.
+- [x] Nothing about how the notice text is authored or saved changes — display only.
+
+## Outcome
+
+The notice card defaults to a read-only view of the *current* text/link (never the live edit draft),
+truncated via a new pure `truncateToLines` helper with a "Show fully"/"Show less" toggle. Editing is a
+secondary action behind an Edit/Cancel toggle, the same `formOpen`/`formVisible` shape `25-21`'s
+`ConsentDocumentPanel` already established for the identical problem on `/account/documents`.
+`requireContactConsent` moved into its own separate "Contact consent" panel; saving is unchanged, one
+`<form>`, one PUT. `25-21` itself (bundled with this item for the same file/theme) was found already
+merged directly by the author before this branch was cut — verified against its own Done-when rather
+than redone.
