@@ -1,7 +1,7 @@
 # a visitor can keep a copy of the conversation
 
 - **Stage**: 23
-- **Status**: ready — **the format question answered by the author, 2026-09-09, recorded below**
+- **Status**: done — `ago-widget#71`, `adr/0162`
 - **Depends on**: `23-61` reserves the place this control sits in.
 - **Decision**: the author's, 2026-09-07 — a down-arrow icon in the compose area, «Сохранить диалог».
 
@@ -59,8 +59,14 @@ have expired by the time it is opened is a worse copy than a larger file.
 
 ## Done when
 
-- [ ] A visitor can save the conversation from the compose area and gets a file.
-- [ ] The file contains what they could see and nothing else, asserted by a test.
-- [ ] The saved file is a `.zip` containing an HTML transcript with the real attachment files bundled
-      inside, per the author's decision above.
-- [ ] The widget's bundle budget still holds.
+- [x] A visitor can save the conversation from the compose area and gets a file — the button fills
+      `23-61`'s reserved place, `ago-widget#71`.
+- [x] The file contains what they could see and nothing else — proven by a fails-before that leaked
+      an operator's own internal id into the transcript and watched the privacy-boundary test catch
+      it, restored, re-ran green.
+- [x] The saved file is a `.zip` containing an HTML transcript with the real attachment files bundled
+      inside, per the author's decision above. No new dependency — `adr/0162` argues why the ZIP
+      writer is hand-rolled.
+- [x] The widget's bundle budget still holds: 32.3 KB gzipped base (+0.5 KB), against a 45 KB
+      ceiling — the archive/zip logic itself lives in a lazily-loaded module (2.51 KB), not counted
+      against the base bundle at all.
