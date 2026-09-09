@@ -1,7 +1,7 @@
 # 25-27 · The consent checkbox label names a document but cannot open it
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#76`
 - **Depends on**: `24-05` built the checkbox; `23-37` built the public `/policies/:documentKey` page
   this item points the link at
 - **Found**: 2026-09-09, the author's own request
@@ -49,9 +49,17 @@ The widget just never uses it.
 
 ## Done when
 
-- [ ] The consent checkbox's document-title text is an underlined, visibly-a-link element pointing to
+- [x] The consent checkbox's document-title text is an underlined, visibly-a-link element pointing to
       that document's real public policy page.
-- [ ] The link opens in a new tab, and does not navigate the visitor's own conversation away.
-- [ ] Both consent purposes (contact, marketing) get the identical treatment.
-- [ ] Clicking the link does not also toggle the checkbox; clicking the checkbox is unaffected by the
+- [x] The link opens in a new tab, and does not navigate the visitor's own conversation away.
+- [x] Both consent purposes (contact, marketing) get the identical treatment.
+- [x] Clicking the link does not also toggle the checkbox; clicking the checkbox is unaffected by the
       link now being present.
+
+## Outcome
+
+`ago-widget#76`. A new `WidgetConfig.policyBaseUrl`, baked at build time like `apiBaseUrl` but with
+no inference from it (the console and the API are unrelated hosts by design), gives `buildConsentLabel`
+an absolute URL to `/policies/:documentKey`. The link's own `click` handler calls `stopPropagation` —
+that is what keeps the checkbox's own click target unambiguous, verified by a dedicated test in both
+directions. Bundle cost: +0.3 KB gzipped (33.3 → 33.6 KB), well inside the 45 KB budget.
