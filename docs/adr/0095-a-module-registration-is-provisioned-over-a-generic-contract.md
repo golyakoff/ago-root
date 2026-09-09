@@ -7,7 +7,9 @@
   and `adr/0094` (the per-call credential this mechanism installs on both sides). Amends neither.
 - **Amended**: 2026-09-04 by `22-17` (see Consequences) — the provisioning secret can now create
   tenants, so this ADR's enumerated blast radius is wider than it was written. The decision stands;
-  the limit does not.
+  the limit does not. **Amended again**, 2026-09-10, by `adr/0164` (`23-93`) — this ADR's blast-radius
+  section never mentioned transport, which read as considered and accepted when it was not; `adr/0164`
+  is that answer (encrypt the leg), and does not otherwise change this decision.
 
 ## Context
 

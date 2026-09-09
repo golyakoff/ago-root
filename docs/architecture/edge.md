@@ -204,6 +204,17 @@ accepted gap, mitigated only by a ten-year duration - versus the leaf certificat
 `TlsCertificateRenewalOverdue` Prometheus rule already covers with no changes to the rule itself,
 `adr/0045`), and what was demonstrated rather than merely argued.
 
+**`23-93`/`adr/0164` is the follow-through this section's own mechanism needed and did not yet have.**
+`adr/0095`'s deployment-wide provisioning secret (`X-Ago-Module-Provisioning-Secret`) rides the
+identical hop this section describes, and until `23-93` the configured entry point (`23-92`'s own
+centralised value) still read `http://ago-calendar-api` in every overlay - the CA and the listener
+existed, but the address never asked for them. `Ago.Chat.Api`'s own image had already been trusting
+the CA since `22-24` landed; what `23-93` closed was the entry point itself, switched to
+`https://ago-calendar-api:443` in the demo overlay specifically (the only overlay that runs the
+encrypted listener at all - `k8s/overlays/local/` stays on `http`, deliberately, since it has neither
+`internal-tls.yaml` nor a cert-manager `Issuer` of its own), proven first against the real production
+gateway class over a real TLS handshake, then switched - never the other way round.
+
 ## What the edge must **not** be responsible for
 
 Auth decisions, CORS logic that depends on a site's `allowed_origins` (that is a database lookup,
