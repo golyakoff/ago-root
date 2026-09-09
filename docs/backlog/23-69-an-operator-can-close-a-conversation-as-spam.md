@@ -1,8 +1,9 @@
 # an operator can close a conversation as spam
 
 - **Stage**: 23
-- **Status**: ready — **and it carries two questions, named below**
-- **Depends on**: `24-10` built `ConversationBlock`, which is the neighbour this must not be confused with.
+- **Status**: ready — **both open questions answered by the author, 2026-09-09, recorded below**
+- **Depends on**: `24-10` built `ConversationBlock` — and, per the author's own answer below, this item
+  reuses that same mechanism rather than a neighbour to it.
 - **Decision**: the author's, 2026-09-07, including the reason abuse is not the objection.
 
 ## What is actually true today
@@ -27,25 +28,26 @@ polish:
 - **Reversible.** A mistake can be undone, and the undo is recorded too. An irreversible judgement made
   in one click by a tired person is a worse tool than no tool.
 
-## The two questions, and they are the author's
+## The two questions, and they are the author's — both answered 2026-09-09
 
-**1. Does marking spam do anything, or only record it?**
+**1. Does marking spam do anything, or only record it? Decided: it auto-mutes the visitor for a
+window of time.** Marking a conversation as spam both records the judgement and suspends that
+visitor for a stated duration — the middle of the three options this item named, taken deliberately:
+records-only was rejected as giving the operator nothing for the click; hands-to-tenant was rejected
+as slower with no stated advantage the author asked for. The failure mode this option itself named
+("a visitor who was misjudged is silently unable to reach the shop") is real and accepted — mitigated
+by the record being attributed, visible and reversible (this item's own three scope properties above),
+not by avoiding the mute.
 
-If it only records, this is bookkeeping and the operator gets nothing for the click. Options, and they
-are genuinely different products:
-
-- **Records only.** Simplest, honest, and the operator's reward is a cleaner report rather than a
-  quieter day.
-- **Records, and the same visitor's next message does not create a new conversation** for some window.
-  That is where the value is — but it means a visitor who was misjudged is silently unable to reach the
-  shop, which is the failure mode worth being afraid of.
-- **Records, and hands the decision to the tenant** — a report of who was marked, with blocking as a
-  separate, deliberate act. Slower, and the only one where a wrong call is caught by somebody other
-  than the person who made it.
-
-**2. Is this the same thing as blocking?** `24-10` built `ConversationBlock`. Closing as spam and
-blocking a visitor are different acts with very different consequences, and if they end up sharing a
-mechanism it should be because somebody decided that, not because both were about unwanted messages.
+**2. Is this the same thing as blocking? Decided: yes, the same mechanism.** Marking spam applies
+`24-10`'s own `ConversationBlock` to the visitor, rather than a parallel mechanism. `24-10` built a
+manually-reversed, indefinite block with no expiry concept — this item's own "for a window of time"
+answer to question 1 means `ConversationBlock` needs a stated, automatic expiry added as part of this
+item's own scope, not assumed to already exist. Read `24-10`'s actual shipped code
+(`ago-chat`, `docs/backlog/24-10-*.md`) before building — it explicitly left a console screen for its
+own number and named `blocked_at IS NULL` as a repeated, hand-written predicate across roughly a dozen
+queries; both are directly relevant to building spam-marking on top of it correctly rather than
+re-discovering either.
 
 ## Where this is likely to go wrong
 
@@ -57,8 +59,10 @@ mechanism it should be because somebody decided that, not because both were abou
 
 ## Done when
 
-- [ ] An operator can close a conversation as spam, in one act.
+- [ ] An operator can close a conversation as spam, in one act, which applies `ConversationBlock` to
+      the visitor with a stated expiry (not indefinite) — the author's own decided shape.
 - [ ] The tenant can see how many, by whom, and read the conversations themselves.
-- [ ] It can be undone, and the undo is recorded.
-- [ ] Question 1 is answered in the change rather than settled by what was easiest to build.
-- [ ] The relationship to `24-10`'s blocking is stated, whichever way it goes.
+- [ ] It can be undone before the expiry, and the undo is recorded; after the expiry, the block lifts
+      on its own.
+- [x] Question 1 is answered — auto-mute for a stated window, recorded above.
+- [x] Question 2 is answered — the same mechanism as `24-10`'s blocking, recorded above.
