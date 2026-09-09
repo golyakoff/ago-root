@@ -1,7 +1,7 @@
 # a visitor uploads only after somebody agreed
 
 - **Stage**: 23
-- **Status**: ready — **two questions inside it, named below**
+- **Status**: ready — **both open questions answered by the author, 2026-09-09, recorded below**
 - **Depends on**: nothing. It changes the weighting of `23-75` and `23-76` rather than depending on them.
 - **Decision**: the author's, 2026-09-07 — an operator ticks *«разрешаю пользователю отправлять файлы»*,
   and without it there is no upload control at all.
@@ -30,35 +30,39 @@ size, where the application checked a declared number and the storage enforced n
 ## Scope
 
 - **A grant lives on the conversation**, given by an operator, revocable.
+- **A tenant-level default** (off, per the author's own recommendation above — a tenant who wants
+  uploads open by default turns it on) that seeds the per-conversation grant, which an operator can
+  then still override in either direction for one specific conversation.
 - **`CreateAttachmentHandler` refuses without it**, for the visitor side.
 - **The widget shows no upload control** until it exists, and the refusal is not explained to the
   visitor in terms they could act on.
 - **The operator's own uploads are unaffected.** They are an authenticated, paid identity; the
   per-conversation byte budget (`23-75`) still applies to both.
+- **No automatic grant from "recognised client" status** — recognition (`23-58`'s contact capture) is
+  free and self-asserted, and the author's own answer above is that it never grants on its own.
 
-## The two questions, and they are the author's
+## The two questions, and they are the author's — both answered 2026-09-09
 
 **1. What happens out of hours?** Nobody is there to agree, and night is exactly when somebody wants to
 send a photograph of a broken item. Three answers, each a different product:
 
 - **A tenant-level default**, which the operator can then override per conversation in either
-  direction. **Recommended**: a repair shop or a claims desk has photographs in every second
+  direction. **Recommended, and decided.** a repair shop or a claims desk has photographs in every second
   conversation, and for them a per-conversation tick is a tax; a shop that fears junk leaves the default
   off. It keeps the abuse property exactly where a tenant wants it.
 - **The auto-reply path grants it** when nobody is online. Keeps the night case working and gives an
-  attacker a predictable, unattended way in.
-- **No files out of hours.** Simplest, and it loses a real case.
+  attacker a predictable, unattended way in. Rejected.
+- **No files out of hours.** Simplest, and it loses a real case. Rejected.
 
 **2. Does "a recognised client" grant it automatically?** The author asked whether uploads could open
-once the visitor is known as a registered customer.
+once the visitor is known as a registered customer. **Decided: no.** Only an operator's own manual
+grant, per conversation or via the tenant-level default above — never automatically from recognition
+alone.
 
 **As a control on its own it is weak, and this is worth being plain about.** Being "recognised" means
 the visitor filled in the contact form (`23-58`), and filling that in is free and self-asserted. An
-attacker types junk and is recognised. It raises the cost by one form submission.
-
-**As a rule for granting automatically it is good**, and it composes with the operator's own switch
-rather than replacing it. That is the shape to build if the answer is yes: the grant is the boundary;
-recognition is one way it gets given.
+attacker types junk and is recognised. It raises the cost by one form submission — not enough on its
+own, which is exactly why the answer above is no.
 
 ## What it changes elsewhere
 
@@ -73,6 +77,10 @@ recognition is one way it gets given.
 
 - [ ] A visitor cannot obtain an upload slot for a conversation with no grant, refused server-side.
 - [ ] An operator can grant and revoke it in the conversation.
+- [ ] A tenant-level default (off) seeds the per-conversation grant, overridable by an operator either
+      way for one conversation — the out-of-hours case this item asked about, built rather than
+      discovered at night.
 - [ ] The widget shows no upload control until then, and says nothing an attacker could use.
-- [ ] The out-of-hours question is answered in the change rather than discovered at night.
+- [ ] Recognised-client status alone never grants it — only an operator's own manual grant or the
+      tenant default above.
 - [ ] An operator's own uploads are unaffected.
