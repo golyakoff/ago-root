@@ -692,6 +692,12 @@ startup, so a wrong key fails fast instead of silently disabling a feature.
   updated in `5-05` to link the operator row to Keycloak's own demo-operator user; source
   `deploy/docker/.env` first). Prints the demo site's public key and the demo operator's id - "Getting
   a working operator session locally" above is what actually turns that into a usable token now.
+- Restrict MinIO's CORS to whatever `sites.allowed_origins` actually holds: `deploy/seed/apply-minio-
+  cors.sh` (verified live against this compose stack's own MinIO - `25-14`; source `deploy/docker/.env`
+  first, and run it after `create-demo-tenant.sh` or any later change to a site's own origins, since it
+  is a snapshot, not a subscription - `docs/architecture/file-storage.md` has the full reasoning). Out
+  of the box MinIO's own CORS default is wide open (`*`), not closed, so skipping this step leaves
+  every origin able to read a presigned attachment URL it obtains, not only the tenant it belongs to.
 - Stop and restart without losing data: `down` then `up -d` again - verified, comes back healthy
   with no manual fixes. Add `-v` to `down` to also wipe the named volumes for a truly clean slate
   (not run in this session - permission for a volume-destroying command was withheld; the command
