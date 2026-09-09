@@ -1,7 +1,8 @@
 # 25-35 · Saving a conversation fails live
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **one of two candidates ruled out by reading the code (2026-09-09); live
+  re-verification against the real deployment still needed, see below**
 - **Depends on**: `23-62` built the feature; `25-30` fixed the same *class* of bug (CORS on a
   lazily-loaded module chunk) for `widget-module-booking.js` — check first whether that fix already
   covers `widget-module-save.js` or whether a second, different cause is at play
@@ -48,6 +49,15 @@ neither confirmed nor ruled out:
 
 ## Done when
 
-- [ ] The actual failing step is identified from a real caught error, not inferred.
+- [~] The actual failing step is identified from a real caught error, not inferred. — **one candidate
+  ruled out by reading the code, not yet confirmed which of the remaining ones it actually is.**
+  `25-14` cannot be the cause: `fetchAttachmentLocationForExport`/`fetchAttachmentBytes` both catch
+  every failure internally and omit the attachment rather than rethrow, so a CORS-blocked attachment
+  fetch cannot produce the generic total-failure `saveConversationFailedNote` this report describes.
+  The remaining live candidate is `loadModule`'s dynamic `import()` of `widget-module-save.js` — an ES
+  module import is a real CORS-mode fetch, unlike a `<script src>` tag. `25-30`'s nginx fix already
+  wildcards `Access-Control-Allow-Origin: *` on every file that server serves, generically, so it
+  should already cover this file too; the live report may simply predate that fix reaching the tested
+  page (a stale cached script). Needs an actual live re-test to settle, not further reading.
 - [ ] The fix lands wherever that step's own cause actually lives.
 - [ ] Re-verified live: saving a real conversation produces a real downloaded file.

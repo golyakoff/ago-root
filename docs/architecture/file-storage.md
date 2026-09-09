@@ -101,17 +101,87 @@ because guessable-or-not is not an access-control model.
 Presigned read URLs are cached per (attachment, viewer) for slightly less than their lifetime, so a
 chat history render of 20 images is one round trip's worth of signing, not 20.
 
-**No bucket CORS policy is configured anywhere in this repository or `ago-deploy` today.** Every
-existing consumer of a presigned GET reaches it through plain navigation - `<img src>`, `<a href>` -
-which a browser never subjects to CORS. `23-62` (`ago-widget`) is the first caller to need the bytes
-themselves, via `fetch()`, to bundle a visitor's attachments into a saved-conversation `.zip`
-(`adr/0162`); a browser's `fetch()` *is* subject to CORS, and MinIO/S3 sends none of the required
-`Access-Control-Allow-Origin` headers by default. That call degrades gracefully where it is made (the
-attachment is simply left out of the archive, per that item's own "never break the host page" posture)
-rather than failing loudly, which means this gap can go unnoticed rather than being forced into view -
-recorded here so it is a known, deliberate limitation rather than a silent one. Fixing it - a bucket
-CORS policy scoped to tenant origins, mirroring the per-site allowlist `SiteOriginCorsPolicyProvider`
-already enforces for the REST API - is unbuilt and belongs to whichever item picks it up next.
+**Closed by `25-14`, and not the shape the item that opened this note assumed.** The premise below
+this line used to be "MinIO/S3 sends none of the required `Access-Control-Allow-Origin` headers by
+default" - checked live against this deployment's own pinned image
+(`minio/minio:RELEASE.2025-09-07T16-13-09Z`) and **wrong for MinIO**: its default is
+`Access-Control-Allow-Origin: *`, reflecting back *any* `Origin` header unconditionally on every
+request, including the presigned GET's own signature-verified one. Confirmed with a plain `curl` (no
+CORS config touched) carrying an invented origin no site would ever list, against a real bucket:
+`Access-Control-Allow-Origin: https://not-a-real-tenant-at-all.evil` came back on the very first try.
+MinIO ships CORS wide open, not closed - the opposite of AWS S3's own default, and the opposite of
+what this note and `25-14` both originally assumed. `23-62`'s attachment `fetch()` was therefore
+**never actually blocked by CORS on this deployment** - the real, live gap was that any origin able to
+obtain a presigned URL (not only the tenant it belongs to) could already read the bytes it points at.
+
+**What actually fixes it, and why it looks nothing like a bucket policy.** `mc cors set/get/remove`
+exists in the `mc` CLI and implies AWS S3's real per-bucket `PutBucketCors` API is available - it is
+not, on this MinIO version: the underlying `s3.PutBucketCors` call answers `501 Not Implemented`
+(`mc admin trace` shows it on the wire), so a literal "bucket CORS policy" cannot be built here at
+all, regardless of shape. The only CORS knob this MinIO version actually enforces is the
+server-wide admin setting `api.cors_allow_origin` (`MINIO_API_CORS_ALLOW_ORIGIN` as an env var,
+equivalently) - one list, for every bucket the server holds, which is exactly one here
+(`attachments`). `ago-deploy/seed/apply-minio-cors.sh` reads every distinct origin currently in
+`sites.allowed_origins`, sets that list with `mc admin config set ... api cors_allow_origin=...`, and
+restarts the container so MinIO reloads it (`mc admin service restart` needs an interactive TTY this
+script never has, confirmed live - a plain restart is what actually applies a value MinIO persists to
+its own backend store, not the container's environment). Proven against the real local `docker-compose`
+MinIO, not a throwaway container: before the script ran, an invented origin already got
+`Access-Control-Allow-Origin` back (the over-permissive default above); after, an origin actually
+listed in `sites.allowed_origins` (`https://northwind.example.test`, a real row already in this
+deployment) gets the header and an origin that is not (the same invented one) gets none - the browser
+blocks that `fetch()` from reading the response, which is the actual, provable control this item's own
+Done-when asked for.
+
+**This is a snapshot, not a subscription - accepted, not hidden, the same posture this note already
+took before being closed.** `SiteOriginCorsPolicyProvider`
+(`ago-chat/src/Ago.Chat.Api/Cors/SiteOriginCorsPolicyProvider.cs`) reads `sites.allowed_origins` live,
+per request, which is exactly why the API's own CORS layer reacts to a tenant's own change
+immediately. MinIO's CORS config cannot: it is a static value that only changes when something calls
+`mc admin config set` and the server reloads it - there is no live per-request callout to Postgres or
+anywhere else, and no S3-compatible product's CORS model has one, wildcard-per-origin syntax included
+(one `*` per `AllowedOrigin` entry is the most AWS S3's own real `PutBucketCors` ever allows, which
+still cannot express an open set of unrelated tenant domains sharing no common suffix). A tenant who
+adds a new origin gets a CORS-blocked presigned `fetch()` - degrading the same way this gap already
+did, per-attachment, never a broken save - until `apply-minio-cors.sh` runs again. Re-running it on
+every `sites.allowed_origins` write would close that window; nothing does that today, and it is not
+this item's own scope to build - flagged here the same way the bucket-provisioning gap below already
+is, rather than carried forward silently a second time.
+
+**A boundary worth naming rather than smoothing over.** `ago-deploy/README.md`'s own rule says
+manifests carry operational concerns only and "business behaviour (per-site CORS, tenant rate limits,
+auth decisions) lives in application code, where it is testable and visible to a reviewer" - and
+`apply-minio-cors.sh` reads a tenant-owned business column (`sites.allowed_origins`) from an
+infrastructure repository to do its job, which is exactly what that rule warns against on its face.
+The reasoning for building it there anyway: there is no application-code path this could take instead
+- `IFileStorage` (`Ago.Platform.Abstractions`) has no method that reaches a storage server's own
+admin config, and MinIO's mechanism is a static, operator-applied server setting with no per-request
+hook an application process could drive even if the port existed. The same "explicit operational
+step, not implicit app-startup magic" reasoning the bucket-provisioning gap below already accepted for
+*creating* the bucket is what this script extends to *configuring* it. Recorded as a real tension, not
+resolved by assertion - a future session with a cleaner answer (an `ago-platform` port that exposes
+"restrict CORS to this origin set" as a first-class operation, called from application code on every
+`sites.allowed_origins` write) would remove it, but that is an `ago-platform` change outside a
+deployment-script item's own reach.
+
+**Local `docker-compose` only, today.** `apply-minio-cors.sh` targets the compose network by name,
+the same limitation `create-demo-tenant.sh` already has and `k8s-local.md` already documents a
+`kubectl exec` workaround for - no equivalent exists yet for the Docker Desktop cluster or the demo
+overlay's own MinIO, both reachable only via `kubectl exec`/`kubectl run` against the cluster's own
+`minio` Service. Restricting CORS there today means running the script's own `mc admin config set`
+and restart by hand against that Service address, not yet a checked-in step. Flagged rather than
+assumed solved everywhere this deployment runs.
+
+**Unrelated, and still genuinely open**: even with CORS now correctly scoped, a presigned attachment
+GET issued by the live demo deployment is not reachable from a visitor's browser at all yet -
+`Storage__S3__ServiceUrl` is `http://minio:9000`, the in-cluster Service DNS name
+(`k8s/base/api.yaml`, `k8s/base/worker.yaml`), and nothing in `k8s/overlays/demo/gateway.yaml` routes
+any public hostname to MinIO. This is the same gap this document already names further down ("nothing
+in `ago-deploy` currently routes a public hostname to MinIO at all") - CORS and reachability are two
+different questions, and closing the first does not touch the second. A visitor's `fetch()` against a
+presigned URL on the real deployment fails today on DNS resolution before CORS is ever evaluated, and
+degrades exactly as gracefully (silently) as the CORS gap did - worth knowing before assuming `23-62`
+now works end to end on the public demo just because this note is closed.
 
 ## Validation and safety
 
