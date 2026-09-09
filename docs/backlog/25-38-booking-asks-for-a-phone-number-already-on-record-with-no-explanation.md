@@ -1,7 +1,8 @@
 # 25-38 · Booking asks for a phone number already on record, with no explanation
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#56`, `ago-chat#247` — with one Done-when box only partially met,
+  see Outcome
 - **Found**: 2026-09-09, live, reported by the author — having already given a phone number earlier in
   the same conversation (the widget's own "represent yourself" contact capture, `25-28`), the booking
   flow's phone step reads as asking the same question again for no visible reason.
@@ -42,10 +43,25 @@ number the visitor just gave, rather than as a deliberate second, stronger check
 
 ## Done when
 
-- [ ] A visitor who already gave a phone number earlier in the same conversation sees it prefilled
-      (not re-typed from scratch) at the verified-phone step.
-- [ ] The step's own wording explains that this confirms the number for the booking, distinct from the
+- [~] A visitor who already gave a phone number earlier in the same conversation sees it prefilled
+      (not re-typed from scratch) at the verified-phone step. — **partially met, and named honestly
+      rather than rounded up**: there is no wire-level "default value" for a form field in this
+      contract (`adr/0065`'s closed primitive vocabulary), and adding one would only ever be honoured
+      by `ago-widget`'s own input rendering, outside this change's scope. The number is instead named
+      in the prompt text itself ("is +7999… still the best number…"), reaching every renderer this
+      contract has today with zero new plumbing — but the visitor still sends a reply, same as before,
+      rather than confirming a pre-populated field with one tap. A real prefill needs `ago-widget`
+      changes and is left for whoever picks that up.
+- [x] The step's own wording explains that this confirms the number for the booking, distinct from the
       earlier contact info — verified by reading the rendered copy, in whichever language `25-37`
       lands.
-- [ ] `RequiresVerifiedPhone` behaviour is unchanged — a booking still requires proof of control over
+- [x] `RequiresVerifiedPhone` behaviour is unchanged — a booking still requires proof of control over
       the number regardless of what was on file before.
+
+## Outcome
+
+Landed alongside `25-37`/`25-39` (same files, same PRs — `ago-calendar#56`, `ago-chat#247`). The known
+phone number is resolved by `RouteConversationToModuleHandler` from the visitor's most recent
+`VisitorContactDetail` and resent fresh on every reply, the same wire shape `25-37`'s locale and
+`25-39`'s setting use. See the box above for the one real scope limit: this is a wording fix, not a
+true form prefill.

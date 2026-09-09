@@ -1,7 +1,7 @@
 # 25-39 · A tenant can accept an unverified phone, until a real gateway exists
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#56`, `ago-chat#247`, `ago-console#189`; `adr/0163`
 - **Depends on**: nothing to build against — the gap it works around (`14-15`, no live SMS/voice
   gateway account) is itself undecided on vendor, and this item does not wait for that decision.
 - **Found**: 2026-09-09, live — the author testing the calendar end to end today reached the
@@ -59,15 +59,35 @@ changes, `RequiresVerifiedPhone: true` doesn't protect anything — it just make
 
 ## Done when
 
-- [ ] A tenant can turn the setting on for their own site, off by default.
-- [ ] With it on and a phone already known from earlier in the conversation, picking a slot completes
+- [x] A tenant can turn the setting on for their own site, off by default.
+- [x] With it on and a phone already known from earlier in the conversation, picking a slot completes
       the booking directly — no phone-form step is shown at all, proven by a test asserting the reply
       to `HandleSlotChosenAsync` is a completion/confirmation step, not `PhoneForm`.
-- [ ] With it on and no phone known yet, the phone step still appears, but without the verification
+- [x] With it on and no phone known yet, the phone step still appears, but without the verification
       requirement — proven by a test.
-- [ ] With it off (default), both of the above are unchanged from today's behaviour.
-- [ ] The booking/customer record distinguishes an unverified phone accepted this way from a genuinely
+- [x] With it off (default), both of the above are unchanged from today's behaviour.
+- [x] The booking/customer record distinguishes an unverified phone accepted this way from a genuinely
       verified one, proven by a test.
-- [ ] The console states plainly, next to the setting, why it exists and that it is temporary.
-- [ ] Explicitly decided and recorded whether `20-10`'s public widget path is covered by the same
+- [x] The console states plainly, next to the setting, why it exists and that it is temporary.
+- [x] Explicitly decided and recorded whether `20-10`'s public widget path is covered by the same
       setting or left for a separate item.
+
+## Outcome
+
+`WidgetConfig.AcceptUnverifiedPhone` (renamed from the first-drafted `AcceptUnverifiedPhoneBooking`
+after `Ago.Chat.Architecture.Tests`' own `MessageOpacityTests.NoProductAssembly_NamesAnotherProductsDomain`
+caught "booking" naming Calendar's own domain from inside `Ago.Chat.*`) is the one migration this wave
+carries, following `AttractAttention`'s established shape. `ReplyToModuleTaskHandler.HandleSlotChosenAsync`
+(`ago-calendar`) is the setting's real core: with it on and a known phone, it calls straight into
+`HandlePhoneProvidedAsync` with `phoneVerifiedAt: null`, no form step ever built; with it on and no
+phone known, `ModuleStepFactory.PhoneForm` emits plain `ModuleStepKind.Form` instead of
+`VerifiedPhoneForm` — the kind distinction is what actually turns off Chat's own gate
+(`RouteConversationToModuleHandler.ContinueActiveTaskAsync` only demands `14-15` evidence ahead of a
+`verified_phone_form` reply), not merely a hint Calendar could ignore. `BookEvent.RequiresVerifiedPhone`
+is `!acceptUnverifiedPhone`, computed fresh on every reply; `PhoneVerifiedAt` stays exactly what the
+caller passed (`null` on the skip path), so the record never lies about verification. `20-10`'s public
+booking widget is explicitly **not** covered — recorded in `BookEvent.cs`'s own doc comment — it has
+its own working verification mechanism and never had `14-15`'s missing-vendor problem. Console UI:
+a "Booking (temporary)" panel on the widget-config screen, off by default, labelled as a workaround
+for the missing gateway rather than a feature. Decision recorded as `adr/0163` (a genuine guarantee
+relaxation, opt-in per tenant — the "why on earth" case the ADR skill flags).
