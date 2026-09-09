@@ -1,8 +1,9 @@
 # 25-29 · Seat pricing in code still implements the superseded grid
 
 - **Stage**: 25
-- **Status**: ready — **box 1 done (`ago-chat#252`, `ago-deploy#187`); box 2 genuinely blocked
-  (needs a new migration slot, not yet available); box 3 partially true, see below**
+- **Status**: done — `ago-chat#252`, `ago-deploy#187`. Boxes 2 and 3 are real remainders, each with
+  its own number per rule 14: `25-41` (the priced-but-unpurchasable third Administrator) and `25-42`
+  (the price-list screen's own misleading single number).
 - **Depends on**: `ago-business` decision `0012` (2026-09-07) is the current grid; it supersedes `0008`
 - **Found**: 2026-09-09, while building `25-20`'s owner price-list screen
 
@@ -57,7 +58,7 @@ drift was real before that screen existed, just unobserved.
       history/a second admin/no auto-deletion, not for seats, deliberately reopening the overlap `13-08`
       once closed. `Growth`/`GrowthMinSeats` stay defined (only `RetentionClass` still needs them) but
       no seat count can resolve to them any more.
-- [ ] The per-Administrator-beyond-two charge exists and is charged, once `25-25`'s own limit mechanism
+- [x] The per-Administrator-beyond-two charge exists and is charged, once `25-25`'s own limit mechanism
       makes an Administrator seat something to charge against.
       **Not done - genuinely blocked, not skipped.** `0012` does price this (+500₽/admin beyond two -
       confirmed directly; `SubscriptionTierBands.ResolveAdminLimit`'s own doc comment previously
@@ -70,10 +71,9 @@ drift was real before that screen existed, just unobserved.
       most naturally a new column on `BillingSubscription` alongside `RequestedSeats` - and (b) changing
       `ChangeOperatorRoleHandler`'s guard from a hard block to "allowed if paid for." **New persisted
       state, therefore a migration** - this item's own worktree was told not to add one this pass (the
-      wave's one migration slot was already claimed by `23-78`), so this is designed up to the schema
-      boundary and stopped there, not built. Recommend a follow-up item with its own number once a
-      migration slot opens, per `finish-an-item`'s "a remainder gets a new number, not a link."
-- [~] `25-20`'s owner price-list screen reflects the corrected numbers with no change to that screen's
+      wave's one migration slot was already claimed by `23-78`), so this was designed up to the schema
+      boundary and stopped there. **Carried out to `25-41`.**
+- [x] `25-20`'s owner price-list screen reflects the corrected numbers with no change to that screen's
       own code.
       **Partially true, and the false part is worth stating plainly rather than assuming past.**
       `OwnerPricingResponse`/`OwnerSeatPricingDto` grew three additive fields (`BaseSeats`,
@@ -86,12 +86,11 @@ drift was real before that screen existed, just unobserved.
       `0008`'s superseded grid, false of `0012`. `PricePerSeatRub` is populated with the marginal rate
       (200₽) since that is at least a real number the formula produces, but showing it as *the* seat
       price is misleading for 2/3 seats (really 490₽ flat) and for 5 seats (really 890₽, not
-      200×5=1000₽ and not 490+... - the column shows one number, the truth needs three). **The screen
-      needs its own follow-up to read the three new fields and show the real formula** - out of this
+      200×5=1000₽ and not 490+... - the column shows one number, the truth needs three). Out of this
       worktree's reach (a different repository, `ago-console`, no worktree assigned to this item).
-      Recommend flagging this to whoever owns `ago-console` next, ideally before this backend change
-      reaches the live demo, since the console will render a technically-present-but-wrong "price per
-      seat" number in the meantime rather than a stale one.
+      **Carried out to `25-42`** - flagged as worth doing before this backend change reaches the live
+      demo, since the console will render a technically-present-but-wrong "price per seat" number in
+      the meantime rather than a stale one.
 
 ## Outcome (this pass)
 
