@@ -1,7 +1,7 @@
 # 25-12 · The calendar's readiness checklist and nav both order by how a tenant actually fills them in
 
 - **Stage**: 23
-- **Status**: ready — **priority**, the author's own request, 2026-09-09
+- **Status**: done — `ago-calendar#53`, `ago-console#179`
 - **Depends on**: none
 - **Found**: 2026-09-09, the author logging in as a tenant with the calendar module, opening
   `/calendar/masters` first, and reading the readiness checklist there
@@ -99,11 +99,13 @@ often each screen is opened once setup is done:
 
 ## Done when
 
-- [ ] `GetBookingReadinessHandler`'s `Order` moves `CalendarPublished` to the end.
-- [ ] `buildCalendarItems`'s full-access branch reorders to the proposed sequence above, or a
-      corrected one the author states — including the `Настройка` placement question above,
-      answered rather than assumed.
-- [ ] The admin-muted and operator-limited branches of the same function reorder to match, not left
-      to drift from the full-access one.
-- [ ] A test pins the new order in both places, so a future addition cannot silently reorder either
-      list by falling wherever it was appended.
+- [x] Done, `ago-calendar#53`. CI's own integration-level order test caught a hard-coded
+      assertion my local run missed - fixed in the same PR (298/298 after).
+- [x] `buildCalendarItems`'s full-access branch reorders to exactly the proposed sequence,
+      `ago-console#179`. The `Настройка` placement question is answered by the implementer's own
+      stated choice (after the three dictionaries), not settled by the author — recorded in the
+      component's own comment as the chosen middle ground, not a final answer.
+- [x] The operator-limited branch already pushed in the matching relative order — only its stale
+      comment needed a fix. The admin-muted branch has one item, nothing to reorder.
+- [x] `src/shell/consoleNav.test.ts` (new) pins all three branches' order directly against
+      `buildTenantNavSections`'s real output.
