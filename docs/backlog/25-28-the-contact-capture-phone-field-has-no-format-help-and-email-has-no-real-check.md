@@ -1,7 +1,7 @@
 # 25-28 · The contact-capture phone field has no format help, and email has no real check
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#75`, deployed and confirmed live
 - **Depends on**: nothing
 - **Found**: 2026-09-09, the author's own request
 
@@ -47,8 +47,10 @@ where a visitor typing a number gets no help getting it right.
 
 ## Done when
 
-- [ ] The phone field defaults to +7 (Russia) and constrains/guides input to a valid Russian mobile
-      shape, with a stated (not silent) way to enter a non-Russian number.
-- [ ] Email is checked against a real, named regex before submit is allowed, not just the browser's own
-      `type="email"` behavior.
-- [ ] The widget's gzipped bundle size is measured before and after, against the existing budget.
+- [x] The phone field defaults to +7 (Russia) and constrains/guides input to a valid Russian mobile
+      shape, with a stated (not silent) way to enter a non-Russian number — a leading `+` followed by
+      a different country code is left as digits only, never forced into the Russian shape.
+- [x] Email is checked against a real, named regex before submit is allowed (the WHATWG `type=email`
+      reference pattern), not just the browser's own `type="email"` behavior.
+- [x] The widget's gzipped bundle size is measured before and after: 32.3 KB → 33.3 KB, +1.0 KB against
+      the 45 KB budget (no dependency added — hand-rolled per ADR-0162's own precedent).
