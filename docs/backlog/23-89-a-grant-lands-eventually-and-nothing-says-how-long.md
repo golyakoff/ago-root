@@ -1,7 +1,7 @@
 # a grant lands eventually and nothing says how long
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — `ago-chat#249`, `ago-console#191`
 - **Depends on**: `23-66`, which built the grant whose bound is unstated.
 - **Found**: 2026-09-07, carried out of `23-66` at landing.
 
@@ -43,6 +43,17 @@ call, the tenant refreshes, nothing has changed, and the owner grants it again.
 
 ## Done when
 
-- [ ] The delay's expected and worst case are stated, derived from the dispatch interval rather than assumed.
-- [ ] Somebody making a grant is told it is not instant, without needing to know why.
-- [ ] Granting the same quantity twice is shown to be safe.
+- [x] The delay's expected and worst case are stated, derived from the dispatch interval rather than assumed.
+- [x] Somebody making a grant is told it is not instant, without needing to know why.
+- [x] Granting the same quantity twice is shown to be safe.
+
+## Outcome
+
+`ago-chat#249`, `ago-console#191`. Expected: low single-digit seconds (`OutboxDispatcher` wakes on
+Postgres LISTEN/NOTIFY). Worst case, healthy system: `PollInterval` (5s, the missed-notification
+fallback) + one `PublishTimeout` (10s) retry — under a minute. Honestly unbounded only while the
+broker itself is down — stated as such rather than inventing a ceiling. Idempotency was already safe
+(`ModuleQuantityGrant`'s natural `(site_id, module_key)` key), proved rather than assumed, with a
+fails-before reproducing a real Postgres `23505` by temporarily breaking the read-before-decide check.
+The owner-facing alert (already existing from `23-66`, wording corrected in place) now names the real
+mechanism, the worst case, and that granting again is safe.
