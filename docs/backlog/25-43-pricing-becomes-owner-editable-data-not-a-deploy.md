@@ -1,7 +1,7 @@
 # 25-43 · Pricing becomes owner-editable data, not a deploy
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **three open questions answered by the author, 2026-09-10, recorded below**
 - **Depends on**: `25-29` (the current formula this item moves off of compile-time constants),
   `25-20` (the owner's own price-list screen, today read-only, the natural home for the write side)
 - **Found**: 2026-09-10, the author's own request, while `25-29`/`25-41`/`25-42` were still fresh —
@@ -24,6 +24,34 @@ fact that has nothing to do with the code's own correctness.
 **everything already paid for in advance keeps running at the price it was actually charged; only a
 new charge — a new purchase, or the next renewal — picks up the changed price.** Nothing already paid
 is ever retroactively repriced.
+
+**Stated explicitly, because it changes the shape**: this is for **every** paid resource, not only
+the ones that already have a settled number today. The author's own reason for wanting this dynamic
+in the first place — not having to decide real figures before the business actually opens — only
+holds if adding a new sellable thing later needs no schema change and no redeploy of its own, the
+identical problem this item already exists to solve for a *changed* number.
+
+## The three questions, and they are the author's — all answered 2026-09-10
+
+**1. Who registers a new priceable resource — code, or the owner directly?** Decided: **code
+registers the resource's own key** (a developer adds it, the same moment they build whatever feature
+it prices), **the owner only ever sets or changes the Rouble figure for a key that already exists.**
+A fully owner-driven catalogue (inventing an entirely new SKU with no code change at all) was
+considered and rejected — real freedom, at the cost of nothing in the system ever being sure a given
+key actually corresponds to a real, built capability.
+
+**2. Can a resource exist with no price at all? Decided: yes, and it is the ordinary case, not an
+edge one.** "No price set" means **built, not yet for sale** — a developer can ship a priceable
+resource's own key the day the feature ships, entirely independent of whether the business has
+decided to charge for it yet, or how much. A resource is never required to carry a placeholder number
+just to exist.
+
+**3. Do the tariff plans themselves (Free/Business, the seat ladder/bands) become owner data too, or
+only the numbers inside them? Decided: only the numbers.** `SubscriptionTierBands`'s own shape — the
+plan names, `MinSeats`/`MaxSeats`/`BaseSeats`, which band a seat count resolves to — **stays in
+code**; it is the logic that decides eligibility and grouping, not a number. Only the Rouble figures
+attached to an already-defined key move to owner data. Reopening the ladder's own shape as data too
+was considered and set aside as real, separate scope with no bearing on this item's own promise.
 
 ## Why this is not a small config-vs-code swap
 
@@ -49,15 +77,27 @@ than to "whatever the row says today."
 
 ## Scope
 
-- **Every tariff number this product charges** — seat base/marginal price, the per-Administrator
-  charge `25-41` is building a purchase path for, and any future tier or option price — becomes
-  versioned, owner-published data, following `adr/0114`'s own shape (a version, an effective
-  instant, no in-place edit of a published value — a correction is a new version).
-- **A platform-owner surface to publish a new price version** — `25-20`'s existing price-list screen
-  is currently read-only; this is the natural place a write action belongs, following whatever UI
-  precedent `24-02`'s own document-publish action already established for the identical "publish a
-  new version" shape.
-- **Every real charge site reads the currently-effective version at the moment it charges** —
+- **One generic, string-keyed price mechanism — not a named field per resource.** `BaseSeatPriceRub`,
+  `PricePerExtraSeatRub`, and whatever `25-41`'s own Administrator charge would otherwise have added
+  as a third named property are exactly the shape that needs a schema/code change for every new
+  priced thing. Instead: a resource key (a plain string a developer chooses when they build the
+  feature — `"seat-base"`, `"seat-extra"`, `"admin-extra"`, and whatever a future AI add-on or
+  channel names itself) maps to a versioned price, following `adr/0114`'s own shape (a version, an
+  effective instant, no in-place edit of a published value — a correction is a new version). A new
+  priceable thing needs a new key, never a new column or a new C# property.
+- **A key with no published version is valid and expected** — "not yet for sale," per the second
+  decision above. Every charge site must treat "no price found for this key" as a real, refuse-to-
+  charge outcome, never a crash and never a silent zero.
+- **A platform-owner surface to publish a new price version for an existing key** — `25-20`'s existing
+  price-list screen is currently read-only; this is the natural place a write action belongs,
+  following whatever UI precedent `24-02`'s own document-publish action already established for the
+  identical "publish a new version" shape. This surface only ever picks among keys the code has
+  already registered — it does not let the owner type an arbitrary new key into existence, per the
+  first decision above.
+- **`SubscriptionTierBands`'s own shape stays in code** — plan names, seat-band boundaries, which
+  band a seat count resolves to. Only the Rouble figure attached to each already-defined key becomes
+  owner data, per the third decision above.
+- **Every real charge site reads the currently-effective version, by key, at the moment it charges** —
   `CreateCheckoutSessionHandler`, `ProcessSubscriptionRenewalHandler`, and wherever `25-41`'s own
   Administrator purchase path lands — never a cached or cross-request-stale copy for a decision that
   moves money (`CLAUDE.md` rule 8).
@@ -84,6 +124,14 @@ than to "whatever the row says today."
   *current* hardcoded-constant shape, only to redo it once this item lands, is real rework — read
   this item's own state before starting `25-41`'s own migration and decide which lands first, rather
   than discovering the collision mid-build.
+- **"No price for this key" must refuse the charge cleanly, never crash and never charge zero.** A
+  key that exists in code but has never had a version published is the ordinary state for something
+  "built, not yet for sale" — every charge site must read that as a real, named refusal a caller can
+  act on, not an unhandled exception or (far worse) a successful charge of nothing.
+- **The key itself is still a developer's decision, not the owner's.** Do not build a screen that
+  lets the platform owner type a brand-new key into existence — the first decision above is explicit
+  that a key without a corresponding built feature is meaningless, and a screen that allows one
+  invites exactly that.
 
 ## Out of scope
 
@@ -96,12 +144,16 @@ than to "whatever the row says today."
 ## Done when
 
 - [ ] Every real tariff number (seat base/marginal, per-Administrator, any other priced resource) is
-      owner-editable data, published as a new version rather than edited in place — no compile-time
-      constant or `appsettings` value decides a real charge any more.
-- [ ] A platform owner can publish a new price version without a code change or a redeploy.
-- [ ] Every charge site reads the currently-effective version at the moment it charges, proven by a
-      test that changes the effective price mid-flow and shows the charge already in progress is
-      unaffected while the next one picks up the new value.
+      owner-editable data, keyed generically and published as a new version rather than edited in
+      place — no compile-time constant or `appsettings` value decides a real charge any more, and a
+      new priced resource never needs a schema change to become priceable.
+- [ ] A platform owner can publish a new price version for an existing key without a code change or a
+      redeploy — and cannot invent a new key from that same surface.
+- [ ] A key with no published version refuses any charge attempt cleanly and namedly, proven by a
+      test — never a crash, never a zero-amount charge.
+- [ ] Every charge site reads the currently-effective version, by key, at the moment it charges,
+      proven by a test that changes the effective price mid-flow and shows the charge already in
+      progress is unaffected while the next one picks up the new value.
 - [ ] A completed charge can be read back showing the exact price version it was charged under, proven
       by a test that changes the price after a charge and shows the historical charge's own record is
       unchanged.
