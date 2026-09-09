@@ -111,18 +111,19 @@ git merge-base HEAD origin/main   # must equal:
 git rev-parse origin/main
 ```
 
-If those two differ, rebase **now**, while the branch is still local. Nobody has seen the history, so
-rewriting it costs nothing and is not the restricted operation.
+If those two differ, rebase **now**, while the branch is still local — nobody has seen the history,
+so rewriting it costs nothing.
 
-**The boundary is the first push, and it is the whole point of doing this early:**
-
-| State of the branch | Stale base is fixed by |
-|---|---|
-| Not yet pushed, no PR | `git rebase origin/main`, freely — this is the expected move |
-| Pushed, PR open | Close the PR, delete the local **and remote** branch, rebuild on current `main`, open a new PR |
-
-Rebasing or force-pushing a branch that has been pushed is the author's action only, so skipping the
-pre-push check does not save the rebase — it converts a one-command rebase into a close-and-rebuild.
+**Checking before the first push is still the cheap moment**, not a boundary past which rebasing
+stops being possible. Doing it earlier means the fetch and any conflict are both smaller. But if a
+branch is pushed and its base has simply moved forward, **`git fetch && git rebase origin/main`,
+resolving any conflicts and force-pushing the result, is the managing session's own to do** — the
+`git rebase` tool block that used to force a close-and-rebuild for this case is gone
+(`ago-root#772`), and CLAUDE.md rule 9 is explicit that a rebase onto a moved base was never the
+restricted operation, only `--amend` and a from-scratch history rewrite are (2026-09-09, the author's
+own correction). Check `git merge-base HEAD origin/main` against `git rev-parse origin/main` the same
+way, on the pushed branch, before rebasing it — the check is what tells a genuinely stale base from a
+branch that only *looks* stale (below).
 
 A stacked branch will look worse than it is. This project merges via **Rebase and merge**, which
 gives every replayed commit a new SHA, so a branch stacked on another shows as `CONFLICTING` the
@@ -134,8 +135,14 @@ git rev-parse <old-base-tip>^{tree}
 git rev-parse origin/main^{tree}
 ```
 
-Identical trees mean graph divergence, not a content conflict — but the remedy is the same one in the
-table, because the branch has already been pushed either way.
+Identical trees mean graph divergence, not a content conflict — a plain `git rebase origin/main`
+resolves it with nothing to reconcile by hand. A real conflict still rebases the same way; it just
+needs the conflict resolved on the branch, same as any other rebase.
+
+**Close-and-rebuild is now the fallback, not the default** — reach for it only when a rebase itself
+cannot be trusted (a branch whose history has diverged in a way that is not just "the base moved",
+or one already reviewed enough that replaying it would obscure what changed). For the ordinary stale
+base, rebase and force-push.
 
 Two failures this has actually caused, both worth the check being written down:
 
@@ -256,7 +263,9 @@ not summaries of it. `CLAUDE.md` keeps each rule's number and its always-true co
 the branch (`docs/conventions/git-workflow.md`). "Rebased onto `main`" means `main`'s tip **at
 push time**, not at branch-cut time: `git fetch` and confirm `git merge-base HEAD origin/main`
 equals `git rev-parse origin/main` **before the first push**, and rebase while the branch is
-still local if it does not. After the branch is pushed a stale base is no longer rebasable by
-anyone but the author — it becomes close-the-PR-and-rebuild — so the check is cheapest exactly
-once, just before pushing.
+still local if it does not — cheapest exactly once, just before pushing, since a smaller fetch and
+a smaller conflict beat a larger one later. After the branch is pushed a stale base is still fixed
+by rebasing, force-pushing the result — the managing session's own to do (`CLAUDE.md` rule 9,
+2026-09-09) — not the author-only operation this section used to describe before `ago-root#772`
+unblocked `git rebase` as a tool.
 
