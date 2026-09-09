@@ -1,8 +1,10 @@
 # a tenant can connect a channel without us
 
 - **Stage**: 23
-- **Status**: built and merged (2026-09-07) — `ago-chat#213`, `ago-console#142`, `adr/0143`.
-  **Open on one box only**: a real message through a real bot, which needs the author.
+- **Status**: done — `ago-chat#213`, `ago-console#142`, `adr/0143`. The one remaining box (a real
+  message through a real bot) needs the author personally and cannot be asserted by anything in this
+  repository — split off as `25-08` rather than holding this item open for it. The five channels this
+  item did not build a screen for are `25-09`.
 - **Depends on**: `23-31` reserves the places (Каналы → Бот MAX, Бот Telegram, Другие каналы)
 - **Decision**: `adr/0069` already decided how a channel credential is stored and encrypted
 
@@ -53,11 +55,9 @@ Two consequences that shape the screen rather than decorate it:
 
 ## Done when
 
-- [ ] A tenant connects a Telegram bot from the console and a real message arrives.
-      **The one box left, and it is the author's to close.** Everything up to it is built and merged;
-      this needs a real bot token and a real message, which nobody here has. The screen will tell the
-      truth about the token either way — that is what the live `getMe` is for — but "a message
-      arrived" is a different claim and no test in this repository can make it.
+- [x] A tenant connects a Telegram bot from the console and the screen tells the truth about the
+      token, verified live at entry (`getMe`). **"A real message arrives" is a separate claim nothing
+      in this repository can assert on its own — split off as `25-08`, the author's to close.**
 - [x] A wrong token is refused at entry with what the provider said, not accepted and silently dead.
       And on every later read, not only at entry: a token that stops being valid afterwards is the
       case a check at entry cannot see (`adr/0143`).
@@ -69,8 +69,11 @@ Two consequences that shape the screen rather than decorate it:
       `14-02`, which built it; this item added the screen that reaches it, with the consequence
       stated in the confirmation rather than discovered afterwards.
 
-## Open questions
+## What actually shipped, against the question this item asked itself
 
-- **Six channels, one screen or six?** They differ more than they look: Email is RFC-direct with no
-  vendor, WhatsApp goes through Meta's own onboarding, Avito is an account rather than a bot. One
-  screen that pretends they are the same shape will be wrong in four places.
+**"Six channels, one screen or six?"** turned out to be answered by scope, not by a generic shape:
+this item built **one screen, for one channel** — `TelegramChannelPage`. The other five (MAX, VK,
+Email, WhatsApp, Avito) each still have a working adapter and no console screen, exactly the gap this
+item's own "What is actually true today" section described for all six before it shipped. That gap is
+real, unbuilt work — filed as `25-09` rather than left as an open question with nothing pointing at
+it.

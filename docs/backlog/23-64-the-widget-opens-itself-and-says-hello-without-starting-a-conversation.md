@@ -1,7 +1,7 @@
 # the widget opens itself and says hello, without starting a conversation
 
 - **Stage**: 23
-- **Status**: ready — **and it carries two product questions, named below**
+- **Status**: ready — **both product questions answered by the author, 2026-09-09, recorded below**
 - **Depends on**: `23-63` shares the settings screen but not the promise. `adr/0148` is the decision.
 - **Decision**: the author's, 2026-09-07, including the constraint that makes the item interesting.
 
@@ -39,32 +39,23 @@ is not stored, and does not exist server-side. `adr/0148` records the shape and 
 - **Nothing reaches the server until the visitor writes.** No conversation, no assignment, no unread,
   no analytics row that implies contact.
 
-## The two questions, and they are the author's
+## The two questions, answered by the author, 2026-09-09
 
 **1. What happens to the greeting when the visitor does write?**
 
-The visitor answers *«да, хочу»* and a real conversation begins. The operator opens it and sees a reply
-to a question that is not there.
-
-- **Materialise it retroactively** as the conversation's first message, authored as the automatic
-  greeting rather than as a person. The transcript then reads correctly, forever, and the record
-  matches what the visitor actually saw. Costs: the message has to exist in a shape nothing else
-  produces today.
-- **Never materialise it; show the operator a note** that an automatic greeting was displayed, with its
-  text. Cheaper, and the transcript stays literally true — but the greeting is then not part of the
-  record a visitor could later ask to see.
-- **Never materialise and show nothing.** Cheapest, and the operator is guessing what was answered.
+**Materialise it retroactively** as the conversation's first message, authored as the automatic
+greeting rather than as a person — downloadable and visible to the operator like any other message.
+The transcript reads correctly, forever, and the record matches what the visitor actually saw. This
+was the item's own first-listed option; the other two (a side note, or nothing at all) are rejected.
 
 **2. Whose name is on it?**
 
-The author asked for *«первого текста со стороны оператора»*. But `23-56` settled that a machine's
-replies carry a tenant-editable name defaulting to «Электронный помощник», precisely so a visitor is
-not told they are talking to a person who is not there. **An automatic greeting is a machine reply.**
-Putting a real operator's name and face on a sentence they never wrote is the same misrepresentation
-that decision was taken to avoid, and it is worse here because it is the *first* thing the visitor sees.
-
-The consistent answer is the machine's own name. It is named as a question rather than assumed because
-the author may have meant something narrower, and because it changes what the visitor is told.
+**The operator's name** — the author's original request, *«первого текста со стороны оператора»*,
+stands as written. This is a deliberate departure from this item's own recommendation and from
+`23-56`'s default (a machine's replies otherwise carry a tenant-editable name, «Электронный
+помощник», precisely so a visitor is not told they are talking to a person who is not there). Record
+this explicitly as the exception when it is built — the next reader of `23-56` should not conclude
+the rule was simply missed here.
 
 ## Where this is likely to go wrong
 
@@ -90,8 +81,9 @@ the author may have meant something narrower, and because it changes what the vi
 - [ ] The panel opens after the delay and shows the greeting, with no default text of ours.
 - [ ] Nothing exists server-side until the visitor writes — no conversation, no assignment, no unread —
       asserted by a test rather than by inspection.
-- [ ] Question 1 is answered in the change and the transcript makes sense to the operator either way.
-- [ ] The greeting is attributed consistently with `23-56`'s decision, or the author's different answer
-      is recorded.
+- [ ] The greeting materialises retroactively as the conversation's first message when the visitor
+      writes, downloadable and visible to the operator like any other message.
+- [ ] The greeting is attributed to the operator's own name, per the author's decision above — a
+      deliberate, stated exception to `23-56`'s machine-name default, not an oversight.
 - [ ] Focus is not taken from the host page, and the mobile behaviour is a decision rather than an
       accident.
