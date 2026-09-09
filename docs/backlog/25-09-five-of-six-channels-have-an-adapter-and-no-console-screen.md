@@ -1,6 +1,6 @@
 # 25-09 · Five of six channels have an adapter and no console screen
 
-- **Status**: ready
+- **Status**: done — MAX built (`ago-chat#242`, `ago-console#180`); VK, Email, WhatsApp, Avito remain
 - **Date found**: 2026-09-09, closing `23-36`'s own "Open questions" note against what actually
   shipped
 - **Depends on**: `23-36` (built and merged) named the shape; none of the underlying adapters
@@ -43,6 +43,12 @@ discipline (`23-36`'s own text, restated here since it still applies):
 
 ## Done when
 
-- [ ] At least one more channel (of MAX, VK, Email, WhatsApp, Avito) has a console connection screen,
-      following `TelegramChannelPage`'s discipline stated above.
-- [ ] Which channel, and why it went first, is stated rather than assumed.
+- [x] MAX has a console connection screen (`ago-chat#242`, `ago-console#180`), following
+      `TelegramChannelPage`'s discipline — token never echoed back, disconnect unlinks not deletes,
+      "connected" verified wherever the provider's own API makes that honest.
+- [x] Why MAX went first: its request shape matched Telegram's most closely, and `23-31`'s own nav
+      comment had already reserved "Бот MAX" as its own named place, distinct from the generic
+      "Другие каналы" catch-all — real signal, not a guess. The one premise that did not hold
+      (a status check as cheap as Telegram's `getMe`) is named explicitly in `MaxChannelPage`'s own
+      doc comment rather than faked: MAX's connected badge is a single state, never Telegram's
+      three-way live check, because MAX's API has no side-effect-free equivalent to check with.
