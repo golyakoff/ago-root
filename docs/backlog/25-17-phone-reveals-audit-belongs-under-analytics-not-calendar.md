@@ -1,7 +1,7 @@
 # 25-17 · The phone-reveals audit trail belongs under Analytics, not Calendar
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#182`
 - **Depends on**: nothing — corrects `25-12`'s own nav ordering, landed the same week
 - **Found**: 2026-09-09, the author using the console
 
@@ -24,7 +24,8 @@ other analytics screens already live, and it is where this one reads naturally b
 
 ## Done when
 
-- [ ] "Показы телефонов" appears under Analytics in the console nav, gated on `calendar:configure`
-      exactly as before.
-- [ ] `consoleNav.test.ts` and `permissionGating.test.tsx` (both touched by `25-12`) are updated to
+- [x] "Показы телефонов" appears under Analytics in the console nav, gated on `calendar:configure`
+      exactly as before. The route stays `/calendar/phone-reveals` — only the nav section moves, the
+      same choice `/calendar/customer-merges` already made for itself.
+- [x] `consoleNav.test.ts` and `permissionGating.test.tsx` (both touched by `25-12`) are updated to
       match the new section.
