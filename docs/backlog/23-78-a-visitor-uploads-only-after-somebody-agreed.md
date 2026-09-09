@@ -1,7 +1,7 @@
 # a visitor uploads only after somebody agreed
 
 - **Stage**: 23
-- **Status**: ready — **both open questions answered by the author, 2026-09-09, recorded below**
+- **Status**: done — `ago-chat#251`, `ago-widget#77`, `ago-console#193`
 - **Depends on**: nothing. It changes the weighting of `23-75` and `23-76` rather than depending on them.
 - **Decision**: the author's, 2026-09-07 — an operator ticks *«разрешаю пользователю отправлять файлы»*,
   and without it there is no upload control at all.
@@ -75,12 +75,35 @@ own, which is exactly why the answer above is no.
 
 ## Done when
 
-- [ ] A visitor cannot obtain an upload slot for a conversation with no grant, refused server-side.
-- [ ] An operator can grant and revoke it in the conversation.
-- [ ] A tenant-level default (off) seeds the per-conversation grant, overridable by an operator either
+- [x] A visitor cannot obtain an upload slot for a conversation with no grant, refused server-side.
+- [x] An operator can grant and revoke it in the conversation.
+- [x] A tenant-level default (off) seeds the per-conversation grant, overridable by an operator either
       way for one conversation — the out-of-hours case this item asked about, built rather than
       discovered at night.
-- [ ] The widget shows no upload control until then, and says nothing an attacker could use.
-- [ ] Recognised-client status alone never grants it — only an operator's own manual grant or the
+- [x] The widget shows no upload control until then, and says nothing an attacker could use.
+- [x] Recognised-client status alone never grants it — only an operator's own manual grant or the
       tenant default above.
-- [ ] An operator's own uploads are unaffected.
+- [x] An operator's own uploads are unaffected.
+
+## Outcome
+
+`ago-chat#251`, `ago-widget#77`, `ago-console#193`. `CreateAttachmentHandler` refuses the visitor-side
+presigned slot without a grant, checked before the rate limiter. The grant is two mapped properties on
+`Conversation` (`AttachmentUploadGrantedAt`/`GrantedBy`), written through a new
+`IConversationAttachmentUploadGrantRepository` (raw SQL, mirroring `IConversationBlockRepository`) to
+avoid racing the aggregate's own `xmin` against a visitor mid-typing. `WidgetConfig
+.AllowAttachmentUploadsByDefault` (off by default) seeds new conversations; a new `Permission
+.ConversationAttachmentUploadGrant` sits in the Operator role (routine per-conversation judgement, not
+a moderation act), and grant/revoke also checks the caller is the operator currently assigned. No
+separate audit table — current-state attribution is what the Done-when asks for. One migration: three
+additive columns. Widget hides the attach icon until `VisitorJoinResult.hasAttachmentUploadGrant` says
+otherwise, refreshed on reconnect. Console gets a `SeatToggleButton`-shaped grant/revoke toggle riding
+the existing `/queue` response. A real, unrelated bug was found and fixed along the way: two new error
+codes had no entry in `ErrorExtensions.ToProblem`'s switch and fell through to a 500 default.
+
+**Named gaps, not silently closed**: `ago-deploy/seed/create-demo-tenant.sh`'s own restatement of the
+Operator permission list was not updated (no worktree for that repo — the same already-acknowledged
+gap other permissions carry); no live push for an already-connected, never-reconnecting visitor when
+an operator toggles the grant mid-session (narrowed via reconnect refresh, not closed — the same gap
+block/unblock already accepts); the console's "who granted it" caption never resolves to an operator's
+display name.
