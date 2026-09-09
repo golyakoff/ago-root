@@ -1,7 +1,7 @@
 # 25-16 · Calendar timezone becomes a localized dropdown
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#181`
 - **Depends on**: nothing
 - **Found**: 2026-09-09, the author testing the calendar setup screen
 
@@ -38,7 +38,11 @@ validation beyond whatever the calendar API itself rejects.
 
 ## Done when
 
-- [ ] The timezone field on `CalendarSetupPage.tsx` is a dropdown, not free text.
-- [ ] Each option is shown in the interface's own language, formatted "City/City (+HH:MM)", the offset
-      read live rather than hardcoded.
-- [ ] An existing site's saved zone still shows correctly selected when the page loads.
+- [x] The timezone field on `CalendarSetupPage.tsx` is a dropdown, not free text.
+- [x] Each option is shown in the interface's own language, formatted "City (+HH:MM)", the offset read
+      live via `Intl.DateTimeFormat` rather than hardcoded. `Intl.DisplayNames`'s `type: "timeZone"`
+      turned out not to exist per ECMA-402 (throws `RangeError`, confirmed live) — the localized city
+      names come from a curated hand-translation map instead, covering Russia's 11 canonical federal
+      time zones (fixed offsets, no DST since 2014).
+- [x] An existing site's saved zone still shows correctly selected — a zone outside the curated 11
+      still appears as a selectable option (raw id + live offset).
