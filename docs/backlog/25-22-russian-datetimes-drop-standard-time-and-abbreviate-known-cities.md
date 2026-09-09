@@ -1,7 +1,7 @@
 # 25-22 · Russian-locale datetimes drop "стандартное время" and abbreviate known cities
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#186`
 - **Depends on**: nothing
 - **Found**: 2026-09-09, the author reading a timestamp in the console
 
@@ -35,6 +35,14 @@ here and never worth saying, so the phrase adds nothing a reader needs.
 
 ## Done when
 
-- [ ] Russian-locale datetime rendering never appends "стандартное время" (or a DST equivalent).
-- [ ] A city with a standard Russian abbreviation renders abbreviated (Москва → МСК); one without stays
+- [x] Russian-locale datetime rendering never appends "стандартное время" (or a DST equivalent).
+- [x] A city with a standard Russian abbreviation renders abbreviated (Москва → МСК); one without stays
       full, and the list used is named and checkable rather than invented ad hoc.
+
+## Outcome
+
+`formatAbsolute` now formats via `formatToParts` and rewrites only the `timeZoneName` part: a zone
+from `25-16`'s own eleven-zone list renders its real MSK/MSK+N abbreviation; any other zone keeps its
+full name with the always-true DST tail stripped by a general regex, not a hard-coded string. English
+rendering is untouched, out of scope — "MSK" is not a checkable standard abbreviation for the English
+name.

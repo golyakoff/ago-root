@@ -1,7 +1,9 @@
 # paying for something does not turn it on
 
 - **Stage**: 23
-- **Status**: ready — **rewritten 2026-09-08: it is larger than it was filed, and `adr/0159` settles the shape**
+- **Status**: ready — **`ago-chat#233` shipped the core mechanism (option-as-subscription, aligned
+  renewal, entitlement grant/revoke) 2026-09-08; the `ago-deploy` manifest declaring what an option
+  actually turns on, and the three awkward cases named below, remain open — see Done when.**
 - **Depends on**: `adr/0159` for the shape. `22-33` is the commercial question this deliberately does not answer.
 - **Found**: 2026-09-07 — named as the gap `adr/0151` creates and does not close.
 
@@ -71,11 +73,22 @@ the shape and careless about what it replaced.
 
 ## Done when
 
-- [ ] A purchased option can be written down, and its period ends on the same day as the account's base.
-- [ ] An option whose renewal succeeds has its entitlement; one that lapses does not — shown in both
-      directions rather than argued, against a real database.
-- [ ] Nothing that reads "the site's subscription" can be handed an option instead.
-- [ ] The deployment declares what an option turns on, and no price of any kind enters a public
-      repository.
+- [x] A purchased option can be written down, and its period ends on the same day as the account's base.
+      — `ago-chat#233`: `BillingSubscription.OptionKey`, `MarkSucceeded`'s aligned-period invariant.
+- [x] An option whose renewal succeeds has its entitlement; one that lapses does not — shown in both
+      directions rather than argued, against a real database. — `SubscriptionRenewalApplier` grants/
+      revokes via `IModuleQuantityGrantStore` in the same transaction; fails-before re-proved
+      independently (removing the grant call fails 3/12 `SubscriptionRenewalJobTests` against real
+      Postgres).
+- [x] Nothing that reads "the site's subscription" can be handed an option instead. —
+      `GetBillingStatusHandler`'s `GetLatestForSiteAsync` leak fixed in the same PR.
+- [~] The deployment declares what an option turns on, and no price of any kind enters a public
+      repository. — **half done.** The mechanism exists (option-to-entitlement mapping resolved by
+      key, mirroring `IModuleEntryPointProvider`) and no price entered this repository — but the
+      `ago-deploy` manifest change that actually declares a mapping is explicitly **not** in
+      `ago-chat#233` ("the ago-deploy manifest change is not in this branch"). No option can actually
+      grant anything real yet until that manifest lands.
 - [ ] Each of the three awkward cases above is answered in the change or explicitly carried out to
-      its own number.
+      its own number. — **not done.** None of the three (a payment for something already granted by
+      hand; the grant's own provenance; a refund/chargeback) is mentioned in `ago-chat#233`. Still
+      open, needs its own number if picked up separately from the `ago-deploy` manifest work above.

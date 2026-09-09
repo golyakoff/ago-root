@@ -1,7 +1,7 @@
 # a key-shaped field makes the person go and find a terminal
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — `ago-console#157`; `adr/0153`
 - **Depends on**: nothing. `23-92` is the neighbouring cure for the same disease — a form asking a human
   for something a machine should supply.
 - **Found**: 2026-09-07, by the author, filling in a module credential by hand.
@@ -47,6 +47,15 @@ the floor exists as *"a floor against an operator typing something trivial"*. A 
 
 ## Done when
 
-- [ ] A key-shaped field can be filled without leaving the browser, with a value from a CSPRNG.
-- [ ] The generated value is the one that reaches the module, proven by following it to the request body.
-- [ ] Whether a server route was needed is answered explicitly, either way.
+- [x] A key-shaped field can be filled without leaving the browser, with a value from a CSPRNG.
+- [x] The generated value is the one that reaches the module, proven by following it to the request body.
+- [x] Whether a server route was needed is answered explicitly, either way.
+
+## Outcome
+
+`crypto.getRandomValues`, 32 bytes, base64 — the same shape `openssl rand -base64 32` already
+produced, generated client-side. No server route: established rather than assumed, on two grounds —
+this console already trusts the browser for `crypto.randomUUID()` elsewhere with no fallback, and a
+route would push the secret across the network before the owner decided to submit it. The generated
+value feeds the same `credentialInput` state the submit handler already reads, proven by a test that
+mutates the handler to regenerate between click and submit and catches it. Decided in `adr/0153`.

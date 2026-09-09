@@ -1,11 +1,10 @@
 # erasing a tenant reaches both databases, and the second half is proved rather than assumed
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done — `ago-chat#226`, `ago-calendar#50`
 - **Depends on**: `22-03`, `22-11` (the registration channel this reaches the module over), `24-13`
   (the erasure receipt this extends)
-- **Decision**: `docs/adr/0149-*` — **Proposed.** Its second rule ("a lifecycle operation completes
-  when the module proves it") is the whole of this item's shape.
+- **Decision**: `docs/adr/0149-*` — accepted, with one stated divergence, see Outcome.
 - **Split out of `22-08`** on 2026-09-07 (rule 15). Its own promise, its own gate.
 
 ## Goal
@@ -95,18 +94,37 @@ item must read the unfiltered set: **a lapsed grant still means the calendar hol
 
 ## Done when
 
-- [ ] Erasing a tenant with a calendar add-on leaves no `tenants`, `customers`, `events`, `workers` or
+- [x] Erasing a tenant with a calendar add-on leaves no `tenants`, `customers`, `events`, `workers` or
       `operators` row for them, **proven by erasing one and querying the calendar's database**, not by
       reading the job.
-- [ ] The chat-side site row is still standing at the moment the calendar's half is confirmed —
+- [x] The chat-side site row is still standing at the moment the calendar's half is confirmed —
       asserted, because the reverse ordering is the failure that cannot be recovered from.
-- [ ] A module that does not answer leaves the receipt `Failed` with the module named, and the site
+- [x] A module that does not answer leaves the receipt `Failed` with the module named, and the site
       row undeleted. Proven by making the module unreachable.
-- [ ] The same erasure works for a tenant whose grant has **lapsed**, and for a tenant whose add-on was
+- [x] The same erasure works for a tenant whose grant has **lapsed**, and for a tenant whose add-on was
       **revoked** — the two cases the Open question below separates.
-- [ ] `personal-data.md`'s AGO Calendar rows name what removes them.
+- [x] `personal-data.md`'s AGO Calendar rows name what removes them.
 
-## Open questions
+## Outcome
+
+The recommended answer to the Open question was taken: **revoke tombstones instead of deleting.**
+`EnabledModule.RevokedAt` is stamped so a later erasure can still find the module; the module-side
+revoke call still runs first so `22-11`'s guarantee (the credential dies immediately) is intact, and
+every existing read of "is this enabled" gained a `revoked_at is null` filter so nothing behaves
+differently today except the one new caller that needs the history.
+
+**One deliberate divergence from `adr/0149`'s literal wording, written up rather than silently
+reinterpreted**: erasure reaches a module over the deployment-wide provisioning secret, not the
+per-site call credential the ADR's prose names — because that per-site credential is exactly what a
+revoked or never-registered tenant lacks, which is the hole this item closes. The ADR's intent ("the
+module proves it") is honoured unchanged.
+
+The one-hour unreachable-module bound is a stated implementer's bound, not a measured SLA — named as
+such per `CLAUDE.md`'s ban on inventing production figures. `(SiteId, ModuleKey)` still has no
+uniqueness constraint (a pre-existing gap, not introduced here); reads are filtered so nothing
+behaves differently today, and the gap is named rather than folded in silently.
+
+## Open questions — resolved, see Outcome above
 
 - **After a tenant cancels the calendar add-on, who is responsible for their booking data — and can
   the automatic erasure path still reach it?** Three answers, all defensible, and today's behaviour is
