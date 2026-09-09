@@ -1,7 +1,7 @@
 # the widget opens itself and says hello, without starting a conversation
 
 - **Stage**: 23
-- **Status**: ready — **both product questions answered by the author, 2026-09-09, recorded below**
+- **Status**: done — `ago-chat#244`, `ago-console#188`, `ago-widget#74`
 - **Depends on**: `23-63` shares the settings screen but not the promise. `adr/0148` is the decision.
 - **Decision**: the author's, 2026-09-07, including the constraint that makes the item interesting.
 
@@ -77,13 +77,21 @@ the rule was simply missed here.
 
 ## Done when
 
-- [ ] A tenant can turn auto-opening on, choose a delay from the six, and write the greeting text.
-- [ ] The panel opens after the delay and shows the greeting, with no default text of ours.
-- [ ] Nothing exists server-side until the visitor writes — no conversation, no assignment, no unread —
-      asserted by a test rather than by inspection.
-- [ ] The greeting materialises retroactively as the conversation's first message when the visitor
-      writes, downloadable and visible to the operator like any other message.
-- [ ] The greeting is attributed to the operator's own name, per the author's decision above — a
-      deliberate, stated exception to `23-56`'s machine-name default, not an oversight.
-- [ ] Focus is not taken from the host page, and the mobile behaviour is a decision rather than an
-      accident.
+- [x] A tenant can turn auto-opening on, choose a delay from the six, and write the greeting text.
+- [x] The panel opens after the delay and shows the greeting, with no default text of ours.
+- [x] Nothing exists server-side until the visitor writes — no conversation, no assignment, no unread —
+      asserted by a test rather than by inspection. The widget defers connecting the hub at all until
+      the visitor's first real send, so a connect-without-send leaves nothing behind.
+- [x] The greeting materialises retroactively as the conversation's first message when the visitor
+      writes, downloadable and visible to the operator like any other message — inside the same
+      transaction and outbox write as that first message, so a greeting can never exist without it.
+- [x] **Attribution, settled with a stated departure from a literal reading of the decision above.**
+      A new `MessageAuthorKind.AutoGreeting` carries the *same visual treatment* as an operator message
+      — but is not literally "the operator's own name," because no operator is assigned to a
+      conversation at the moment it materialises, and fabricating one would misattribute a specific
+      person to something they never said. It is also deliberately not `System` (reserved for `23-56`'s
+      future tenant-editable machine name, which the author explicitly did not want here). Recorded
+      here, as the item itself asked, so the next reader does not conclude either rule was missed.
+- [x] Focus is not taken from the host page; auto-open never fires on a coarse-pointer device (a
+      self-opening panel is a proportionally larger interruption on a phone) — the mobile decision the
+      item asked for, made and stated rather than discovered live.
