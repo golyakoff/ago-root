@@ -1,7 +1,7 @@
 # 25-19 · The owner grants a module by picking it, not typing it
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#184`
 - **Depends on**: nothing
 - **Found**: 2026-09-09, the author granting a module by hand
 
@@ -31,8 +31,12 @@ be written there. A typo produces a grant for a module key that does not exist, 
 
 ## Done when
 
-- [ ] The module-key field is a dropdown sourced from the real set of grantable module keys, not free
-      text.
-- [ ] The now-unnecessary "what can be written here" caption is removed.
-- [ ] Granting a module through the dropdown still reaches `EnableModuleForSiteAsOwnerHandler`
+- [x] The module-key field is a dropdown sourced from the real set of grantable module keys, not free
+      text. No backend endpoint enumerates them (`IModuleEntryPointProvider` is deliberately opaque,
+      `adr/0065`) — the interim answer is a small, explicitly-commented static list (`calendar`,
+      `faq`), the same set `ProductsPage.tsx`/`KnownModuleKeys.cs` already use, deliberately not
+      narrowed to what's configured on this one cluster (a stricter dropdown than the API would be a
+      worse regression than the free-text field it replaces).
+- [x] The now-unnecessary "what can be written here" caption is removed.
+- [x] Granting a module through the dropdown still reaches `EnableModuleForSiteAsOwnerHandler`
       correctly, proven by a test.
