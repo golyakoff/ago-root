@@ -1,7 +1,8 @@
 # 25-37 · The booking module's own text is hardcoded English
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#56` (built alongside `25-38`/`25-39`, bundled by CLAUDE.md rule 15
+  reasoning: all three touch `ModuleStepFactory`'s same strings), `ago-chat#247` (the locale plumbing)
 - **Found**: 2026-09-09, live, reported by the author mid-booking on the real deployment — every
   step of the chat-driven booking flow renders in English regardless of the visitor's language.
 - **Depends on**: none. Touches `ago-calendar` only.
@@ -37,7 +38,19 @@ own console (`11-11`–`11-16`) are already localized.
 
 ## Done when
 
-- [ ] Every `ModuleStepFactory` string renders in the tenant's configured language, proven by a test
+- [x] Every `ModuleStepFactory` string renders in the tenant's configured language, proven by a test
       that asserts the Russian variant for at least one tenant.
-- [ ] English remains available for a tenant configured that way — this is localization, not a
+- [x] English remains available for a tenant configured that way — this is localization, not a
       hardcoded swap from one language to another.
+
+## Outcome
+
+The module boundary carried no locale at all — new plumbing, not a lookup, exactly as this item's own
+"Where this is likely to go wrong" anticipated. `RouteConversationToModuleHandler` (`ago-chat`)
+resolves the site's own configured `Locale` fresh on every trigger-match and every reply, and resends
+it across the existing wire contract (the same shape `PhoneVerifiedAt` already crosses) rather than
+Calendar persisting it on `ChatBookingTask` — no migration budget was available for that, and none was
+needed. `ModuleStepFactory` gained a private `Strings` record with English/Russian tables and a safe
+English default for anything else, following the identical "closed set of two, hand-written" shape
+`ago-console`'s own `LOCALE_LABELS` already uses. The price's currency code (`RUB`) stays
+unlocalized as scoped; the surrounding word ("from"/"от") does not.
