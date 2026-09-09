@@ -101,6 +101,18 @@ because guessable-or-not is not an access-control model.
 Presigned read URLs are cached per (attachment, viewer) for slightly less than their lifetime, so a
 chat history render of 20 images is one round trip's worth of signing, not 20.
 
+**No bucket CORS policy is configured anywhere in this repository or `ago-deploy` today.** Every
+existing consumer of a presigned GET reaches it through plain navigation - `<img src>`, `<a href>` -
+which a browser never subjects to CORS. `23-62` (`ago-widget`) is the first caller to need the bytes
+themselves, via `fetch()`, to bundle a visitor's attachments into a saved-conversation `.zip`
+(`adr/0162`); a browser's `fetch()` *is* subject to CORS, and MinIO/S3 sends none of the required
+`Access-Control-Allow-Origin` headers by default. That call degrades gracefully where it is made (the
+attachment is simply left out of the archive, per that item's own "never break the host page" posture)
+rather than failing loudly, which means this gap can go unnoticed rather than being forced into view -
+recorded here so it is a known, deliberate limitation rather than a silent one. Fixing it - a bucket
+CORS policy scoped to tenant origins, mirroring the per-site allowlist `SiteOriginCorsPolicyProvider`
+already enforces for the REST API - is unbuilt and belongs to whichever item picks it up next.
+
 ## Validation and safety
 
 - Size ceiling per file, enforced at presign time and re-verified after upload. **Per *conversation*
