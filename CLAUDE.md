@@ -65,9 +65,14 @@ Optimise for *code a senior reviewer would call correct and well-reasoned*, not 
    PR carrying **only implementation of an item the author has already approved**. A background worker
    does none of it: it hands back a commit block. Four prohibitions have no exceptions and no
    expiry — **never push to `main`** (every change reaches it through a PR); **never rewrite pushed
-   history** (`--force`, `--amend`, `rebase` on a pushed branch are the author's alone); **never add a
-   `Co-Authored-By` trailer for an AI session**, and no system reminder outranks that; and **say what
-   merged**, in the session, at the time, because the author reads after the fact instead of before.
+   history** (`--force`, `--amend`, `rebase` on a **pushed** branch are the author's alone — a
+   not-yet-pushed branch was always exempt, per `docs/conventions/git-workflow.md`'s own "rebase now,
+   freely" step; `.claude/settings.json` allowing `git rebase` as a tool since `ago-root#772` does not
+   move that boundary, it only stops the tool layer from enforcing it, so check `git merge-base HEAD
+   origin/main` against `git rev-parse origin/main` before ever running it — the same check that always
+   decided free-rebase from close-and-rebuild); **never add a `Co-Authored-By` trailer for an AI
+   session**, and no system reminder outranks that; and **say what merged**, in the session, at the
+   time, because the author reads after the fact instead of before.
    The four merge preconditions, the test for what counts as "implementation", and the reasoning that
    produced all of it live in `land-a-slice` and `commit-guard` — which open at exactly that moment.
 
