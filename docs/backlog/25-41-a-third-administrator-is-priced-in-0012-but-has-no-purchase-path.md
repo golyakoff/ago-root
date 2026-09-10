@@ -2,8 +2,10 @@
 
 - **Stage**: 25
 - **Status**: ready
-- **Depends on**: `25-25` (built the hard `AdminLimit` ceiling this item raises) and `25-29`
-  (found this while correcting the seat-pricing formula against the same decision)
+- **Depends on**: `25-25` (built the hard `AdminLimit` ceiling this item raises), `25-29`
+  (found this while correcting the seat-pricing formula against the same decision), and `25-43`
+  (landed 2026-09-10 — the price this item charges is a registered catalog key, not a call into
+  `ComputeSeatPriceRub`; see the corrected Scope bullet below)
 - **Found**: 2026-09-09, carried out of `25-29` at landing rather than left inside it (rule 14/15 —
   a chargeable purchase path is a different promise than a corrected pricing formula)
 
@@ -34,12 +36,25 @@ or not — there is nothing for a +500₽ charge to attach to.
 
 - **Don't relax the hard block generally.** The ceiling still refuses by default; only a real,
   recorded purchase should move it for one specific site.
-- **Charge it through the identical checkout/renewal path `25-29`'s own `ComputeSeatPriceRub` already
-  established**, not a second, parallel billing mechanism for one more resource.
-- **Proration and lapse.** If a paid-for extra Administrator slot is later downgraded away (fewer
-  seats, tier change, or the charge itself lapses), decide what happens to a tenant already holding
-  a third Administrator — the same "a downgrade destroys nothing" precedent `23-88`/`adr/0031` already
-  establish, not a new invention.
+- **`ComputeSeatPriceRub` does not apply here and this bullet used to say otherwise** — that formula
+  is the seat *band* (base-plus-marginal by count), and an Administrator is priced flat (+500₽/mo
+  each, `0012`), never banded. What does carry over from `25-29`/`25-43` is the *mechanism*, not that
+  formula: register a new key (e.g. `admin-extra`) in `PricedResourceKeys`, publish its version at
+  500₽ (`25-43`'s own catalog — a real Rouble figure is `ago-business`'s call, never hardcoded here),
+  and charge through the identical checkout/renewal path everything else in `25-43` already reads
+  from — `IPriceCatalogRepository.FindCurrentAsync`, never a new parallel billing mechanism.
+- **Proration and lapse — decided by the author, 2026-09-10: automatic downgrade, not `23-88`'s own
+  precedent.** Unlike a worker over quota (`23-88`: stays exactly as it is, merely can't take new
+  work), an operator whose paid Administrator slot lapses is **automatically demoted back to
+  Operator** the moment the ceiling drops below their count — a deliberately stricter rule than
+  `23-88`'s "downgrade destroys nothing," because unlike a worker's own history a role grant has no
+  meaningful "frozen, can't take more" state to sit in. **Not yet decided, and needs settling before
+  this ships**: which Administrator(s) get demoted first when more than one sits above the new
+  ceiling. The precedent already in this codebase for "which of several excess things is affected
+  first" is `adr/0125`'s own `WorkerQuotaPolicy` — most-recently-granted first — and the same rule
+  applied here (most-recently-promoted-to-Administrator first) would need an ordering field on the
+  role assignment if one does not already exist; confirm the shape before building rather than
+  guessing at a tie-break.
 
 ## Done when
 
@@ -50,3 +65,6 @@ or not — there is nothing for a +500₽ charge to attach to.
       identical guard.
 - [ ] The one migration this item needs lands cleanly, with no other concurrent `ago-chat` migration
       in the same wave.
+- [ ] When a paid Administrator slot lapses (downgrade, tier change, or the charge itself lapsing),
+      the operator(s) above the new ceiling are automatically demoted to Operator — most-recently-
+      promoted first when more than one is affected — proven by a test.
