@@ -2,10 +2,25 @@
 
 - **Stage**: 25
 - **Status**: ready
-- **Depends on**: `ago-business` decisions `0007`, `0011`, `0012` are the grid this page has to match
+- **Depends on**: `ago-business` decisions `0007`, `0011`, `0012` are the grid this page has to match;
+  `25-41` — **added 2026-09-10, found while re-checking this item before dispatch**: the tenant billing
+  status wire (`GetBillingStatusHandler`/`BillingStatusDto`, `Ago.Chat.Contracts`) has no Administrator
+  seat count, no free-vs-paid-beyond-it split, and no purchased-extra-Administrators field at all —
+  `25-41`'s own `BillingSubscription.ExtraAdministratorsPurchased` is the fact this page needs to show
+  that split honestly, and it does not exist on `main` yet. Do not start this item's backend half before
+  `25-41` merges.
 - **Found**: 2026-09-09, the author reading their own billing page
 
 ## What is actually true
+
+**This item was filed as a console-only fix and it is not one — confirmed by reading the actual
+backend, 2026-09-10.** `Ago.Chat.Application.UseCases.GetBillingStatus.GetBillingStatusHandler` (the
+handler `BillingPage.tsx` actually calls) returns exactly `{ Tier, SeatLimit, SeatsUsed,
+LatestSubscription }` — `Tier` is the raw enum string, `SeatsUsed` is one undifferentiated count of
+every operator holding a seat (`IOperatorRepository.CountHeldSeatsAsync`), and there is no
+Administrator count, no free-allowance-vs-purchased split, and no seat-range/price text anywhere on
+this DTO. Every distinction this item asks the console to *show* has to exist on the wire first — this
+is a two-repository item, `ago-chat` before `ago-console`, not a console-only one.
 
 `BillingPage.tsx` predates the tariff grid `ago-business 0012` settled:
 
@@ -25,6 +40,15 @@
 
 ## Scope
 
+- **The backend half, first** (`ago-chat`, blocked on `25-41` landing): extend `BillingStatusDto` with
+  what the console side actually needs — the Administrator seat count and limit (from `Site.AdminLimit`,
+  already real since `25-25`) alongside the existing Operator `SeatsUsed`/`SeatLimit`, and
+  `BillingSubscription.ExtraAdministratorsPurchased` (`25-41`) so the free-vs-paid-beyond-it split has
+  a real number to show. Whether the tier display *name* is mapped server-side or client-side is an
+  open, cheap call — either is fine, but decide and say which. Whatever answers the stale seat-range
+  copy (`ago-business 0012`'s own figures, or `25-43`'s price catalog if that is the more honest
+  source for a price range specifically) also goes on this DTO rather than staying a hand-typed
+  console string — the same "sourced, not retyped" rule `25-20`'s price-list screen already follows.
 - **Tier name**: map the tier enum to its real name — Solo for the free tier, Business for the paid
   one — rather than rendering the raw enum value.
 - **Seat counts, split by role**: show Operator seats and Administrator seats as two separate
@@ -42,6 +66,10 @@
 
 ## Where this is likely to go wrong
 
+- **Don't start the backend half before `25-41` merges.** Both touch `Site.cs`/`BillingSubscription.cs`
+  in the same repository; building against `25-41`'s own still-unmerged worktree state would mean
+  rebasing onto a moving target, and the whole reason this item needs `25-41` at all is a field
+  (`ExtraAdministratorsPurchased`) that does not exist until it lands.
 - **Do not build the ЮKassa call.** This item's whole point is the UI catching up to the grid; wiring a
   real purchase is explicitly `23-86`'s item, already scoped and larger. A stub button that visibly
   does nothing is the correct shape here, not a half-wired payment call.
@@ -51,6 +79,9 @@
 
 ## Done when
 
+- [ ] `BillingStatusDto` carries what the console side needs — Administrator seat count and limit
+      alongside the existing Operator pair, and the purchased-extra-Administrators fact — sourced from
+      `Site.AdminLimit`/`25-41`'s own state, never retyped or recomputed client-side.
 - [ ] The tier renders as "Соло" / "Business" (localized), not a raw enum value.
 - [ ] Operator and Administrator seat counts are shown separately, each against its own limit, with the
       free-allowance/paid-beyond-it distinction named rather than collapsed.
