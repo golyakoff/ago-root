@@ -1,7 +1,8 @@
 # 25-43 · Pricing becomes owner-editable data, not a deploy
 
 - **Stage**: 25
-- **Status**: ready — **three open questions answered by the author, 2026-09-10, recorded below**
+- **Status**: done — `ago-chat#256`, `ago-console#194`. Three open questions answered by
+  the author, 2026-09-10, recorded below.
 - **Depends on**: `25-29` (the current formula this item moves off of compile-time constants),
   `25-20` (the owner's own price-list screen, today read-only, the natural home for the write side)
 - **Found**: 2026-09-10, the author's own request, while `25-29`/`25-41`/`25-42` were still fresh —
@@ -143,17 +144,79 @@ than to "whatever the row says today."
 
 ## Done when
 
-- [ ] Every real tariff number (seat base/marginal, per-Administrator, any other priced resource) is
+- [x] Every real tariff number (seat base/marginal, per-Administrator, any other priced resource) is
       owner-editable data, keyed generically and published as a new version rather than edited in
       place — no compile-time constant or `appsettings` value decides a real charge any more, and a
       new priced resource never needs a schema change to become priceable.
-- [ ] A platform owner can publish a new price version for an existing key without a code change or a
+      *(Seat base/marginal — the only two real tariff numbers that exist in code today — are fully
+      converted: `BillingOptions.BaseSeatPriceRub`/`PricePerExtraSeatRub` are removed outright, not
+      deprecated. "Per-Administrator" has no charge site to convert yet — that is `25-41`'s own,
+      still-unbuilt item — so this box is satisfied for every tariff that is real today; `25-41` gets
+      the mechanism already built, at the cost of registering one more key, never a new column.)*
+- [x] A platform owner can publish a new price version for an existing key without a code change or a
       redeploy — and cannot invent a new key from that same surface.
-- [ ] A key with no published version refuses any charge attempt cleanly and namedly, proven by a
+- [x] A key with no published version refuses any charge attempt cleanly and namedly, proven by a
       test — never a crash, never a zero-amount charge.
-- [ ] Every charge site reads the currently-effective version, by key, at the moment it charges,
+- [x] Every charge site reads the currently-effective version, by key, at the moment it charges,
       proven by a test that changes the effective price mid-flow and shows the charge already in
       progress is unaffected while the next one picks up the new value.
-- [ ] A completed charge can be read back showing the exact price version it was charged under, proven
+- [x] A completed charge can be read back showing the exact price version it was charged under, proven
       by a test that changes the price after a charge and shows the historical charge's own record is
       unchanged.
+
+## Outcome
+
+Shipped as `ago-chat#256` and `ago-console#194`, both independently re-verified (exact test counts
+below) before merging. No `ago-deploy` change was needed (the mechanism reads Postgres,
+not configuration) and no ADR was written — this item explicitly reapplies `adr/0114`'s own already-decided
+versioning shape to a second domain rather than making a new architectural decision; `25-29` needed no ADR
+for the identical reason when it first hand-corrected these numbers.
+
+**Mechanism**: `PricedResource`/`PublishedPriceVersion` (`Ago.Chat.Domain`) mirror `Document`/
+`PublishedDocumentVersion` structurally — an aggregate root holding `LastSequence` and an EF Core
+optimistic-concurrency token (`xmin`), owning an insert-only, never-mutated list of published child
+versions. `PriceKey` mirrors `ModuleKey`'s shape-only validation; the *closed registry* of legitimate
+keys (`PricedResourceKeys.IsKnown`, currently `seat-base`/`seat-extra`) is checked in exactly one place,
+`PublishPriceVersionHandler`, never in the value object or the aggregate's own factory — every other
+reader of an already-legitimate `PriceKey` stays free of that check.
+
+**Where this needed to go further than `adr/0114`'s own shape**: `ChangeSubscriptionSeatsHandler`'s
+upgrade proration reads two *different* methods for "old" vs "new" price — `FindVersionAsync` against
+the subscription's own stored `BaseSeatPriceVersion`/`ExtraSeatPriceVersion` for what the tenant is
+already paying, and `FindCurrentAsync` for what the upgraded seat count will cost going forward. Reading
+`FindCurrentAsync` for *both* (the natural-looking shortcut) would have silently repriced an
+already-paid period the moment the catalog's price changed between a charge and a later upgrade — found
+while wiring the handler, not from a failing test; a dedicated regression test
+(`HandleAsync_WhenThePriceChangesAfterTheLastChargeButBeforeThisUpgrade_...`) now pins the correct
+behaviour and was proven to fail against the naive version.
+
+**Migration** (`Stage25AddPricedResourceCatalog`, applied and verified against the local Postgres):
+creates `priced_resources`/`published_price_versions` and two new `billing_subscriptions` columns
+(`base_seat_price_version`/`extra_seat_price_version`), seeds `v1` for both seat keys at the exact
+figures `25-29` already hand-corrected to (490₽/200₽), and backfills every pre-existing base
+subscription row's own two new columns to `1` (an option row's own convention stays `0`,
+"meaningless for an option row") — without the backfill, the very next seat-count upgrade for an
+already-`Succeeded` subscription would resolve `FindVersionAsync(key, 0)` to `null` and throw, a real
+regression on data this deployment already has, not a theoretical one.
+
+**Console**: `OwnerPricingPage.tsx` gained a "Priced resources" panel and `PricedResourcePanel`
+component — one form per registered key, closed behind a toggle once a version already exists,
+mirroring `DocumentsPage.ConsentDocumentPanel`'s own shape. `25-42`'s own seat-formula display bug on
+this same page was left untouched, as instructed. Found and fixed while writing this panel's own
+tests: the success/error alerts originally lived inside the auto-collapsing form (copied verbatim from
+`ConsentDocumentPanel`), which means they would never paint for a key that already had a version —
+`ConsentDocumentPanel`'s own tests never catch this because they only ever publish a document's *first*
+version, where the form never auto-collapses at all. The alerts now render outside the collapsible
+region.
+
+**Wire compatibility**: `OwnerPricingResponse`/`OwnerSeatPricingDto`'s existing fields (including the
+already-known-stale `PricePerSeatRub`/`25-42` display bug) are unchanged; `PricedResources` is a new,
+additive field. The new write route is `POST /api/v1/owner/prices/{key}/versions`.
+
+**Verification**: `ago-chat` — `dotnet format --verify-no-changes` clean; `dotnet build -c Release`
+0 warnings/0 errors; `dotnet test -c Release`: Domain.Tests 616/616, Application.Tests 1067/1067,
+Architecture.Tests 44/44, Integration.Tests 1095/1095 (against a real Postgres container),
+Concurrency.Tests 73/75 (2 pre-existing, unrelated skips), FakeCrm.Tests 21/21. `ago-console` —
+`tsc -b --noEmit` clean, `eslint` clean, `vitest run` 1174/1174 across 111 files, `vite build` clean.
+Every new behavioural test proven against a deliberately-reintroduced bug first (fails-before), then
+against the real fix.
