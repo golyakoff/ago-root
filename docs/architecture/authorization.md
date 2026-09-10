@@ -305,19 +305,36 @@ transaction `RemoveOperatorHandler` already takes - two independent write paths 
 and one lock, not two invariants that could drift apart. Proven on real Postgres the same way
 `23-26`'s own race was (`RemoveOperatorConcurrencyTests`): `ChangeOperatorRoleConcurrencyTests` has a
 site's last two administrators concurrently demote each other, and exactly one succeeds - never zero
-remaining, never both. Promoting somebody to administrator takes no lock at all and is never refused
-for capacity - see the next paragraph for why that is a considered decision, not an oversight.
+remaining, never both. Promoting somebody to administrator took no lock at all and was never refused
+for capacity at the time `23-72` shipped - `25-25` and `25-41` below are what changed that.
 
-**An administrator is a role, not a purchase, and this item does not couple the two.** A draft of this
-handler once added a tier-priced ceiling on how many administrators a site could have, modelled on an
-`ago-business` pricing document this session could not actually read. That coupling was found and
-removed before landing: `adr/0151` keeps entitlement and permission apart, and `RegisterSiteHandler`
-seeds a site's roles with no reference to billing at all - a real per-tier administrator limit, if one
-is ever wanted, is a new, separately-scoped item built against the actual pricing decision, not
-something inferred here. The seat-limit check an administrator invite goes through is unchanged by this
-item: `OperatorInviteRedemptionRepository`'s refusal has counted every active `operators` row
-regardless of role since `13-03`, and `23-72` does not carve out an exception for an administrator
-invite - the row it creates is an ordinary row.
+**An administrator was a role, not a purchase, at the time this item shipped - `25-25` and `25-41`
+coupled the two afterward, deliberately, against a pricing decision the earlier draft could not read.**
+A draft of `23-72`'s own handler once added a tier-priced ceiling on how many administrators a site
+could have, modelled on an `ago-business` pricing document that session could not actually read. That
+coupling was found and removed before `23-72` landed (`adr/0151` keeps entitlement and permission
+apart), and the paragraph above described the result as final. It was not: `25-25` later added a real
+per-tier ceiling (`Site.AdminLimit`, resolved from the tenant's tier via
+`SubscriptionTierBands.ResolveAdminLimit`) and made `ChangeOperatorRoleHandler`'s promotion branch take
+the identical `sites`-row lock the demotion branch already held, counting by role name
+(`IOperatorRoleRepository.CountNonRemovedHoldersAsync`) and refusing with
+`ConversationErrors.OperatorAdminLimitReached` (HTTP 402) at or above it - promoting past the ceiling is
+refused by default, the same way seat capacity always has been. `25-41` then gave a site a way to raise
+that ceiling for money: a flat, per-Administrator price (`ago-business` `0012`) purchased through
+`PurchaseAdministratorSlotHandler`, charged through the same `IPriceCatalogRepository` mechanism `25-43`
+built for seat pricing, which raises `Site.AdminLimit` by the purchased count on top of the tier
+baseline. The two items still keep entitlement and permission apart in the sense `adr/0151` cares
+about - the ceiling is read off `Site.AdminLimit`, a fact `Site` (Domain) computes for itself, never a
+billing call `ChangeOperatorRoleHandler` makes at promotion time - but the ceiling itself is no longer
+independent of billing the way this paragraph originally claimed. When a paid Administrator slot lapses
+and `Site.AdminLimit` drops, the operator(s) now above the new ceiling are demoted back to `"Operator"`
+automatically - `IAdministratorLimitEnforcer`, most-recently-promoted-first
+(`role_change_records`' own `changed_at`, `23-72`'s write), deliberately stricter than `23-88`'s
+"downgrade destroys nothing" precedent because a role grant, unlike a worker's booking history, has no
+meaningful frozen state to preserve. The seat-limit check an administrator invite goes through is
+unchanged by any of this: `OperatorInviteRedemptionRepository`'s refusal has counted every active
+`operators` row regardless of role since `13-03`, and `23-72` does not carve out an exception for an
+administrator invite - the row it creates is an ordinary row.
 
 **Every role change is recorded**, write-only, in `role_change_records` (who changed whom, from which
 roles to which one, and when) - a deliberately separate table from `access_records`, because a role
