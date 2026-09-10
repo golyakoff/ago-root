@@ -1,7 +1,7 @@
 # 25-44 · `Ago.Calendar.Worker` has no `OutboxDispatcher` at all
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#59`
 - **Depends on**: nothing
 - **Found**: 2026-09-10, while building `23-88`'s `ago-calendar` half — the new
   `ModuleQuantityImpactComputed` reply staged correctly to the outbox table, proven against a real
@@ -55,8 +55,26 @@ outbox writer (`23-88`) made the gap block a real feature rather than a placehol
 
 ## Done when
 
-- [ ] `Ago.Calendar.Worker` runs an outbox dispatcher that publishes staged rows to the broker.
-- [ ] A test proves a `BookingConfirmed` row and a `ModuleQuantityImpactComputed` row, both staged via
+- [x] `Ago.Calendar.Worker` runs an outbox dispatcher that publishes staged rows to the broker.
+- [x] A test proves a `BookingConfirmed` row and a `ModuleQuantityImpactComputed` row, both staged via
       the normal code path, are actually delivered — not just committed to Postgres.
-- [ ] `docs/architecture/messaging.md`'s "None wired yet" note and this session's "no `OutboxDispatcher`
+- [x] `docs/architecture/messaging.md`'s "None wired yet" note and this session's "no `OutboxDispatcher`
       yet" paragraph are corrected or removed, matching what is actually true after this lands.
+
+## Outcome
+
+`ago-calendar#59` — a straight port of `Ago.Chat.Worker.OutboxDispatcher`'s own mechanism (LISTEN/
+NOTIFY wake with poll fallback, `FOR UPDATE SKIP LOCKED` batch claim, publish, mark `published_at`),
+plus the `notify_outbox_insert()`/`outbox_notify_trigger` migration this product's outbox table never
+had. `OutboxDispatcherTests` proves both real rows this product stages — `BookingConfirmed` and
+`ModuleQuantityImpactComputed` — actually reach a real RabbitMQ, staged through their real, unmodified
+production handlers, not a synthetic row. Deliberately does not port the metrics/tracing half of its
+precedent: `Ago.Platform.Hosting.AddPlatformObservability` is never called anywhere in `ago-calendar`,
+so there is nothing yet for an instrument to export through — wiring this product's observability is
+its own, separate, product-wide gap, not invented piecemeal here. `docs/architecture/messaging.md`
+updated in the same change.
+
+Independently re-verified before merging: `dotnet format --verify-no-changes` clean, `dotnet build
+-c Release` 0 warnings/0 errors, full suite Domain 229/229, Application 204/204, Architecture 26/26,
+Concurrency 26/26, Integration 312/312 (real Postgres + real RabbitMQ) — exact match to the worker's
+own reported counts.
