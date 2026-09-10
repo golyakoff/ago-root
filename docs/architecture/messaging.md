@@ -102,15 +102,26 @@ A separate product with a separate broker vhost and a separate database (`adr/00
 page because the delivery semantics, the outbox rule and the versioning rule are the platform's and
 are identical.
 
-**Until `23-88`/`adr/0165`, nothing here was consumed by AGO Chat and nothing there was consumed
-here** - that sentence was true of every topic below it until the async worker-quota impact preview
-needed the first reply in the opposite direction. It stays true of `BookingConfirmed`: that row is
-still calendar-internal only.
+**Since `23-88`/`adr/0165`, `ModuleQuantityImpactComputed` is consumed by AGO Chat** - the first topic
+below this line that crosses the product boundary at all. That sentence was true of every topic below
+it until the async worker-quota impact preview needed the first reply in the opposite direction. It
+stays true of `BookingConfirmed`: that row is still calendar-internal only.
 
 | Event | Key | Consumers |
 |---|---|---|
 | `BookingConfirmed` (`20-04`) | `event_id` | `20-05`'s SMS delivery. None wired yet |
-| `ModuleQuantityImpactComputed` (`23-88`/`adr/0165`) | `site_id` | `Ago.Chat.Worker.ModuleQuantityImpactComputedConsumer` - the reply to chat's own `ModuleQuantityImpactRequested` (below). No module product publishes to this topic yet; `ago-chat`'s own consuming half ships ahead of any publisher, the same "mechanism first, caller later" shape `GrantModuleQuantity` itself once shipped in |
+| `ModuleQuantityImpactComputed` (`23-88`/`adr/0165`) | `site_id` | `Ago.Chat.Worker.ModuleQuantityImpactComputedConsumer` - the reply to chat's own `ModuleQuantityImpactRequested` (below). Published by `Ago.Calendar.Worker.ModuleQuantityImpactRequestedConsumer` (`Ago.Calendar.Infrastructure.Postgres.WorkerQuotaImpactAnswerer`'s own outbox write) whenever chat asks about the `"calendar"` module - the first calendar-to-chat crossing this table has ever carried |
+
+**This product has no `OutboxDispatcher` yet** - the same honest gap `BookingConfirmed`'s own "None
+wired yet" already states for its own consumer, restated here because it is now also true of the
+*publishing* side of a topic another product depends on. `Ago.Calendar.Worker` stages every outbox row
+correctly (`WorkerQuotaImpactAnswerer` included - proven against a real Postgres and a real
+broker-delivered request in `Ago.Calendar.Integration.Tests.WorkerQuotaImpactAnswererTests`/
+`ModuleQuantityImpactRequestedWireTests`), but nothing in this product's own `Worker` host drains the
+`outbox` table to RabbitMQ the way `Ago.Chat.Worker.OutboxDispatcher` does for chat - so on a real
+deployment, a reply to `ModuleQuantityImpactComputed` sits staged and undelivered until this product
+gets its own dispatcher, and chat's own preview (`23-88`'s own `ago-chat` half) stays "asked, not yet
+answered" regardless. Not this item's own gap to close - filed separately as `25-44`.
 
 `BookingConfirmed` is a past-tense fact: the operator veto window closed with nobody acting (or an
 operator confirmed early), and the visit is on. Staged to the outbox in the **same transaction** as

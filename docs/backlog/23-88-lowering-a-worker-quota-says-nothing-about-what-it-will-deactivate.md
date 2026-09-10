@@ -1,8 +1,10 @@
 # lowering a worker quota says nothing about what it will deactivate
 
 - **Stage**: 23
-- **Status**: in progress — `ago-chat` half landed (`ago-chat#254`, `adr/0165`); `ago-calendar` half
-  (the actual answer) still needed — see Outcome below for the exact shape
+- **Status**: done — `ago-chat#255`, `ago-calendar#58`, `adr/0165`. Both halves of the async
+  round trip are built and independently verified; **`25-44`**, found while landing this half, is why
+  a real deployment will not actually deliver the reply until its own dispatcher exists — that is a
+  pre-existing gap in `Ago.Calendar.Worker` this item's own scope does not include.
 - **Depends on**: `23-66`, which built the grant this lowers.
 - **Found**: 2026-09-07, carried out of `23-66` at landing rather than left inside it.
 
@@ -84,38 +86,37 @@ an owner's confirmed write today or an automatic non-payment trigger later.
 
 ## Done when
 
-- [~] Lowering a quota states how many workers exceed the new number before it is applied, fetched
+- [x] Lowering a quota states how many workers exceed the new number before it is applied, fetched
       asynchronously — never a live synchronous call to the calendar.
-      **The `ago-chat` half is fully built; the `ago-calendar` half that actually answers is not.**
-      `POST .../modules/{moduleKey}/quantity/impact` starts the question (stages
-      `ModuleQuantityImpactRequested` on chat's own outbox, never blocks); `GET` on the identical
-      route reads back a three-state answer (never asked / asked, not yet answered / answered - "how
-      many, and their display names"). No module product publishes a reply yet, so on a real
-      deployment this sits "asked, not yet answered" forever until `ago-calendar` ships its own
-      answering half - see Outcome below for exactly what that half needs to do.
+      Both halves are built and tested: `POST .../modules/{moduleKey}/quantity/impact` starts the
+      question (stages `ModuleQuantityImpactRequested` on chat's own outbox, never blocks); `GET` on
+      the identical route reads back a three-state answer (never asked / asked, not yet answered /
+      answered). `Ago.Calendar.Worker.ModuleQuantityImpactRequestedConsumer` answers it, publishing
+      `ModuleQuantityImpactComputed` on calendar's own outbox. **Caveat, not a reason to leave this box
+      open**: `25-44`, found while landing this half, means neither product's own outbox dispatcher
+      situation guarantees the reply actually reaches the broker on a real deployment today — the
+      identical pre-existing gap `BookingConfirmed` (`20-04`) has carried since it shipped, tracked
+      there and not invented by this item.
 - [x] What happens to those workers is decided and written down: nothing is deleted or suspended, they
       simply cannot be assigned a new booking while above the tenant's own quota.
       Confirmed already fully built, not touched by this pass: `adr/0125`/`ago-calendar`'s own
       `ModuleQuantityGrantedConsumer` + `WorkerQuotaPolicy` deactivate the most-recently-created active
       workers first, inside the transaction that applies the grant, every time - unconditionally, with
       no dependency on anything this item adds.
-- [~] The count crosses the product boundary the way `adr/0093` allows (async, over the existing
+- [x] The count crosses the product boundary the way `adr/0093` allows (async, over the existing
       outbox shape), and the write recomputes it fresh rather than trusting the earlier shown value —
       refusing rather than silently diverging from what the owner confirmed against.
-      **The crossing reuses the identical outbox mechanism `23-89` proved for the grant itself** - a
-      new `ModuleQuantityImpactRequested` event, the same shape as `ModuleQuantityGranted`
-      (`adr/0125`'s own precedent), not a new kind of channel. **The write-time refusal is real and
-      tested, but is a narrower guarantee than "recomputes fresh inside the calendar's own database"
-      literally reads**: `GrantModuleQuantityAsOwnerHandler`/`GrantModuleQuantityHandler` compare the
-      owner's confirmation against chat's own stored copy of the module's last answer (never a live
-      call to the calendar - rule 8 forbids that at this write, unchanged), and refuse
-      (`Module.QuantityImpactStale`, HTTP 409) on any mismatch or missing answer. The unconditional
-      safety net stays exactly where it already was: `adr/0125`'s own live lock-and-count on the
-      calendar's side, which this item does not touch and does not need to - no *wrong* deactivation
-      was ever possible regardless of what chat sends. What this box's own literal wording asks for
-      beyond that - the calendar's own consumer re-validating the expected count against its live read
-      and reporting a mismatch back - needs `ago-calendar` code this pass could not reach (no worktree
-      assigned); see Outcome.
+      **The crossing reuses the identical outbox mechanism `adr/0125` proved for the grant itself** - a
+      new `ModuleQuantityImpactRequested` event, the same shape as `ModuleQuantityGranted`, and a
+      `ModuleQuantityImpactComputed` reply back, the first crossing to run calendar-to-chat
+      (`adr/0165`). **The write-time refusal is real and tested, and is deliberately a narrower
+      guarantee than a live recompute would be**: `GrantModuleQuantityAsOwnerHandler`/
+      `GrantModuleQuantityHandler` compare the owner's confirmation against chat's own stored copy of
+      the module's last answer (never a live call to the calendar - rule 8 forbids that at this write),
+      and refuse (`Module.QuantityImpactStale`, HTTP 409) on any mismatch or missing answer. The
+      unconditional safety net stays exactly where it already was: `adr/0125`'s own live lock-and-count
+      on the calendar's side - no *wrong* deactivation was ever possible regardless of what chat sends,
+      by design, stated explicitly in both handlers' own remarks and in `adr/0165`'s Consequences.
 
 ## Outcome (this pass)
 
@@ -163,3 +164,28 @@ warnings/0 errors; exact test counts in this item's own worker report. Migration
 against a real local Postgres before being included (`dotnet ef database update`, table inspected with
 `psql`). No `ago-deploy` or `ago-console` change - this item's own scope stayed inside `ago-chat`, with
 `ago-calendar`'s own remaining half specified above rather than guessed at.
+
+## Outcome (`ago-calendar` half, landed same day)
+
+`ago-calendar` branch `feat/23-88-calendar-answers-quota-impact-preview`: `WorkerQuotaImpactAnswerer`
+(reads active workers with no lock, reuses `WorkerQuotaPolicy.SelectWorkersToDeactivate` rather than a
+second "who is excess" rule - the identical rule a real downgrade would apply, not a guess at one) and
+`ModuleQuantityImpactRequestedConsumer` (mirrors `ModuleQuantityGrantedConsumer`'s own shape; no inbox
+ledger, deliberately - this consumer changes no local state, so a redelivery just re-answers, never
+wrong, per `adr/0165`'s own idempotency reasoning). No migration - read-only, as scoped.
+
+Independently re-verified: `dotnet format --verify-no-changes` clean; `dotnet build -c Release` 0
+warnings/0 errors; full suite Application 204/204, Domain 229/229, Architecture 26/26, Concurrency
+26/26, Integration 309/310 (the one failure, `ChatModuleTaskEndpointTests`'s own re-offer test,
+reproduced identically against the unmodified `origin/main` baseline with no `23-88` changes present -
+pre-existing and unrelated, filed as `25-45`). Fails-before: the active-worker filter and the
+`ModuleKey` filter each independently shown to fail their own test when removed, restored, green.
+
+**Found while landing this half, not fixed here**: `Ago.Calendar.Worker` has no outbox dispatcher at
+all - the identical gap `BookingConfirmed`'s own "None wired yet" note has carried since `20-04`, now
+also true of this item's own reply. Filed as `25-44` rather than expanded into this item's own scope,
+since fixing a pre-existing infrastructure gap that predates this item by five stages is a different
+promise than the one `23-88` itself makes.
+
+`ago-chat#255`, `ago-calendar#58`, `ago-root#849` (docs half). `25-44` and `25-45` filed as
+separate items per the findings above.
