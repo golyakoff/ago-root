@@ -1,7 +1,7 @@
 # 25-42 · The owner price-list screen shows one number for a formula that needs three
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — pending PR number (see `## Outcome` below)
 - **Depends on**: `25-20` (built the screen), `25-29` (corrected the formula the screen now
   misrepresents)
 - **Found**: 2026-09-09, carried out of `25-29` at landing rather than left inside it (rule 14/15 —
@@ -43,8 +43,36 @@ shows the marginal rate (200₽) against every row, which reads as "every seat c
 
 ## Done when
 
-- [ ] The price-list screen shows the real base-plus-marginal formula for Business, not a single
+- [x] The price-list screen shows the real base-plus-marginal formula for Business, not a single
       misleading per-seat number.
-- [ ] A tenant reading the screen at 2, 3, 4, or 5 seats sees the correct total for each, matching
+- [x] A tenant reading the screen at 2, 3, 4, or 5 seats sees the correct total for each, matching
       `ago-business 0012` directly.
-- [ ] Nothing about `25-29`'s own backend formula or the wire contract changes.
+- [x] Nothing about `25-29`'s own backend formula or the wire contract changes.
+
+## Outcome
+
+Shipped as an `ago-console` PR (worktree `ago-console-25-42`, branch
+`fix/25-42-owner-price-list-shows-the-real-formula`) — see the managing session's own commit-prep
+block for the exact commit. Console-only, as scoped; nothing in `ago-chat` changed.
+
+**What changed.** `ownerApi.ts`'s `OwnerSeatPricing` gained `baseSeats`/`baseSeatPriceRub`/
+`pricePerExtraSeatRub` (additive; `pricePerSeatRub` stays on the wire, unread by this screen now).
+`OwnerPricingPage.tsx`'s "Seats" panel: the description states the formula in prose ("₽490.00 for
+the first 3 seats, then +₽200.00 per seat beyond that"), and the table changed from one row per
+*tier* (`Starter`, `2–5`, a single misleading `₽200.00`) to one row per *seat count* (`2`→₽490.00,
+`3`→₽490.00, `4`→₽690.00, `5`→₽890.00) — `SubscriptionTierBands.ComputeSeatPriceRub`'s own formula
+restated client-side (`baseSeatPriceRub + max(0, seats − baseSeats) × pricePerExtraSeatRub`), built
+generically from `tiers[].minSeats..maxSeats` rather than hardcoded to today's single 2–5 band, so a
+future second band needs no rendering change.
+
+**Test fixture finding.** `ownerPricingPage.test.tsx`'s own `REAL_PRICING` fixture and its first test
+had never been updated for `25-29` — they still asserted the superseded `0008`-era shape (`₽590.00`
+flat, two tiers `Starter 3–9`/`Growth 10–100`), which is exactly the display bug this item exists to
+fix. Fixed as part of this change; the old test would otherwise have kept passing against the bug it
+was nominally covering.
+
+**Verification** (`ago-console-25-42`): `tsc -b --noEmit` clean, `eslint src ux-gate` clean,
+`vitest run` 1174/1174 across 111 files (unchanged total — one test rewritten, none added or
+removed net), `vite build` clean. Fails-before: the rewritten test run against the pre-fix component
+failed on the missing formula text (`"Starter 2–5 ₽200.00"` — the exact wrong number the item
+describes), then passed after restoring the fix.
