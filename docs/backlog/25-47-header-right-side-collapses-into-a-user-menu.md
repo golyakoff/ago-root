@@ -1,7 +1,7 @@
 # 25-47 · The header's right side collapses into a user menu
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#209`
 - **Verified**: 2026-09-12 — `ago-console/src/shell/AppShell.tsx`'s `ShellIdentity` confirmed as the
   real header-right component (operator identity, `tenancySwitcher` prop, `onSignOut`);
   `TenancySwitcher.tsx` confirmed as the real tenant-switch component, already wired via
@@ -40,11 +40,22 @@ single avatar (initials, e.g. "АГ" for "Андрей Голяков"), GitHub'
 - **Only tenants this operator actually belongs to appear** — this is not a directory of every tenant
   on the platform.
 
+## Outcome
+
+`operatorInitials.ts` derives the avatar's letters (no avatar/initials logic existed anywhere before
+this — answers `docs/design/gaps.md` pile 3 item 8 directly). The dropdown is page-local markup in
+`ShellIdentity` (`AppShell.tsx`), not a new shared component — `adr/0030`'s fourth amendment is the
+full reasoning for why a hand-rolled disclosure still holds at one level deep, not modal, no ARIA
+`menu` protocol claimed. Tenant switch reuses the real `switchTenancy` mechanism
+(`PermissionsContext`) unchanged — `TenancySwitcher.tsx`'s own `<select>` is deleted, its job fully
+absorbed. Three inline Material Symbols Outlined SVG icons (`menuIcons.tsx`), path data fetched
+verbatim from `google/material-design-icons` and independently re-verified byte-for-byte.
+
 ## Done when
 
-- [ ] The header's right side is a single avatar with initials; everything else lives behind it.
-- [ ] The dropdown matches the GitHub-shaped structure above, in order: header row, tenant switcher
+- [x] The header's right side is a single avatar with initials; everything else lives behind it.
+- [x] The dropdown matches the GitHub-shaped structure above, in order: header row, tenant switcher
       (alphabetical, only if more than one tenant), separator, Appearance, separator, Sign out.
-- [ ] Clicking a tenant in the switcher activates it and the header reflects the new active tenant
+- [x] Clicking a tenant in the switcher activates it and the header reflects the new active tenant
       after reload.
-- [ ] A single-tenant operator sees no switcher section at all.
+- [x] A single-tenant operator sees no switcher section at all.
