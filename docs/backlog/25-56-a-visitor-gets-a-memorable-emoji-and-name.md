@@ -1,7 +1,7 @@
 # 25-56 · A visitor gets a memorable emoji pair and their own name, everywhere the short code appears
 
 - **Stage**: 25
-- **Status**: ready — fully specified via the author's own answers, 2026-09-12
+- **Status**: done — `ago-chat#262`, `ago-chat#264`, `ago-console#202`, `ago-console#208`
 - **Verified**: 2026-09-12 — the 8-character code is confirmed real: `visitorId.slice(0, 8)`, rendered
   at `ago-console/src/workspace/ConversationList.tsx:102,167` (the conversation-switching panel, both
   its list variants) and `ago-console/src/pages/ConversationPage.tsx:705` (the open-dialog header) —
@@ -65,13 +65,34 @@ even "this is a different conversation from that one" without reading the full c
   migration assigning pairs to all existing visitor rows, or lazy assignment on first render — either
   is fine, state which).
 
+## Outcome
+
+Landed in two waves. **Emoji pair** (`ago-chat#262`, `ago-console#202`): `Visitor.EmojiCreature`/
+`EmojiFood`, two emoji drawn once from `VisitorEmojiDictionary`'s fixed 20+20 lists via
+`IVisitorEmojiPairGenerator`, assigned at first contact and never reassigned. Existing visitors
+backfilled by a real EF migration (`Stage25AddVisitorEmojiPair`), not left null — the column stays
+nullable at the DB level regardless, since the actual guarantee is enforced by the two creation call
+sites, not a schema constraint (~90 test fixtures construct a bare `Visitor`).
+
+**Visitor's own name** (`ago-chat#264`, `ago-console#208`) — the piece that had to wait on `25-62`
+(the `Other`→`Name` rename): sourced from a `VisitorContactDetailKind.Name` row, batch-loaded
+alongside the emoji pair (`GetOperatorQueueHandler`'s own `IVisitorContactDetailRepository.GetNamesForVisitorsAsync`,
+a `left join lateral` in `ConversationReadStore`'s hand-written queries). No unique index exists on
+`(visitor, kind)`, so a repeat submission resolves to the most recent by `RecordedAt`.
+
+Both render in exactly the two named places (`ConversationList.tsx`'s two rows, `ConversationPage.tsx`'s
+open-dialog header) via `visitorEmoji.ts`'s `visitorDisplayPrefix`, in the exact
+`{emoji}{emoji} {name} {shortCode}` format, falling back byte-identically to emoji-only when no name
+exists. Both update live with no new plumbing — the same `ConversationSummaryDto` the workspace
+already refreshes on its 15s poll and on assignment/send events.
+
 ## Done when
 
-- [ ] Every visitor has a stable emoji pair, assigned once, drawn from the two fixed dictionaries,
+- [x] Every visitor has a stable emoji pair, assigned once, drawn from the two fixed dictionaries,
       never reassigned.
-- [ ] The pair (and name, if known) renders in the conversation-switching panel and the open-dialog
+- [x] The pair (and name, if known) renders in the conversation-switching panel and the open-dialog
       header, in the exact format shown above — and nowhere else (not in-transcript, not in the
       widget).
-- [ ] A visitor's name appearing mid-conversation updates the display live.
-- [ ] Existing visitors (pre-dating this item) get a real, stated backfill strategy, not a permanently
+- [x] A visitor's name appearing mid-conversation updates the display live.
+- [x] Existing visitors (pre-dating this item) get a real, stated backfill strategy, not a permanently
       empty pair.
