@@ -1,7 +1,7 @@
 # a tenant cannot fill the disk, and neither can a stranger
 
 - **Stage**: 23
-- **Status**: ready — **and the first question in it is the one that matters**
+- **Status**: ready — **the tenant-facing question is answered, 2026-09-13**
 - **Depends on**: `23-75` is the per-conversation budget. This is the part that actually bounds storage.
 - **Found**: 2026-09-07, asked by the author: *«файлы — самое опасное, как не дать засрать весь MinIO».*
 
@@ -91,10 +91,34 @@ account — not for the anonymous flood.
   object; check that reasoning before sharing anything across tenants — the safe first version
   deduplicates **within** a tenant only.
 
+## Answered, 2026-09-13
+
+The one decision this item named as a decision rather than engineering — what a tenant sees when
+their own quota is exhausted by someone else's abuse — is **soft degradation**, the author's own
+words: *«Старые вложения продолжают работать, новые — блокируются с мягким текстом «Пересылка файлов
+временно недоступна»»*.
+
+Two parts, and the second narrows the option this section originally offered:
+
+- **Old attachments keep working.** Nothing already uploaded is affected by the quota being full —
+  existing objects stay servable and downloadable exactly as before. The block is on new uploads only.
+- **The text is deliberately soft, not a support CTA.** *"Пересылка файлов временно недоступна"* names
+  no limit, no cause and no action to take — it reads like any other transient unavailability, not
+  like a wall the visitor or operator hit. That is a narrower choice than this section's own option B
+  ("явным CTA «лимит исчерпан, написать в поддержку»"): the author chose to say less, not more. It
+  matches the widget's existing failure style (`22-08`'s note that the widget already "degrades to no
+  widget, never to a broken site") rather than exposing the quota mechanism to whoever is looking at
+  it — including, if the exhaustion is abuse rather than genuine use, the person doing the abusing.
+- **Option A (hard stop with an explicit error) and option C (silent auto-extend paid for by us until
+  an alert fires) are both rejected** — A for leaving a paying tenant stuck not knowing why, C for
+  billing the tenant's own storage cost for somebody else's abuse.
+
 ## Done when
 
 - [ ] A tenant's total attachment storage is bounded, by tier, and the bound is enforced at presign.
 - [ ] Creating conversations at speed does not multiply the available budget.
 - [ ] There is a ceiling below which the disk cannot be filled by this feature, and an alert before it.
 - [ ] The same bytes uploaded repeatedly cost one object, within a tenant.
-- [ ] What a tenant sees when their quota is exhausted is decided rather than discovered.
+- [x] What a tenant sees when their quota is exhausted is decided rather than discovered — soft
+      degradation: old attachments keep working, new uploads blocked with the soft text "Пересылка
+      файлов временно недоступна" (no CTA, no mention of a limit). See *Answered*, above.
