@@ -1,7 +1,7 @@
 # 25-51 · Unread and pending counts on the left menu
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#213`
 - **Verified**: 2026-09-12 — confirmed no badge/count field exists anywhere in the nav model today
   (`ago-console/src/shell/consoleNav.ts`, `AppShell.tsx`'s `AppShellNavItem`); the only `Badge`
   component (`src/components/Badge.js`) renders static labels, never a count. `25-50`'s real labels
@@ -72,10 +72,34 @@ numeric badge system, with two genuinely different semantics for the two section
 
 ## Done when
 
-- [ ] Диалоги shows an unread-message count, summed and positioned correctly whether "Мои" is
+- [x] Диалоги shows an unread-message count, summed and positioned correctly whether "Мои" is
       visible or the section is collapsed; reading a conversation's messages clears or decreases it.
-- [ ] Записи shows a pending-bookings count; viewing a pending booking does **not** clear it — only
+- [x] Записи shows a pending-bookings count; viewing a pending booking does **not** clear it — only
       confirming it (or its own equivalent resolution) does.
-- [ ] Both counts update live, without a page reload, as the underlying facts change.
-- [ ] On mobile with the menu collapsed, one small badge on the menu-open button shows the sum of
+- [x] Both counts update live, without a page reload, as the underlying facts change.
+- [x] On mobile with the menu collapsed, one small badge on the menu-open button shows the sum of
       both sections' counts; expanding the menu shows them split back onto their own items.
+
+## Outcome
+
+Shipped as `ago-console#213`. The two sections deliberately use different mechanisms, per this
+item's own "Where this is likely to go wrong" warning.
+
+**Диалоги**: a new `ConversationsAttentionProvider` reuses `attention.ts`'s own existing
+summing/live-adjustment reducer rather than rebuilding it — `WorkspaceLayout`'s existing hub listeners
+now additionally forward every event into this provider, which is what makes "reading a conversation
+clears the nav badge" instant rather than waiting on the next poll.
+
+**Записи**: a new `usePendingBookingsBadge` hook reacts only to `CalendarOperatorHub`'s
+`PendingBookingsChanged` push — it has no "viewed" input at all, so opening the queue cannot clear it.
+Building this surfaced a real bug: `CalendarOperatorConnection.onPendingBookingsChanged` was a
+single-listener slot that a second listener (this badge, alongside `CalendarQueuePage`'s own existing
+one) would have silently overwritten — fixed by converting it to a real multi-listener subscription.
+
+**Mobile**: the collapsed hamburger badge is purely derived (`useMemo` summing both sections), never a
+third query, per the item's own constraint.
+
+**Verification**: `tsc -b --noEmit` clean, `eslint src ux-gate` clean, `vitest run` 126 files / 1298
+tests (0 failed, +23 new), `vite build` clean (231.70 KB gzipped), `ux-gate` 63 passed / 5 skipped
+(mobile-only drawer tests, correctly skipped at desktop viewport). Fails-before proved for all 6 new
+test files.
