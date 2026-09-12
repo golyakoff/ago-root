@@ -1,7 +1,7 @@
 # `minio/minio` no longer exists on Docker Hub
 
 - **Stage**: 15
-- **Status**: ready
+- **Status**: done — `ago-chat#259`, `ago-deploy#191`
 - **Verified**: 2026-09-12 — confirmed live: `https://hub.docker.com/v2/repositories/minio/minio/`
   returns `{"message":"object not found"}`; the exact pinned tag this project uses,
   `RELEASE.2025-09-07T16-13-09Z`, resolves cleanly on `quay.io/minio/minio` (`200 OK`, real
@@ -56,6 +56,19 @@ All six currently read `minio/minio:RELEASE.2025-09-07T16-13-09Z`; all six becom
 
 ## Done when
 
-- [ ] All six references read `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z`.
-- [ ] `ago-chat`'s full test suite is green, including `Ago.Chat.Integration.Tests`.
-- [ ] The `ago-deploy` change is deployed to the live stand (manifest applied, not just committed).
+- [x] All six references read `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z`.
+- [x] `ago-chat`'s full test suite is green, including `Ago.Chat.Integration.Tests`.
+- [x] The `ago-deploy` change is deployed to the live stand (manifest applied, not just committed).
+
+## Outcome
+
+Both halves merged (`ago-chat#259`, `ago-deploy#191`) and the manifest half applied to the live node
+via `./apply-demo.sh` — the node's own `ago-deploy` checkout had drifted several commits behind, so
+the pull also picked up unrelated prior changes and this apply's own migrator Jobs both completed
+(`ago-chat-migrator`, `ago-calendar-migrator`, `1/1 Complete`). `smoke.sh` ran clean afterward: 46
+passed, 0 failed. The MinIO pod itself was recreated and confirmed running the new image:
+`quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z`, `1/1 Running`.
+
+`ago-chat#259` merged first and its own "Closes golyakoff/ago-root#887" auto-closed the tracking issue
+before the `ago-deploy` half or the live apply had happened — reopened once caught, closed again for
+real once every Done-when box above was actually checked.
