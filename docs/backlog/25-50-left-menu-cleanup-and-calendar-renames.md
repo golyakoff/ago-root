@@ -1,7 +1,12 @@
 # 25-50 · Left menu cleanup and calendar section renames
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — `navSectionsAriaLabel` ("Разделы консоли") confirmed real: used as an
+  invisible `aria-label` on the desktop rail (`AppShell.tsx:566`), but rendered as a visible `<h2>`
+  title inside the mobile drawer (`Dialog.tsx:92-93`, passed via `AppShell.tsx:543`) — exactly the
+  "not visible on desktop, visible on mobile" the item describes. `navSectionCalendar`/
+  `navCalendarBookings`/`navCalendarQueue` all confirmed real in `consoleNav.ts`/`ru.ts`/`en.ts`.
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`
 
