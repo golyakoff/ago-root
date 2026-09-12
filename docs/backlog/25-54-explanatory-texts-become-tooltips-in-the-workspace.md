@@ -1,7 +1,11 @@
 # 25-54 · Explanatory prose becomes tooltips across the Диалоги›Мои workspace
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — every named string confirmed real in `ago-console/src/i18n/ru.ts`:
+  `queueAssignedNote`, `queueWaitingNotePrefix`, `conversationWaitingForHub`, the delivery-status
+  note (line ~109), `notesVisitorCannotSeeNote`, `channelIdentitiesSectionTitle`'s own explanation,
+  `outcomeNotAVerifiedSaleNote`, and the visitor-panel header text (line ~145).
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`
 
