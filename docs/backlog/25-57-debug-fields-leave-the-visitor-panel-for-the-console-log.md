@@ -23,8 +23,18 @@ day-to-day work.
   renders, so it stays reachable via the browser's own DevTools (F12) for a support/debugging session,
   per the author's own instruction.
 
+## Outcome
+
+The `<dl className="ago-aside__facts">` block that rendered all four fields is gone from
+`VisitorPanel.tsx`. A `useEffect` keyed on the four primitive values (not the `conversation` object
+reference, so an unrelated prop change like `visitorOnline` doesn't re-log it) fires
+`console.log("[VisitorPanel] visitor/conversation identity", { visitorId, conversationStartedAt, siteId, conversationId })`
+on mount and whenever the identity actually changes. `siteId`/`conversationId` themselves are
+untouched — still passed to every child panel exactly as before, only their visible rendering here
+is gone. Now-dead CSS (`.ago-aside__facts`, `.ago-aside__id`) removed alongside.
+
 ## Done when
 
-- [ ] None of the four fields (ID посетителя, Диалог начат, Сайт UUID, Диалог UUID) renders visibly
+- [x] None of the four fields (ID посетителя, Диалог начат, Сайт UUID, Диалог UUID) renders visibly
       in the Посетитель panel.
-- [ ] The same values are written to the browser console when the panel loads, inspectable via F12.
+- [x] The same values are written to the browser console when the panel loads, inspectable via F12.
