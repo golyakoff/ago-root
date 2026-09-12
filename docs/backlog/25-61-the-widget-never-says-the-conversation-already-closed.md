@@ -1,10 +1,7 @@
 # 25-61 · The widget never says the conversation already closed
 
 - **Stage**: 25
-- **Status**: ready — **blocked on a small `ago-chat` addition, not filed yet**. Investigated in
-  `ago-widget-25-61` (`fix/25-61-widget-never-says-conversation-already-closed`); no widget-side code
-  changed. See Investigation below for exactly what `ago-chat` needs to expose before this item's
-  Done-when can be met honestly rather than by guessing at a wording match.
+- **Status**: done — `ago-chat#258`, `ago-widget#80`
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`
 
@@ -92,9 +89,94 @@ needed for the "prefer proactive" stretch goal):
 Filing this as its own numbered `ago-chat` item is the coordinator's call, per this task's own
 instructions — not done here.
 
+## Outcome (`ago-chat`, 2026-09-12)
+
+Built the investigation's own "option 1" - the reactive minimum this item's Done-when actually
+requires. Not built: option 2 (a live push to the visitor's connection at close time) - it needs a
+new outbox consumer and a new hub-push mechanism that do not exist today, which is genuinely new
+infrastructure, not the "genuinely cheap" stretch this task was scoped to attempt only if free. Left
+for a future item if the proactive stretch is ever wanted; the reactive signal below already satisfies
+both Done-when boxes.
+
+**The wire shape `ago-widget-25-61` needs to read**, exactly:
+
+`VisitorHub.SendAsync` (`Ago.Chat.Api/Hubs/VisitorHub.cs`, the private method every one of
+`SendMessageAsync`/`SendMessageWithAutoGreetingAsync`/`SendStructuredMessageAsync` delegates to) now
+special-cases exactly one error code on the failure branch that used to rethrow every rejection as
+bare free text:
+
+```csharp
+throw error.Code == "Conversation.InvalidState"
+    ? new HubException(ConversationClosedHubErrorPrefix + error.Message)  // "Conversation.InvalidState: " + <English sentence>
+    : new HubException(error.Message);                                    // unchanged - every other rejection
+```
+
+- The prefix is the literal string **`"Conversation.InvalidState: "`** (with the trailing space),
+  published as `VisitorHub.ConversationClosedHubErrorPrefix` (`internal`, but `Ago.Chat.Api` already
+  grants `InternalsVisibleTo("Ago.Chat.Integration.Tests")` - not visible to `ago-widget`, which is a
+  different language/repo anyway; that repo hardcodes the literal, the same way it already hardcodes
+  hub method names).
+- On the widget side, the check is a plain `string.startsWith` on the caught error's `.message` -
+  `ui/widget.ts`'s `completeSend`, the `else` branch at its `.catch` (around line 1274-1285 as of this
+  writing): today it picks between `notConnectedRetryNote` and `sendFailedNote`; the fix adds a third
+  branch checked first - `error instanceof Error && error.message.startsWith("Conversation.InvalidState: ")`
+  → a new, distinct "this conversation has ended" string, never `sendFailedNote`.
+- Everything after the prefix is `Conversation.AddVisitorMessage`'s own English sentence
+  (`"Cannot add a message to closed conversation {id}."`) - present for a human reading logs, but the
+  widget must never match on it; the prefix is the only stable part.
+- Scope is exactly this one rejection on exactly this one hub method. Every other failure on
+  `VisitorHub` (rate limits, a malformed body, a participant mismatch, a stale attachment) and every
+  rejection on `OperatorHub` still arrives as the unprefixed free-text message, unchanged - this is not
+  a general "hub errors now carry codes" mechanism, deliberately, per this task's own scoping.
+
+**Why this shape, not the alternatives considered**: a hub method has no RFC 7807 `type` field the way
+a REST endpoint's `ErrorExtensions.ToProblem` does (`ConversationsEndpoints.cs`'s own reasoning for
+preferring REST specifically so a failure can carry one) - `HubException` carries one string, and
+that string is the only channel available. Rather than invent a second error-code vocabulary just for
+this one hub method, the prefix reuses the *same* stable code (`Error.Code`, `"Conversation.InvalidState"`)
+`ErrorExtensions.ToProblem` already surfaces as this identical error's REST `type` - one vocabulary,
+a second transport for one value out of it. A second, typed exception type was considered and rejected:
+SignalR's own client always delivers a `HubException` (or, off the SignalR client's happy path, a
+plain `Error`) to `.invoke()`'s rejection, so a second .NET exception type would still collapse to the
+same one string on the wire - no cheaper than a prefix, and it would need its own new "how do I
+serialize a second exception shape over SignalR" answer this codebase has never needed before.
+
+**Verified real, not asserted**: `Ago.Chat.Integration.Tests/VisitorSendIntoClosedConversationTests.cs`
+closes a real conversation (`Conversation.Close`, real Postgres), sends into it through the real,
+unmodified `VisitorHub.SendMessageAsync` (real `SendVisitorMessageHandler`, real `MessageBatchWriter`),
+and asserts the thrown `HubException.Message` carries the prefix. Fails-before was run for real: with
+the fix reverted, the assertion failed against the bare English sentence, confirming the test can
+catch the exact defect it exists to prevent; the revert was never committed. A second fact
+(`SendMessageAsync_ByAVisitorWhoIsNotThisConversationsOwnVisitor_ThrowsAPlainHubExceptionWithNoPrefix`)
+proves the sibling rejection (`Conversation.Forbidden`, a participant mismatch) does *not* pick up the
+same prefix - this item's own "don't collapse this into the same generic error path" warning, checked
+against the new branch itself.
+
+## Outcome (`ago-widget`, 2026-09-12)
+
+Consumed the wire shape above exactly as specified. `ui/widget.ts`'s `ChatWidget.completeSend`, the
+same `.catch` branch the Outcome above names, gained a third check ahead of the existing
+`NotConnectedError`/generic split: `error instanceof Error && error.message.startsWith("Conversation.InvalidState: ")`
+→ a new `conversationEndedNote` string (en/ru), added to `WidgetStrings` alongside the existing
+`*Note` fields it's worded to match (`"Not sent - this conversation has ended."` /
+`"Не отправлено — диалог завершён."`) rather than `sendFailedNote`'s bare "Failed to send." — the two
+existing branches are otherwise untouched. The prefix is hardcoded as a literal in `widget.ts`, never
+referencing `VisitorHub.ConversationClosedHubErrorPrefix` directly (different language, different
+repository, and `internal` there anyway).
+
+Two new tests in `widget.test.ts`: one drives the exact rejection shape above and asserts
+`conversationEndedNote` renders, never `sendFailedNote`; a sibling drives an ordinary, unrelated
+`Error` and asserts the *old* `sendFailedNote` behavior is unchanged — the regression guard proving
+the new check didn't widen past the one prefix it's meant to catch. Both shown failing against the
+change stashed out, passing with it restored.
+
+Verified independently by the managing session: `npm run typecheck`/`lint` clean, `npm test` 35 files /
+361 tests (361, matching the worker's own count exactly), `npm run build` 34.4 KB gzipped against the
+45 KB budget (10.6 KB headroom left after this and `25-46`'s icon work).
+
 ## Done when
 
-- [ ] A visitor who tries to send into a conversation that has already closed sees a message saying
+- [x] A visitor who tries to send into a conversation that has already closed sees a message saying
       the conversation ended, not the generic "не удалось отправить" note.
-- [ ] A genuine send failure (real network/server problem) still shows its own, correctly distinct
+- [x] A genuine send failure (real network/server problem) still shows its own, correctly distinct
       message.
