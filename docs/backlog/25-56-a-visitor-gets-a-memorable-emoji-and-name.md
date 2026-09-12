@@ -2,6 +2,11 @@
 
 - **Stage**: 25
 - **Status**: ready — fully specified via the author's own answers, 2026-09-12
+- **Verified**: 2026-09-12 — the 8-character code is confirmed real: `visitorId.slice(0, 8)`, rendered
+  at `ago-console/src/workspace/ConversationList.tsx:102,167` (the conversation-switching panel, both
+  its list variants) and `ago-console/src/pages/ConversationPage.tsx:705` (the open-dialog header) —
+  exactly the two locations this item names and no others. `Ago.Chat.Domain/Visitor.cs` exists as the
+  natural home for a new per-visitor emoji-pair field.
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md` — the author's own idea, sharpened into concrete requirements
   through direct questions (recorded below) rather than left to guesswork

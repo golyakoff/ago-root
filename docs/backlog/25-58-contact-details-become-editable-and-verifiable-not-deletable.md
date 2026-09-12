@@ -2,6 +2,11 @@
 
 - **Stage**: 25
 - **Status**: ready — fully specified via the author's own answers, 2026-09-12
+- **Verified**: 2026-09-12 — `ago-console/src/workspace/ContactDetailsPanel.tsx` and its test file
+  confirmed real; `ago-chat`'s `DeleteVisitorContactDetailHandler` and
+  `RecordVisitorContactDetailHandler` both confirmed real under
+  `Ago.Chat.Application/UseCases/{Delete,Record}VisitorContactDetail/`, alongside the repository and
+  domain type (`VisitorContactDetail.cs`) an edit/confirm/invalid mechanism would extend.
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`, sharpened through direct investigation and the author's own
   answers (recorded below)

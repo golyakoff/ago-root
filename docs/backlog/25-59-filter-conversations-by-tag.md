@@ -1,7 +1,11 @@
 # 25-59 · Filter conversations by tag
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — `ConversationTagsPanel.tsx` confirmed as the real vocabulary source
+  (`siteTags`, fetched via `tagsApi.ts`, `18-04`). No existing multi-select filter (checkbox-style,
+  AND/OR) exists anywhere else in the console to match — searched for one, found none — so this
+  item's own AND-by-default fallback applies as written, not a convention borrowed from elsewhere.
 - **Depends on**: nothing — `18-04`/`19-02` already built the tag dictionary and per-conversation
   tagging this item filters by; confirmed shipped, not built here
 - **Found**: 2026-09-12, `feedback.md`, narrowed by investigation — the tag mechanism itself (a real
