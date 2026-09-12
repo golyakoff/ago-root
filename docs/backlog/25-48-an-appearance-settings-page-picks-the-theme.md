@@ -1,7 +1,7 @@
 # 25-48 · An Appearance settings page picks the theme
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#206`
 - **Verified**: 2026-09-12 — **the item's own premise was wrong: `ago-console` already ships a fully
   working System/Light/Dark picker.** `design/ThemeToggle.tsx` (a `<Select>`, rendered by `AppShell`
   next to Sign out) backed by `design/theme.ts`'s `useTheme()` (`localStorage`, key
@@ -41,11 +41,21 @@ of a second placement migration later.
 - **Removing it from the header must not orphan the underlying `useTheme()` hook or its storage key**
   — those keep working exactly as they do today, only the rendering call site moves.
 
+## Outcome
+
+`/appearance` (`AppearanceSettingsPage`) — a flat top-level route, not `/settings/appearance`: `23-31`
+retired the `/settings/*` prefix entirely, moving every tenant-configuration screen into one of
+`consoleNav.ts`'s seven gated sections. A theme choice is a personal, ungated preference, not tenant
+configuration, so it follows the same flat-route shape `/team/chat`/`/onboarding` already use rather
+than reviving a retired prefix. `ThemeToggle`/`useTheme()` internals are unchanged — moved, not
+duplicated, out of `AppShell.tsx`'s header. No settings index exists to add a nav entry to;
+`25-47`'s own future user-menu is this page's real link, per that item's own dependency on this one.
+
 ## Done when
 
-- [ ] `/settings/appearance` (or the console's own equivalent route convention) offers
+- [x] `/settings/appearance` (or the console's own equivalent route convention) offers
       System/Light/Dark via the existing `useTheme()`/`ThemeToggle` machinery, unchanged in substance.
-- [ ] The header no longer renders `ThemeToggle` — the page is now the only place the control lives.
-- [ ] The choice still persists across a reload for the same operator, and "System" still follows the
+- [x] The header no longer renders `ThemeToggle` — the page is now the only place the control lives.
+- [x] The choice still persists across a reload for the same operator, and "System" still follows the
       OS/browser preference — both already proven by the existing implementation, just re-confirmed
       after the move.
