@@ -2,7 +2,9 @@
 
 - **Stage**: 25
 - **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
-- **Depends on**: `25-50` (the final menu shape/labels this item's badges attach to)
+- **Depends on**: `25-50` (done — the final menu shape/labels this item's badges attach to, per
+  `25-50`'s own Outcome) and `25-63` (the Записи badge cannot be genuinely live without a real-time
+  hub for `ago-calendar`, which does not exist yet — filed 2026-09-12 while scoping this item)
 - **Found**: 2026-09-12, `feedback.md` — the most complex single item in this batch; read the whole
   spec before starting, the rules differ between the two menu sections it touches
 
