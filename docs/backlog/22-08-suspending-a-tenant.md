@@ -1,21 +1,26 @@
 # suspending a tenant, and what a suspended tenant's visitors see
 
 - **Stage**: 22
-- **Status**: ready — **narrowed 2026-09-07 from "tenant lifecycle across two databases"**, which was
+- **Status**: ready — **the Open questions are answered (2026-09-13)**, in dialogue with the author;
+  see *Answered*, below. Narrowed 2026-09-07 from "tenant lifecycle across two databases", which was
   four promises under one number (rule 15). This file keeps suspension; erasure went to `22-30`,
   export to `22-31`, reconciliation to `22-32`. See *Where the other three went*, below.
 - **Depends on**: `22-03`, `22-07`
-- **Decision**: `docs/adr/0149-*` — **Proposed, not Accepted.** It settles the shape; the two numbers
-  it does not settle are this item's own Open questions.
+- **Decision**: `docs/adr/0149-*` — **Proposed, not Accepted.** It settled the shape; the two-numbers
+  question it left open is answered below as one owner-chosen number, not two.
 - **Found**: 2026-09-03, and it was missing from this stage's first draft. Recorded because the
   omission is the informative part: suspend/delete/export is the workstream nobody writes down until
   something has already gone wrong.
 
 ## Goal
 
-An account can be suspended. Within a bound this item states — two numbers, one for the ordinary case
-and one that holds when the broker is down — the calendar stops accepting new bookings for it. Lifting
-the suspension restores everything with no re-provisioning. Nobody who is not party to the suspension
+An account can be suspended, account-wide, for a duration the platform owner sets in minutes at the
+moment of suspending — a reversible freeze while a suspected violation is looked into, never an
+erasure. The owner sees which accounts are currently suspended, can extend one or lift it early, and a
+suspension nobody extends expires on its own. Independent of that owner-chosen duration, the
+calendar's own knowledge of the suspension is bounded even with the broker down — an internal
+robustness property, not a second number anyone sets. Lifting the suspension (by hand or by
+expiring) restores everything with no re-provisioning. Nobody who is not party to the suspension
 notices it happened.
 
 ## What is actually true today, verified 2026-09-07
@@ -54,24 +59,42 @@ notices it happened.
 ## The design, in one paragraph
 
 Suspension is a state on the account with its own act and its own reversal, distinct from a lapse
-(`adr/0073`) and from a revoke (`adr/0118`). A suspension never deletes an entitlement — the
-`EnabledModule` row, its credential and its entry point all stand, so lifting a suspension is a write
-on the account and nothing else. The calendar learns about it through the mechanism its three existing
-consumers already use, with one addition that turns a hope into a bound: the projected row carries a
-`valid_until` the calendar compares against its own clock **inside the transaction that creates a
-booking**, chat renews it on a schedule, and a suspension is chat declining to renew *plus* an
-immediate event that brings the effect forward. That is `adr/0149`, and it is why the answer to "what
-is the staleness bound" is two numbers rather than one.
+(`adr/0073`) and from a revoke (`adr/0118`) — **and, since the Answered section below, distinct in
+*purpose* from both too: this mechanism exists for a suspected violation, never for non-payment**,
+which `adr/0073`'s downgrade already handles completely on its own. A suspension never deletes an
+entitlement — the `EnabledModule` row, its credential and its entry point all stand, so lifting a
+suspension is a write on the account and nothing else. The calendar learns about it through the
+mechanism its three existing consumers already use, with one addition that turns a hope into a bound:
+the projected row carries a `valid_until` the calendar compares against its own clock **inside the
+transaction that creates a booking**, chat renews it on a short, fixed schedule for as long as the
+suspension is active, and a suspension is chat declining to renew *plus* an immediate event that
+brings the effect forward. That renewal cadence is an internal robustness detail, not the owner-facing
+duration — the owner sets *how long the suspension itself lasts* (`suspended_until`, extendable,
+liftable early); the lease merely bounds how stale the calendar's own copy of "is this account still
+suspended" can get before it fails closed. The two are independent, which is what makes "one owner-set
+number, plus an internal bound nobody sets" the honest description rather than the two-numbers
+question this section used to leave open.
 
 ## Scope
 
+- **Account-wide, not add-on-only.** Chat stops for new sessions (the widget degrades to nothing, its
+  own already-existing silent failure mode) and operators can read but not send; the calendar refuses
+  new bookings the same way. Decided this way *because* the case is enforcement, not non-payment — see
+  *Answered* below for why that resolves the contradiction the two readings used to pose.
 - A suspension state on the account, set and cleared by the platform owner, with the act, the actor,
   the reason and the instant recorded — the same standard `adr/0118` already holds a forced revoke to,
   and for the same reason: this is an act that later has to be justified to the person it was used
   against.
-- The lease per `adr/0149`: a `valid_until` on the calendar's own tenancy row, renewed by chat at
-  half the lease length, read inside the calendar's own booking transaction. Fail-closed when it
-  passes.
+- **The owner sets the duration in minutes at the moment of suspending.** Stored as `suspended_until`
+  on the account, not a fixed system constant - a suspension nobody extends lifts itself when it
+  passes, the same "no manual cleanup step" property lifting it early already has.
+- **A console screen listing currently-suspended accounts**, each with *extend* (push
+  `suspended_until` further out) and *unblock* (lift immediately) - reversing this item's own earlier
+  Out-of-scope line, now that the mechanism has a duration and a list to manage, not just an on/off
+  switch a single request could flip blind.
+- The lease per `adr/0149`: a `valid_until` on the calendar's own tenancy row, renewed by chat on a
+  short, fixed cadence - decoupled from the owner's chosen `suspended_until`, see *The design* above -
+  read inside the calendar's own booking transaction. Fail-closed when it passes.
 - **What the calendar refuses, and what it does not.** Refuse: creating a new booking, from the public
   widget and from the console alike. Do not refuse: every read, the tenant's own configuration
   screens, and anything touching a booking that already exists.
@@ -80,75 +103,70 @@ is the staleness bound" is two numbers rather than one.
   shop is using a third party as leverage. This is the same line `22-07` already drew when it decided
   that lowering a quota deactivates workers rather than deleting them: nothing a shop typed, and
   nothing a customer was promised, is destroyed by a commercial action.
-- **What the tenant sees.** The console says the account is suspended, since when, and what to do
-  about it. That is the entire visible effect, and it is deliberately the only one.
-- **What a visitor sees: nothing new.** A conversation already open is not cut and an inbound message
+- **What the tenant sees.** The console says the account is suspended, since when, until when, and
+  what to do about it. That is the entire visible effect, and it is deliberately the only one.
+- **What a visitor sees: nothing new**, beyond the account-wide effect Scope's first line already
+  states (no widget for a new session). A conversation already open is not cut and an inbound message
   is still accepted and stored — exactly the distinction `adr/0124` already draws between blocking and
-  erasure, applied one level up. A new session on a suspended tenant's page gets no widget, which the
-  widget already degrades to silently.
-- Both numbers stated in the report and in `messaging.md`: the ordinary propagation time (one outbox
-  hop — `LISTEN`/`NOTIFY` wakes the dispatcher, the 5 s `OutboxDispatcher.PollInterval` is the
-  fallback, and the deployment already alerts at 60 s of outbox lag) and the guaranteed ceiling (the
-  lease length, which holds with the broker stopped).
+  erasure, applied one level up.
+- The internal propagation bound stated in the report and in `messaging.md`: the ordinary propagation
+  time (one outbox hop — `LISTEN`/`NOTIFY` wakes the dispatcher, the 5 s `OutboxDispatcher.PollInterval`
+  is the fallback, and the deployment already alerts at 60 s of outbox lag) and the guaranteed ceiling
+  (the lease-renewal cadence, which holds with the broker stopped) - both about how fast the *effect*
+  propagates, neither a number the owner ever sets or sees.
 
 ## Out of scope
 
 - **Changing what a lapse does.** `adr/0073` decided that a lapsed subscription downgrades rather than
-  suspends, and this item does not reopen it. If the answer to the first Open question below is that a
-  lapse should suspend the add-on, that is a second item and it supersedes `adr/0073` rather than
-  editing it.
-- Erasure (`22-30`), export (`22-31`), reconciliation (`22-32`).
+  suspends, and this item does not reopen it - confirmed by the author 2026-09-13: suspension is for a
+  suspected violation, never for non-payment, so there is no case left where the two mechanisms
+  compete for the same trigger.
+- Erasure (`22-30`), export (`22-31`), reconciliation (`22-32`). A suspicion that becomes a decision to
+  actually erase the account is `22-30`'s own act, a separate one from lifting or letting this expire.
 - Suspending one **operator**. A different subject, a different question, and `24-04`'s territory
   rather than this one's.
-- A console screen for the platform owner to suspend from. `decisions.md` §6 already defers the
-  equivalent for module grants, for a reason that applies unchanged.
 
 ## Done when
 
-- [ ] Suspending an account stops the calendar accepting a new booking, proven by doing it, with the
-      observed elapsed time in the report.
+- [ ] Suspending an account stops the calendar accepting a new booking **and** stops the widget being
+      served for a new chat session, proven by doing both, with the observed elapsed time in the
+      report.
 - [ ] **With the broker stopped**, a suspended tenant's calendar refuses a new booking once the lease
       passes — proven by stopping the broker, not by reading the code. This is the box that makes the
       bound a bound.
-- [ ] Lifting a suspension restores bookings with no re-provisioning, no new credential and no manual
-      step.
+- [ ] The owner can set a suspension's duration in minutes, see it in a list, extend it, and lift it
+      early — and a suspension nobody touches lifts itself once `suspended_until` passes, with no
+      manual step.
+- [ ] Lifting a suspension (by hand or by expiring) restores bookings and the widget with no
+      re-provisioning, no new credential and no manual step.
 - [ ] A visitor with a conversation already open on a suspended tenant's site sees no error, and their
       message is still stored.
 - [ ] A booking made before the suspension is untouched by it.
-- [ ] `messaging.md` carries the two numbers, and `adr/0149` moves to Accepted with them filled in.
+- [ ] `messaging.md` carries the internal propagation numbers, and `adr/0149` moves to Accepted with
+      them filled in.
 
-## Open questions
+## Answered, 2026-09-13
 
-**Both are the author's, and the second one decides the first.**
+In dialogue with the author, both questions this section used to pose resolved into one clean answer
+rather than a split:
 
-- **Is a suspension account-wide, or add-on-only?**
-  - *Account-wide* — chat stops too: the widget is not served for new sessions, operators can read but
-    not send. The suspension is real leverage and one state means one thing. Cost: it contradicts
-    `adr/0073`, which deliberately chose a downgrade over a stop for non-payment, so account-wide
-    suspension only makes sense if suspension's case is *not* non-payment.
-  - *Add-on-only* — chat is untouched, the calendar stops taking bookings. Much smaller blast radius,
-    no contradiction with `adr/0073`, and it matches the shape of the thing being sold (the calendar is
-    an add-on, `22-07`). Cost: it is not leverage over a tenant who only uses chat, so it does not
-    answer `decisions.md` §6's actual motivating case — the law-breaking tenant.
-  - The two are not exclusive: the state can live on the account and each product decide what it does
-    with it. That is the more expensive build and the one that does not have to be revisited.
-
-- **What is suspension *for*, and therefore how long is the lease?** These are one question.
-  - *A commercial lever* (unpaid invoice, chargeback): the expensive failure is a **paying** tenant's
-    bookings stopping because AGO's own broker was down. Lease long — **24 hours** is the
-    recommendation, renewed at 12, so a single missed renewal expires nothing and the outbox-lag alert
-    has fired eleven hours before anything breaks. A non-payer taking one more day of bookings costs
-    one day of a product they already had.
-  - *A stop on a law-breaking tenant* (`decisions.md` §6's case): the expensive failure is the
-    opposite, and a day of continued booking is a day of continued harm. Lease short — minutes — and
-    accept that a broker outage now stops paying customers.
-  - *Both, with two leases*: a long one for the commercial case and an immediate, unconditional
-    mechanism for the other. The honest observation is that the second case probably is not a
-    suspension at all — stopping a law-breaking tenant is closer to `22-30`'s erasure path, which
-    already has to reach the module and prove it did.
-  - **No number can be derived from measurement here.** This deployment has no recorded broker-outage
-    distribution, and inventing one would be the figure `CLAUDE.md` forbids. The argument above is
-    from the cost asymmetry, which is the only honest ground available.
+- **What is suspension for?** A suspected violation (`decisions.md` §6's own motivating case) — never
+  non-payment, which `adr/0073`'s downgrade already handles completely. The author, verbatim: *«давай
+  тогда зафиксируемся что приостановка у нас для нарушителей, Я не вижу необходимости что-то
+  приостанавливать в течение 24 часов для штатной ситуации»* - there is no commercial-lever case left
+  to design a second lease around, so the "both, with two leases" reading this section used to name is
+  moot, not chosen against.
+- **Is it suspension or erasure?** Confirmed suspension - a reversible freeze while a suspected
+  violation is looked into, not a decision to erase. If a suspicion becomes a decision to actually
+  delete the account, that is `22-30`'s own act, entered separately.
+- **Account-wide or add-on-only?** Account-wide. With the commercial case gone, `adr/0073` no longer
+  has anything to contradict, and add-on-only would leave this item unable to answer its own motivating
+  case - a tenant using chat alone.
+- **How long is the lease?** Not a fixed number at all - the author wants to set it per suspension, in
+  minutes, at the moment of blocking, with a list of currently-suspended accounts to extend or unblock
+  from. That single owner-facing number replaces both the "24 hours" and "minutes" this section used to
+  weigh against each other; the internal lease-renewal cadence `adr/0149` still needs is a robustness
+  detail underneath it, not a second thing anyone sets - see *The design* above.
 
 ## Where the other three went
 
