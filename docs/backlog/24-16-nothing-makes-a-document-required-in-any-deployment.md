@@ -1,7 +1,7 @@
 # nothing makes a document required in any deployment
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done — `ago-chat#266`
 - **Verified**: 2026-09-12 — confirmed in `ago-chat`: the `required_documents` table is real
   (`Migrations/20260905191052_Stage24AddRequiredDocuments.cs`), `RegisterSiteHandler.cs` and
   `POST /api/v1/owner/documents` (`Ago.Chat.Api/Owner/OwnerDocumentEndpoints.cs`) both exist as
@@ -64,10 +64,33 @@ missing is the mechanism that lets that choice be made once it exists.
 
 ## Done when
 
-- [ ] A platform owner can add and remove a required document for a subject kind, without SQL.
-- [ ] Publishing a version has a surface, or a runbook stating plainly that the API call is the
+- [x] A platform owner can add and remove a required document for a subject kind, without SQL.
+- [x] Publishing a version has a surface, or a runbook stating plainly that the API call is the
       procedure and how to make it.
-- [ ] Removing a requirement leaves existing acceptance records untouched, asserted by a test.
-- [ ] A registration in a deployment with one required document records an acceptance — proven
+- [x] Removing a requirement leaves existing acceptance records untouched, asserted by a test.
+- [x] A registration in a deployment with one required document records an acceptance — proven
       end to end rather than at the handler, since the gap this item closes is exactly the one that
       handler-level tests could not see.
+
+## Outcome
+
+Shipped as `ago-chat#266`. No EF migration — `required_documents` (`24-03`) already carried the
+columns needed. `IRequiredDocumentRepository` gained `AddAsync`/`RemoveAsync`, both idempotent;
+`OwnerDocumentEndpoints` gained three `RequirePlatformOwner`-gated routes (list, add, remove) —
+publishing already had a surface (`24-02`'s existing endpoint), confirmed and reused rather than
+duplicated.
+
+`adr/0111`'s guarantee is structural, not just documented: `RemoveAsync` is a single
+`ExecuteDeleteAsync` against `required_documents` alone — no join, no cascade, nothing in the
+statement that could reach `acceptance_records`. Proven by a real-Postgres integration test that
+breaks when that guarantee is deliberately violated. A second integration test drives the owner's
+real HTTP routes end to end into a real registration, proving the mechanism works, not just that the
+routes answer 200 — the exact gap the item's own text names as invisible to a handler-level test.
+
+`processing-instruction-facts.md`'s "What only the author, or the running system, can answer" list
+gained the honest line: whether any `required_documents` row has actually been added on the live
+deployment is live state this repository cannot see.
+
+**Verification**: `dotnet format --verify-no-changes` clean; `dotnet build -c Release` 0 warnings;
+`dotnet test -c Release`, 6/6 assemblies, 0 failed — Domain 646, Application 1113, Architecture 44,
+FakeCrm 21, Concurrency 75, Integration 1115.

@@ -431,6 +431,13 @@ Listed rather than guessed. `24-06` had no access to any live system and used no
   (`personal-data.md`, "What is unestablished").
 - **Whether AGO has configured a YandexGPT key anywhere outside `ago-deploy`.** From the repositories,
   the answer is no.
+- **Whether any `required_documents` row exists on the live deployment, and therefore what a tenant is
+  bound by today.** `24-03` shipped the mechanism seeding no row; `24-16` added the platform owner's
+  own surface to populate it (`POST /api/v1/owner/documents/required`,
+  `Ago.Chat.Api/Owner/OwnerDocumentEndpoints.cs`). Until that call has actually been made on the live
+  cluster, a tenant registering today accepts nothing beyond ordinary contract necessity — this file
+  cannot see whether it has been made, and each tenant's own "from when" is that registration's own
+  `acceptance_records.accepted_at`, never one global date.
 
 ## The one element that is a decision, not a fact
 
