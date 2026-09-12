@@ -10,6 +10,12 @@
   that split honestly, and it does not exist on `main` yet. Do not start this item's backend half before
   `25-41` merges.
 - **Found**: 2026-09-09, the author reading their own billing page
+- **Verified**: 2026-09-12 — `25-41` is merged (`ago-chat#257`); `BillingSubscription.
+  ExtraAdministratorsPurchased` is real (`Ago.Chat.Domain/BillingSubscription.cs:121`). Confirmed
+  `BillingStatusDto`'s current wire shape exactly as the item describes — `Ago.Chat.Application/
+  UseCases/GetBillingStatus/GetBillingStatus.cs:21`: `record BillingStatusDto(string Tier, int
+  SeatLimit, int SeatsUsed, BillingSubscriptionSummaryDto? LatestSubscription)` — no Administrator
+  fields at all. The blocker this item names is cleared; its premise still holds.
 
 ## What is actually true
 
