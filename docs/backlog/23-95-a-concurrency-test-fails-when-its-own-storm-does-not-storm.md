@@ -1,7 +1,7 @@
 # a concurrency test fails when its own storm does not storm
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — `ago-chat#265`
 - **Verified**: 2026-09-12 — confirmed both the named test and its exact assert message are real in
   `ago-chat/tests/Ago.Chat.Concurrency.Tests/TransferConversationConcurrencyTests.cs:60,194`. The
   "check the neighbours" claim holds wider than stated: `RateLimitingConcurrencyTests.cs` exists as
@@ -66,7 +66,29 @@ genuine concurrency regression, which will look exactly like this one.
 
 ## Done when
 
-- [ ] A run on a loaded CI runner either tests the property or says it could not, and does not fail the
+- [x] A run on a loaded CI runner either tests the property or says it could not, and does not fail the
       build for the second case unless the retries are exhausted.
-- [ ] A storm that did not storm still cannot report success.
-- [ ] Whether the neighbouring concurrency tests share this shape is established and written down.
+- [x] A storm that did not storm still cannot report success.
+- [x] Whether the neighbouring concurrency tests share this shape is established and written down.
+
+## Outcome
+
+Chose a bounded retry (up to 3 fresh-seeded storm attempts, stopping at the first that actually
+produces a Postgres deadlock) over retuning the storm's own parameters — the item's own "Where this is
+likely to go wrong" section warns that tuning against this machine risks tuning against the wrong CI
+contention distribution, and a retry needs no such assumption. The correctness assertions (no escaped
+exception, the exact capacity invariant) run unconditionally on every attempt and fail immediately,
+never retried; only "didn't storm" is retried, and exhausting every attempt without ever storming still
+fails the test with an explicit message — the vacuous-pass property stays intact. Both
+`TransferringRacesTheAssignmentEngine_...` and `ClosesStormingAssignmentBatches_...` are un-skipped.
+
+Proved by breaking it: forcing `deadlockReports=0` drove exactly 3 attempts then failed with the
+exhaustion message; injecting a fake escaped exception failed immediately on attempt 1, never retried.
+
+**Neighbours, checked**: `RateLimitingConcurrencyTests` does not share this shape — its two tests
+assert exact, deterministic counts, never a "did contention happen" self-check; its one prior CI flake
+(a `RetryAfter` timing issue) was already fixed differently, by waiting the exact value Redis returns.
+
+**Verification**: `dotnet format --verify-no-changes` clean; `dotnet build -c Release` 0 warnings;
+`dotnet test -c Release`, 6/6 assemblies, 0 failed — Domain 646, Application 1103, Architecture 44,
+FakeCrm 21, Concurrency 75 (0 skipped, previously 2), Integration 1104.
