@@ -1,7 +1,7 @@
 # 25-50 · Left menu cleanup and calendar section renames
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`
 

@@ -1,7 +1,7 @@
 # 25-51 · Unread and pending counts on the left menu
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: `25-50` (the final menu shape/labels this item's badges attach to)
 - **Found**: 2026-09-12, `feedback.md` — the most complex single item in this batch; read the whole
   spec before starting, the rules differ between the two menu sections it touches

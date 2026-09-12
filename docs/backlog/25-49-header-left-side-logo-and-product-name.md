@@ -1,7 +1,7 @@
 # 25-49 · Header left side: logo size and the product's real name
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`
 

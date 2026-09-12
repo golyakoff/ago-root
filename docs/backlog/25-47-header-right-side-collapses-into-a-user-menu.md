@@ -1,7 +1,7 @@
 # 25-47 · The header's right side collapses into a user menu
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: `25-46` (real icons for the menu's own rows), `25-48` (the Appearance page this
   menu links to — build together or stub the link and land `25-48` immediately after)
 - **Found**: 2026-09-12, `feedback.md`
