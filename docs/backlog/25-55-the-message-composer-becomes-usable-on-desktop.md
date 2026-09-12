@@ -1,7 +1,7 @@
 # 25-55 · The message composer becomes usable on desktop
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#203`
 - **Verified**: 2026-09-12 — `ago-console/src/workspace/Composer.tsx` confirmed as the real, dedicated
   component (not inline in `Thread.tsx`); its textarea currently renders `rows={1}`, matching the
   item's own "reduced to a sliver" complaint. No file overlap with `25-58`'s own already-merged
@@ -32,10 +32,28 @@ pixels wide — effectively non-functional for typing a real message. The three 
   UX is not this item's own scope (it is a bigger, separate redesign question), but this item's own
   fix must not silently rely on that redesign happening — it must work inside today's panel widths.
 
+## Outcome
+
+Root cause found by measurement, not guesswork: at the project's own canonical 1280px desktop test
+viewport, the textarea was 26px wide because `.ago-shell__body`'s own shell-wide `max-width` caps the
+whole three-column workspace grid at ~884px total on any monitor, and the fixed-width rail (21rem) and
+aside (18rem) left only ~228px for the middle column — nowhere near enough for a readable textarea
+beside three text-label buttons in one row.
+
+Fix: `rows={1}` → `rows={5}` (the existing auto-grow effect and its 200px/8-line scroll cap already
+handled growth correctly, they just had nothing to grow from); the three buttons (confirmed still
+text labels, not icons — `25-46`'s icon work turned out to be `ago-widget`'s own scope) move below
+the textarea, stacked in a column rather than a row; the aside column narrows 18rem → 14rem to give
+the middle column real width, safe because `.ago-aside__id` already wraps a full uuid.
+
+Measured result: input width 26px → 232px on desktop (1280px), 275px on mobile (375px). Full
+`ux-gate` suite (63 tests, all screens, both viewports) passes, including overflow/contrast checks on
+screens that share this same grid.
+
 ## Done when
 
-- [ ] On a real desktop viewport, the compose textarea is wide enough to type and read a real
+- [x] On a real desktop viewport, the compose textarea is wide enough to type and read a real
       message, not clipped to a sliver.
-- [ ] The textarea starts at roughly 5 rows and grows for longer messages rather than clipping.
-- [ ] Прикрепить/Предложить/Отправить sit directly under the textarea and all fit without wrapping
+- [x] The textarea starts at roughly 5 rows and grows for longer messages rather than clipping.
+- [x] Прикрепить/Предложить/Отправить sit directly under the textarea and all fit without wrapping
       oddly, on both desktop and mobile.
