@@ -1,10 +1,28 @@
 # 25-51 · Unread and pending counts on the left menu
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
-- **Depends on**: `25-50` (done — the final menu shape/labels this item's badges attach to, per
-  `25-50`'s own Outcome) and `25-63` (the Записи badge cannot be genuinely live without a real-time
-  hub for `ago-calendar`, which does not exist yet — filed 2026-09-12 while scoping this item)
+- **Status**: ready
+- **Verified**: 2026-09-12 — confirmed no badge/count field exists anywhere in the nav model today
+  (`ago-console/src/shell/consoleNav.ts`, `AppShell.tsx`'s `AppShellNavItem`); the only `Badge`
+  component (`src/components/Badge.js`) renders static labels, never a count. `25-50`'s real labels
+  confirmed exactly as guessed: `navConversations`="Диалоги", `navMyConversations`="Мои",
+  `navSectionCalendar`="Записи", the pending sub-item is `navCalendarQueue`="В ожидании"
+  (`/calendar/waiting`, `CalendarQueuePage`) — a sibling `navCalendarBookings`="Утверждённые"
+  (`/calendar/bookings`) is a separate item the badge must not land on. Much of the Диалоги mechanism
+  already exists and is reusable, not net-new: `Conversation.OperatorUnreadCount` is already tracked
+  server-side (`RecordUnreadMessageHandler`), already on `ConversationSummaryDto`, already has a real
+  mark-read write (`MarkConversationReadHandler`, `POST /api/v1/conversations/{id}/read`), and
+  `ago-console/src/workspace/attention.ts` already implements `unreadCountFor`/`totalUnread` plus a
+  live-adjustment reducer (`applyAttentionEvent`) fed by the existing `OperatorConnectionProvider`
+  (`onAnyMessage`) — currently used only for the browser tab title, not a menu badge, but the
+  summing/read-clearing logic this item needs already exists. On the Записи side,
+  `BookingPendingStateChanged`'s real payload (`EventId, TenantId, Status, OccurredAt,
+  CorrelationId`) carries no count — it is a "something changed" signal only; a badge still needs a
+  REST call (`GetPendingBookingsForTenantHandler`) for the actual number.
+- **Depends on**: `25-50` (done) and `25-63` (done — `ago-calendar#61`/`ago-console#211`, merged
+  2026-09-12 after this item was first scoped; `CalendarOperatorHub`/`CalendarOperatorConnectionProvider`/
+  `CalendarConnectionContext` are real and on `main`, pushing a `PendingBookingsChanged` event per the
+  shape above).
 - **Found**: 2026-09-12, `feedback.md` — the most complex single item in this batch; read the whole
   spec before starting, the rules differ between the two menu sections it touches
 
