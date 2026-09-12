@@ -1,15 +1,18 @@
 # ADR-0030: Design tokens and a closed hand-rolled component set for the console, not a component library
 
-- **Status**: Accepted, and **amended four times** — on 2026-08-26 (a second surface now reads these
+- **Status**: Accepted, and **amended five times** — on 2026-08-26 (a second surface now reads these
   tokens, the Keycloak login theme, `11-07`, and answers the webfont question in the last "Negative"
   consequence below *differently* from the console), on 2026-09-05 (`23-24` opens the closed
   eleven-component set by exactly one glyph, narrowly, for one meaning), on 2026-09-06 (`23-31`/
   `adr/0129` closes that opening again — the meaning the glyph existed for is gone, and nothing
-  replaces it with a second one), and on 2026-09-12 (`25-47` reopens it a third time, for three
-  glyphs and the console's first real dropdown menu). All four amendments are appended below the
+  replaces it with a second one), on 2026-09-12 (`25-47` reopens it a third time, for three
+  glyphs and the console's first real dropdown menu), and again on 2026-09-12 (`25-54` grows the set
+  itself for the first time since `11-05` — a twelfth component, the tooltip this ADR's own
+  Alternatives section named as its trigger to revisit). All five amendments are appended below the
   Decision they modify; none rewrites the original text.
-- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05, amended 2026-09-06, amended 2026-09-12)
-- **Stage**: 11, second amendment `23`, third amendment `23`, fourth amendment `25`
+- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05, amended 2026-09-06, amended 2026-09-12,
+  amended 2026-09-12)
+- **Stage**: 11, second amendment `23`, third amendment `23`, fourth amendment `25`, fifth amendment `25`
 
 ## Amendment (2026-08-26): the login page loads no webfont, and the tokens now have a second consumer
 
@@ -182,6 +185,47 @@ second, independent menu that needs *nested* items, or real keyboard users repor
 navigation is expected and its absence reads as broken (this ADR's Alternatives section already names
 `aria-menu` conformance as the deciding fact, not a hunch) - either is grounds to revisit properly,
 not to quietly grow a second hand-rolled menu with different behaviour from this one.
+
+## Amendment (2026-09-12): the twelfth component — a tooltip, exactly where this ADR said one would go
+
+`25-54` moves eight standing explanatory paragraphs out of permanent inline text in the three-panel
+workspace and behind a `(?)` trigger, hover/focus-revealed. Seven of the eight strings this item's
+own investigation named were real; the eighth (an explanation near `ChannelIdentitiesPanel`'s own
+"Связанные каналы" title) does not exist in the code today and nothing was invented to fill it —
+recorded here rather than left silent, since the item's own Verified section had assumed it did.
+
+**This grows the closed set itself, not just the icon exception two amendments above narrow again
+and again.** This ADR's own Alternatives section named its trigger in so many words: *"the first
+real combobox, menu, or tooltip is the trigger to revisit this ADR."* A tooltip earns a twelfth,
+shared component rather than one screen's own local markup for the same reason the two icon
+amendments above stayed narrow instead of opening a general system: this item alone gives it seven
+call sites across three panels (`ConversationList` twice, `ConversationPage`, `Thread`,
+`ConversationNotesPanel`, `ConversationOutcomePanel`, `VisitorPanel`), and a hover/focus-triggered
+popover with real keyboard and touch behaviour is exactly what a copy-pasted `<span>` per call site
+would drift on — nobody owning the interaction is the failure mode this ADR's own Alternatives
+section already names for a component like this.
+
+**Still hand-rolled, the same call the dropdown-menu amendment above already made and for the same
+reason**: the hard parts a headless library buys — focus trapping, a roving-`tabindex` protocol,
+submenu/typeahead — are not what a tooltip needs. It is not modal, holds no focus hostage, and has
+exactly one interactive element. Native `title` was the real alternative and loses on the request
+that raised this item: it never fires on keyboard focus, cannot be styled to this console's own
+tokens, and cannot be measured for contrast the way `tokens.css` measures every other pair — a
+console that already gates on WCAG 1.4.11/2.5.8 elsewhere is exactly the case `title` is wrong for.
+
+**The trigger glyph is a plain `"?"` character, not an icon** — deliberately not reaching for either
+of the two icon exceptions above, both of which are scoped narrowly to one meaning each and say so
+in their own text. A text glyph costs nothing, needs no path data fetched from anywhere, and matches
+this console's own founding argument for closing the set at eleven in the first place: text is
+unambiguous and translatable.
+
+**What this does not attempt**: viewport-collision detection (the bubble always opens below,
+left-aligned to the trigger) or multi-line reflow beyond a fixed `max-width`. Every call site this
+item adds lives inside the three-panel workspace's own bounded columns, never near a viewport edge
+at this console's supported widths — a positioning library would be solving a problem that does not
+exist yet, the same shape this ADR's own "Alternatives considered" already rejects a dependency for
+elsewhere. The trigger to revisit this specific limit is a real report of a clipped bubble, not a
+hunch. `docs/design/gaps.md` pile 3 item 4 ("no tooltip and no popover") is closed by this amendment.
 
 ## Context
 
