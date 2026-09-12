@@ -1,7 +1,7 @@
 # 25-53 · Console-wide audit: "list + create form in one card" becomes two blocks
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#207`
 - **Verified**: 2026-09-12 — confirmed a real, non-trivial set of settings-style pages exists to
   audit: `CalendarServicesPage.tsx`, `CalendarSetupPage.tsx`, `OperatorsTeamPage.tsx`, `TagsPage.tsx`,
   `TeamChatPage.tsx` and others under `src/pages/`. This is an audit item by its own nature — no fixed
@@ -41,9 +41,28 @@ directly), then a create-new-object form below. The feedback's own example is `�
   already exist as API operations (if editing an object type has no backend support yet, name that as
   a real gap on the item's own report rather than building new backend surface unannounced).
 
+## Outcome
+
+Three screens found in the old one-blended-card shape, each split into a table card + separate
+add-form card:
+
+| Screen | Actions wired | Gap left named, not built |
+|---|---|---|
+| `CalendarServicesPage.tsx` (the feedback's own named example) | none | no `updateService`/`deleteService` API exists |
+| `CalendarSetupPage.tsx`'s calendars sub-section | Edit | no `deleteCalendar` API exists |
+| `TagsPage.tsx` | rename-in-place + delete | none — full CRUD already existed |
+
+Already in the two-block shape before this item, unchanged: `CalendarWorkersPage.tsx`,
+`OperatorsTeamPage.tsx`. Reviewed and confirmed not an instance of this pattern:
+`TeamChatPage.tsx` (a live chat room, not an object list), `CannedResponsesPage.tsx`/
+`OfflineAutoReplyPage.tsx`/the calendar setup page's own origins field (each edits one whole list via
+a single `PUT`, a different, already-decided pattern — no per-item id), and every single-entity
+config screen with no variable-count list at all (`FaqModulePage`, `WidgetConfigPage`, `ProductsPage`,
+`DocumentsPage`, the channel pages, `MyNumbersPage`). No webhooks screen exists in the console.
+
 ## Done when
 
-- [ ] Every console screen using the old one-blended-card list+form pattern is found and listed in
+- [x] Every console screen using the old one-blended-card list+form pattern is found and listed in
       this item's own Outcome, named by screen, not only the Услуги example.
-- [ ] Each one is split into a list card (table + edit/delete) and a separate create-form card, using
+- [x] Each one is split into a list card (table + edit/delete) and a separate create-form card, using
       the actual object type's own existing fields and API operations.
