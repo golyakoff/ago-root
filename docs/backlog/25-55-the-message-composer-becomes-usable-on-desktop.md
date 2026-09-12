@@ -1,7 +1,11 @@
 # 25-55 · The message composer becomes usable on desktop
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — `ago-console/src/workspace/Composer.tsx` confirmed as the real, dedicated
+  component (not inline in `Thread.tsx`); its textarea currently renders `rows={1}`, matching the
+  item's own "reduced to a sliver" complaint. No file overlap with `25-58`'s own already-merged
+  `Thread.tsx`/`ConversationPage.tsx` changes — `Composer.tsx` itself was untouched by that item.
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md` — a real, live usability defect, not only a style preference
 
