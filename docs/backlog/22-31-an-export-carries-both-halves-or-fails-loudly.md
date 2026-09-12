@@ -1,7 +1,7 @@
 # a tenant's export carries both halves, or fails loudly
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: ready — build as written; the transport question below is answered (2026-09-13).
 - **Depends on**: `16-03` (the export machinery this extends), `22-30` (whichever answer its Open
   question takes about reaching a module after a revoke — this item needs the same reach)
 - **Decision**: `docs/adr/0149-*` — **Proposed.** Its third rule, that chat never parses a module's
@@ -102,12 +102,21 @@ tenant has no calendar", which today's manifest could not express.
 - [ ] The difference between this and a visitor's own request is written where the next person will
       read it: `personal-data.md`, and `24-11`'s own file.
 
-## Open questions
+## Answered, 2026-09-13
 
-- **Does the module's half arrive as bytes over the channel, or as its own presigned artifact chat
-  copies?** Both work and the difference is operational rather than architectural: bytes are one
-  round trip and one failure mode but put a whole tenant's history through the module HTTP path that
-  `ResilientModuleGateway`'s timeouts were sized for visitor messages; a presigned artifact avoids
-  that but means the module needs object storage, which the calendar today does not have at all. The
-  second is the more honest long-term shape and the more expensive one now. Not the author's question
-  unless the answer is "give the calendar object storage", which it might be.
+**The module's half arrives as bytes over the existing channel** — the same one `22-11`'s registration
+already uses — and chat copies them straight into the archive. The author chose this over standing up
+object storage for the calendar purely to serve this one item: the calendar has none today, and this
+item is not the reason to build it.
+
+That means `ResilientModuleGateway`'s timeouts, sized for a visitor message, now also have to carry a
+whole tenant's calendar history in one call — the operational cost this section named as option A's
+price. Two things this decision commits the implementation to:
+
+- **The export path needs its own timeout/size budget on this channel**, not the visitor-message one
+  reused as-is — a large tenant's calendar history is a different shape of payload than a chat message,
+  and sizing it the same way as `20-07`'s module-flow steps would be the mistake worth avoiding.
+- **If a tenant's calendar half ever gets too large for one call to carry reliably, that is a real
+  problem to hit and solve then** — with actual numbers from a real export, rather than building
+  object storage speculatively now for a case that may never arrive. This is a deliberate "revisit
+  when it hurts" choice, not an oversight - stated here so it reads as one.
