@@ -102,8 +102,13 @@ ADR, not an addition to a backlog.
 
    `25-47` added the console's first real dropdown menu (the header's own user menu) - not a popover
    in this item's sense (an explanatory aside), and `adr/0030`'s fourth amendment reasons explicitly
-   about why that menu did not yet justify a headless library. Left open: this item is about
-   *tooltips*, which `25-47` does not touch at all.
+   about why that menu did not yet justify a headless library.
+
+   **Closed, 2026-09-12 (`25-54`, `adr/0030`'s fifth amendment).** Eight standing explanatory
+   paragraphs across the three-panel workspace move behind a new, hover/focus-triggered `Tooltip`
+   component - the console's twelfth, the exact trigger this ADR's own Alternatives section named for
+   reopening the closed set. No popover (an explanatory aside separate from a trigger control) exists
+   yet - that half of this item's own title stays open.
 
 5. **No progress bar, no chart, no sparkline, no meter.** Four report screens and no figure treatment.
    Decision 7 has just made those screens carry more numbers, not fewer.
