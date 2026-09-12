@@ -28,6 +28,9 @@ and in `docs/`.
 | `dependabot-sweep` | Working through a repository's open Dependabot PRs — package bumps and CI-less infra image bumps alike. |
 | `user-story-writer` | Turning what the product does into what a person is trying to get out of it, for a design pass. Carries this product's per-role objectives and the honesty and anti-manipulation rules that bound them. |
 | `leftover-branch-triage` | Something survived a cleanup sweep. Deciding whether it is work that reached `main` by another route or work nobody has — the two look identical to `git cherry`, and six of seven survivors on the first real run were duplicates. |
+| `grilling` | The user wants a plan or idea stress-tested, or says "grill" — a relentless, round-by-round interview until nothing is left silently assumed. |
+| `grill-with-docs` | The same interview, but the terms and decisions that crystallise get written down as they happen — calls `grilling` and `domain-modeling` together. |
+| `domain-modeling` | Sharpening a term against `CONTEXT.md`, or a decision from a `grilling` session is hard to reverse, surprising and a real trade-off — the last case hands off to `adr-writer`, this project's own ADR mechanics. |
 
 ## How they relate
 
