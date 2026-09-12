@@ -1,7 +1,7 @@
 # 25-58 · Contact details become editable and verifiable, not silently deletable
 
 - **Stage**: 25
-- **Status**: ready — fully specified via the author's own answers, 2026-09-12
+- **Status**: done — `ago-chat#261`, `ago-console#201`
 - **Verified**: 2026-09-12 — `ago-console/src/workspace/ContactDetailsPanel.tsx` and its test file
   confirmed real; `ago-chat`'s `DeleteVisitorContactDetailHandler` and
   `RecordVisitorContactDetailHandler` both confirmed real under
@@ -63,9 +63,17 @@ confirmed by reading both handlers, not assumed.
 
 ## Done when
 
-- [ ] Phone, Email and Name entries are each editable in place (pencil action), never via a second
+- [x] Phone, Email and Name entries are each editable in place (pencil action), never via a second
       parallel form.
-- [ ] Phone and Email entries can be marked confirmed or invalid by an operator, persisted.
-- [ ] The "Удалить" action and the separate "add new record" form are both gone.
-- [ ] Pill labels read real Russian words, not "Phone"/"Email"/"Other", and the "непроверенные"
+- [x] Phone and Email entries can be marked confirmed or invalid by an operator, persisted.
+- [x] The "Удалить" action and the separate "add new record" form are both gone.
+- [x] Pill labels read real Russian words, not "Phone"/"Email"/"Other", and the "непроверенные"
       prefix is not repeated per line.
+
+## Outcome
+
+Shipped as `ago-chat#261` (edit/confirm/invalid persisted on `VisitorContactDetail`, `Source` stays
+whatever it was through an edit) and `ago-console#201` (`ContactDetailsPanel.tsx`: inline pencil edit
+per entry, confirm/mark-invalid actions gated to Phone/Email only per the author's own decision that
+a name has no channel to confirm, "Удалить" and the separate add-new-record form both removed). Spot-
+verified against the real, currently-merged `ContactDetailsPanel.tsx` before closing this out.
