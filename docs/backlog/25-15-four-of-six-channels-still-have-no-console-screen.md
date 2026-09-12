@@ -1,6 +1,16 @@
 # 25-15 · Four of six channels still have no console screen
 
 - **Status**: ready
+- **Verified**: 2026-09-12 — confirmed in `ago-console/src/pages/`: `TelegramChannelPage.tsx` and
+  `MaxChannelPage.tsx` (plus their own `.test.tsx` and `src/api/*ChannelApi.ts`) are real and shipped.
+  No `VkChannelPage`/`EmailChannelPage`/`WhatsAppChannelPage`/`AvitoChannelPage` exists anywhere in
+  `ago-console`. Confirmed in `ago-chat/src/Ago.Chat.Api/Channels/`: `VkChannelEndpoints.cs`,
+  `WhatsAppChannelEndpoints.cs` and `AvitoChannelEndpoints.cs` are real, working backend adapters with
+  no console counterpart — matching the item's own claim for three of the four. Email differs from the
+  other three: it has `Ago.Chat.Infrastructure.Email/EmailChannelAdapter.cs` (inbound routing only, no
+  `EmailChannelEndpoints.cs`/connect-a-token flow the way Telegram/MAX/VK/WhatsApp/Avito each have) —
+  worth the dispatched worker reading before assuming Email fits the same "connection screen" shape as
+  the other three.
 - **Date found**: 2026-09-09, the remainder of `25-09` once MAX shipped
 - **Depends on**: none — `23-36` (Telegram) and `25-09` (MAX) already establish the shape to follow
 

@@ -2,6 +2,15 @@
 
 - **Stage**: 23
 - **Status**: ready
+- **Verified**: 2026-09-12 — confirmed both the named test and its exact assert message are real in
+  `ago-chat/tests/Ago.Chat.Concurrency.Tests/TransferConversationConcurrencyTests.cs:60,194`. The
+  "check the neighbours" claim holds wider than stated: `RateLimitingConcurrencyTests.cs` exists as
+  named, and the identical assert message (`"the storm produced no Postgres deadlock at all, so it
+  proved nothing"`) is also present in `CloseConversationCapacityConcurrencyTests.cs:377` — a second,
+  previously-unnamed sibling with the same shape. Both `TransferringRacesTheAssignmentEngine_...` and
+  `ClosesStormingAssignmentBatches_...` are currently marked `[SKIP]` in a real local full-suite run
+  (`dotnet test Ago.Chat.slnx -c Release`, 2026-09-12), directly corroborating the problem this item
+  describes.
 - **Depends on**: nothing.
 - **Found**: 2026-09-07, on `23-83`'s CI run — an item that touches nothing this test exercises.
 
