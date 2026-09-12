@@ -1,7 +1,7 @@
 # 25-54 · Explanatory prose becomes tooltips across the Диалоги›Мои workspace
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#210`
 - **Verified**: 2026-09-12 — every named string confirmed real in `ago-console/src/i18n/ru.ts`:
   `queueAssignedNote`, `queueWaitingNotePrefix`, `conversationWaitingForHub`, the delivery-status
   note (line ~109), `notesVisitorCannotSeeNote`, `channelIdentitiesSectionTitle`'s own explanation,
@@ -42,8 +42,18 @@ explains — the visible label/control stays, the paragraph explaining it does n
   those mechanisms already exist and work (see this item's own investigation notes in the session
   that filed it); this item only relocates their existing explanatory copy into a tooltip.
 
+## Outcome
+
+Seven of the eight named strings were real and moved into a new `Tooltip` component (`ago-root#907`
+is the companion `adr/0030` fifth amendment — the twelfth component, exactly the trigger that ADR's
+own Alternatives section named). Hand-rolled, not a headless library — hover + keyboard focus +
+click-to-focus for touch, Escape closes without moving focus, `role="tooltip"` + `aria-describedby`.
+The eighth (an explanation near `ChannelIdentitiesPanel`'s "Связанные каналы") does not exist in the
+code — corrected here rather than silently assumed: the item's own Scope above named eight strings,
+seven are real, and nothing was invented to fill the eighth.
+
 ## Done when
 
-- [ ] None of the named paragraphs renders as permanent inline text in any of the three panels.
-- [ ] Each is reachable via a (?) tooltip triggered from the control/section it explains, including
+- [x] None of the named paragraphs renders as permanent inline text in any of the three panels.
+- [x] Each is reachable via a (?) tooltip triggered from the control/section it explains, including
       the visitor panel's own header tooltip.
