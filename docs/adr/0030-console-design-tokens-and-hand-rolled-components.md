@@ -1,14 +1,15 @@
 # ADR-0030: Design tokens and a closed hand-rolled component set for the console, not a component library
 
-- **Status**: Accepted, and **amended three times** — on 2026-08-26 (a second surface now reads these
+- **Status**: Accepted, and **amended four times** — on 2026-08-26 (a second surface now reads these
   tokens, the Keycloak login theme, `11-07`, and answers the webfont question in the last "Negative"
   consequence below *differently* from the console), on 2026-09-05 (`23-24` opens the closed
-  eleven-component set by exactly one glyph, narrowly, for one meaning), and on 2026-09-06 (`23-31`/
+  eleven-component set by exactly one glyph, narrowly, for one meaning), on 2026-09-06 (`23-31`/
   `adr/0129` closes that opening again — the meaning the glyph existed for is gone, and nothing
-  replaces it with a second one). All three amendments are appended below the Decision they modify;
-  none rewrites the original text.
-- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05, amended 2026-09-06)
-- **Stage**: 11, second amendment `23`, third amendment `23`
+  replaces it with a second one), and on 2026-09-12 (`25-47` reopens it a third time, for three
+  glyphs and the console's first real dropdown menu). All four amendments are appended below the
+  Decision they modify; none rewrites the original text.
+- **Date**: 2026-08-25 (amended 2026-08-26, amended 2026-09-05, amended 2026-09-06, amended 2026-09-12)
+- **Stage**: 11, second amendment `23`, third amendment `23`, fourth amendment `25`
 
 ## Amendment (2026-08-26): the login page loads no webfont, and the tokens now have a second consumer
 
@@ -133,6 +134,54 @@ future reader who found a second icon in this console "did not find it licensed 
 as of today there is no icon in the console at all. `docs/design/gaps.md` pile 3 item 3 is therefore
 **re-opened** rather than closed by that amendment's own last line, because the concrete answer which
 closed it no longer ships.
+
+## Amendment (2026-09-12): the header collapses into a user menu — three glyphs, and the console's first real dropdown
+
+`25-47` collapses the header's right side (the operator's name, the tenancy `<select>`, a visible
+"Sign out" button, all three side by side) behind one circular avatar. Clicking it opens a dropdown -
+GitHub's own account menu is the item's named reference - listing, in order: a non-clickable header
+row (avatar, name, active tenant), an optional tenant-switcher section, Appearance, and Sign out. Two
+things this ADR already governs are touched: the icon question (item 3, re-opened above) and, for the
+first time, item 4's neighbour - a real dropdown menu, not a `<select>`.
+
+**The icon question, answered a third time - narrowly again, the same shape as 2026-09-05's, not a
+reopening of the general position.** Three static, `aria-hidden`, `currentColor` SVG paths
+(`src/shell/menuIcons.tsx`) - a globe-shaped glyph beside the tenant switcher, a palette beside
+Appearance, `logout` beside Sign out - for exactly the three rows this one menu needs, nothing else in
+the console gaining an icon by this amendment. The reasoning the 2026-09-06 withdrawal turned on -
+"tied to one meaning, and the meaning changed" - does not apply here the way it did to the deleted nav
+lock: these three glyphs are decoration beside menu-item text that already names the same thing in
+words (the same "not translated text, a second wordless channel for one fact already stated" shape),
+not the sole carrier of a meaning that could shift under them later. Path data is Google's own
+Material Symbols Outlined, weight 400/fill 0/grade 0, fetched verbatim from `google/material-design-
+icons` on GitHub (`symbols/web/<name>/materialsymbolsoutlined/<name>_24px.svg`, `master`, retrieved
+2026-09-12) - never retyped from memory, for the same reason a hand-copied colour value would be a
+defect in `tokens.css`: a plausible-looking path that silently renders the wrong shape is worse than an
+obviously missing one. `docs/design/gaps.md` pile 3 item 3 is updated alongside this amendment.
+
+**The avatar answers pile 3 item 8 directly** - "Badge is the product's only representation of a
+person - no avatar, no initial, no name" - with initials (`operatorInitials`, `src/auth/
+operatorInitials.ts`), never a photo: nothing in this identity system carries one, so there is no
+fallback state an avatar-with-image would need and this component does not invent one. Updated
+alongside item 3 above.
+
+**The harder question this amendment has to answer honestly is the Alternatives section below -
+"the first real combobox, menu, or tooltip is the trigger to revisit" this whole ADR.** A dropdown
+menu is exactly that trigger, and it would be dishonest to add one and say nothing. The call made
+here is: not yet, and here is what "yet" would look like. What makes a menu the hard case for a
+headless library to earn its keep - focus trapping, a roving-`tabindex` arrow-key protocol, submenus,
+typeahead - is not what this menu does. It is one level deep, has at most nine rows, is not modal (the
+rest of the header and the page stay live behind it, unlike `Dialog`), and deliberately does not claim
+the ARIA `menu`/`menuitem` roles that would promise that keyboard protocol (`ShellIdentity`'s own doc
+comment, `AppShell.tsx`) - it is a disclosure over a short list of ordinary, independently focusable
+buttons and one `Link`, closed by a `pointerdown` listener and an `Escape` handler that together are
+about fifteen lines. That is measurably smaller than adopting Radix or React Aria for it would be, and
+unlike the padlock glyph this is not a one-off either - the same shape would serve a second menu
+this console grows later without new code, only a new list of rows. **What would tip this call**: a
+second, independent menu that needs *nested* items, or real keyboard users reporting that arrow-key
+navigation is expected and its absence reads as broken (this ADR's Alternatives section already names
+`aria-menu` conformance as the deciding fact, not a hunch) - either is grounds to revisit properly,
+not to quietly grow a second hand-rolled menu with different behaviour from this one.
 
 ## Context
 

@@ -90,8 +90,20 @@ ADR, not an addition to a backlog.
    answer did not survive its own week: it was tied to one meaning, and the meaning changed. A future
    answer to this question should be one that does not depend on a single rule staying true.
 
+   **Answered a third time, 2026-09-12 (`25-47`, `adr/0030`'s fourth amendment).** Three inline
+   Material Symbols Outlined glyphs beside the new user menu's own rows (tenant switcher, Appearance,
+   Sign out) - `src/shell/menuIcons.tsx`. Unlike the withdrawn lock glyph, each sits beside text that
+   already states the same fact in words, so there is no single meaning for a later rule change to
+   pull out from under it the way `23-31` did to `NavLockGlyph`. Closed again, narrowly, for these
+   three and no others.
+
 4. **No tooltip and no popover.** Every explanation in the console is inline prose today. That is a
    defensible stance and an expensive one on dense screens.
+
+   `25-47` added the console's first real dropdown menu (the header's own user menu) - not a popover
+   in this item's sense (an explanatory aside), and `adr/0030`'s fourth amendment reasons explicitly
+   about why that menu did not yet justify a headless library. Left open: this item is about
+   *tooltips*, which `25-47` does not touch at all.
 
 5. **No progress bar, no chart, no sparkline, no meter.** Four report screens and no figure treatment.
    Decision 7 has just made those screens carry more numbers, not fewer.
@@ -105,6 +117,12 @@ ADR, not an addition to a backlog.
 8. **Badge is the product's only representation of a person** — no avatar, no initial, no name. This
    one is downstream of decision 1: once operators have names, the question is whether they get a
    face.
+
+   **Answered 2026-09-12 (`25-47`).** A circular avatar showing the operator's initials
+   (`operatorInitials`, `src/auth/operatorInitials.ts`) is now the header's whole right side. Initials,
+   never a photo — nothing in this identity system carries one (Keycloak's `profile.picture` is not
+   requested and no upload path exists), so there is no fallback state an image-based avatar would
+   need. Closed.
 
 9. **Three surfaces are outside the design system entirely** — the widget (its own one-file styling),
    the Keycloak screens (sign-in, registration, password reset — the *first* thing a new tenant sees),
