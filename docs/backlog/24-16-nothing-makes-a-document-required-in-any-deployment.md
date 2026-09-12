@@ -2,6 +2,12 @@
 
 - **Stage**: 24
 - **Status**: ready
+- **Verified**: 2026-09-12 — confirmed in `ago-chat`: the `required_documents` table is real
+  (`Migrations/20260905191052_Stage24AddRequiredDocuments.cs`), `RegisterSiteHandler.cs` and
+  `POST /api/v1/owner/documents` (`Ago.Chat.Api/Owner/OwnerDocumentEndpoints.cs`) both exist as
+  claimed. Confirmed the gap is real, not already closed: `Ago.Chat.Api/Documents/DocumentEndpoints.cs`
+  has only a read route (`GET /required/{subjectKind}`) — no owner-facing add/remove surface for
+  `required_documents` exists anywhere in the codebase.
 - **Depends on**: `24-02` (documents and versions) and `24-03` (the required-documents table and the
   registration path that reads it). Both shipped.
 - **Found**: 2026-09-05, while landing `24-03`. Filed under CLAUDE.md rule 14 — the remainder of a

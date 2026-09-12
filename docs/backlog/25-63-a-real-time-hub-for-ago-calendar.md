@@ -1,7 +1,7 @@
 # 25-63 · A real-time hub for AGO Calendar, so 25-51's pending-bookings badge can be live
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#61`, `ago-console#211`
 - **Verified**: 2026-09-12 — confirmed `ago-calendar` has no SignalR hub anywhere (`find ... -iname
   "*Hub.cs"` returns nothing) and `CalendarQueuePage.tsx` (the console's own pending-bookings screen)
   fetches once on mount with no live-update mechanism at all. `Ago.Chat.Api.Hubs.OperatorHub` uses
@@ -56,10 +56,35 @@ with no push channel behind it.
 
 ## Done when
 
-- [ ] `ago-calendar` has a real SignalR hub, authenticated and tenant-scoped, built on
+- [x] `ago-calendar` has a real SignalR hub, authenticated and tenant-scoped, built on
       `Ago.Platform.Realtime`.
-- [ ] A booking entering or leaving the pending state pushes a real event to every connected operator
+- [x] A booking entering or leaving the pending state pushes a real event to every connected operator
       in that tenant — proven by a real test, not asserted.
-- [ ] The console has a working connection to this hub, wired the same disciplined way
+- [x] The console has a working connection to this hub, wired the same disciplined way
       `OperatorConnectionProvider` wires the chat one (documented reconnect/backoff behavior, not a
       bare `new HubConnectionBuilder()` with no story for a dropped connection).
+
+## Outcome
+
+Built by a background worker earlier in the session and landed by the managing session, independently
+verified against both worktrees before committing (`land-a-slice` discipline).
+
+**`ago-calendar#61`**: a new `CalendarOperatorHub` (`Ago.Calendar.Api/Hubs/`), authenticated and
+tenant-scoped, built on `Ago.Platform.Realtime` for connection registry/scale-out — the same shared
+platform package `ago-chat`'s own `OperatorHub` already depends on, not a second implementation. A
+booking entering or leaving the pending state (created, confirmed, cancelled, or otherwise resolved)
+pushes `BookingPendingStateChanged` to every connected operator in that tenant, via a new
+`BookingPendingFanoutConsumer` in `Ago.Calendar.Worker`, driven off the existing outbox — the identical
+shape `ago-chat`'s own outbox-to-hub fanout already establishes. Verified: `dotnet format
+--verify-no-changes` clean; `dotnet build -c Release`, 0 warnings; `dotnet test -c Release`, 5/5
+assemblies, 0 failed — Domain 229, Application 205, Architecture 26, Concurrency 26, Integration 314
+(800 total, including a new end-to-end fanout test, `BookingPendingFanoutEndToEndTests.cs`).
+
+**`ago-console#211`**: a second, calendar-specific SignalR connection
+(`CalendarOperatorConnectionProvider`/`CalendarConnectionContext`) alongside the existing chat one —
+kept parallel rather than generalized into one shared provider, since the two authenticate against
+different backends (`ago-chat` vs `ago-calendar`) — the exact choice this item's own Scope asked to be
+stated and justified. `CalendarQueuePage` now reflects a booking entering/leaving the pending state
+live, without a page reload. Verified (after a rebase onto a `main` that had moved one commit ahead of
+this branch's original base): `tsc -b --noEmit` clean, `eslint src ux-gate` clean, `vitest run` 121
+files / 1264 tests, 0 failed, `vite build` clean (229.70 KB gzipped).
