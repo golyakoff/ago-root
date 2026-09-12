@@ -1,7 +1,7 @@
 # 25-42 · The owner price-list screen shows one number for a formula that needs three
 
 - **Stage**: 25
-- **Status**: done — pending PR number (see `## Outcome` below)
+- **Status**: done — `ago-console#195`
 - **Depends on**: `25-20` (built the screen), `25-29` (corrected the formula the screen now
   misrepresents)
 - **Found**: 2026-09-09, carried out of `25-29` at landing rather than left inside it (rule 14/15 —
@@ -51,9 +51,7 @@ shows the marginal rate (200₽) against every row, which reads as "every seat c
 
 ## Outcome
 
-Shipped as an `ago-console` PR (worktree `ago-console-25-42`, branch
-`fix/25-42-owner-price-list-shows-the-real-formula`) — see the managing session's own commit-prep
-block for the exact commit. Console-only, as scoped; nothing in `ago-chat` changed.
+Shipped as `ago-console#195`. Console-only, as scoped; nothing in `ago-chat` changed.
 
 **What changed.** `ownerApi.ts`'s `OwnerSeatPricing` gained `baseSeats`/`baseSeatPriceRub`/
 `pricePerExtraSeatRub` (additive; `pricePerSeatRub` stays on the wire, unread by this screen now).

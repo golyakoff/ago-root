@@ -1,7 +1,7 @@
 # 25-57 · Debug fields leave the visitor panel for the browser console
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#204`
 - **Verified**: 2026-09-12 — all four fields confirmed real in `ago-console/src/workspace/VisitorPanel.tsx`
   (~lines 121-148): `strings.visitorIdLabel`/`visitorNotInQueue`, `strings.queueConversationStartedTitle`,
   `siteId`, `conversationId`. Re-checked after `25-58`'s merge to this same file — unaffected, different
