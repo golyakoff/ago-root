@@ -6,8 +6,10 @@
   four promises under one number (rule 15). This file keeps suspension; erasure went to `22-30`,
   export to `22-31`, reconciliation to `22-32`. See *Where the other three went*, below.
 - **Depends on**: `22-03`, `22-07`
-- **Decision**: `docs/adr/0149-*` — **Proposed, not Accepted.** It settled the shape; the two-numbers
-  question it left open is answered below as one owner-chosen number, not two.
+- **Decision**: `docs/adr/0149-*` — **Accepted**, rules 1–3 (the mechanism itself, unchanged).
+  `docs/adr/0166-*` — **Accepted**, superseding `0149`'s own "two parameters" answer (commercial lever,
+  L=24h) with this file's own *Answered* section: enforcement-only, account-wide, an owner-chosen
+  `suspended_until`, and a 5-minute internal lease.
 - **Found**: 2026-09-03, and it was missing from this stage's first draft. Recorded because the
   omission is the informative part: suspend/delete/export is the workstream nobody writes down until
   something has already gone wrong.
@@ -92,9 +94,9 @@ question this section used to leave open.
   `suspended_until` further out) and *unblock* (lift immediately) - reversing this item's own earlier
   Out-of-scope line, now that the mechanism has a duration and a list to manage, not just an on/off
   switch a single request could flip blind.
-- The lease per `adr/0149`: a `valid_until` on the calendar's own tenancy row, renewed by chat on a
-  short, fixed cadence - decoupled from the owner's chosen `suspended_until`, see *The design* above -
-  read inside the calendar's own booking transaction. Fail-closed when it passes.
+- The lease per `adr/0149` rule 1, sized by `adr/0166`: a `valid_until` on the calendar's own tenancy
+  row, **5 minutes, renewed by chat at 2.5** - decoupled from the owner's chosen `suspended_until`, see
+  *The design* above - read inside the calendar's own booking transaction. Fail-closed when it passes.
 - **What the calendar refuses, and what it does not.** Refuse: creating a new booking, from the public
   widget and from the console alike. Do not refuse: every read, the tenant's own configuration
   screens, and anything touching a booking that already exists.
@@ -142,8 +144,8 @@ question this section used to leave open.
 - [ ] A visitor with a conversation already open on a suspended tenant's site sees no error, and their
       message is still stored.
 - [ ] A booking made before the suspension is untouched by it.
-- [ ] `messaging.md` carries the internal propagation numbers, and `adr/0149` moves to Accepted with
-      them filled in.
+- [ ] `messaging.md` carries the internal propagation numbers (the ordinary-case outbox hop, and the
+      5-minute/2.5-minute lease `adr/0166` sets).
 
 ## Answered, 2026-09-13
 
