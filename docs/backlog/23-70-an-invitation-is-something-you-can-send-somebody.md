@@ -32,6 +32,16 @@ bigger thing than it looks.
 node used for operational alerts to ourselves; `25-03` reused it today for exactly that. `adr/0040`
 already rejected every third-party mail provider considered, on payment and data-residency grounds.
 
+**Stale as of 2026-09-12, corrected here rather than silently left to mislead the next reader.**
+Keycloak's own realm has sent verification mail at registration and password-reset mail since
+`10-01`/`adr/0028` (`verifyEmail: true`, `k8s/apply-smtp-settings.sh` pointing its `smtpServer` at this
+same node's own Postfix per `adr/0045`'s own text: "Keycloak already sends verification mail through
+it"). So this deployment does send mail outside it today, through that one already-built path. What
+this item's own words below still name correctly is the gap that path does not close: mail to an
+address Keycloak holds no identity for at all — a stranger being invited, a tenant's registered contact
+receiving a lifecycle notice (`23-73`), a booking confirmation. That decision is still nobody's,
+verified unresolved while landing `23-73` on this same date.
+
 So *«отправить приглашение на почту»* means: customer-facing mail, from our infrastructure, to a
 stranger's inbox — which brings deliverability, SPF and DKIM for the sending domain, bounces, and what
 happens when a shop's colleague never receives it and nobody knows. **None of that is hard. All of it

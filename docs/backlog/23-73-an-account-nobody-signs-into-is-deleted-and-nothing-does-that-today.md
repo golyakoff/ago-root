@@ -1,7 +1,7 @@
 # an account nobody signs into is deleted, and nothing does that today
 
 - **Stage**: 23
-- **Status**: ready — **and it is a question before it is work**
+- **Status**: ready — the question is answered; what remains is building it
 - **Depends on**: `13-03`'s subscription lifecycle for the paid half. Nothing for the unpaid half,
   because nothing exists.
 - **Decision**: the tier grid, 2026-09-07 (`ago-business` `0012`). The mechanism is undecided and the
@@ -60,10 +60,95 @@ anything is built.
 - **The paid grace month is not the same mechanism** and should not be built as though it were: one is
   "nobody came back", the other is "payment stopped", and `13-03` already owns the second half.
 
+## Answered, 2026-09-12
+
+The author, verbatim, answering all three questions at once:
+
+> Поправка любой аккаунт удаляется при отсутствии исходящего трафика, то есть трафика оператора,
+> входящий трафик при этом получается повисает в пустоте. вот когда такого трафика оператора нету в
+> течение трёх месяцев аккаунт удаляется. при этом трафик оператора из любого канала сбрасывает этот
+> счётчик по принципу watchdog, то есть если оператор отвечает через чат или телеграмм то о'кей,
+> считаем что это живой аккаунт. Если был вход тенанта в офис — так же считаем, аккаунт живой. Тогда
+> и клиенты остаются. Но если не было ни логина в Офис, ни ответов клиентам в чате или ещё где-то - то
+> сносим всё.
+
+**1. What counts as activity — a watchdog on operator-outbound traffic, not literal sign-in.** The
+timer resets on either of two events: a tenant/operator signing into the Office console, or an
+operator sending a reply to a customer through any platform channel (widget chat, Telegram, and every
+other channel this product carries). Visitor-originated traffic alone never resets it. This is the
+narrowest of the three readings this item's own question named, chosen deliberately — including the
+hazard the question warned about: a shop whose widget is live and whose visitors write, but whose
+operator answers them entirely off-platform (phone, email outside the system) and never opens the
+Office console, loses the account exactly as if nobody used it at all. The platform cannot see a reply
+it was never part of, and the author has accepted that as the cost of a rule simple enough to reason
+about and to explain in the warning mail below.
+
+**2. Yes, warned — by mail, `N` days ahead, `N = 15` in config.** Not a new mail decision from
+scratch: Keycloak's own realm has sent verification mail at registration and password-reset mail since
+`10-01`/`adr/0028`, through the same node-local Postfix `adr/0045` set up (`23-70`'s "no mail" framing
+is now stale — corrected in that item's own file). The warning mail is a new use of that same path,
+addressed to the site's own registered contact rather than a Keycloak identity — see the drafted text
+below.
+
+**3. Everything is deleted, customer base included — the grid's "always" meant "for as long as the
+account exists," not "survives its deletion."** `ago-business` `0012`'s Solo section is amended
+accordingly (2026-09-12). `adr/0111`'s guarantee (an acceptance record survives the erasure of its own
+*subject*) is unrelated and unaffected — it was never a promise that the customer base itself is
+exempt, and nothing here changes what it actually says.
+
+## The warning mail, drafted
+
+Placeholders: `{{siteName}}`, `{{daysRemaining}}`, `{{deletionDate}}`, `{{loginUrl}}`.
+
+**Russian**
+
+```
+Тема: Аккаунт {{siteName}} в AGO Chat будет удалён через {{daysRemaining}} дн.
+
+Здравствуйте!
+
+Мы не видим активности в аккаунте {{siteName}} уже почти три месяца: никто не заходил в Офис,
+и ни один оператор не отвечал клиентам через AGO Chat.
+
+Если ничего не изменится, {{deletionDate}} аккаунт будет удалён безвозвратно — вместе с историей
+переписки, контактами клиентов, вложениями и настройками.
+
+Чтобы сохранить аккаунт, достаточно одного из двух действий до этой даты:
+— зайти в Офис: {{loginUrl}}
+— ответить хотя бы одному клиенту через AGO Chat.
+
+Если вы уже не пользуетесь сервисом и удаление ожидаемо — ничего делать не нужно.
+
+— Команда AGO Chat
+```
+
+**English**
+
+```
+Subject: Your AGO Chat account {{siteName}} will be deleted in {{daysRemaining}} days
+
+Hello,
+
+We haven't seen any activity on the {{siteName}} account for close to three months: nobody has
+signed into the Office console, and no operator has replied to a customer through AGO Chat.
+
+If nothing changes, the account will be permanently deleted on {{deletionDate}} — along with its
+conversation history, customer contacts, attachments and settings.
+
+To keep the account, either of these before that date is enough:
+— sign into the Office console: {{loginUrl}}
+— reply to at least one customer through AGO Chat.
+
+If you've already stopped using the service and this deletion is expected, there's nothing you need
+to do.
+
+— The AGO Chat team
+```
+
 ## Done when
 
-- [ ] The author has answered what counts as activity, and the answer is recorded.
-- [ ] Whether and how a tenant is warned is decided, with the mail question named rather than assumed.
-- [ ] What is deleted and what survives is stated, and does not contradict `adr/0111` or the grid's own
+- [x] The author has answered what counts as activity, and the answer is recorded.
+- [x] Whether and how a tenant is warned is decided, with the mail question named rather than assumed.
+- [x] What is deleted and what survives is stated, and does not contradict `adr/0111` or the grid's own
       promise that the customer base is kept.
 - [ ] Whatever is built is shown not deleting an account whose widget is in active use.
