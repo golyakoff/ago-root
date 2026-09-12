@@ -1,8 +1,7 @@
 # 25-35 · Saving a conversation fails live
 
 - **Stage**: 25
-- **Status**: in progress — **the real cause found and fixed, `ago-widget#78`; not yet deployed to
-  the demo stand, see below**
+- **Status**: done — `ago-widget#78`, deployed to the demo stand 2026-09-12, re-verified live
 - **Depends on**: `23-62` built the feature; `25-30` fixed the same *class* of bug (CORS on a
   lazily-loaded module chunk) for `widget-module-booking.js` — check first whether that fix already
   covers `widget-module-save.js` or whether a second, different cause is at play
@@ -63,7 +62,8 @@ neither confirmed nor ruled out:
 - [x] The fix lands wherever that step's own cause actually lives. `ago-widget#78` — the missing two
   `COPY` lines, mirroring the booking module's own shape exactly. Fails-before: built the `assets`
   image target without the change (404), then with it (200, file present, byte-identical to `dist/`).
-- [ ] Re-verified live: saving a real conversation produces a real downloaded file. **Not yet —
-  `ago-widget#78` is merged but the demo stand's own `ago-demo-shop1`/`ago-demo-shop2`/
-  `ago-widget-assets` images still predate it.** This box stays open until that deploy happens and a
-  real save is re-tested against the live origin, not the merge alone.
+- [x] Re-verified live: saving a real conversation produces a real downloaded file. **2026-09-12,
+  against `demo-shop1.reserve-me.ru` post-deploy**: sent a real message, clicked «Сохранить диалог»,
+  `widget-module-save.js` answered 200, no console error, no `saveConversationFailedNote` rendered —
+  the exact opposite of the original live report. `ago-demo-shop1`/`ago-demo-shop2`/`ago-widget-assets`
+  all moved to `ago-widget#78`'s own commit (`ago-deploy#190`).
