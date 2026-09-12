@@ -122,7 +122,15 @@ denial.
   **The counters are stored per day rather than as running totals** so that the screen can answer
   "over the last N days" without a second table, and so that a wrong count from a lost flush ages out
   of the window instead of being carried forever.
-- `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, and nothing else.
+- `visitors` - `id`, `site_id`, `first_seen_at`, `last_seen_at`, plus (**`25-56`**) `emoji_creature`/
+  `emoji_food` - two emoji, each drawn once from `VisitorEmojiDictionary`'s own fixed twenty-member list
+  and never reassigned (`Visitor.AssignEmojiPair`), an operator-facing mnemonic rendered beside the
+  console's short code and nothing more - not personal data (`personal-data.md`'s own row on this
+  table). Nullable at the storage level rather than `NOT NULL`, deliberately: the guarantee this system
+  makes is that every visitor a real caller can ever observe has a pair (both creation call sites assign
+  one before the first save; `Stage25AddVisitorEmojiPair` backfills every row that predates the item),
+  not that the column itself forbids null - a real constraint would also have to hold for the many
+  existing tests that build a bare `Visitor` for unrelated fixture scaffolding.
   **Corrected in `16-01`**: this bullet listed a `token_hash` column that was never built. There is no
   such column in `Stage1CreateChatSchema`, in the EF model snapshot, or in `Visitor.cs`, and the string
   does not occur anywhere in `ago-chat` - the visitor token is a stateless signed JWT (`sub`, `site_id`,
