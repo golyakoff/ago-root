@@ -1,7 +1,7 @@
 # 25-55 · The message composer becomes usable on desktop
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md` — a real, live usability defect, not only a style preference
 

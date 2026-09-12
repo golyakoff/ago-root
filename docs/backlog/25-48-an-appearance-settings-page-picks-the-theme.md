@@ -1,7 +1,7 @@
 # 25-48 · An Appearance settings page picks the theme
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: nothing to build against — `25-47`'s own user menu links here, but this page must
   exist on its own regardless of when that lands
 - **Found**: 2026-09-12, `feedback.md`

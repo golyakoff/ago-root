@@ -1,7 +1,7 @@
 # 25-53 · Console-wide audit: "list + create form in one card" becomes two blocks
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md` — the author has already hand-fixed several screens this way
   and does not remember which; this item is the audit that finds every remaining instance, not just

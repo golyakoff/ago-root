@@ -1,7 +1,7 @@
 # 25-59 · Filter conversations by tag
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
 - **Depends on**: nothing — `18-04`/`19-02` already built the tag dictionary and per-conversation
   tagging this item filters by; confirmed shipped, not built here
 - **Found**: 2026-09-12, `feedback.md`, narrowed by investigation — the tag mechanism itself (a real

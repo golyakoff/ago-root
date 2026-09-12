@@ -55,6 +55,44 @@ When work already exists, say so in the brief: what shipped, what its author rec
 what specifically remains. A brief that describes remaining work is far shorter than one that
 describes the whole item, which is the second reason to check.
 
+## 0.6. Verify the claim before writing the brief, not after the worker stalls on it
+
+**"No open questions" is not the same as "verified."** `docs/backlog/README.md`'s own "Verify before
+ready" section is the authoritative rule; this section is what it means at the moment of briefing
+specifically. An item can read as ready — no unanswered question, `Depends on` items all closed — and
+still have a wrong premise nobody checked, because the queue row is the only thing anyone read before
+delegating.
+
+**Two checks, before the worktree is even created:**
+
+- **Redundancy, by concept, not by the item's own wording.** Search for an existing implementation of
+  what's being asked for under whatever name the codebase actually uses, not the item's own phrasing.
+  `25-59` (2026-09-12) asked for a tag-filtering mechanism; a five-minute search found the entire tag
+  system — dictionary, per-conversation apply, a breakdown report — already shipped under `18-04`, and
+  the *only* real gap was the filter itself. Briefing the item as written would have sent a worker to
+  rebuild a working feature from scratch.
+- **The premise, against the real code.** For a bug, read the actual code path before trusting the
+  reporter's own diagnosis of the mechanism — `25-35` (2026-09-12) named two specific, plausible
+  candidate causes, and neither was the real one; a worker briefed against either would have shipped a
+  fix for a bug that wasn't there. For a feature naming a specific repository or file, confirm that
+  repository or file is actually where the thing lives — `25-46` (2026-09-12) was filed as
+  console-only; the emoji it described turned out to exist only in the widget, not the console at all,
+  found only because the worker itself went looking before writing code. For a `Depends on` list,
+  confirm each dependency actually delivers what *this* item needs, not merely that its own `Status`
+  says `done` — `25-23` (2026-09-12) listed no dependency at all until reading the handler it would
+  need to extend found one real, unwritten one (`25-41`).
+
+**Do this yourself, or dispatch a cheap `Explore` agent for it — but do it before the brief, not as
+part of it.** A worker discovering its own item's premise is wrong mid-task has already paid a cold
+start finding out what five minutes of the managing session's own reading would have caught for free,
+and (per `25-61`'s own worked case, same day) a worker that hits this honestly *stops* and reports
+back rather than guessing past it — which is the right behaviour, but it means the lane sat idle for
+the round trip a pre-check would have skipped entirely.
+
+**Once verified, flip the item's own `Status` qualifier off** (`ready — not yet verified` → plain
+`ready`) and fill in its `Verified` line before writing the brief — the same file a fresh session
+would read next has to carry the evidence, not just this session's own memory of having checked.
+
 ## 0.7. A worker is a colleague, not a disposable process
 
 **Decided by the author, 2026-08-26**, after a day in which every task got a freshly spawned worker
