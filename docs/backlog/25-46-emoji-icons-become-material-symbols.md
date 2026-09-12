@@ -1,7 +1,9 @@
 # 25-46 · Emoji icons become Material Symbols Outlined
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#79`
+- **Verified**: 2026-09-12, real Material Symbols source fetched and compared byte-for-byte
+  (`google/material-design-icons`) after two of the five paths turned out fabricated — see Outcome
 - **Depends on**: nothing — `25-47`/`25-48`/`25-51` build the console's own new header/menu icons
   fresh, so they simply use Material Symbols from the start; they do not depend on a prior
   replacement pass here
