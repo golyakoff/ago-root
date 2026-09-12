@@ -2,6 +2,16 @@
 
 - **Stage**: 23
 - **Status**: ready — **both open questions answered by the author, 2026-09-09, recorded below**
+- **Verified**: 2026-09-12 — confirmed `24-10`'s real mechanism (`IConversationBlockRepository`,
+  `BlockConversationHandler`/`UnblockConversationHandler`, `conversations.blocked_at`/`blocked_by`,
+  `conversation_block_records`) is real. **One real mismatch worth flagging before building**: the
+  mechanism blocks by `ConversationId`, not by visitor — `Conversation.VisitorId` exists and a
+  visitor-level mute is buildable on top of it, but this item's own "auto-mutes the visitor for a
+  window of time" answer is broader than what `24-10` blocks today (one conversation). Whoever builds
+  this needs to decide and state whether a *new* conversation the same visitor opens during the mute
+  window is also blocked (the auto-mute's own stated intent) or whether "the visitor" in the answer
+  above was shorthand for "this conversation" — the item's own text does not resolve this, and it
+  changes the actual scope of the build.
 - **Depends on**: `24-10` built `ConversationBlock` — and, per the author's own answer below, this item
   reuses that same mechanism rather than a neighbour to it.
 - **Decision**: the author's, 2026-09-07, including the reason abuse is not the objection.
