@@ -1,7 +1,11 @@
 # 25-53 · Console-wide audit: "list + create form in one card" becomes two blocks
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — confirmed a real, non-trivial set of settings-style pages exists to
+  audit: `CalendarServicesPage.tsx`, `CalendarSetupPage.tsx`, `OperatorsTeamPage.tsx`, `TagsPage.tsx`,
+  `TeamChatPage.tsx` and others under `src/pages/`. This is an audit item by its own nature — no fixed
+  file list to verify against, the audit itself is the deliverable.
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md` — the author has already hand-fixed several screens this way
   and does not remember which; this item is the audit that finds every remaining instance, not just
