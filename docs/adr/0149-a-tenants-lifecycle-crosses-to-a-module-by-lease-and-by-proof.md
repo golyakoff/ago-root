@@ -1,7 +1,11 @@
 # ADR-0149: A tenant's lifecycle crosses to a module by a lease and by a proof, never by a fire-and-forget event
 
-- **Status**: Accepted — 2026-09-07. The two parameters were the author's and they answered both the
-  same day; see *The two parameters, answered*.
+- **Status**: Accepted — 2026-09-07. Rules 1–3 (the lease-not-a-flag mechanism, proof-before-complete
+  ordering, chat's opacity to a module's data) stand unchanged. **"The two parameters, answered" section
+  below is superseded by `adr/0166`** — the commercial-lever reading and the 24-hours/renewed-at-12
+  lease it produced do not survive `22-08`'s own 2026-09-13 dialogue, which settled suspension as
+  enforcement-only, account-wide, with an owner-set duration and a 5-minute internal lease. The section
+  is kept below, unedited, as the record of what was decided and superseded — not as current guidance.
 - **Date**: 2026-09-07
 - **Stage**: 22 (`22-08`, `22-30`, `22-31`, `22-32`)
 - **Qualifies**: ADR-0098's "a grant's expiry binds chat only; the module is never told" — see
