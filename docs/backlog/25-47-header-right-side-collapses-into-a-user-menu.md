@@ -1,7 +1,12 @@
 # 25-47 · The header's right side collapses into a user menu
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — `ago-console/src/shell/AppShell.tsx`'s `ShellIdentity` confirmed as the
+  real header-right component (operator identity, `tenancySwitcher` prop, `onSignOut`);
+  `TenancySwitcher.tsx` confirmed as the real tenant-switch component, already wired via
+  `OperatorShell.tsx` (`tenancies`/`activeSiteId`/`switchTenancy`). Both dependencies (`25-46`, `25-48`)
+  are done.
 - **Depends on**: `25-46` (real icons for the menu's own rows), `25-48` (the Appearance page this
   menu links to — build together or stub the link and land `25-48` immediately after)
 - **Found**: 2026-09-12, `feedback.md`
