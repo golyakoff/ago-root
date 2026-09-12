@@ -1,7 +1,10 @@
 # 25-52 · Modal dialog titles are centered
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code** (docs/backlog/README.md)
+- **Status**: ready
+- **Verified**: 2026-09-12 — the single shared `Dialog.tsx` component confirmed as every modal's own
+  source: `<h2 className="ago-dialog__title">{title}</h2>` (line ~92), styled by `.ago-dialog__title`
+  in `components.css`. One component change covers every dialog in the console.
 - **Depends on**: nothing
 - **Found**: 2026-09-12, `feedback.md`
 
