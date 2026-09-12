@@ -1,7 +1,7 @@
 # an account nobody signs into is deleted, and nothing does that today
 
 - **Stage**: 23
-- **Status**: ready — the question is answered; what remains is building it
+- **Status**: done — `ago-chat#270`
 - **Depends on**: `13-03`'s subscription lifecycle for the paid half. Nothing for the unpaid half,
   because nothing exists.
 - **Decision**: the tier grid, 2026-09-07 (`ago-business` `0012`). The mechanism is undecided and the
@@ -151,4 +151,6 @@ to do.
 - [x] Whether and how a tenant is warned is decided, with the mail question named rather than assumed.
 - [x] What is deleted and what survives is stated, and does not contradict `adr/0111` or the grid's own
       promise that the customer base is kept.
-- [ ] Whatever is built is shown not deleting an account whose widget is in active use.
+- [x] Whatever is built is shown not deleting an account whose widget is in active use — proven by
+      `InactivityWatchdogJobTests.RunOnceAsync_ASiteInsideItsGracePeriod_IsNeitherWarnedNorSwept`
+      (`ago-chat#270`).
