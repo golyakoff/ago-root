@@ -1,7 +1,7 @@
 # 25-62 · `VisitorContactDetailKind.Other` is actually `Name`
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#263`, `ago-widget#81`, `ago-console#205`
 - **Verified**: 2026-09-12 — confirmed live in `ago-widget/src/ui/widget.ts:1546-1576`: the visitor's
   own contact-capture form collects a real, dedicated name field (`result.name`) and records it with
   `Kind: "Other"` — the widget's own doc comment already says so in plain words ("records the phone,
@@ -64,12 +64,24 @@ has that member, and a fresh `Name` value written going forward would never matc
 - **Do not touch `Phone`/`Email` or their own confirm/invalid mechanism (`25-58`)** — this item is
   scoped to the one mislabeled member, not a broader redesign of the contact-detail kind system.
 
+## Outcome
+
+All three repos landed together. `VisitorContactDetailKind.Other` → `Name` in `ago-chat`
+(`EditValue`/`SetAssessment`'s guards and every doc-comment reference updated, behavior unchanged — a
+name still gets no confirm/invalid state). `Stage25RenameVisitorContactDetailKindOtherToName`
+migrates existing rows via raw SQL (`dotnet ef migrations add` came back with an empty `Up`/`Down`
+first, confirming this is a pure data fix, not a schema change) — **0 rows affected**, confirmed by
+querying the local dev Postgres directly (`visitor_contact_details` is genuinely empty there).
+`ago-widget`'s contact-capture form sends `"Name"` instead of `"Other"`, matching `ago-chat`'s own
+`Enum.TryParse` on the read path. `ago-console`'s `contactDetailsKindOther` i18n key is renamed to
+`contactDetailsKindName` with real values ("Имя"/"Name").
+
 ## Done when
 
-- [ ] `VisitorContactDetailKind` has `Phone`/`Email`/`Name` — no `Other` member remains anywhere in
+- [x] `VisitorContactDetailKind` has `Phone`/`Email`/`Name` — no `Other` member remains anywhere in
       `ago-chat`'s source.
-- [ ] A real migration has moved every existing `kind = 'Other'` row to `kind = 'Name'` — row count
+- [x] A real migration has moved every existing `kind = 'Other'` row to `kind = 'Name'` — row count
       stated in the Outcome.
-- [ ] `ago-widget`'s contact-capture form sends `"Name"`, not `"Other"`.
-- [ ] `ago-console`'s pill for this kind reads "Имя"/"Name", sourced from a correctly-named i18n key,
+- [x] `ago-widget`'s contact-capture form sends `"Name"`, not `"Other"`.
+- [x] `ago-console`'s pill for this kind reads "Имя"/"Name", sourced from a correctly-named i18n key,
       not a leftover `...Other` key holding the new text.
