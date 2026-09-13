@@ -1,7 +1,11 @@
 # 25-73 · An operator invite requires an email, and Keycloak does the rest
 
 - **Stage**: 25
-- **Status**: ready — fully designed in dialogue with the author, 2026-09-13, two rounds of critique
+- **Status**: code landed — `ago-chat#278`/`ago-console#218`, `adr/0167`. Not marked done: most of what
+  this item promises depends on real Keycloak realm behavior (identity lookup, `execute-actions-email`,
+  locale-aware templates, the SMTP error surfaced back) that could not be verified against a live
+  realm — see *Shipped, and what still needs a real realm*, below — and one Done-when is met by a
+  deliberate, stated deviation rather than as literally written.
 - **Depends on**: `23-70` (link-based invite, done — this item removes the bare-code path it built),
   `23-27` (redeem-invite screen, done — this item removes the code-entry UX it built, replacing it with
   automatic redemption)
@@ -113,22 +117,67 @@ invited user as never touching the "create your own workspace" form at all).
 - Handling an invitee who never opens the email at all beyond what the existing 7-day expiry already
   does — no reminder/nudge mechanism is being built here.
 
+## Shipped, and what still needs a real realm
+
+`ago-chat#278`/`ago-console#218` build the full mechanism end to end: `email` required on invite
+creation; `OperatorInviteEmailProvisioner` (`Ago.Chat.Infrastructure.Keycloak`, `adr/0167`) calling
+Keycloak's Admin API to create-or-find an identity and send `execute-actions-email`; redemption
+checking the code and the authenticated caller's email together
+(`OperatorInviteRedemptionRepository`, revoked checked before email-mismatch); a 5/day/site rate limit
+via the existing `IRateLimiter` pattern; an invite-list console screen (email/sent/status/expiry/
+revoke); every pre-existing invite annulled by the migration. All of it independently re-verified —
+full test suites re-run in both repos (`ago-chat`: 664+1171+21+44+87+1148 tests; `ago-console`: 1331
+tests plus the full `ux-gate` suite), the security-critical redemption rewrite and the new
+Keycloak-writing class read in full and judged sound.
+
+**What is not proven, because this project's own local Keycloak (the `docker-desktop` cluster's
+`ago-demo-provisioner` service-account client) has drifted admin credentials unrelated to this change**
+— `client_credentials` grant refused, and fixing that local-environment drift was out of scope for
+landing this item. Needs checking against the real deployment realm before this reaches actual
+invitees, not assumed from code review alone:
+
+- Whether `KeycloakAdminOptions.ConsoleClientId` (`"ago-console"`) is the console's actual registered
+  client id, and whether its valid-redirect-uri pattern permits this design's `?inviteCode=` query
+  parameter.
+- Whether the realm has email-template internationalization on for more than one locale — if not, an
+  invite still sends, just not necessarily in the inviting site's own language.
+- What Keycloak's Admin REST API actually returns on a real SMTP relay failure — `SmtpFailureDetail`
+  captures the most specific value the HTTP response can offer, unconfirmed against a real failure.
+- The whole create-or-find-by-email round trip and the hosted `execute-actions-email` page itself, not
+  exercised against any live Keycloak at all (the integration-test host uses a fake
+  `IOperatorInviteEmailProvisioner`, deliberately — no admin service-account client exists in that
+  fixture's own realm).
+
+**One Done-when is met by a deliberate, stated deviation, not as literally written**: Keycloak's own
+hosted self-registration duplicate-email refusal happens entirely inside Keycloak's themed pages and
+never reaches AGO's backend or console, so it is not interceptable from application code at all. Built
+instead: a new `GET /api/v1/operator-invites/pending-for-me` endpoint that `OnboardingPage` calls
+proactively, steering a signed-in identity with a pending invite away from the "create your own
+company" form *before* any collision could occur, rather than catching the collision after the fact.
+
 ## Done when
 
-- [ ] Creating an invite without an email is refused by the API, not merely hidden in the console.
+- [x] Creating an invite without an email is refused by the API, not merely hidden in the console. —
+      `CreateOperatorInviteHandlerTests`, and the column is `NOT NULL` by migration.
 - [ ] Inviting an email that already holds a Keycloak identity (on this site, a different site, or
       no site at all) succeeds without creating a duplicate account — proven against a real, already-
-      existing identity, not only the fresh-account path.
+      existing identity, not only the fresh-account path. **Code sound, unverified against a live
+      realm** — see above.
 - [ ] The invited user's flow never surfaces the "create your own company" form — an invitee who opens
       the email link ends up as an operator on the inviting site with no branch point where a new
-      tenant could be created instead.
+      tenant could be created instead. **Console routing (`CallbackPage`→`/redeem-invite`, auto-submit
+      on arrival) unit-tested; the real Keycloak-hosted round trip unverified.**
 - [ ] An invitee who self-registers first (before opening the invite email) sees the specific
-      "you have an invitation, check your email" message, not a raw Keycloak error.
-- [ ] The invite email's language matches the inviting site's own configured `Locale`.
-- [ ] A sixth invite from the same site on the same day is refused with a message naming the limit; the
-      limit itself is one config value, not hardcoded in a handler.
+      "you have an invitation, check your email" message, not a raw Keycloak error. **Not met as
+      literally written — see the deliberate deviation above.**
+- [ ] The invite email's language matches the inviting site's own configured `Locale`. **Sent as a
+      Keycloak user `locale` attribute; whether the realm's own templates honor it is unverified.**
+- [x] A sixth invite from the same site on the same day is refused with a message naming the limit; the
+      limit itself is one config value, not hardcoded in a handler. — 3 tests in
+      `CreateOperatorInviteHandlerTests`, real rate-limiter, not mocked.
 - [ ] A genuine SMTP-layer send failure is visible in the console's invite list, with the relaying
-      server's own error code, not only in a log.
+      server's own error code, not only in a log. **Wired and tested against a fake provisioner
+      returning `SendFailed`; the actual error-code content from a real SMTP failure is unverified.**
 - [ ] The invite list (email / sent / status / expiry / revoke) renders under the operator table only
       when at least one invite exists for the site, and revoking before acceptance is proven to
       actually block a later redemption attempt with the stated message.
