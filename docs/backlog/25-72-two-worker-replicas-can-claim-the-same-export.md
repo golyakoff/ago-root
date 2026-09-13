@@ -1,7 +1,7 @@
 # 25-72 · Two worker replicas can claim the same export
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#277`/`ago-console#216`
 - **Found**: 2026-09-13, discussing `16-03`'s export queue's own failover story with the author.
   Not a live bug today — `Ago.Chat.Worker` runs one replica — named so it is not discovered by
   running a second one for real availability and finding two replicas silently doubling every export.
@@ -31,6 +31,30 @@ in storage with nothing ever pointing at it.
 
 ## Done when
 
-- [ ] Two `SiteExportJob` instances ticking concurrently against the same database claim disjoint
+- [x] Two `SiteExportJob` instances ticking concurrently against the same database claim disjoint
       batches — proven by actually running two instances against one database, not by reading the
       query.
+
+## Answered, 2026-09-13
+
+`SiteExportClaimQuery.ClaimPendingBatchAsync` (`Ago.Chat.Worker`) replaces the plain read with a single
+`UPDATE export_requests SET status = 'Processing', processing_started_at = @now WHERE id IN (SELECT ...
+FOR UPDATE SKIP LOCKED) RETURNING id, site_id` — the same claim-then-resolve shape
+`SiteExportPruneQuery.ClaimExpiredReadyBatchAsync` (`25-75`) already established, deliberately simpler
+here since no pre-update column value is needed. `MarkReadyAsync`/`MarkFailedAsync` now resolve from
+`Processing`, not `Pending`. A crashed replica's abandoned claim is recovered by
+`SiteExportClaimQuery.ReclaimStaleBatchAsync`, called at the top of every `SweepAsync` cycle once a row
+has sat `Processing` longer than `SiteExportJobOptions.StaleProcessingTimeout` (1 hour — an internal
+robustness constant, reasoned but not measured) — the stale-sweep-back-to-`Pending` option this item's
+own Scope named, not operator-triggered retry.
+
+Proven with `Ago.Chat.Concurrency.Tests.SiteExportClaimConcurrencyTests` (9 tests, its own isolated
+Postgres container): several concurrent claim calls against one real database, each simulating a
+`Worker` replica, claim disjoint batches covering every seeded row exactly once. Fails-before confirmed
+by temporarily removing `FOR UPDATE SKIP LOCKED`: the covering/disjoint assertion then failed 5 of 6
+runs with duplicate claims across callers.
+
+Console side (`ago-console#216`): `SiteExportPage.tsx`'s `statusLabel` switch is deliberately
+exhaustive-checked (no `default` case) over the closed `SiteExportStatus` union, so the new `Processing`
+value had to be added there too or the console would stop compiling once this shipped — not merely a
+cosmetic follow-on.
