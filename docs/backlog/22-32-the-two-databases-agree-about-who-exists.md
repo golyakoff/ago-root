@@ -1,7 +1,8 @@
 # the two databases agree about who exists, and something says so out loud
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done — `ago-deploy#201`, `ago-root#972`. Run live 2026-09-14: no drift. The mail-on-drift
+  path is code-reviewed only, never exercised by a real non-zero result.
 - **Depends on**: nothing. **This is the one of the four to build first**, despite the number.
 - **Decision**: none needed — see *Why this needs no ADR*.
 - **Split out of `22-08`** on 2026-09-07 (rule 15). It was the "and the fourth thing, which is smaller
@@ -71,12 +72,20 @@ Three ways the invariant can already break, and none of them is theoretical:
 
 ## Done when
 
-- [ ] The check exists, reads both databases, and reports both asymmetries.
-- [ ] It has been run against the live deployment and its output is in the report — including, and
-      especially, if the output is "none".
-- [ ] Its non-zero result reaches a person by the route `15-03` already established, rather than by
-      somebody remembering to look.
-- [ ] It reports identifiers and counts only, and that is asserted rather than assumed.
+- [x] The check exists, reads both databases, and reports both asymmetries. —
+      `ago-deploy/k8s/tenancy-reconciliation-report.sh`.
+- [x] It has been run against the live deployment and its output is in the report — including, and
+      especially, if the output is "none". — run 2026-09-14: **no drift**, one chat-originated
+      calendar tenant, nothing stranded on either side. Full output in
+      `docs/runbooks/tenancy-reconciliation.md`'s own "Run against the live deployment" section.
+- [~] Its non-zero result reaches a person by the route `15-03` already established, rather than by
+      somebody remembering to look. — `TENANCY_REPORT_MAIL_ON_DRIFT=1` reuses `backup-watchdog.sh`'s
+      own `sendmail` mechanism to the same `alerts` alias. **The mail path itself was never exercised
+      end to end** — the live run found zero drift, so the non-zero branch never actually fired. Code
+      review only, not proof.
+- [x] It reports identifiers and counts only, and that is asserted rather than assumed. — the live
+      output above carries exactly one id/name pair (none needed, since the run was clean) and no
+      other column from either table.
 
 ## Why this needs no ADR
 
