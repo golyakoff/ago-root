@@ -1,7 +1,7 @@
 # a tenant's export carries both halves, or fails loudly
 
 - **Stage**: 22
-- **Status**: ready — build as written; the transport question below is answered (2026-09-13).
+- **Status**: done — `ago-chat#273`/`ago-calendar#63`.
 - **Depends on**: `16-03` (the export machinery this extends), `22-30` (whichever answer its Open
   question takes about reaching a module after a revoke — this item needs the same reach)
 - **Decision**: `docs/adr/0149-*` — **Accepted** (rules 1–3; its own "two parameters" section is
@@ -93,16 +93,20 @@ tenant has no calendar", which today's manifest could not express.
 
 ## Done when
 
-- [ ] An export of a tenant with the calendar add-on contains the calendar's half, and `manifest.json`
-      names it — proven by opening the archive.
-- [ ] An export of a tenant whose calendar cannot be reached is `Failed`, naming the module, and no
-      archive is published. Proven by making the module unreachable.
-- [ ] `manifest.json` distinguishes "this tenant has no calendar" from "the calendar's half is
-      missing".
-- [ ] Nothing in `Ago.Chat.*` reads a field of the module's half — asserted by the existing
-      architecture guard, which must still pass with no new exemption.
-- [ ] The difference between this and a visitor's own request is written where the next person will
-      read it: `personal-data.md`, and `24-11`'s own file.
+- [x] An export of a tenant with the calendar add-on contains the calendar's half, and `manifest.json`
+      names it — proven by opening the archive
+      (`SiteExportModuleGateIntegrationTests`/`TenantExportEndpointTests`).
+- [x] An export of a tenant whose calendar cannot be reached is `Failed`, naming the module, and no
+      archive is published — proven by making the module genuinely unreachable in a test, not mocked
+      away.
+- [x] `manifest.json` distinguishes "this tenant has no calendar" from "the calendar's half is
+      missing" — `IEnabledModuleReadStore.GetAllForSiteAsync` (includes revoked/expired, matching
+      `22-30`'s own erasure precedent) decides the `modules` array's own membership.
+- [x] Nothing in `Ago.Chat.*` reads a field of the module's half — the existing architecture guard
+      still passes, no new exemption (44/44).
+- [x] The difference between this and a visitor's own request is written where the next person will
+      read it — `personal-data.md`'s own export-archive row, and a dated note in `24-11`'s own
+      Outcome.
 
 ## Answered, 2026-09-13
 

@@ -125,3 +125,9 @@ finished work whose record had not arrived.
 had moved on — `24-12` rewrote the same section hours earlier. The Element 6 change was re-made against
 the current text rather than forced. Moving a diff across bases is not the same as moving a true
 statement, and this is the second time today that mattered.
+
+**Note, 2026-09-13 (`22-31`)**: the tenant-scoped whole-site export (`16-03`) was extended to cross to
+the calendar module. This item's own person-scoped exports (per-conversation, per-visitor) remain
+chat-only, unchanged by that item — still blocked on the same "no linking key between a chat visitor
+and a calendar customer" gap this file's own asymmetry section already names. `22-31` did not build any
+part of what this item scopes; read it as extending the other export, not this one.
