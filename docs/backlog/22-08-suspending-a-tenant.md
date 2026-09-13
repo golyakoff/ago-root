@@ -1,10 +1,12 @@
 # suspending a tenant, and what a suspended tenant's visitors see
 
 - **Stage**: 22
-- **Status**: ready — **the Open questions are answered (2026-09-13)**, in dialogue with the author;
-  see *Answered*, below. Narrowed 2026-09-07 from "tenant lifecycle across two databases", which was
-  four promises under one number (rule 15). This file keeps suspension; erasure went to `22-30`,
-  export to `22-31`, reconciliation to `22-32`. See *Where the other three went*, below.
+- **Status**: done — `ago-chat#271`/`ago-calendar#62`/`ago-console#214`. The tenant's own console
+  showing its suspension (named in Scope, never its own Done-when box) shipped as unbuilt, filed
+  separately as `25-70` rather than silently dropped. Narrowed 2026-09-07 from "tenant lifecycle across
+  two databases", which was four promises under one number (rule 15). This file keeps suspension;
+  erasure went to `22-30`, export to `22-31`, reconciliation to `22-32`. See *Where the other three
+  went*, below.
 - **Depends on**: `22-03`, `22-07`
 - **Decision**: `docs/adr/0149-*` — **Accepted**, rules 1–3 (the mechanism itself, unchanged).
   `docs/adr/0166-*` — **Accepted**, superseding `0149`'s own "two parameters" answer (commercial lever,
@@ -130,21 +132,28 @@ question this section used to leave open.
 
 ## Done when
 
-- [ ] Suspending an account stops the calendar accepting a new booking **and** stops the widget being
-      served for a new chat session, proven by doing both, with the observed elapsed time in the
-      report.
-- [ ] **With the broker stopped**, a suspended tenant's calendar refuses a new booking once the lease
-      passes — proven by stopping the broker, not by reading the code. This is the box that makes the
-      bound a bound.
-- [ ] The owner can set a suspension's duration in minutes, see it in a list, extend it, and lift it
+- [x] Suspending an account stops the calendar accepting a new booking **and** stops the widget being
+      served for a new chat session — proven; measured elapsed time in `messaging.md` (~450-490 ms
+      ordinary-case propagation to the calendar, ~40-60 ms for chat's own two live gates).
+- [x] **With the broker stopped**, a suspended tenant's calendar refuses a new booking once the lease
+      passes — proven by a test that genuinely stops a real RabbitMQ container mid-lease
+      (`TenantSuspensionBrokerStoppedTests`), not by reading the code.
+- [x] The owner can set a suspension's duration in minutes, see it in a list, extend it, and lift it
       early — and a suspension nobody touches lifts itself once `suspended_until` passes, with no
-      manual step.
-- [ ] Lifting a suspension (by hand or by expiring) restores bookings and the widget with no
-      re-provisioning, no new credential and no manual step.
-- [ ] A visitor with a conversation already open on a suspended tenant's site sees no error, and their
-      message is still stored.
-- [ ] A booking made before the suspension is untouched by it.
-- [ ] `messaging.md` carries the internal propagation numbers (the ordinary-case outbox hop, and the
+      manual step (both gates read `suspended_until` live against the clock; nothing sweeps).
+- [x] Lifting a suspension (by hand or by expiring) restores bookings and the widget with no
+      re-provisioning, no new credential and no manual step — proven on both sides
+      (`ATenantWhoseSuspensionWasLifted_CanClaimANewBooking`,
+      `VisitorSessionEndpoint_OnceUnblocked_MintsNormallyAgain`).
+- [~] A visitor with a conversation already open on a suspended tenant's site sees no error, and their
+      message is still stored — true by construction (`SendVisitorMessageHandler` carries no
+      suspension check at all, and its own pre-existing test suite is unchanged and still green) but
+      **no dedicated end-to-end test proves it**; a real gap in verification rigor, not a known defect.
+- [~] A booking made before the suspension is untouched by it — same caveat: `ClaimSlotSql` is the
+      only write path suspension touches, so an existing booking's own confirm/cancel/reschedule paths
+      are structurally untouched, but no dedicated test exercises "suspend, then confirm an
+      already-claimed booking" directly.
+- [x] `messaging.md` carries the internal propagation numbers (the ordinary-case outbox hop, and the
       5-minute/2.5-minute lease `adr/0166` sets).
 
 ## Answered, 2026-09-13

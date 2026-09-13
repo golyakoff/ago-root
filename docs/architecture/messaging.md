@@ -288,8 +288,24 @@ an event through this outbox and inherits at-least-once delivery with it.
   ([`adr/0165`](../adr/0165-the-quota-impact-preview-is-the-first-reply-the-calendar-sends-chat.md)) -
   the first crossing to run calendar-to-chat rather than the other way, reusing the identical
   mechanism rather than inventing a second one.
+- **A tenant suspension crosses as a renewed lease, not a fire-and-forget fact** - the one exception to
+  every other row on this page, all of which carry an eventual guarantee with no stated ceiling
+  ([`adr/0149`](../adr/0149-a-tenants-lifecycle-crosses-to-a-module-by-lease-and-by-proof.md) rules
+  1-3, parametrised by [`adr/0166`](../adr/0166-a-suspension-is-for-enforcement-and-its-length-is-the-owners-own.md)).
+  Chat publishes `TenantSuspensionChanged` (`site_id`, `suspended_until` or `null`) on suspend, on
+  extend, on an owner's explicit lift, and on its own recurring 2.5-minute renewal for as long as an
+  account stays suspended - a suspension is chat *declining to renew*, never a delta. The calendar's
+  `TenantSuspensionChangedConsumer` writes `Tenant.SuspensionValidUntil`, read live inside
+  `BookingStore`'s own claim transaction (never a pre-read - rule 8), fail-closed once it passes.
+  **Measured, `22-08`, 2026-09-13**: ordinary-case propagation (chat's outbox publish to the
+  calendar's own row reflecting it, real RabbitMQ and real Postgres) is **~450-490 ms**; chat's own two
+  live gates (a new widget session, an operator's own send) cost **~40-60 ms** - a live, uncached read
+  of the same write that just committed, no broker hop involved at all. The stated ceiling - 5 minutes,
+  renewed at 2.5 - was proven by genuinely stopping the broker mid-lease (`TenantSuspensionBrokerStoppedTests`):
+  a claim still refuses for the remainder of an already-established lease with the broker down, and is
+  no longer refused once that lease fully lapses with nothing left to renew it.
 
-All three are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same
+All four are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same
 as usable on the calendar's, and only the consumer's own copy decides what a tenant can do.
 
 ## Outbox dispatcher
