@@ -1,7 +1,8 @@
 # the drift check normalises away the only drift that actually happens
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — reading B chosen in dialogue with the author, 2026-09-13; see *Answered*, below.
+  Not built yet.
 - **Depends on**: `15-21` built the check; `adr/0144` is its decision. This is the gap that item's own
   second Done-when names and could not close.
 - **Found**: 2026-09-07, by watching the check pass on a cluster that had drifted eleven ways.
@@ -56,10 +57,30 @@ Three readings, none chosen here:
   It correctly did not fire on 2026-09-07 because the cluster and the manifest agreed at apply time —
   the eleven-way drift was created by the two redeploys that came *after* the apply.
 
+## Answered, 2026-09-13
+
+**Reading B — the next run.** A deploy records what it actually rolled out somewhere durable; the next
+deploy (or the next drift-check run) reads that record and says so if what's currently running was
+never recorded as committed. Chosen over the other two, for stability specifically:
+
+- **A (time-based) was rejected as a net addition of instability, not a fix.** It still needs the same
+  durable record B needs — there is no way to say "this tag has been running longer than expected"
+  without persisting when it started — and it adds a threshold on top that has to be tuned, tripping on
+  an ordinary slow deploy or a maintenance window. It pays B's own cost and adds a second, flakier one.
+- **C (apply-side only, demote the check) was rejected as leaving the actual problem unaddressed.**
+  `22-24`'s rollback guard is real protection, but it only refuses a *backwards* apply — drift between
+  two forward deploys with no commit between them, exactly 2026-09-07's own case, can still accumulate
+  silently and indefinitely under C. Demoting the check to informational is an honest description of
+  what protects the cluster today; it is not a check that notices what this item exists to notice.
+- **B catches exactly the observed failure, deterministically, with no new failure mode of its own** —
+  no clock, no threshold, nothing to tune. It is a pure addition: the tag normalisation, and `apply-
+  demo.sh`'s own existing rollback guard, are both unchanged by this.
+
 ## Done when
 
-- [ ] Tags left unrecorded after a deploy are noticed by something, and the item says which of the
-      three readings above it took and why.
+- [x] Tags left unrecorded after a deploy are noticed by something, and the item says which of the
+      three readings above it took and why. — **reading B, see Answered above.** "Noticed by
+      something" is not yet built; the remaining two boxes cover that.
 - [ ] Whatever notices is shown noticing, against a real recorded-versus-running gap.
 - [ ] The normal case — a deploy in progress — stays quiet, so the check does not become one more
       banner nobody reads.
