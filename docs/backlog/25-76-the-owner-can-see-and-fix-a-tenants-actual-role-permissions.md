@@ -1,7 +1,8 @@
 # 25-76 · The owner can see and fix a tenant's actual role permissions
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: code landed — `ago-chat#280`/`ago-console#219`. Add-only, as scoped; removal carried to
+  `25-77`. Not yet run against the real deployment's own two live gaps — see Done when.
 - **Found**: 2026-09-13, twice in the same evening. First `25-69` — no seeded role anywhere grants
   `conversation:close`, discovered because closing a real duplicate conversation was refused for an
   account's own founder. Second, checking that same class of gap live while verifying `25-08`: querying
@@ -77,14 +78,18 @@ query."
 
 ## Done when
 
-- [ ] The owner can open a site's detail screen and see every role it has, with its actual current
-      permission list — not a template, not assumed.
-- [ ] The owner can add a permission a role is missing, and it takes effect for every operator already
+- [x] The owner can open a site's detail screen and see every role it has, with its actual current
+      permission list — not a template, not assumed. — `GET .../owner/sites/{siteId}` extended with
+      `Roles`; `OwnerSiteDetailPage`'s own new "Role permissions" section renders it.
+- [x] The owner can add a permission a role is missing, and it takes effect for every operator already
       holding that role without them signing out and back in — `AddPermissionsAsync`'s own
-      `RoleAssignmentsChanged` publish already gives this; proven end to end, not assumed from the
+      `RoleAssignmentsChanged` publish already gives this; proven end to end against real Postgres
+      (`AddRolePermissionsAsOwnerHandlerTests`, `OwnerRolesEndpointsTests`), not assumed from the
       existing method's own contract.
-- [ ] Whether a removal path ships in this same change or is explicitly carried to its own number is
-      decided, not left implicit.
+- [x] Whether a removal path ships in this same change or is explicitly carried to its own number is
+      decided, not left implicit. — carried to `25-77`, decided before this change was built, not
+      after.
 - [ ] The two real gaps this item was found from (`25-69`'s `conversation:close`, `channel:manage`
       missing from two live tenants) are each closed through this tool, not through a hand-run `UPDATE`
-      — proof that the tool actually works, not only that it exists.
+      — proof that the tool actually works, not only that it exists. **Needs this merged and deployed,
+      then actually run by hand against the two real tenants — not provable before that.**
