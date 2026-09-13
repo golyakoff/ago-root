@@ -2,8 +2,9 @@
 
 - **Stage**: 23
 - **Status**: ready — **`ago-chat#233` shipped the core mechanism (option-as-subscription, aligned
-  renewal, entitlement grant/revoke) 2026-09-08; the `ago-deploy` manifest declaring what an option
-  actually turns on, and the three awkward cases named below, remain open — see Done when.**
+  renewal, entitlement grant/revoke) 2026-09-08. The three awkward cases are answered in dialogue,
+  2026-09-13 — see *Answered*, below. What remains open to build: the unconditional-grant flag and its
+  OR-read, and the `ago-deploy` manifest declaring what an option actually turns on — see Done when.**
 - **Depends on**: `adr/0159` for the shape. `22-33` is the commercial question this deliberately does not answer.
 - **Found**: 2026-09-07 — named as the gap `adr/0151` creates and does not close.
 
@@ -56,6 +57,39 @@ the shape and careless about what it replaced.
   neighbouring case (a base lapse does not touch a paid option) and deliberately did not settle this
   one.
 
+## Answered, 2026-09-13
+
+All three awkward cases, settled in dialogue with the author:
+
+**1. A payment arrives for something already granted by hand.** Every entitlement gets its own
+**unconditional-grant flag**, independent of and orthogonal to whatever the billing-driven read already
+checks (a `CurrentPeriodEnd`/paid-until fact) — never a second, competing write to the same field. The
+two sources combine by **OR**: an entitlement is on while *either* the flag is set *or* billing says the
+option is currently paid. Concretely:
+
+- Flag set, billing active — both true at once is not a conflict to resolve; billing is simply
+  redundant for as long as the flag stands, and that is fine, not a state anything needs to notice.
+- Flag lifted, billing still active — the entitlement survives on billing alone; nothing about lifting
+  the flag re-provisions or interrupts it.
+- Flag lifted, billing lapsed or absent — the entitlement goes off. This is the one case where a write
+  actually changes the outcome, so it is the one path that has to re-evaluate billing at the moment the
+  flag is lifted, not assume the prior "on" state persists.
+
+The flag can **only ever be set by the platform owner** — the same actor `adr/0118`'s own forced-revoke
+already holds to a stated reason, applied here to the grant side of the same relationship.
+
+**2. The grant's own provenance.** Settled as already proposed and confirmed without change: a manual
+grant is always attributed to the owner who set it (case 1's flag has exactly one legitimate writer);
+an automatic revoke driven by a lapsed subscription is self-documenting — "the subscription lapsed" is
+itself the reason, the identical `OperatorId.System`-plus-reason-string shape already used elsewhere in
+this codebase for a system-triggered act, not a gap needing new machinery.
+
+**3. A refund or a chargeback.** **Moot by policy — no refunds are offered at all**, so there is no
+credit-reversal case for the domain to model. Noted, not built around: a card-network chargeback can
+still be initiated by an issuing bank regardless of a stated no-refunds policy — rare enough, by the
+author's own call, to fall back on the identical manual owner-revoke path case 1 already provides rather
+than earning any automation of its own.
+
 ## Where this is likely to go wrong
 
 - **`GetBillingStatusHandler` becomes wrong silently, and it is the only such reader.** It calls
@@ -88,7 +122,8 @@ the shape and careless about what it replaced.
       `ago-deploy` manifest change that actually declares a mapping is explicitly **not** in
       `ago-chat#233` ("the ago-deploy manifest change is not in this branch"). No option can actually
       grant anything real yet until that manifest lands.
-- [ ] Each of the three awkward cases above is answered in the change or explicitly carried out to
-      its own number. — **not done.** None of the three (a payment for something already granted by
-      hand; the grant's own provenance; a refund/chargeback) is mentioned in `ago-chat#233`. Still
-      open, needs its own number if picked up separately from the `ago-deploy` manifest work above.
+- [x] Each of the three awkward cases above is answered in the change or explicitly carried out to
+      its own number. — **answered, 2026-09-13** (see *Answered*, above); none of the three is built
+      yet (`ago-chat#233` predates this dialogue), so implementing the unconditional-grant flag and
+      wiring the OR read remains real work, carried by this same item rather than a new number, since
+      the answer was reached here.
