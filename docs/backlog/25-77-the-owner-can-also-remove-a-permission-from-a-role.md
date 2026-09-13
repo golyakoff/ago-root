@@ -1,7 +1,8 @@
 # 25-77 · The owner can also remove a permission from a role
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — design answered in dialogue with the author, 2026-09-13 (see *Answered*, below).
+  Not built yet.
 - **Depends on**: `25-76` (the owner's add-a-permission tool) — this item is its own explicitly-named
   open question, carried to a number of its own rather than answered by assumption.
 - **Found**: 2026-09-13, scoping `25-76`. That item's own text: *"does v1 also need to remove a
@@ -39,15 +40,42 @@ grant side never had to:
   something away? The instinct says yes — a removal is exactly the kind of consequential act that
   pattern exists for — but state it rather than assume it by precedent alone.
 
+## Answered, 2026-09-13
+
+Both product questions settled in dialogue with the author, directly, no split needed:
+
+**1. No magic roles.** The owner may remove any permission from any role, `Admin` included, up to and
+including the ones that make an `Admin` role recognisably `Admin` (`site:configure`,
+`site:manage_operators`). No permission is carved out as unremovable. The author's own framing: the
+owner is trusted to know what they are doing, and a role is not a protected shape this tool second-
+guesses on their behalf. `IRoleRepository`'s removal counterpart therefore needs no allow/deny list of
+its own — every permission `Permission.cs` names is equally removable.
+
+**2. A reason is required, every time.** Matching the precedent this item's own text already named
+rather than assumed: `23-86`'s unconditional-grant flag and `adr/0118`'s forced-revoke both require a
+non-blank reason for the identical shape of act — taking something away from a tenant that it already
+had. Removing a permission is not treated as a lighter-weight act than either.
+
+The third question (`PermissionsContext`'s own live-session behaviour) was resolved by reading the code
+rather than by dialogue, before this session even reached the author: no live subscription exists today
+— permissions load once, from `GET /api/v1/operators/me`, and only change on the next full page load
+(the same tenancy-switch reload path `PermissionsProvider` already uses for an analogous reason).
+Removal's own effect on an already-open session is therefore identical to every other permission change
+this console already makes, add included — not a new gap this item introduces. Named in the Scope's own
+third bullet below as "explicitly named, not fixed here" rather than left as an open question.
+
 ## Scope
 
 - `IRoleRepository` gains a removal counterpart to `AddPermissionsAsync` — same idempotence contract
   (removing an already-absent permission is a no-op, not an error), same same-transaction outbox
-  publish.
+  publish, no permission excluded from what it may remove.
+- A required, non-blank reason on every removal call — the identical shape `adr/0118`'s own
+  forced-revoke and `23-86`'s own unconditional-grant flag already require.
 - The owner-only write and console UI `25-76` already built for adding gains the mirror action for
   removing, on the identical screen.
-- The live-session question above is answered and, if the answer is "no, it is not live today",
-  either fixed in this change or explicitly named as a known, accepted gap with a reason.
+- The live-session question is **explicitly not fixed here** — answered above as "identical to every
+  other permission change this console already makes," a known, accepted, pre-existing gap this item
+  does not newly introduce or need to close.
 
 ## Out of scope
 
@@ -57,8 +85,12 @@ grant side never had to:
 ## Done when
 
 - [ ] `IRoleRepository` has a removal method, additive-idempotent in the reverse direction, publishing
-      `RoleAssignmentsChanged` the same way the grant side does.
+      `RoleAssignmentsChanged` the same way the grant side does, requiring a non-blank reason, refusing
+      no permission.
 - [ ] The owner can remove a permission from a role through the same console screen `25-76` built for
       adding one.
-- [ ] What happens to an operator's own live session when a permission they hold is removed is
-      answered and proven, not assumed.
+- [x] What happens to an operator's own live session when a permission they hold is removed is
+      answered — **answered, 2026-09-13**: no live subscription exists today, identical to every other
+      permission change this console already makes. Not proven by a new test in this design pass; the
+      implementing change should still confirm it against the real `PermissionsContext` rather than
+      trust this note alone.
