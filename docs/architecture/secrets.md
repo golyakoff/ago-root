@@ -75,7 +75,7 @@ tracked `.env` anywhere.
 
 | Name | Protects | Value lives | Read by | Class |
 |---|---|---|---|---|
-| `POSTGRES_PASSWORD` | The `ago_chat` database — every conversation and message | `.env` on the deploying machine → Secret | All four `Ago.Chat.*` deployables, via `AGO_CHAT_CONNECTION_STRING`; `backup.sh` on the node | Coordinated |
+| `POSTGRES_PASSWORD` | The `ago_chat` database — every conversation and message — **and, since `20-20`, `ago_calendar` too**: one Postgres instance, one `ago` role, two databases distinguished only by `Database=`/`dbname=` (`ago-deploy/k8s/base/api.yaml` vs `calendar-api.yaml`) | `.env` on the deploying machine → Secret | All four `Ago.Chat.*` deployables, via `AGO_CHAT_CONNECTION_STRING`; `Ago.Calendar.*`, via `AGO_CALENDAR_CONNECTION_STRING`; `backup.sh` on the node; since `22-32`, a person running `tenancy-reconciliation-report.sh` by hand — the same credential read a second way, not a new one | Coordinated |
 | `RABBITMQ_PASSWORD` | The broker: outbox publication and node fan-out | same | Api, Worker, Webhooks | Restart |
 | `MINIO_ROOT_PASSWORD` | Object storage — every attachment's bytes | same | Api, Worker, Webhooks; `backup.sh` reads it from the Secret | Restart |
 | `KEYCLOAK_ADMIN_PASSWORD` | The identity provider's `master`-realm admin | same | A human, and `apply-realm-settings.sh` / `apply-smtp-settings.sh` / `apply-demo-provisioner.sh` | Breaking-in-form only — see below |
