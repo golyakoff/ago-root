@@ -1,8 +1,7 @@
 # blocking blocks a conversation, and the person opens another
 
 - **Stage**: 23
-- **Status**: ready — one of four Done-when answered in dialogue, 2026-09-13 (see *Answered*, below).
-  Not built yet.
+- **Status**: done — `ago-chat#282`/`ago-console#221`, `adr/0168`.
 - **Depends on**: `24-10` built what exists. `23-69` (closing as spam) meets it.
 - **Found**: 2026-09-07, while answering the author's question about ban lists.
 
@@ -72,8 +71,13 @@ this is additive, not a repurposing of it.
 
 ## Done when
 
-- [ ] A block stops the same visitor's next conversation on that site, proven rather than reasoned.
-- [ ] It is reversible, recorded, and scoped to one site.
+- [x] A block stops the same visitor's next conversation on that site, proven rather than reasoned. —
+      `BlockVisitorHandler` writes a `visitor_restrictions` row (`kind = Block`, `expires_at = null`);
+      `StartConversationHandler`'s own enforcement proven against real Postgres
+      (`ago-chat#282`).
+- [x] It is reversible, recorded, and scoped to one site. — `LiftVisitorRestrictionHandler`;
+      `(SiteId, VisitorId)` keyed throughout.
 - [x] What the visitor experiences is decided rather than inherited. — **silence**, see *Answered*
       above.
-- [ ] `personal-data.md` says what a block records and for how long.
+- [x] `personal-data.md` says what a block records and for how long. — the new `visitor_restrictions`
+      row, kept indefinitely, not a timed audit log; the erasure-cascade gap it also names is `25-78`.

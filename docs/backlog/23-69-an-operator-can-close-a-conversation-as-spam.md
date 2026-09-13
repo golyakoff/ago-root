@@ -1,8 +1,7 @@
 # an operator can close a conversation as spam
 
 - **Stage**: 23
-- **Status**: ready — both 2026-09-09 questions answered, and the 2026-09-12 scope mismatch resolved
-  2026-09-13 (see *Answered*, below). Not built yet.
+- **Status**: done — `ago-chat#282`/`ago-console#221`, `adr/0168`.
 - **Verified**: 2026-09-12 — confirmed `24-10`'s real mechanism (`IConversationBlockRepository`,
   `BlockConversationHandler`/`UnblockConversationHandler`, `conversations.blocked_at`/`blocked_by`,
   `conversation_block_records`) is real. **One real mismatch worth flagging before building**: the
@@ -94,12 +93,16 @@ per-conversation block. The new table is additive, not a replacement.
 
 ## Done when
 
-- [ ] An operator can close a conversation as spam, in one act, which writes a `visitor_restrictions`
+- [x] An operator can close a conversation as spam, in one act, which writes a `visitor_restrictions`
       row for that visitor with a stated `expires_at` (not indefinite) — the author's own decided
-      shape, mechanism corrected 2026-09-13 (see *Answered*).
-- [ ] The tenant can see how many, by whom, and read the conversations themselves.
-- [ ] It can be undone before the expiry, and the undo is recorded; after the expiry, the restriction
-      lifts on its own.
+      shape, mechanism corrected 2026-09-13 (see *Answered*). — `CloseConversationAsSpamHandler`,
+      `ago-chat#282`. 24-hour default (`ConversationSpamMuteOptions`), stated as an engineering
+      judgement, not a measured number.
+- [x] The tenant can see how many, by whom, and read the conversations themselves. — `RestrictedVisitorsPage`
+      (`ago-console#221`), `GET /api/v1/visitor-restrictions`.
+- [x] It can be undone before the expiry, and the undo is recorded; after the expiry, the restriction
+      lifts on its own. — `LiftVisitorRestrictionHandler` for the manual case; `IsActiveAsync`'s own
+      fresh-every-read check means a natural expiry needs no sweep to notice.
 - [x] Question 1 is answered — auto-mute for a stated window, recorded above.
 - [x] Question 2 is answered — the same underlying mechanism as `24-10`'s blocking and `23-77`'s own
       visitor-scoped block, not literally `ConversationBlock` itself (corrected 2026-09-13, see
