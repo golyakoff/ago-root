@@ -1,7 +1,7 @@
 # 25-71 · A shared in-memory exporter can throw mid-enumeration
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#274`
 - **Found**: 2026-09-13, landing `23-76`. Not caused by that item — `git diff origin/main` shows zero
   changes to the affected test or anything it depends on — but that item's own new tests
   (`AttachmentDeduplicatorTests`, a real download over `HttpClient`) added enough concurrent
@@ -45,5 +45,8 @@ ever runs.
 
 ## Done when
 
-- [ ] The same test run under an artificially heavy concurrent `HttpClient` load (or just several
-      repeated full-suite runs) does not throw `InvalidOperationException` from this path.
+- [x] The same test run under an artificially heavy concurrent `HttpClient` load (or just several
+      repeated full-suite runs) does not throw `InvalidOperationException` from this path —
+      `ago-chat#274`. Also fixed the two other trace-exporter tests carrying the identical risk
+      (`DeliveryObservabilityEndToEndTests`, `TracingEndToEndTests`), not just the one that had
+      actually failed.
