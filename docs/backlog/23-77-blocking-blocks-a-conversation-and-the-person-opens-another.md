@@ -1,7 +1,8 @@
 # blocking blocks a conversation, and the person opens another
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — one of four Done-when answered in dialogue, 2026-09-13 (see *Answered*, below).
+  Not built yet.
 - **Depends on**: `24-10` built what exists. `23-69` (closing as spam) meets it.
 - **Found**: 2026-09-07, while answering the author's question about ban lists.
 
@@ -54,9 +55,17 @@ which is a nuisance rather than an adversary.
 - **Do not let this grow into a platform ban list by accident.** The moment a block is shared between
   tenants it becomes a different product with different obligations.
 
+## Answered, 2026-09-13
+
+**Silence — the author's own words: "делаем всё тихо, без всяких оповещений."** A blocked visitor's
+messages simply do not reach an operator; nothing in the widget or the console tells them they were
+blocked, matches or explains anything. Confirms the "Where this is likely to go wrong" section's own
+lean rather than overriding it.
+
 ## Done when
 
 - [ ] A block stops the same visitor's next conversation on that site, proven rather than reasoned.
 - [ ] It is reversible, recorded, and scoped to one site.
-- [ ] What the visitor experiences is decided rather than inherited.
+- [x] What the visitor experiences is decided rather than inherited. — **silence**, see *Answered*
+      above.
 - [ ] `personal-data.md` says what a block records and for how long.
