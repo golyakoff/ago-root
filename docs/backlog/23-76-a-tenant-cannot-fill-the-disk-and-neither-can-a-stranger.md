@@ -1,7 +1,9 @@
 # a tenant cannot fill the disk, and neither can a stranger
 
 - **Stage**: 23
-- **Status**: ready — **the tenant-facing question is answered, 2026-09-13**
+- **Status**: done — `ago-chat#272`/`ago-deploy#198`. `23-80` (a tenant's own storage-visibility/
+  cleanup screen) is not this item's scope but is a real, named coupling risk — see *Where this is
+  likely to go wrong*, unchanged, and treat it as the natural next thing.
 - **Depends on**: `23-75` is the per-conversation budget. This is the part that actually bounds storage.
 - **Found**: 2026-09-07, asked by the author: *«файлы — самое опасное, как не дать засрать весь MinIO».*
 
@@ -21,7 +23,7 @@ payment and a quota.
 
 ## What exists today
 
-- Per-file: 10 MB, enforced twice (`5-13`).
+- Per-file: 5 MB, enforced twice (`5-13`, tightened from 10 MB by `23-81`).
 - Rate limits per site, per visitor, per operator (`AttachmentRateLimitOptions`) — **counts, not bytes**.
 - An allowlist of content types: images and PDF only. That already excludes the "store an executable"
   class of abuse, and is worth knowing before anybody proposes a virus scanner.
@@ -115,10 +117,19 @@ Two parts, and the second narrows the option this section originally offered:
 
 ## Done when
 
-- [ ] A tenant's total attachment storage is bounded, by tier, and the bound is enforced at presign.
-- [ ] Creating conversations at speed does not multiply the available budget.
-- [ ] There is a ceiling below which the disk cannot be filled by this feature, and an alert before it.
-- [ ] The same bytes uploaded repeatedly cost one object, within a tenant.
+- [x] A tenant's total attachment storage is bounded, by tier, and the bound is enforced at presign —
+      `ISiteAttachmentStorageBudget`, reserved alongside `23-75`'s own conversation-level reservation
+      in the same transaction. 100 MiB free, 1 GiB per paid year (cumulative) paid — the tier grid's
+      own numbers, "cumulative" itself flagged there as needing confirmation, built as a named config
+      value for exactly that reason.
+- [x] Creating conversations at speed does not multiply the available budget — a per-visitor and
+      per-site rate limit on `StartConversation`, proven with a fails-before.
+- [x] There is a ceiling below which the disk cannot be filled by this feature, and an alert before it
+      — a real 5 GiB MinIO bucket quota (`mc quota set`, MinIO's own refusal proven live against a
+      lowered quota) plus `MinioAttachmentBucketFilling`, firing at 80%.
+- [x] The same bytes uploaded repeatedly cost one object, within a tenant — dedup at confirm time (a
+      real hash needs real bytes, which don't exist at presign), repointing a duplicate at the existing
+      object and releasing its site-budget reservation.
 - [x] What a tenant sees when their quota is exhausted is decided rather than discovered — soft
       degradation: old attachments keep working, new uploads blocked with the soft text "Пересылка
       файлов временно недоступна" (no CTA, no mention of a limit). See *Answered*, above.
