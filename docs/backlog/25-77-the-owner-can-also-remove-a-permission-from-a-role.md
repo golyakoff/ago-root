@@ -1,8 +1,8 @@
 # 25-77 · The owner can also remove a permission from a role
 
 - **Stage**: 25
-- **Status**: ready — design answered in dialogue with the author, 2026-09-13 (see *Answered*, below).
-  Not built yet.
+- **Status**: code landed — `ago-chat#281`/`ago-console#220`. Not yet run against the real deployment
+  (same caveat as `25-76`).
 - **Depends on**: `25-76` (the owner's add-a-permission tool) — this item is its own explicitly-named
   open question, carried to a number of its own rather than answered by assumption.
 - **Found**: 2026-09-13, scoping `25-76`. That item's own text: *"does v1 also need to remove a
@@ -84,13 +84,18 @@ third bullet below as "explicitly named, not fixed here" rather than left as an 
 
 ## Done when
 
-- [ ] `IRoleRepository` has a removal method, additive-idempotent in the reverse direction, publishing
+- [x] `IRoleRepository` has a removal method, additive-idempotent in the reverse direction, publishing
       `RoleAssignmentsChanged` the same way the grant side does, requiring a non-blank reason, refusing
-      no permission.
-- [ ] The owner can remove a permission from a role through the same console screen `25-76` built for
-      adding one.
+      no permission. — `RemovePermissionsAsync`: an atomic set-difference `UPDATE` (Postgres's own row
+      lock serializes concurrent adds/removes on the same role), `coalesce(..., array[]::text[])` so
+      removing every permission leaves `[]`, never `NULL`. The reason rides in the same EF transaction
+      as the role update and the outbox publish — a real improvement over `ModuleRevokeOverrideRepository`'s
+      own precedent, which writes its override row on a second connection after the fact.
+- [x] The owner can remove a permission from a role through the same console screen `25-76` built for
+      adding one. — a Remove action per currently-held permission, with a required reason prompt.
 - [x] What happens to an operator's own live session when a permission they hold is removed is
       answered — **answered, 2026-09-13**: no live subscription exists today, identical to every other
-      permission change this console already makes. Not proven by a new test in this design pass; the
-      implementing change should still confirm it against the real `PermissionsContext` rather than
-      trust this note alone.
+      permission change this console already makes. Independently confirmed by reading
+      `PermissionsProvider.tsx` directly while building this change (its one `useEffect` depends only on
+      `[accessToken]`, fetched once per sign-in, no polling, no hub listener) — not left as an untested
+      note.
