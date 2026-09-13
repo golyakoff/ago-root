@@ -1,8 +1,9 @@
 # the drift check normalises away the only drift that actually happens
 
 - **Stage**: 23
-- **Status**: ready — reading B chosen in dialogue with the author, 2026-09-13; see *Answered*, below.
-  Not built yet.
+- **Status**: done — `ago-deploy#199`. Live-cluster confirmation of the DRIFT case (rather than the
+  local `docker-desktop` proof this PR shipped with) is carried to the redeploy this item is batched
+  with.
 - **Depends on**: `15-21` built the check; `adr/0144` is its decision. This is the gap that item's own
   second Done-when names and could not close.
 - **Found**: 2026-09-07, by watching the check pass on a cluster that had drifted eleven ways.
@@ -81,6 +82,11 @@ never recorded as committed. Chosen over the other two, for stability specifical
 - [x] Tags left unrecorded after a deploy are noticed by something, and the item says which of the
       three readings above it took and why. — **reading B, see Answered above.** "Noticed by
       something" is not yet built; the remaining two boxes cover that.
-- [ ] Whatever notices is shown noticing, against a real recorded-versus-running gap.
-- [ ] The normal case — a deploy in progress — stays quiet, so the check does not become one more
-      banner nobody reads.
+- [~] Whatever notices is shown noticing, against a real recorded-versus-running gap. — **proven
+      against a real Kubernetes API server (a local `docker-desktop` cluster, scratch namespace and
+      overlay), not yet against the live demo cluster.** A simulated two-deploy sequence with no
+      commit between them reproduced 2026-09-07 exactly and was caught. The live-cluster confirmation
+      is carried to the redeploy this item is batched with.
+- [x] The normal case — a deploy in progress — stays quiet, so the check does not become one more
+      banner nobody reads. — proven live: an ordinary single deploy followed by committing the moved
+      tags produces no warning on the next run.
