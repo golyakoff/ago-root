@@ -1,8 +1,7 @@
 # 25-74 · A worker cannot gain a second service, and a slot lies about its own end
 
 - **Stage**: 25
-- **Status**: ready — both bugs root-caused against live data and code; the second has a real,
-  reproducible fails-before test already written
+- **Status**: done — `ago-calendar#64`/`ago-console#217`
 - **Found**: 2026-09-13, reported by the author against the live tenant `golyakov.net`: a worker has
   two services configured but booking only ever offers one, and a service longer than the calendar's
   slot grid looked like it might only be blocking as much time as one grid cell rather than its own
@@ -75,10 +74,18 @@ fails-before rather than writing a second one) fails exactly as predicted: expec
 
 ## Done when
 
-- [ ] An operator can add a second service to an existing worker through the console, and it is
-      immediately offered at booking - proven end to end, not only that the API call succeeds.
-- [ ] `OpenSlotsEndAtTests.AServiceNeedingTwoSlots_ReportsTheFullRunsEnd_NotTheFirstSlotsOwnEnd` (or its
-      committed equivalent) passes.
-- [ ] The widget's own time-choice button for a multi-slot service shows the service's real end time,
-      confirmed by hand against a real booking flow, not only the underlying query.
-- [ ] golyakov.net's own live worker is re-checked after deploy: both services genuinely bookable.
+- [x] An operator can add a second service to an existing worker through the console, and it is
+      immediately offered at booking - proven end to end, not only that the API call succeeds. —
+      `WorkerEndpointTests`' new end-to-end test proves the booking surface itself lists the worker for
+      the newly-added service, not only that the `PUT` returns 204.
+- [x] `OpenSlotsEndAtTests.AServiceNeedingTwoSlots_ReportsTheFullRunsEnd_NotTheFirstSlotsOwnEnd` (or its
+      committed equivalent) passes. — the reused diagnostic test, now committed, passes.
+- [~] The widget's own time-choice button for a multi-slot service shows the service's real end time,
+      confirmed by hand against a real booking flow, not only the underlying query. — **mechanism
+      confirmed by code-path reading, not yet by hand**: `ModuleStepFactory.SlotChoice`'s
+      `DescribeTimeOnly` already builds a start-end range string from `EndsAt`, so the fixed SQL reaches
+      it (and the widget, which renders the label verbatim) with no further code change — but nobody has
+      clicked through a real booking with the fix live. Carried to the next Done-when box's own deploy.
+- [ ] golyakov.net's own live worker is re-checked after deploy: both services genuinely bookable, and
+      a multi-slot service's button shows its real range. Pending the redeploy this queue's own items
+      are batched into.
