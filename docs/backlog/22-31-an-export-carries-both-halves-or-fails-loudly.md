@@ -4,8 +4,10 @@
 - **Status**: ready — build as written; the transport question below is answered (2026-09-13).
 - **Depends on**: `16-03` (the export machinery this extends), `22-30` (whichever answer its Open
   question takes about reaching a module after a revoke — this item needs the same reach)
-- **Decision**: `docs/adr/0149-*` — **Proposed.** Its third rule, that chat never parses a module's
-  data, is what decides the archive's shape here. `docs/adr/0072-*` is the format this extends.
+- **Decision**: `docs/adr/0149-*` — **Accepted** (rules 1–3; its own "two parameters" section is
+  superseded by `adr/0166` for `22-08`, unrelated to this item). Its third rule, that chat never parses
+  a module's data, is what decides the archive's shape here. `docs/adr/0072-*` is the format this
+  extends.
 - **Split out of `22-08`** on 2026-09-07 (rule 15).
 
 ## Goal
