@@ -1,10 +1,7 @@
 # paying for something does not turn it on
 
 - **Stage**: 23
-- **Status**: ready — **`ago-chat#233` shipped the core mechanism (option-as-subscription, aligned
-  renewal, entitlement grant/revoke) 2026-09-08. The three awkward cases are answered in dialogue,
-  2026-09-13 — see *Answered*, below. What remains open to build: the unconditional-grant flag and its
-  OR-read, and the `ago-deploy` manifest declaring what an option actually turns on — see Done when.**
+- **Status**: done — `ago-chat#233`/`#279`, `ago-deploy#200`. All four Done-when boxes closed.
 - **Depends on**: `adr/0159` for the shape. `22-33` is the commercial question this deliberately does not answer.
 - **Found**: 2026-09-07 — named as the gap `adr/0151` creates and does not close.
 
@@ -116,14 +113,14 @@ than earning any automation of its own.
       Postgres).
 - [x] Nothing that reads "the site's subscription" can be handed an option instead. —
       `GetBillingStatusHandler`'s `GetLatestForSiteAsync` leak fixed in the same PR.
-- [~] The deployment declares what an option turns on, and no price of any kind enters a public
-      repository. — **half done.** The mechanism exists (option-to-entitlement mapping resolved by
-      key, mirroring `IModuleEntryPointProvider`) and no price entered this repository — but the
-      `ago-deploy` manifest change that actually declares a mapping is explicitly **not** in
-      `ago-chat#233` ("the ago-deploy manifest change is not in this branch"). No option can actually
-      grant anything real yet until that manifest lands.
+- [x] The deployment declares what an option turns on, and no price of any kind enters a public
+      repository. — `ago-deploy#200`: `BillingOptionEntitlements__channel-telegram=channel` on
+      `Ago.Chat.Worker` (the only host that calls `IBillingOptionEntitlementProvider`). `calendar`/
+      `faq` deliberately unmapped — both need a real module registration a billing grant cannot
+      provide.
 - [x] Each of the three awkward cases above is answered in the change or explicitly carried out to
-      its own number. — **answered, 2026-09-13** (see *Answered*, above); none of the three is built
-      yet (`ago-chat#233` predates this dialogue), so implementing the unconditional-grant flag and
-      wiring the OR read remains real work, carried by this same item rather than a new number, since
-      the answer was reached here.
+      its own number. — **built**, `ago-chat#279`: `ModuleQuantityGrant.UnconditionallyGrantedByOwner`
+      + `EffectiveQuantity` (the two combined by OR), owner-only `SetUnconditionalModuleGrantAsOwner`
+      write. Proven against real Postgres that a billing lapse while the flag is set does not clobber
+      it (`SubscriptionRenewalJobTests`) — `SubscriptionRenewalApplier`'s own writes needed zero
+      changes, since the OR lives entirely inside `ModuleQuantityGrantStore`'s own write path.

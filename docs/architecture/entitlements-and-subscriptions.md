@@ -121,6 +121,60 @@ So **an account can be on the free tier and paying**, and that is a normal state
 one. Everything downstream reads entitlements rather than inferring them from a tier name, and "free
 account" stops meaning "brings no revenue".
 
+**What an option turns on is deployment configuration, resolved by key** — the identical shape
+`adr/0154` set for module entry points and `23-102` for module permissions.
+`IBillingOptionEntitlementProvider` reads `BillingOptionEntitlements:<option-key>` and answers with the
+`ModuleKey` that option grants; a key this deployment has not declared throws, loudly, rather than
+granting nothing (`SubscriptionRenewalApplier.ResolveEntitlementOrThrow`'s own remarks). `ago-deploy`
+declares one real mapping today — `BillingOptionEntitlements__channel-telegram` → `channel`, on
+`Ago.Chat.Worker` (the only host that ever calls this port, since `SubscriptionRenewalApplier` is the
+only caller) — deliberately not `calendar` or `faq`: this page's own "a billing grant is not yet
+sufficient to turn on a module that requires registration" a few paragraphs up applies here exactly,
+and pointing this mapping at either would leave chat believing the module is granted while nothing
+routes to it.
+
+## An unconditional grant overrides billing, never competes with it
+
+**Every entitlement carries a second, independent input the platform owner alone may set: an
+unconditional-grant flag, combined with whatever billing already says by OR** (`23-86`, answered in
+dialogue 2026-09-13). This is the awkward case an early draft of `23-86` named and did not build: a
+tenant already granted a trial by hand, who then pays for the identical option. Two sources, one
+capability, and the expiry of either must not silently end the other.
+
+- **Flag set, billing active** — both true at once is not a conflict; billing is simply redundant for
+  as long as the flag stands.
+- **Flag lifted, billing still active** — the entitlement survives on billing alone; lifting the flag
+  never re-provisions or interrupts anything.
+- **Flag lifted, billing lapsed or absent** — the entitlement goes off. This is the only case where
+  lifting the flag actually changes the outcome, which is why lifting it re-evaluates the current
+  billing-driven quantity rather than assuming the prior "on" state persists.
+
+**The flag never becomes a second, competing write to `ModuleQuantityGrant.Quantity`.** `Quantity`
+keeps meaning exactly what it always has — the last number a billing renewal/lapse or an owner's own
+quantity grant wrote. `EffectiveQuantity` (`Quantity` OR'd with the flag, `Math.Max(Quantity, 1)` when
+the flag is set) is computed fresh on every read and is what `IModuleQuantityGrantStore.GetQuantityAsync`/
+`GetAllForSiteAsync` return and what every `ModuleQuantityGranted` event carries — never the raw
+`Quantity` alone. That last point is load-bearing: `SubscriptionRenewalApplier`'s own billing-driven
+grant/revoke calls are **completely unchanged** by this mechanism — they still call
+`IModuleQuantityGrantStore.GrantAsync` with the plain billing fact, exactly as before `23-86`. The OR
+happens once, inside `ModuleQuantityGrantStore` itself, so a billing lapse while the flag is set can
+never publish a `ModuleQuantityGranted` fact ("revoked") that contradicts what the flag promises,
+without a single caller needing to know the flag exists.
+
+**Only the platform owner may set or lift the flag**, always with a stated reason
+(`SetUnconditionalModuleGrantAsOwnerHandler`, `PUT /api/v1/owner/sites/{siteId}/modules/{moduleKey}/unconditional-grant`) —
+the same "an owner-only override always carries a stated reason" shape `adr/0118`'s forced-revoke
+already established, mirrored here for the grant side of the identical relationship rather than
+reinvented. Provenance for the flag itself (who, when, why) lives as columns on the
+`ModuleQuantityGrant` row it describes, not a separate audit table: unlike `adr/0118`'s own
+`module_revoke_overrides` (chosen because the row it audits is about to be deleted), this row survives
+indefinitely, which is exactly the case `adr/0118`'s own "Alternatives considered" section says a
+column-on-the-row belongs to (`adr/0098`'s reasoning, restated there).
+
+**A refund or a chargeback needs no mechanism here.** No refunds are offered at all, so there is no
+credit-reversal case to model; the rare chargeback case falls back to this identical manual owner-revoke
+path rather than earning automation of its own.
+
 ## What this page does not decide
 
 **Prices, tiers and packaging are not here and are not public.** They live in the private
