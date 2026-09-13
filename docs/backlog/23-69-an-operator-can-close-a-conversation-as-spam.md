@@ -1,19 +1,18 @@
 # an operator can close a conversation as spam
 
 - **Stage**: 23
-- **Status**: ready — **both open questions answered by the author, 2026-09-09, recorded below**
+- **Status**: ready — both 2026-09-09 questions answered, and the 2026-09-12 scope mismatch resolved
+  2026-09-13 (see *Answered*, below). Not built yet.
 - **Verified**: 2026-09-12 — confirmed `24-10`'s real mechanism (`IConversationBlockRepository`,
   `BlockConversationHandler`/`UnblockConversationHandler`, `conversations.blocked_at`/`blocked_by`,
   `conversation_block_records`) is real. **One real mismatch worth flagging before building**: the
   mechanism blocks by `ConversationId`, not by visitor — `Conversation.VisitorId` exists and a
   visitor-level mute is buildable on top of it, but this item's own "auto-mutes the visitor for a
-  window of time" answer is broader than what `24-10` blocks today (one conversation). Whoever builds
-  this needs to decide and state whether a *new* conversation the same visitor opens during the mute
-  window is also blocked (the auto-mute's own stated intent) or whether "the visitor" in the answer
-  above was shorthand for "this conversation" — the item's own text does not resolve this, and it
-  changes the actual scope of the build.
-- **Depends on**: `24-10` built `ConversationBlock` — and, per the author's own answer below, this item
-  reuses that same mechanism rather than a neighbour to it.
+  window of time" answer is broader than what `24-10` blocks today (one conversation). **Resolved
+  2026-09-13, see *Answered* below** — a new conversation the same visitor opens during the mute window
+  is caught too, by design.
+- **Depends on**: `24-10` built `ConversationBlock`, which stays exactly as it is — the visitor-scoped
+  mechanism this item needs is additive, not a repurposing of it (see *Answered*, below).
 - **Decision**: the author's, 2026-09-07, including the reason abuse is not the objection.
 
 ## What is actually true today
@@ -59,6 +58,32 @@ own number and named `blocked_at IS NULL` as a repeated, hand-written predicate 
 queries; both are directly relevant to building spam-marking on top of it correctly rather than
 re-discovering either.
 
+## Answered, 2026-09-13 — the visitor-scope mismatch this item's own "Verified" note found
+
+The 2026-09-12 note above found the real gap: `ConversationBlock` is keyed on `ConversationId`, so
+"the same mechanism as `24-10`'s blocking" (question 2's own 09-09 answer) cannot literally mean
+reusing that table's own rows for a visitor-wide mute — a visitor opening a *new* conversation during
+the mute window would not be caught by a row keyed to the old one. Resolved in dialogue with the
+author, together with `23-77` (`docs/backlog/23-77-*.md`, the same gap on the manual-block side of the
+identical mechanism, answered the same day): **one new, shared table, not two parallel ones.**
+
+**`visitor_restrictions`** (name provisional), keyed `(SiteId, VisitorId)` — the same site-scoped key
+`23-77`'s own Scope already settled. Columns: `restricted_at`, `restricted_by`,
+`expires_at` (**nullable** — `null` is `23-77`'s own indefinite, manually-lifted block; a real
+timestamp is this item's own "window of time" auto-mute), `lifted_at`, `lifted_by` for the same
+attributed-and-reversible shape `24-10` already gives a conversation-level block. This *is* the answer
+to this item's own 2026-09-12 open question: a new conversation the same visitor opens during the mute
+window **is** caught, because the check is keyed on the visitor, not on which conversation asked.
+
+**Enforcement point**: `StartConversationHandler`, alongside its own existing
+`GetActiveForVisitorAsync(VisitorId)` read (`25-67`/`25-68`) — the identical visitor-keyed lookup this
+handler already performs for an unrelated reason, not a new pattern this item introduces. Silent, per
+`23-77`'s own answered "no message to the visitor" — a restricted visitor's messages simply do not
+reach an operator.
+
+`ConversationBlock` itself is unchanged by this — it stays exactly what `24-10` already built, a
+per-conversation block. The new table is additive, not a replacement.
+
 ## Where this is likely to go wrong
 
 - **Spam is a judgement about a person, and it is stored.** `personal-data.md` should say that a
@@ -69,10 +94,14 @@ re-discovering either.
 
 ## Done when
 
-- [ ] An operator can close a conversation as spam, in one act, which applies `ConversationBlock` to
-      the visitor with a stated expiry (not indefinite) — the author's own decided shape.
+- [ ] An operator can close a conversation as spam, in one act, which writes a `visitor_restrictions`
+      row for that visitor with a stated `expires_at` (not indefinite) — the author's own decided
+      shape, mechanism corrected 2026-09-13 (see *Answered*).
 - [ ] The tenant can see how many, by whom, and read the conversations themselves.
-- [ ] It can be undone before the expiry, and the undo is recorded; after the expiry, the block lifts
-      on its own.
+- [ ] It can be undone before the expiry, and the undo is recorded; after the expiry, the restriction
+      lifts on its own.
 - [x] Question 1 is answered — auto-mute for a stated window, recorded above.
-- [x] Question 2 is answered — the same mechanism as `24-10`'s blocking, recorded above.
+- [x] Question 2 is answered — the same underlying mechanism as `24-10`'s blocking and `23-77`'s own
+      visitor-scoped block, not literally `ConversationBlock` itself (corrected 2026-09-13, see
+      *Answered* — `ConversationBlock` cannot be made visitor-scoped without changing its own key, so a
+      new, shared `visitor_restrictions` table is the mechanism both this item and `23-77` build on).

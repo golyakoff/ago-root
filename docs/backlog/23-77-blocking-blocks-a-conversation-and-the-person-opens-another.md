@@ -62,6 +62,14 @@ messages simply do not reach an operator; nothing in the widget or the console t
 blocked, matches or explains anything. Confirms the "Where this is likely to go wrong" section's own
 lean rather than overriding it.
 
+**The mechanism is shared with `23-69`, decided the same day** (`docs/backlog/23-69-*.md`'s own
+"Answered" section carries the full reasoning): one new table, `visitor_restrictions` (name
+provisional), keyed `(SiteId, VisitorId)` — exactly the scope this item's own Scope section already
+named. `expires_at` nullable — `null` is this item's own indefinite, manually-lifted block; a real
+timestamp is `23-69`'s time-windowed auto-mute. Checked in `StartConversationHandler`, alongside its
+own existing `GetActiveForVisitorAsync(VisitorId)` read. `ConversationBlock` (`24-10`) is untouched —
+this is additive, not a repurposing of it.
+
 ## Done when
 
 - [ ] A block stops the same visitor's next conversation on that site, proven rather than reasoned.
