@@ -492,6 +492,14 @@ denial.
   than a perfectly accurate count would block them, never earlier), which is why this item accepts the
   same proxy rather than building a second, exact counter - but from `25-83` onward this is no longer
   only an observability footnote, and `25-84`'s own real money sits on top of it next.
+  **`25-84` answered "is the proxy good enough to invoice from" with yes, deliberately, and the reason
+  is not tolerance for imprecision.** The storage provider's own egress bill - the "real" figure the
+  proxy is a proxy *for* - is measured per bucket, and this deployment has exactly one bucket shared by
+  every tenant (`file-storage.md`). There is therefore no provider-side figure attributable to a single
+  tenant at all: reconciling against it could only ever scale one tenant's bill by other tenants' cache
+  behaviour, which is worse than the undercount and far harder to defend to the tenant being charged.
+  The figure on a `25-84` invoice line is this table's own `bytes_out`, stated as AGO's own measurement
+  taken when a download URL is issued, and it undercounts - in the tenant's favour.
 - `sites` **gains four columns in `25-83`** - `download_block_exempt` (`boolean`, default `false`) and
   its own three-column audit trail, `download_block_exemption_changed_by`/`_reason`/`_changed_at`
   (all nullable text/`timestamptz`) - the platform owner's own free, indefinite bypass of the hard
@@ -506,7 +514,36 @@ denial.
   here because nothing in the request path ever *writes* a threshold (`docs/backlog/25-83-*.md`'s own
   Scope: a runbook script, never a console screen, as of this item). Seeded with two starting rows
   (`free`, `starter`) that are a labelled starting point, not a measured figure - see that migration's
-  own remarks (`Stage25AddTierDownloadThresholds`).
+  own remarks (`Stage25AddTierDownloadThresholds`). **`25-84` adds `auto_bill_cap_rub`
+  (`numeric(10,2)`, nullable, `>= 0` enforced by a check constraint)** - the most a site on this tier
+  may accrue in download-overage charges within one calendar month before `25-83`'s block returns
+  despite the tenant being on auto-bill. `NULL` means uncapped. A money column in a byte table, and
+  per tier while the price itself is deployment-wide: a price answers "what does a gigabyte cost",
+  which does not vary by customer, while a cap answers "how much exposure should this kind of customer
+  be allowed", which does.
+- `download_overage_charges` (**added in `25-84`**) - `id`, `site_id` (cascading), `period_month`
+  (`date`, the same first-of-month bucket key `site_attachment_egress` uses, so the two join on plain
+  equality), `source` (`Checkout`/`Invoice`, stored as the member name), `status`
+  (`Pending`/`Succeeded`/`Failed`), `bytes_over`, `amount_rub` (`numeric(10,2)`), `price_version`,
+  `yookassa_payment_id` (nullable, unique where present), `created_at`, `settled_at?`.
+  **Append-only.** A month's settled position is `SUM(bytes_over)`/`SUM(amount_rub)` over its
+  `Succeeded` rows, never a mutable running total somebody has to keep correct - this is the table a
+  tenant would point at when disputing an invoice line, and a ledger answers "what was charged, when,
+  at what price, against what byte count" while a running total answers none of it. `price_version`
+  names the exact `published_price_versions.sequence` the amount was computed from, the identical
+  grandfathering discipline `billing_subscriptions.base_seat_price_version` (`25-43`) already keeps.
+  Unlike `site_attachment_egress` above, this one *is* an EF entity (`DownloadOverageCharge`): its
+  writes are single-row inserts and status transitions with real invariants, inside transactions that
+  already span other aggregates (`BillingWebhookApplier`, `SubscriptionRenewalApplier`), which is the
+  opposite of that table's raw-upsert running total. Its reads go through Dapper
+  (`IDownloadOverageReadStore`) because both are aggregate questions - adr/0004's split, both halves,
+  on one table.
+- `sites` **gains four more columns in `25-84`** - `download_overage_billing_mode` (`text`, default
+  `'Manual'`) and its own `_changed_by`/`_reason`/`_changed_at` audit trio, the same shape `25-83`'s
+  exemption columns take. The default is `Manual`, not the backlog's "recommended" `AutoBill`,
+  deliberately: `Manual` is the behaviour every existing row already has, so the migration that adds
+  the column changes nobody's bill. Moving a tenant onto `AutoBill` starts charging them and is an
+  owner's explicit, reasoned act (`POST /api/v1/owner/sites/{siteId}/download-overage-billing-mode`).
 - `conversation_notes` (**added in `18-04`**) - `id`, `conversation_id`, `author_id`, `body`
   (`varchar(4000)`), `created_at`. Its own table, deliberately not a `messages` row with a `Kind`
   discriminator - `18-04`'s own backlog item and `ConversationNote`'s own remarks give the full
