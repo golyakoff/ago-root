@@ -2,9 +2,13 @@
 
 - **Stage**: 25
 - **Status**: ready
-- **Depends on**: nothing to build; `25-88` (the console's own locale fallback flips to Russian)
-  depends on **this** item to have any visible effect on the platform owner's own screens - flipping
-  a default has nothing to switch if nothing here reads from it yet.
+- **Depends on**: nothing to build. **Corrected 2026-09-14, once `25-88` was actually built**:
+  `25-88`'s own fallback flip (`resolve.ts`'s `parseConsoleLocale`) never reaches the owner panel at
+  all - `OwnerSitesPage` and its siblings mount with no `StringsProvider` above them, so they read
+  `StringsContext`'s own bare React-context default instead, which `25-88` investigated flipping and
+  found could not be flipped safely in one pass (562 test failures across 69 files, see that item's
+  own Outcome). This item's own scope therefore includes giving the owner panel **its own explicit
+  Russian provider** - see Scope below - not merely reading from `strings`.
 - **Found**: 2026-09-14, the managing session's own check while scoping `25-88` - the author asked
   directly whether that item already covered translating the owner panel. It does not, and could not:
   `grep -c "strings\." src/owner/*.tsx` returns **zero** across all five real owner pages
@@ -30,9 +34,14 @@ one section.
   codebase already holds itself to for every other locale pair).
 - Follow `11-12`'s own precedent for shape and tone rather than inventing a new one - read that
   item's own merged diff (`ago-console#46`) first.
-- **This item does not change `resolve.ts`'s own default** - that is `25-88`'s own scope, not this
-  one's. This item's own Done-when is satisfied once the owner panel *would* render correctly in
-  Russian if asked to; whether the console actually defaults to asking is the other item's question.
+- **The owner panel's own routes wrap themselves in an explicit `<StringsProvider value={ru}>`** -
+  the identical, already-established `PreSessionStringsProvider` pattern `23-28` built for exactly
+  this situation (a route with no tenant to read a locale from, that must not rely on `StringsContext`'s
+  own bare default, because that default's own blast radius across the rest of this codebase is why
+  `25-88` could not simply flip it). A new `OwnerStringsProvider` (or reusing `PreSessionStringsProvider`
+  directly, if its own name still fits once read) is this item's own to decide - either way, **do not
+  change `StringsContext`'s own bare default**, and do not change `resolve.ts` either - both are other
+  items' own scope, already settled.
 
 ## Where this is likely to go wrong
 
@@ -50,4 +59,7 @@ one section.
       reviewed Russian translation - not English copied into the Russian slot.
 - [ ] A real Russian-locale render of each of the five pages is checked by hand (or by test,
       snapshotting rendered text), not only asserted from the string table.
-- [ ] `25-88`'s own item file is updated to say this dependency is satisfied, once it is.
+- [ ] The owner panel's own routes are wrapped in their own explicit Russian `StringsProvider`, not
+      relying on `StringsContext`'s own bare default or on `25-88`'s own `resolve.ts` change (neither
+      reaches these routes) - proven by rendering an owner page with no other locale signal available
+      and seeing Russian.
