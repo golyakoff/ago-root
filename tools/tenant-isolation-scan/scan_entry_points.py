@@ -7,7 +7,7 @@ gate) -- a reproducible cross-check of what that gate is currently enforcing.
 
 Usage: python scan_tenant_scope.py <path-to-ago-chat-checkout-root>
 
-Method, mirroring TenantScopeRule.Scan (tests/Ago.Chat.Architecture.Tests/TenantScopeRule.cs):
+Method, mirroring TenantScopeRule.Scan (src/Ago.Chat.Infrastructure.TenantScopeDiagnostics/TenantScopeRule.cs):
   1. Every file matching src/Ago.Chat.Application/UseCases/**/*Handler.cs is one handler *file*
      (may declare more than one class, though in practice each declares exactly one).
   2. Within each such class (class name ends with "Handler"), every method whose signature starts
@@ -38,7 +38,11 @@ from pathlib import Path
 def main():
     root = Path(sys.argv[1])
     usecases_dir = root / "src" / "Ago.Chat.Application" / "UseCases"
-    exemptions_file = root / "tests" / "Ago.Chat.Architecture.Tests" / "TenantScopeExemptions.cs"
+    # `24-17`: TenantScopeRule.cs/TenantScopeExemptions.cs moved out of the test project into
+    # Ago.Chat.Infrastructure.TenantScopeDiagnostics, so a runtime endpoint could read the identical
+    # fact this scan already read from source text - see that project's own remarks. This path
+    # follows the file, not a change to what this script measures.
+    exemptions_file = root / "src" / "Ago.Chat.Infrastructure.TenantScopeDiagnostics" / "TenantScopeExemptions.cs"
 
     handler_files = sorted(usecases_dir.rglob("*Handler.cs"))
     print(f"Handler.cs files under UseCases: {len(handler_files)}")

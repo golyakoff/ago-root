@@ -1,7 +1,7 @@
 # nothing re-runs the tenant-isolation scan, so its headline numbers drift again
 
 - **Stage**: 24
-- **Status**: ready
+- **Status**: done — `ago-chat#283`, `ago-calendar#65`, `ago-console#222`, `ago-root#974`.
 - **Depends on**: nothing. `22-19` built the scan; this is about what makes anyone run it.
 - **Decision**: taken by the author 2026-09-06 — each backend computes its own numbers by reflection and serves them; the console sums them; visible to the platform owner only
 
@@ -98,11 +98,20 @@ codebase grants — not to tenants, and not in any anonymous response.
 
 ## Done when
 
-- [ ] Each backend serves its own counts, computed at runtime from its own handlers.
-- [ ] `/owner` shows one combined figure, and nothing anonymous or tenant-facing exposes it.
-- [ ] A non-zero `Unaccounted` is visibly different from a count that merely moved.
-- [ ] `tenant-isolation.md`'s five counts match reality on the day this lands, and the file says the
-      table is a snapshot rather than the source.
+- [x] Each backend serves its own counts, computed at runtime from its own handlers. —
+      `Ago.Chat.Api`'s `GET /api/v1/owner/tenant-isolation` and `Ago.Calendar.Api`'s own copy, both
+      backed by a `TenantScope*Rule`/`ITenantScopeInspector` pair; independently re-verified to agree
+      with the build-time architecture test's own IL walk, not merely assumed to.
+- [x] `/owner` shows one combined figure, and nothing anonymous or tenant-facing exposes it. — console
+      `OwnerTenantIsolationPage`, gated by each backend's own `RequirePlatformOwner` policy
+      (`ago-calendar`'s first).
+- [x] A non-zero `Unaccounted` is visibly different from a count that merely moved. — danger/success
+      `Alert` for `ago-chat`'s `Unaccounted`; a separately-toned, explicitly-not-the-same-kind-of-fact
+      info `Alert` for `ago-calendar`'s honestly weaker `NotGated` (that product has no exemption
+      catalogue to cross-reference against).
+- [x] `tenant-isolation.md`'s five counts match reality on the day this lands, and the file says the
+      table is a snapshot rather than the source. — refreshed to 179/166/106/73/174/75,
+      `Unaccounted: 0`; a new "AGO Calendar's own figures" section states that product's own caveat.
 
 ## What this deliberately does not solve
 
