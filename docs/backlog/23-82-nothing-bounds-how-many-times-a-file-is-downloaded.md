@@ -1,13 +1,9 @@
 # nothing bounds how many times a file is downloaded
 
 - **Stage**: 23
-- **Status**: ready — `ago-chat#288`, `ago-console#225`. Independently re-verified by the managing
-  session before merging (its own `dotnet build`/`test` run against the worker's own worktree —
-  3303/3303 tests — and an `npm` run, both matching the worker's reported counts exactly). Egress is
-  now counted, maintained per tenant per month, and visible; the ceiling decision is still open, on
-  purpose, for the tier-grid conversation, which is why this item stays `ready` rather than `done`
-  even though its own code has shipped — its third Done-when box is deliberately not this item's to
-  close.
+- **Status**: done — `ago-chat#288`, `ago-console#225`. Egress is counted, maintained per tenant per
+  month, and visible; the ceiling decision this item's own third Done-when deferred was reached
+  2026-09-14 and carried to `25-83`/`25-84`, so all three boxes are now genuinely closed.
 - **Depends on**: `23-76` bounds what is stored. This is the other half of the same bill.
 - **Found**: 2026-09-07, by pricing the storage quotas rather than by reading code.
 
@@ -82,6 +78,8 @@ per tenant, per month**, and look before deciding.
       `ago-chat/tests/Ago.Chat.Integration.Tests/SiteAttachmentStorageHandlersTests.cs`). The actual
       number - "how often is an attachment really downloaded" - can only be written down once this
       ships and real traffic accrues; flagged here rather than left implicit.
-- [ ] Whether there is a ceiling, and what happens at it, is decided with the tier grid rather than
-      here. **Deliberately not this change's to answer** - the author's own call, made with the tier
-      grid, once the measurement above has real numbers behind it.
+- [x] Whether there is a ceiling, and what happens at it, is decided with the tier grid rather than
+      here. **Decided, 2026-09-14** - in dialogue with the author (the `grilling` skill), without
+      waiting on real production numbers: yes, two per-tier thresholds (warn, then block), a
+      platform-owner override, and a metered paid escape hatch. Carried to its own items rather than
+      built here - `25-83` (the ceiling and the block) and `25-84` (the paid path past it).
