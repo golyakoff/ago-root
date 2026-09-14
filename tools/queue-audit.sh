@@ -840,6 +840,40 @@ else
   echo "Every ADR file has a row in docs/adr/README.md."
 fi
 
+# The reverse gap (`25-93`): an index row with no file behind it. `docs/adr/README.md` carried a full
+# row for ADR-0169 for eight days with no `docs/adr/0169-*.md` ever written - `d23ddce` added the row
+# while landing `23-82`/`23-80`, a commit whose own diff touched only README.md, and nothing caught the
+# omission until a reader followed the link and hit a 404. The check above cannot see this direction:
+# it only walks real files, so a row nothing backs is invisible to it by construction.
+#
+# Three numbers are deliberately vacant - `0052`, `0062`, `0126`, each reserved for an item that turned
+# out to need no ADR of its own, kept vacant rather than reused so a stray reference to the number is a
+# mistake rather than a different decision. Each says so in its own row, with a Status of `n/a` - the
+# one signal that distinguishes "never going to be written, on purpose" from "not written yet, and
+# nobody noticed". Rows whose Status is `n/a` are excluded here for exactly that reason; anything else
+# missing a file is a gap, not a placeholder.
+missing_files=""
+while IFS= read -r row; do
+  n=$(printf '%s' "$row" | sed -n 's/^| *\([0-9][0-9][0-9][0-9]\) *|.*/\1/p')
+  [ -n "$n" ] || continue
+  status=$(printf '%s' "$row" | awk -F'|' '{print $4}')
+  case "$status" in
+    *n/a*) continue ;;
+  esac
+  ls "$audit_root"/docs/adr/"$n"-*.md >/dev/null 2>&1 || missing_files="$missing_files  $n
+"
+done < <(grep -E '^\| *[0-9]{4} *\|' "$audit_root/docs/adr/README.md")
+
+echo
+if [ -n "$missing_files" ]; then
+  echo "Rows in docs/adr/README.md with no docs/adr/NNNN-*.md file behind them:"
+  printf "$missing_files"
+  echo "  Write the ADR in the next ago-root change, or if the row was only ever a placeholder,"
+  echo "  give it a Status of n/a instead of leaving the index promising a decision nobody recorded."
+else
+  echo "Every row in docs/adr/README.md has a docs/adr/NNNN-*.md file behind it."
+fi
+
 # A skill without YAML frontmatter is never registered, so it can never be offered and can never be
 # invoked - it is a file, not a skill. Nothing said so until 2026-09-08, when three were found in that
 # state at once: `user-story-writer`, `finish-an-item`, and `commit-guard` - the last written
