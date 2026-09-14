@@ -302,7 +302,7 @@ describe, and the reason it must be described rather than left implicit.
 | **Avito** (`14-11`) | Same | Same, `ChannelKind.Avito` | **Not established** | **Not established** | `AvitoChannelAdapter` |
 | **WhatsApp / Meta** (`14-10`) | Same | Same, `ChannelKind.WhatsApp` | **Not established** | **Not established** | `WhatsAppChannelAdapter` |
 | **The visitor's own mail provider** (`14-09`) | Message text, attachments, the visitor's email address | **Nobody we contract with.** RFC 5321/5322 direct, no vendor in between — the destination is whichever provider the visitor themselves uses | Theirs, and unknowable to us by construction | Nothing of ours. A sent mail is gone from our reach the moment it is accepted | `EmailChannelAdapter` |
-| **YandexGPT** (`19-01` reply draft, `19-02` categorisation) | **The conversation's own message history**, as prompt context | **AGO, deployment-wide — not the tenant.** The real client is registered only when an API key and folder id are present, and **neither is set in any overlay** (checked 2026-09-05), so nothing reaches it today. See the note below, because the *switch* is the finding, not the current state | **Not established** | **Not established** | `YandexGptReplyDraftClient`, `YandexGptConversationCategorizerClient`; `adr/0078` |
+| **YandexGPT** (`19-01` reply draft, `19-02` categorisation) | **The conversation's own message history**, as prompt context — and only for conversations **created at or after** that tenant's own cut-off instant | **The tenant's, per site (`25-04`).** Three independent conditions, all re-read on every call: the site holds an effective quantity of the AI add-on module (`22-07`), the tenant has enabled it (which requires accepting `ai-processing-addendum` at its current version **and** separately declaring a lawful basis), and the conversation was created at or after the enabling instant. AGO's own API key still has to be present for the client to exist at all — it is now a *necessary* condition rather than the whole switch, and none is set in any overlay (checked 2026-09-05) | **Not established** | **Not established** | `AiProcessingGate`, `AiAddOnEnablement`, `AiProcessingBasisDeclaration`; `YandexGptReplyDraftClient`, `YandexGptConversationCategorizerClient`; `adr/0078`, `adr/0173` |
 | **An SMS gateway** (`14-03`, `14-15`) | **Nothing, today** | No adapter exists. The only registered `IPhoneVerificationSender` is `UnconfiguredPhoneVerificationSender`, and no SMS infrastructure project exists | — | — | `IPhoneVerificationSender`; `src/` listing |
 
 **"Not established" is a finding, not a placeholder.** What a provider retains is answerable only from
@@ -310,14 +310,29 @@ that provider's own terms, and writing a guess here would be worse than the gap 
 that a reader can act on it. A tenant who needs the answer for their own notice has to get it from the
 provider they chose to connect, and this file should say so rather than imply we know.
 
-**The AI switch is AGO's, and there is no per-tenant control.** Nothing reaches YandexGPT today. But the
-day AGO sets that key, every tenant's closed conversations begin being sent to an LLM vendor for
-categorisation and every tenant's operators can draft replies from one — without any tenant choosing it
-and with nothing for a tenant to point at and refuse. **A processor adding a processing purpose and a
-sub-processor on its own initiative is precisely what a processing instruction exists to constrain.**
-Stating it here is not the fix; building a per-tenant control is a different promise and a different
-item (`24-08`'s own Out of scope), and until one exists this is a row a tenant's lawyer is entitled to
-ask about.
+**The AI switch is the tenant's, per site, as of `25-04`.** It used to be AGO's, deployment-wide: the day
+AGO set an API key, every tenant's closed conversations would have begun going to an LLM vendor for
+categorisation with nothing for a tenant to point at and refuse — *a processor adding a processing
+purpose and a sub-processor on its own initiative, which is precisely what a processing instruction
+exists to constrain.* That is no longer reachable. What a tenant must do, and what each act records:
+
+- **Buy the add-on.** An effective module quantity on the site (`22-07`/`adr/0093`), re-read on every
+  call — so a lapsed subscription stops transmission without anybody switching anything off.
+- **Accept the agreement.** `ai-processing-addendum`, versioned by `24-02`, accepted by `24-01`'s own
+  insert-only record naming the version. Enabling is refused unless the *current* version is accepted.
+- **Declare a lawful basis — a second, separate record.** `ai_processing_basis_declarations`, its own
+  table, its own timestamp, naming the operator who made it. This is deliberately **not** folded into
+  the acceptance: by art. 6 ч. 3 the basis has to exist *for the visitor*, and by ч. 4 obtaining it is
+  the tenant's obligation rather than ours, so "they agreed to our terms" and "they told us they hold a
+  basis covering their own customers" are two different statements and a reader must be able to tell
+  which was made. **AGO records the declaration and does not verify it**, and says so to the tenant.
+- **Enable, which stamps a cut-off.** Nothing created before that instant is ever sent — including by
+  the background categoriser, which sweeps the archive and is the one place where "off" alone would not
+  have been enough.
+
+**What AGO still controls, and it is now only a veto.** The real YandexGPT client is still constructed
+only when AGO's own API key and folder id are present, and neither is set in any overlay. AGO can
+therefore still prevent all of this; it can no longer cause it.
 
 ## Retention, stated plainly
 

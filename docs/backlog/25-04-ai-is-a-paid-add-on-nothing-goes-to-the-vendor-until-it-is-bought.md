@@ -1,7 +1,7 @@
 # AI is a paid add-on, and nothing reaches the vendor until a tenant has bought it and accepted its terms
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done (2026-09-14)
 - **Depends on**: `22-07` for the add-on machinery, `24-01`/`24-02`/`24-03` for accepting a document
 - **Decision**: the author's, 2026-09-06 — every choice below is recorded, not inferred
 
@@ -93,14 +93,44 @@ costs money.
 
 ## Done when
 
-- [ ] With the module disabled — which is every tenant until they act — **nothing reaches the vendor**,
+- [x] With the module disabled — which is every tenant until they act — **nothing reaches the vendor**,
       proven by a test that fails if the client is constructed at all.
-- [ ] Enabling is refused until the current version of the agreement is accepted, and the acceptance
+      *Both AI handlers take their provider as `Lazy<T>` and consult `AiProcessingGate` before touching
+      `.Value`. `NothingReachesTheVendorWhenDisabledTests` (`Ago.Chat.Application.Tests`) passes a
+      factory that **throws**, and asserts `IsValueCreated` is still `false` — the test fails on
+      construction, not on a call. Fails-before: making the gate condition unreachable in
+      `CategorizeConversationHandler` fails 2 of its 3 tests; the same in `GenerateReplyDraftHandler`
+      fails the third.*
+- [x] Enabling is refused until the current version of the agreement is accepted, and the acceptance
       names the version.
-- [ ] The tenant's declaration is recorded as its own fact, with who made it and when.
-- [ ] A conversation closed **before** the cut-off is never categorised, proven against the background
+      *`EnableAiAddOnHandler` compares `IDocumentRepository.FindCurrentAsync`'s own version against the
+      tenant's real `24-01` records — no flag anywhere. `EnableAiAddOnHandlerTests` covers never-accepted
+      and only-an-older-version-accepted, through the real `RecordAcceptanceHandler`. Fails-before:
+      disabling that check fails both.*
+- [x] The tenant's declaration is recorded as its own fact, with who made it and when.
+      *`ai_processing_basis_declarations` — its own table, insert-only, no FK on `site_id` (the same
+      `adr/0111` erasure position `acceptance_records` takes), carrying `declared_by` (an `OperatorId`)
+      and `declared_at`. `TheAcceptanceAndTheDeclarationAreSeparatelyTimestampedAndAttributed` shows the
+      two facts with different instants and different subjects — the acceptance names the **tenant**,
+      the declaration names the **person**. `Enable_RefusesWhenTheTenantHasAcceptedButNotDeclared` and
+      `Enable_RefusesWhenTheTenantHasDeclaredButNotAccepted` are the two asymmetric states, refused with
+      two different error codes. Fails-before: disabling the declaration check fails the first.*
+- [x] A conversation closed **before** the cut-off is never categorised, proven against the background
       job rather than against the handler.
-- [ ] `personal-data.md` and `docs/compliance-checklist.md` H4 are updated to what is then true.
+      *`ConversationCategorizationJobTests` — real Postgres, the real `ConversationCategorizationQuery`,
+      the real `ConversationCategorizationJob.RunOnceAsync`, and a **real** `AiProcessingGate` over the
+      real `AiAddOnReadStore` and `ModuleQuantityGrantStore`. Four new cases: disabled, closed-before-the
+      -cut-off, entitlement-lapsed (all three with a categorizer factory that throws), and the positive
+      control that a conversation created after the cut-off is still categorised. Fails-before: making
+      the gate condition unreachable fails all of them.*
+      *Note: the gate compares against `created_at`, not `closed_at` — strictly stronger, since a
+      conversation created at or after the cut-off necessarily closed at or after it, and it is what the
+      agreement's own point 3 promises («диалоги, созданные после него»).*
+- [x] `personal-data.md` and `docs/compliance-checklist.md` H4 are updated to what is then true.
+      *The register's LLM row now states the per-site conditions and the cut-off, and the note under it
+      is rewritten from "the switch is AGO's" to what a tenant must do and what each act records. H4
+      moves from red to **built on the mechanism, with the agreement's wording still owed to a lawyer** —
+      the Open questions below are unchanged by this item and are named in the H4 cell itself.*
 
 ## Draft of the agreement text — **not legal text, a starting point for the lawyer**
 
@@ -135,3 +165,44 @@ what they agreed to has not agreed to anything.
 - **What happens to a tenant who disables the module** — the vendor's own retention is *not
   established* (`personal-data.md`), so point 6 currently promises only what we control. Whether that
   is acceptable to say out loud is the same lawyer's call.
+
+## Outcome (2026-09-14) — `adr/0173`
+
+**The declaration is a table, and that is the whole argument made structural.** `ai_processing_basis_declarations`
+sits beside `acceptance_records`, shaped identically (insert-only, no update method, no FK on the
+subject so `adr/0111`'s erasure position holds) and holding deliberately different things: the
+acceptance names the **tenant** and a document version, the declaration names the **operator who said
+it** and nothing else. There is no free-text "what is your basis" field — AGO does not verify it
+(decision 5), and a box nobody reads invites a tenant to believe it was reviewed.
+
+**The strongest available form of "nothing reaches the vendor" turned out to be a DI shape, not a
+check.** Both AI handlers now take `Lazy<IReplyDraftGenerator>`/`Lazy<IConversationCategorizer>`. The
+gate runs before `.Value` is ever touched, so a refused tenant never causes the real YandexGPT client
+to be *constructed* — and a test can assert `IsValueCreated == false`, which fails on construction
+rather than on a call. Writing it with a plain injected port would have satisfied the sentence and not
+the promise.
+
+**The cut-off is compared against `created_at`, not `closed_at`.** The Done-when above says "closed
+before", and `created_at` satisfies it a fortiori while also being what the agreement's own point 3
+promises. The weaker test would have sent a conversation that ran for days before the tenant ever saw
+the agreement, merely because it happened to close afterwards.
+
+**A dead method was caught by its own fails-before run.** `AiAddOnEnablement.Covers(createdAt)` read
+well and was called by nothing but its own tests: neither AI path ever holds the aggregate, both reach
+the fact through `IAiAddOnReadStore`. It was removed and the comparison lives only in `AiProcessingGate`;
+what the aggregate still owns is the harder half — a disabled row yields **no cut-off at all**, so no
+caller can compare against a stale one.
+
+## Remaining, and it is not this item's to close
+
+- **The agreement text is a draft AGO wrote; a lawyer has not read it.** Seeded verbatim from the
+  section above as `ai-processing-addendum` v1, with a first line saying so. Later versions go through
+  `24-02`'s existing owner publish endpoint and append; nothing here is a second publishing path. The
+  three Open questions below are unchanged.
+- **`AiAddOn:ModuleKey`.** `ago-chat`'s own `appsettings.json` sets `ai` for both hosts (the same place
+  `ModuleFlowReport:ModuleKey` already names `calendar`). A deployment that overrides it to blank has
+  the add-on unsellable, which is the safe direction. **`ago-deploy` was not touched** — if the demo
+  overlay sets its own configuration for this section it needs the key too.
+- **Nobody has bought it.** The module key exists and the grant machinery is `22-07`'s, unchanged; a
+  real grant is still the platform owner's own act (`22-17`), and pricing lives in `ago-business`.
+
