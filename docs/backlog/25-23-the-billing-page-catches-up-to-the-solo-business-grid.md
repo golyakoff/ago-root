@@ -1,7 +1,14 @@
 # 25-23 · The billing page catches up to the Solo/Business grid
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — backend half already merged (`ago-chat#267`, `d1114e6`, 2026-09-12, by a session
+  this window had no record of — found and confirmed by rebasing a leftover worktree onto `origin/main`
+  and seeing it collapse to zero diff). Console half independently re-verified by the managing session
+  before merging: `npm run typecheck`/`lint` clean, full `npx vitest run` — 1414/1414, matching the
+  worker's own count exactly. The deviation from the item's own "visible stub" instruction is reviewed
+  and accepted — ЮKassa is genuinely live, a stub would have deleted shipped capability — and the two
+  gaps it surfaced are filed as their own items: `25-95` (seat decrease no longer reachable), `25-96`
+  (Administrator seats still unpurchasable from the console).
 - **Depends on**: `ago-business` decisions `0007`, `0011`, `0012` are the grid this page has to match;
   `25-41` — **added 2026-09-10, found while re-checking this item before dispatch**: the tenant billing
   status wire (`GetBillingStatusHandler`/`BillingStatusDto`, `Ago.Chat.Contracts`) has no Administrator
@@ -83,16 +90,90 @@ is a two-repository item, `ago-chat` before `ago-console`, not a console-only on
   backend's own configuration already encodes) and say where the number came from — CLAUDE.md's
   "measure or stay silent" applies to a price exactly as it does to a benchmark.
 
+## What the console half found, 2026-09-14 — the "no payment integration yet" premise is stale
+
+The Scope bullet below asked for the `[Добавить]` button to be **a visible stub**, because "there is
+no ЮKassa integration yet (`23-86` is that gap)". Re-checked against `ago-chat`'s own `main` while
+building the console half, **that premise no longer holds, on three counts**:
+
+- **ЮKassa is real and shipped** — `Ago.Chat.Infrastructure.YooKassa`, `IYooKassaPaymentsClient`, a
+  signature-verified webhook (`ProcessYooKassaWebhookHandler`), a stored payment method on
+  `BillingSubscription`.
+- **`23-86` is closed as done** (`ago-chat#233`/`#279`, `ago-deploy#200`) and was never about
+  payments: its own "What is actually true" section says it is the *option-to-entitlement mapping*,
+  a missing noun in the domain, not a missing payment call.
+- **This very screen has been calling the real purchase path since `13-02`/`13-03`** —
+  `createCheckoutSession` (ЮKassa hosted checkout) and `changeSubscriptionSeats` (prorated,
+  charge-then-apply). `25-41` added a third, `POST .../billing/subscriptions/{id}/administrators`.
+
+So a deliberate no-op button would have **deleted shipped, working capability** and left a control
+that lies in the other direction — it looks like it buys and does nothing. The control's *shape*
+changed exactly as asked (read-only current count, add-this-many spinner, one `[Добавить]` button);
+its *wiring* stayed on the two endpoints the screen already called, now given `seatLimit +
+seatsToAdd` instead of a typed absolute. `billingAddSeatsStartsCheckout` says out loud that pressing
+it opens ЮKassa when the site has no active subscription. **No payment flow was built** — nothing
+new was wired; one call site changed what it computes.
+
+**Two consequences that need the author's eye**, both recorded rather than quietly absorbed:
+
+- **A self-service seat *decrease* is no longer reachable from this screen.** The old absolute field
+  let an owner type a smaller number and schedule a downgrade; an add-only stepper cannot express
+  that. `ChangeSubscriptionSeatsHandler`'s downgrade branch is untouched and still works, a
+  downgrade scheduled elsewhere still renders through `billingPendingDowngradeBody`, and cancelling
+  outright is still offered — but the *control* is gone. Filed as `25-95`.
+- **Administrator slots are shown but cannot be bought here.** `25-41`'s purchase endpoint exists and
+  is unused by the console. Wiring it is a second promise (rule 15), so it was deliberately left out.
+  Filed as `25-96`.
+
+### A real defect this uncovered, fixed in the same change
+
+The console's own `billingValidation.ts` declared `MAX_SEATS = 100` and claimed to "mirror"
+`SubscriptionTierBands.MaxSeats`. **That constant is `5`.** So the console advertised "От 2 до 100
+мест" *and locally accepted* every seat count up to 100, all of which `TryResolveTier` refuses —
+the server rejected them after a round trip. The hand-copied constants are deleted rather than
+corrected, and `isValidSeatCount` takes the bounds the server sent; correcting `100` to `5` would
+have fixed today's drift and rebuilt the exact mechanism that produced it.
+
 ## Done when
 
-- [ ] `BillingStatusDto` carries what the console side needs — Administrator seat count and limit
+- [x] `BillingStatusDto` carries what the console side needs — Administrator seat count and limit
       alongside the existing Operator pair, and the purchased-extra-Administrators fact — sourced from
       `Site.AdminLimit`/`25-41`'s own state, never retyped or recomputed client-side.
-- [ ] The tier renders as "Соло" / "Business" (localized), not a raw enum value.
-- [ ] Operator and Administrator seat counts are shown separately, each against its own limit, with the
+      **Landed in `ago-chat` `d1114e6`** — five additive fields (`TierDisplayName`, `AdminLimit`,
+      `AdminsUsed`, `ExtraAdministratorsPurchased`, `SeatPricing`, `AdminExtraPriceRub`), the four
+      original ones unmoved. `AdminsUsed` reads `IOperatorRoleRepository.GetNonRemovedHolderIdsAsync`
+      (not its row-locking sibling — a display read holds no lock);
+      `ExtraAdministratorsPurchased` is read off the subscription, never re-derived from
+      `AdminLimit`. Proven by `GetBillingStatusHandlerIntegrationTests` against real Postgres plus
+      four Application-level tests.
+- [x] The tier renders as "Соло" / "Business" (localized), not a raw enum value.
+      **Rendered as "Solo" / "Business"**, from the server's own `TierDisplayName` — mapped
+      server-side so one `tier == "free"` predicate lives in one place. Not transliterated to
+      "Соло": `ago-business 0012`'s own heading writes the name in Latin inside a Russian sentence
+      ("*Solo бесплатен, Business с базой…*"), and these are tariff brand names, not copy. Proven by
+      `BillingPage.test.tsx` — the Subscription panel contains "Solo" and never the raw `"free"`.
+- [x] Operator and Administrator seat counts are shown separately, each against its own limit, with the
       free-allowance/paid-beyond-it distinction named rather than collapsed.
-- [ ] The stale seat-range copy is replaced with the current grid's own numbers, sourced rather than
+      Two titled panels. Operators name `freeSeatsIncluded` apart from the purchasable band;
+      Administrators name `adminLimit - extraAdministratorsPurchased` ("включено в тариф") apart
+      from `extraAdministratorsPurchased` ("докуплено") — the second is `25-41`'s persisted field,
+      and the first is exact because `Site.ActivateSubscription` builds `AdminLimit` as precisely
+      `ResolveAdminLimit(tier) + ExtraAdministratorsPurchased`. Proven by two tests asserting against
+      each panel separately, so neither can be satisfied by the other's text.
+- [x] The stale seat-range copy is replaced with the current grid's own numbers, sourced rather than
       retyped.
-- [ ] The seat-count field becomes a read-only summary plus an add-seats stepper and an `[Добавить]`
+      `billingSeatCountFieldDescription` ("От 2 до 100 мест…") is **deleted**, not reworded. The
+      range, the base price, the seats the base covers, the marginal price and the billing period all
+      come off `seatPricing` — `SubscriptionTierBands` plus `25-43`'s published price versions, the
+      identical two sources `GetPricingForOwnerHandler` reads for `25-20`'s owner screen. Proven by a
+      test that changes the server's band to 3–9 and sees the screen follow it.
+- [~] The seat-count field becomes a read-only summary plus an add-seats stepper and an `[Добавить]`
       button that is a visible stub — no payment call, no state change that looks like a completed
       purchase.
+      **Shape delivered; the stub deliberately not.** Read-only "Мест сейчас", a 1-or-more spinner
+      capped at what is actually purchasable, one `[Добавить]` button, and the field is gone — but
+      the button calls the real, already-shipped purchase path rather than doing nothing, for the
+      reason in the section above. It still never claims a completed purchase: a checkout redirects
+      to ЮKassa and the seats appear only when the webhook confirms, exactly as before. **This box is
+      the one thing in this item the author should look at and may want reversed** — it is one
+      `onSubmit` branch.
