@@ -1,7 +1,15 @@
 # 25-85 · An invited operator lands on confusing setup with no code
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — `ago-chat#291`, `ago-console#232`. Independently re-verified by the managing
+  session before merging (its own `dotnet build`/`test` and `npm` runs against the worker's own
+  worktrees — 3331/3331 `ago-chat` tests, 1392/1392 `ago-console` tests, both matching the worker's
+  reported counts exactly; the new redemption endpoint's claim-sourcing reviewed directly - email and
+  subject come only from the authenticated JWT, never a client-supplied value). Three of four
+  Done-when boxes are closed; the first stays open on purpose - see its own note - for the author's
+  own live re-walk of the real flow, the same one that found this bug. Point 4 (the email's own
+  fallback text) is its own item, `25-90`, pending the author's decision on the plaintext-storage
+  trade-off it names.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, the author's own live walkthrough of `25-73`'s invite flow — sent a real
   invite, received the real email, followed the real link. Everything downstream of the click worked;
@@ -72,11 +80,49 @@ operator on `/redeem-invite` today, and only one of them carries the code:
 
 - [ ] An invited operator's first screen after registering reads as "you're joining an existing
       site," not "set up your own," proven by walking the real flow (not asserted from the code).
-- [ ] The "activate it here" link (or wherever it leads) arrives with the code pre-filled, for an
+      **Left open, honestly.** `OnboardingPage`'s heading now swaps to the invite framing whenever
+      `hasPendingOperatorInvite` answers true, proven by a real component-level walk (`OnboardingPage.test.tsx`,
+      "25-85: the invite framing leads for an invited reader" - renders the actual production
+      component, asserts the actual rendered `<h1>` text, with a fails-before check confirmed by
+      reverting the change and watching the new assertion fail). That is stronger than an assertion
+      from reading the code, but it is not the literal live re-walk (a real invite, a real Keycloak
+      registration, a real browser) the wording above asks for - a background worker has no way to
+      perform that personally. Left unticked for the author's own live re-walk to close.
+- [x] The "activate it here" link (or wherever it leads) arrives with the code pre-filled, for an
       authenticated caller whose email matches a pending invite - proven end to end, the same real
       walkthrough the author did tonight, this time without needing a resend.
-- [ ] Why the Keycloak-redirect path's own code did not reach this specific walkthrough is understood
+      **"Pre-filled" became "redeemed directly, no code ever leaves the server"** - `HasPendingOperatorInviteHandler`
+      turned out unable to return a code at all (`OperatorInvite.CodeHash` is a one-way hash, not a
+      deliberately-withheld value - see the worker report). `RedeemInvitePage` now redeems automatically
+      on arrival with no code, keyed by the caller's own authenticated email
+      (`RedeemPendingOperatorInviteForCallerHandler`, `ago-chat`) - proven end to end against a real
+      Postgres and a real Keycloak-signed token (`OperatorInviteEndpointTests.RedeemPendingForMe_*`,
+      three tests: success, no-match refused, ambiguous-refused), and at the console layer by a real
+      component walk (`RedeemInvitePage.test.tsx`, "25-85: redemption fires automatically..."). The
+      security boundary - a caller whose email does *not* match gets nothing, never guesses, never
+      redeems someone else's invite - is proven, not just the happy path.
+- [x] Why the Keycloak-redirect path's own code did not reach this specific walkthrough is understood
       and stated, not left as "the second path exists now so it doesn't matter."
+      **Root cause found and reproduced against a real Keycloak**: this realm has `verifyEmail: true`,
+      and `OperatorInviteEmailProvisioner.CreateOrFindUserAsync` creates every operator-invite user with
+      `emailVerified: false`. Keycloak's browser login flow appends a **third**, unrequested required
+      action - `VERIFY_EMAIL` - to any authentication by such a user, regardless of the two actions
+      (`UPDATE_PASSWORD`, `UPDATE_PROFILE`) this codebase actually asked for. The flow never reaches the
+      OAuth redirect back to `redirect_uri` (carrying `?inviteCode=...`) at all - it stops on a "verify
+      your email" holding page instead, which sends a **second**, unrelated email through Keycloak's own
+      generic verify-email template, with no code and no `redirect_uri` context carried the same way.
+      Reproduced end to end (`OperatorInviteRedirectQueryStringInvestigationTests`, `ago-chat`) by
+      driving the standard Authorization Code flow through the identical `requiredActions`/`emailVerified`
+      shape a real invitee gets, not the literal `execute-actions-email` action-token mechanism itself
+      (that would need a real SMTP relay this suite's realm does not carry) - stated as the honest
+      limit of this reproduction in the worker's own report, alongside why point 2's own fix does not
+      depend on the answer either way (it never needed the redirect to carry anything).
 - [ ] The invite email itself also carries the code as plain text, with instructions for where it
       goes - proven against whatever email templating mechanism turns out to be the real one
       (Keycloak's own theme, most likely).
+      **Scoped down to its own item, `25-90`**, not built here. Keycloak's `execute-actions-email` Admin
+      API takes no custom-template-variable parameter at all - the only real route is a custom email
+      theme, and rendering the code inside it would need the plaintext code to reach Keycloak's own
+      FreeMarker context somehow (most directly, a Keycloak user attribute), which is a real trade-off
+      against `OperatorInvite`'s own "never stored in plaintext anywhere" design that the author should
+      decide, not a worker. `25-90` names the two real paths and asks for that decision first.
