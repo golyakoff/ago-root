@@ -2,12 +2,20 @@
 
 - **Stage**: 25
 - **Status**: ready
-- **Depends on**: nothing
+- **Depends on**: nothing to build this item's own scope, but **`25-89` is what makes this item
+  visible on the platform owner's own screens** - the owner panel has never been localized at all
+  (`25-89`'s own finding), so this item's fallback flip has nothing to switch there yet. Found while
+  scoping this item: the author asked directly whether it already covered owner-panel translation.
+  It does not, and structurally could not - see `25-89`.
 - **Decision**: the author's own, 2026-09-14 - "I'm Russian and it's more convenient for me," stated
   directly, and consistent with this deployment's own actual market (`docs/adr/README.md`'s own
   commercial-intent memory, `ago-business`'s Russian-language convention).
 - **Found**: 2026-09-14, the author's own walkthrough of the platform-owner screens - they render in
-  English, with no site in context to read a locale from.
+  English, with no site in context to read a locale from. **This item alone does not fix that specific
+  walkthrough** - the owner panel's strings are hardcoded English, not read from `strings` at all, so
+  flipping the fallback changes nothing there until `25-89` lands. This item still stands on its own:
+  every *other* no-site screen (sign-up, the OIDC callback, anything already routed through
+  `getStrings`) does change today.
 
 ## What is actually true
 
@@ -50,8 +58,11 @@ identical question.
 
 ## Done when
 
-- [ ] The platform owner's own screens render in Russian with no further action, proven by the same
-      walkthrough that found the gap.
+- [ ] Every screen already routed through `getStrings(locale)` with no site context (sign-up, the
+      OIDC callback, and once `25-89` lands, the owner panel) renders in Russian with no further
+      action - proven by walkthrough. **This item's own box does not require `25-89` to be done
+      first** - it is satisfied by the screens that already have real i18n; the owner panel joining
+      that set is `25-89`'s own Done-when, not repeated here.
 - [ ] A tenant's own site with an explicit `Locale = "En"` still renders in English, unchanged -
       proven, not merely reasoned about, since this item touches the fallback every locale resolution
       in this console shares.
