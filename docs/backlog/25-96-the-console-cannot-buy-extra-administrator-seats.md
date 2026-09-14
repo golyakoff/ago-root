@@ -1,7 +1,10 @@
 # 25-96 · The console cannot buy extra Administrator seats
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: rebased on
+  current `main` (already up to date), `npm run typecheck`/`lint` clean, full suite re-run
+  independently at 1436/1436 (exact match to the worker's own claim), fails-before re-confirmed for
+  all 4 new tests.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, building `25-23` — `BillingPage` now shows Administrator seats as their own
   panel (used, limit, included-in-tier, purchased-extra), but nothing on the screen can move the last
@@ -36,9 +39,14 @@ endpoint, not its own UI.
 
 ## Done when
 
-- [ ] An owner can purchase additional Administrator seats from the console, through `25-41`'s
+- [x] An owner can purchase additional Administrator seats from the console, through `25-41`'s
       existing endpoint, proven against a real (or faked, matching this codebase's own established
-      test shape) call — not merely that the button exists.
-- [ ] The purchased count and the resulting limit refresh on the same screen after a successful
+      test shape) call — not merely that the button exists. A new "Add administrators" panel mirrors
+      the Operator-seat stepper's shape, deliberately diverging where `25-41`'s own contract differs:
+      no checkout-session branch (an immediate charge against an already-`Succeeded` subscription's
+      stored payment method only), and no seat-band validation (the endpoint only enforces "must be an
+      increase").
+- [x] The purchased count and the resulting limit refresh on the same screen after a successful
       purchase, the same "never claim success before the server confirms it" discipline `BillingPage`
-      already holds for the Operator-seat path.
+      already holds for the Operator-seat path — `load()` refetch after a successful call, identical
+      to the existing pattern.
