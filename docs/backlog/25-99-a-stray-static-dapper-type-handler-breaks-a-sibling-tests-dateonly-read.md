@@ -1,7 +1,10 @@
 # 25-99 · A stray static Dapper type handler breaks a sibling test's `DateOnly` read
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: rebased onto
+  current `main`, `dotnet format`/`build` clean, full `ago-chat` suite re-run at 3482/3482 (0 failed,
+  0 skipped — the interim `25-99` skip added to unblock a deploy is also removed by this fix and the
+  previously-skipped test now genuinely passes).
 - **Depends on**: nothing
 - **Found**: 2026-09-14, independently re-verifying `25-97` — the managing session's own full
   `dotnet test` run (post-rebase onto `25-84`) failed once, on a test `25-97`'s own diff never
@@ -61,10 +64,16 @@ different mechanism each time, so each earned its own fix rather than a shared o
 
 ## Done when
 
-- [ ] The two behaviours (native `DateOnly` mapping, `MessageRetentionArchiveEndToEndTests`'s own
+- [x] The two behaviours (native `DateOnly` mapping, `MessageRetentionArchiveEndToEndTests`'s own
       custom handling if it is still needed at all) no longer collide regardless of test execution
       order - proven by running the full `Ago.Chat.Integration.Tests` assembly repeatedly (not once,
       since the failure is order-dependent) and confirming `DownloadOverageReadStore`'s own tests
-      never hit it.
-- [ ] A scan for other global, unscoped Dapper type-handler registrations in this test project found
-      none left unaddressed, or named any found as their own follow-up.
+      never hit it. Confirmed genuinely needed (removing the registration reproduces a
+      `NotSupportedException` on the `periodStart` parameter Dapper cannot otherwise bind), so the fix
+      reuses the already-hardened `DapperDateOnlyTypeHandler` (`23-07`) instead of the ad-hoc class -
+      correct for every caller regardless of registration order, already designed for idempotent
+      multi-site registration. `Ago.Chat.Integration.Tests` run 7 times in a row by the worker (6
+      fully green at 1267/1267, one unrelated Docker port-binding flake), plus the managing session's
+      own independent full-suite re-run at 3482/3482.
+- [x] A scan for other global, unscoped Dapper type-handler registrations in this test project found
+      none left unaddressed beyond the one fixed here.
