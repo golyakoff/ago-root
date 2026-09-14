@@ -1,7 +1,8 @@
 # 25-69 · No seeded role grants `conversation:close`
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#285`. Both Done-when boxes closed; see the note below for what remains
+  as a separate, non-Done-when operational step.
 - **Depends on**: `11-09` (done) - that item built the console's own ability to close a conversation;
   this one is about nobody being granted the permission to use it.
 - **Found**: 2026-09-12, while landing `25-68` - closing the one live duplicate conversation through
@@ -38,7 +39,30 @@ action) - but nobody, on any seeded role, can close one the ordinary way.
 
 ## Done when
 
-- [ ] An operator holding a role meant to include it can close a conversation through the real
-      application path, proven on a fresh site (not just the one live account this was found on).
-- [ ] Whichever role definition is authoritative (seed script, default-role factory, or both) carries
-      `conversation:close`, so a newly registered tenant does not reproduce this gap.
+- [x] An operator holding a role meant to include it can close a conversation through the real
+      application path, proven on a fresh site (not just the one live account this was found on). —
+      `FreshSiteOperatorConversationCloseTests`: registers a fresh site through the real
+      `RegisterSiteHandler` (no hand-seeded role), then calls the real `CloseConversationHandler` as
+      the operator that registration itself created. Confirmed red against the unfixed array before
+      the fix, green after — independently re-run by the managing session, not just the worker's claim.
+- [x] Whichever role definition is authoritative (seed script, default-role factory, or both) carries
+      `conversation:close`, so a newly registered tenant does not reproduce this gap. — confirmed
+      systemic rather than seed-only: `RegisterSiteHandler.OperatorRolePermissions` **and**
+      `MintDemoTenantHandler`'s own parallel copy both carry it now, Operator-scoped for the same
+      reason `23-69`'s `ConversationMarkSpam` is — ending a conversation is the ordinary, in-the-moment
+      action an operator takes dozens of times a shift, not a configuration or compliance act.
+
+## What this does not reach
+
+**The live deployment's already-existing "Operator" role rows are not retroactively granted this
+permission** — a seed-default change only affects sites registered from here on. Neither Done-when box
+above asked for a live backfill (unlike, say, `23-85`'s own explicit walkthrough requirement), so this
+is a separate, later operational step rather than unfinished scope: apply it through `25-76`'s own
+`AddRolePermissionsAsOwnerHandler`/console tool, once that ships live, or by hand sooner if wanted. Not
+done tonight — deliberately left for the author's own call on timing, since it touches live tenant
+permissions rather than only a seed default.
+
+Verified: `ago-chat` full suite green (`dotnet format --verify-no-changes` clean, `dotnet build -c
+Release` zero warnings, `dotnet test -c Release` zero failures — Domain.Tests 692, Application.Tests
+1239, FakeCrm.Tests 21, Architecture.Tests 46, Concurrency.Tests 87, Integration.Tests 1196), all
+independently re-run by the managing session.
