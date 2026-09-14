@@ -478,7 +478,35 @@ denial.
   further - that column at least gets an EF shadow property for schema-model consistency; this table's
   writer needing no ambient transaction (it runs strictly after a download URL has already been
   issued, never inside the request that decides anything) removed even that reason to register it with
-  `AgoChatDbContext`.
+  `AgoChatDbContext`. **`25-83` adds `soft_notified_at` (`timestamptz`, nullable)** - the once-per-
+  `(site_id, period_month)` guard for the soft-threshold warning mail
+  (`DownloadThresholdWatchdogJob`/`DownloadThresholdWatchdogQuery`'s own remarks), reset to `null`
+  implicitly every month by the same upsert that starts a fresh period row at `bytes_out = 0`.
+  **`25-83`'s own enforcement caveat, stated here rather than left as a paragraph up above that a
+  reader has no reason to revisit:** the figure this table maintains, and that
+  `GetAttachmentDownloadUrlHandler.EnforceDownloadCapAsync` now gates a real refusal on, is the exact
+  same proxy the two paragraphs above already name - a cache hit inside a presigned URL's own TTL is
+  never re-counted, so `bytes_out` undercounts a tenant's real egress. That was an accepted trade when
+  `23-82` only used the figure to *show* a tenant their own rough usage; `25-83` is the first thing that
+  *refuses a request* because of it. The undercount still errs in the tenant's own favor (blocked later
+  than a perfectly accurate count would block them, never earlier), which is why this item accepts the
+  same proxy rather than building a second, exact counter - but from `25-83` onward this is no longer
+  only an observability footnote, and `25-84`'s own real money sits on top of it next.
+- `sites` **gains four columns in `25-83`** - `download_block_exempt` (`boolean`, default `false`) and
+  its own three-column audit trail, `download_block_exemption_changed_by`/`_reason`/`_changed_at`
+  (all nullable text/`timestamptz`) - the platform owner's own free, indefinite bypass of the hard
+  download-block threshold (`Site.DownloadBlockExempt`'s own remarks on why this is a plain scalar, not
+  a full append-only ledger: there is no console screen yet for a reader to page through a history on).
+- `tier_download_thresholds` (**added in `25-83`**) - `tier` (`text`, primary key, no foreign key -
+  the same "a tier is a string this codebase names in code" convention `sites.tier` itself already
+  uses), `soft_threshold_bytes`, `hard_threshold_bytes` (`bigint`, `hard > soft` enforced by a check
+  constraint), `updated_at`/`updated_by`. No EF entity, read only through Dapper
+  (`IDownloadThresholdReadStore`) - the identical "no domain aggregate owns this, only two per-tier
+  numbers a person edits directly" shape `site_attachment_egress` above already established, restated
+  here because nothing in the request path ever *writes* a threshold (`docs/backlog/25-83-*.md`'s own
+  Scope: a runbook script, never a console screen, as of this item). Seeded with two starting rows
+  (`free`, `starter`) that are a labelled starting point, not a measured figure - see that migration's
+  own remarks (`Stage25AddTierDownloadThresholds`).
 - `conversation_notes` (**added in `18-04`**) - `id`, `conversation_id`, `author_id`, `body`
   (`varchar(4000)`), `created_at`. Its own table, deliberately not a `messages` row with a `Kind`
   discriminator - `18-04`'s own backlog item and `ConversationNote`'s own remarks give the full
