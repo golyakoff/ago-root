@@ -1,7 +1,15 @@
 # 25-86 · Console strings name Keycloak, a third party nobody should see
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — six strings changed, not the four named above: the worker's own grep found two
+  more real leaks reading the actual code, not just the item's own list — `onboardingInvitedDescription`
+  (identical shape to `onboardingDescription`, on the sibling "invited" branch of the same page) and a
+  thrown `Error` in `src/auth/registrationUrl.ts` that lives entirely outside the i18n tables — its own
+  doc comment says the throw exists specifically to put a message on screen, and `SignupPage.tsx`
+  renders it directly. Both fixed the same way: the useful fact kept, the vendor name cut. Independently
+  re-verified by the managing session: `npm run typecheck`/`lint` clean, full `npx vitest run` —
+  1404/1404, matching the worker's own count exactly; a fresh `grep -rn "Keycloak" src/i18n/en.ts
+  src/i18n/ru.ts` returns nothing.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, the author's own live walkthrough of the invite/onboarding flow -
   `onboardingDescription` read "Ваш Keycloak-аккаунт подтверждён..." on the "finish setting up your
@@ -40,9 +48,16 @@ name:
 
 ## Done when
 
-- [ ] No console string names Keycloak, in either locale.
-- [ ] The two strings that carried a real, useful fact beside the leak still carry that fact, reworded
-      without the third-party name - proven by reading the actual rendered screen, not only the string
-      table.
-- [ ] A grep for "Keycloak" across `ago-console/src` (excluding tests and code comments) returns
-      nothing.
+- [x] No console string names Keycloak, in either locale. Six changed in total — the four named above,
+      plus `onboardingInvitedDescription` and the `registrationUrl.ts` thrown error, both found only by
+      reading the surrounding code.
+- [x] The strings that carried a real, useful fact beside the leak still carry that fact, reworded
+      without the third-party name - confirmed against the actual rendering component for each:
+      `CallbackPage.tsx`, `SignupPage.tsx` (description and its error `Alert` path), `OnboardingPage.tsx`
+      (both descriptions and the platform-owner alert body).
+- [x] A grep for "Keycloak" across `ago-console/src` (excluding tests and code comments) returns
+      nothing user-facing. The i18n tables (`en.ts`/`ru.ts`) themselves have zero matches; the only
+      remaining hits anywhere in `src` are internal identifiers never rendered to a user —
+      `keycloakAuthority`/`keycloakClientId` config keys, `VITE_KEYCLOAK_*` env var names, the
+      `keycloakRegistrationRedirect` function name, and the `"keycloak-identity-only"`
+      `OperatorResolutionState` discriminant (compared in code, never interpolated into rendered text).

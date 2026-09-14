@@ -1,7 +1,15 @@
 # 25-80 · The widget cannot tell a visitor a file was removed
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `AttachmentRejectedError` now carries the server's stable RFC 7807 `type` code;
+  `renderAttachmentInto`'s catch shows `attachmentRemoved` only when that code is
+  `Attachment.Removed`, unchanged generic `attachmentUnavailable` otherwise. Independently
+  re-verified by the managing session: `npm run typecheck`/`lint` clean, full `npm test` — 370/370,
+  matching the worker's own count exactly (35/35 files). The saved-conversation export path
+  (`fetchAttachmentLocationForExport`) was deliberately left untouched — it never shows a message
+  itself, and its own downstream copy lives in a separate module that by its own doc comment must not
+  import back into `ui/widget.ts`/`attachments.ts`; distinguishing "removed" there would be a second,
+  wider promise this item's own Scope did not ask for. Filed with its own number: `25-94`.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, while landing `23-80`, which gave a deleted attachment a distinct,
   permanent `Attachment.Removed` (HTTP 410) instead of folding it into the retryable
@@ -35,7 +43,10 @@ cannot show.
 
 ## Done when
 
-- [ ] A visitor whose conversation references a since-deleted attachment sees a distinct "this file
+- [x] A visitor whose conversation references a since-deleted attachment sees a distinct "this file
       was removed" message, not the generic unavailable one — proven by a test, fails-before checked
-      against today's catch-all.
-- [ ] Every other download failure still renders the existing generic message, unchanged.
+      against today's catch-all (three tests: the error code carries through both `AttachmentRejectedError`
+      shapes tested, plus `renderAttachmentInto`'s own distinct-message assertion).
+- [x] Every other download failure still renders the existing generic message, unchanged — proven by
+      three regression-guard tests (transient `NotReady`, a network error, a non-problem+json 502),
+      confirmed to still pass even against the unfixed code (they assert nothing new).
