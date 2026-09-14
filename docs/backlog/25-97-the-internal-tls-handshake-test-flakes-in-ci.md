@@ -1,7 +1,12 @@
 # 25-97 · The internal-TLS handshake test flakes in CI
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: the affected
+  test class's own two tests pass in isolation, `dotnet format`/`build` clean. The full `ago-chat`
+  suite was run to completion (1266/1267 — one failure, in
+  `DownloadOverageReadStore_ComputesOutstandingPerMonth_NetOfSettledCharges`, confirmed unrelated to
+  this item's own diff and order-dependent on an unrelated global Dapper type-handler collision —
+  filed as its own item, `25-99`).
 - **Depends on**: nothing
 - **Found**: 2026-09-14, the author directly challenging a CI-failure count during tonight's landing
   work — pulling the actual GitHub Actions run history to check the claim surfaced this: a *second*,
@@ -23,10 +28,39 @@ generates a real self-signed leaf certificate, and performs a real TLS handshake
 alongside dozens of other Integration.Tests in the same collection) rather than a logic error in the
 test's own assertions.
 
-**Not yet root-caused.** Unlike `25-92`, this item is filed at the "found and reproduced" stage, not
-the "understood and fixed" stage — the mechanism connecting a shared-database order dependency to a
-wrong count does not obviously apply here, and guessing at the real cause without evidence would be
-exactly the kind of unverified claim this codebase's own conventions warn against.
+**Root-caused.** Pulling the actual failed run's log (`gh run view 34853766370 --log-failed`) turned
+up the real error, and it is not the resource-contention guess above — the assertion was never
+reached:
+
+```
+System.ArgumentException : The requested notAfter value (09/14/2026 15:14:36) is later than
+issuerCertificate.NotAfter (09/14/2026 15:14:35). (Parameter 'notAfter')
+   at System.Security.Cryptography.X509Certificates.CertificateRequest.Create(...)
+   at ModuleRegistrationGatewayInternalTlsTests.GenerateRootAndLeaf() ...line 160
+   at ModuleRegistrationGatewayInternalTlsTests.RegisterAsync_OverHttps_WhenTheCallerDoesNotTrustTheInternalCa_IsRefused() ...line 67
+```
+
+`GenerateRootAndLeaf` called `DateTimeOffset.UtcNow.AddHours(1)` **twice, independently** — once for
+the root certificate's own `NotAfter`, a second time (several statements later, after generating the
+leaf's own key and building its CSR) for the leaf's own `notAfter` passed to
+`CertificateRequest.Create`. X.509 validity fields are second-granular — sub-second precision is
+truncated — so on the rare occasion those two `UtcNow` reads straddle a wall-clock second boundary,
+the leaf's rounded-up `notAfter` ends up one second later than the root's own `NotAfter`, and
+`CertificateRequest.Create` refuses: a leaf may never claim to outlive its issuer. Port binding,
+handshake latency and general CI contention were the wrong hypothesis — the failure never reaches a
+socket at all.
+
+**Reproduced deliberately, with real numbers.** A tight loop hammering `GenerateRootAndLeaf` directly
+(not the network path) was run in two matched conditions on the same machine, back to back, under the
+same real background load:
+
+| Condition | Iterations | Failures | Rate |
+|---|---|---|---|
+| Unfixed code | 12,000 | 31 | ~0.26% |
+| Fixed code | 14,000 | 0 | 0% |
+
+Every one of the 31 failures on the unfixed code carried the identical `ArgumentException` with
+`ParamName == "notAfter"` — the same exception the real CI run hit.
 
 ## Why this is worth its own item
 
@@ -48,7 +82,21 @@ unrelated TLS-timing question would misrepresent what its own fix actually close
 
 ## Done when
 
-- [ ] The failure is reproduced deliberately, not only inferred from one accidental CI run, and its
-      actual mechanism is understood and stated.
-- [ ] A fix is in place and demonstrated to reduce or eliminate the failure under the same conditions
+- [x] The failure is reproduced deliberately, not only inferred from one accidental CI run, and its
+      actual mechanism is understood and stated. Proven by the real CI failure log
+      (`ago-chat` run `34853766370`, exact stack trace above) plus a deliberate local tight loop that
+      hit the identical `ArgumentException` 31 times in 12,000 iterations (~0.26%) against the unfixed
+      code.
+- [x] A fix is in place and demonstrated to reduce or eliminate the failure under the same conditions
       that reproduced it — not merely re-run a few times and declared fixed by absence of a repeat.
+      Proven by the same tight loop run immediately afterward, under the same real machine load,
+      against the fixed code: 0 failures in 14,000 iterations (more iterations than the unfixed run,
+      not fewer). `git diff --stat` for the fix: one file, 18 insertions / 3 deletions — `notBefore`
+      and `notAfter` are captured once and shared by both certificates, which does not merely make the
+      race rarer, it removes the second `UtcNow` read that could ever land on the other side of a
+      boundary. Not independently proven against real CI contention (a full local run of the whole
+      `Ago.Chat.slnx` suite, matching CI's exact invocation, was attempted twice and did not finish in
+      reasonable time on this machine — heavy concurrent Docker/Postgres load from unrelated activity
+      on the same box, not the fix itself); the affected test class's own two real tests
+      (`RegisterAsync_OverHttps_WhenTheCallerDoesNotTrustTheInternalCa_IsRefused` and
+      `...TrustsTheInternalCa_Succeeds`) both still pass against the fix.
