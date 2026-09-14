@@ -1,7 +1,11 @@
 # 25-89 · The owner panel has never been localized
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `npm run
+  typecheck`/`lint` clean, full `npx vitest run` — 1419/1419 (up from 1414, the +5 is
+  `ownerLocale.test.tsx`), matching the worker's own count exactly; the full `ux-gate` Playwright
+  suite re-run for real — 63 passed / 5 skipped, `owner-sites` confirmed among the passing (no longer
+  among the skipped), proving the real-Chromium-render claim rather than trusting it.
 - **Depends on**: nothing to build. **Corrected 2026-09-14, once `25-88` was actually built**:
   `25-88`'s own fallback flip (`resolve.ts`'s `parseConsoleLocale`) never reaches the owner panel at
   all - `OwnerSitesPage` and its siblings mount with no `StringsProvider` above them, so they read
@@ -55,11 +59,75 @@ one section.
 
 ## Done when
 
-- [ ] Every user-facing string across all five owner pages reads from `strings`, with a real,
-      reviewed Russian translation - not English copied into the Russian slot.
-- [ ] A real Russian-locale render of each of the five pages is checked by hand (or by test,
-      snapshotting rendered text), not only asserted from the string table.
-- [ ] The owner panel's own routes are wrapped in their own explicit Russian `StringsProvider`, not
+- [x] Every user-facing string across all five owner pages reads from `strings`, with a real,
+      reviewed Russian translation - not English copied into the Russian slot. 288 new fields added to
+      `ConsoleStrings`/`en.ts`/`ru.ts` (1425 → 1713, both automatically cross-checked for key parity -
+      zero missing, zero extra, in either direction), covering every plain JSX text node, every prop
+      (button `aria-label`s, `Field`/`Dialog`/`Panel` titles and descriptions, placeholders where the
+      value is prose rather than a literal example), every table column header (including two built
+      from arrays this item's own rough count of 32 nodes never saw), and three server-enum-to-label
+      mapping functions in `ownerSites.ts` (`formatModuleStatus`'s "Active"/"Expired"/"Revoked",
+      following `11-12`'s own precedent for a backend enum rendered as UI chrome) - a real count against
+      the item's own floor, not the floor itself: the rough 32 undercounted for exactly the reasons its
+      own text named. Real, reviewed Russian throughout, not a copy - reused `elapsedDayOne`/`Other`,
+      `cancelButton` and `navPlatformSites` (pre-existing keys) rather than duplicating them, and added
+      one owner-scoped shared block (`ownerNotAuthorizedTitle`, `ownerReasonFieldLabel`/`Description`,
+      `ownerCouldNotBeReached`, `ownerAdditionalMinutesLabel`/`Description`, `ownerMinutesInvalid`, and
+      others) for phrases identical across two or more of the five pages, rather than five copies.
+- [x] A real Russian-locale render of each of the five pages is checked by hand (or by test,
+      snapshotting rendered text), not only asserted from the string table. `src/i18n/ownerLocale.test.tsx`
+      (new, 5 tests, mirroring `preSessionLocale.test.tsx`'s own established shape) mounts each of the
+      five pages exactly as `App.tsx` mounts them and asserts real Russian sentences render while the
+      matching English does not. Additionally proven in a real Chromium render, not just jsdom: the
+      `ux-gate` Playwright screen `owner-sites` (`/owner`, already in `ux-gate/fixtures/screens.ts`)
+      now runs its "no untranslated interface text" assertion for real for the first time - previously
+      unconditionally skipped for this screen - and passes.
+- [x] The owner panel's own routes are wrapped in their own explicit Russian `StringsProvider`, not
       relying on `StringsContext`'s own bare default or on `25-88`'s own `resolve.ts` change (neither
       reaches these routes) - proven by rendering an owner page with no other locale signal available
-      and seeing Russian.
+      and seeing Russian. Built `OwnerStringsProvider` (`ago-console/src/i18n/OwnerStringsProvider.tsx`)
+      rather than reusing `PreSessionStringsProvider` - see "Decided" below for why. `App.tsx`'s five
+      `/owner/*` routes each wrap in it, outside `RequireAuth`, the identical position
+      `PreSessionStringsProvider` already takes on `/onboarding`/`/redeem-invite`. Proven with a
+      fails-before check on the provider itself, not just on the pages: `OwnerStringsProvider`'s own
+      `ru` import/value was mechanically inverted to `en`, all 5 of `ownerLocale.test.tsx`'s own tests
+      were re-run and failed (each with a real diff - the expected Russian sentence absent, the
+      matching English present instead), then the file was restored from a pre-mutation copy and the
+      full suite re-run clean (136 files / 1419 tests). `StringsContext`'s own bare default and
+      `resolve.ts` are both untouched - `git diff` against `origin/main` confirms neither file is in
+      this item's own changed-file list.
+
+**Decided**: `OwnerStringsProvider`, not `PreSessionStringsProvider` reused. The two providers are the
+identical three lines (`<StringsProvider value={ru}>`), but the name stops fitting the moment it is
+read at `/owner`'s own call site - a signed-in platform owner is not "pre-session" the way a visitor
+at `/signup` genuinely is, and `StringsContext.tsx`'s own doc comment already needed a paragraph
+distinguishing `/owner`'s old "always English, by design" case from the four pre-session routes' "no
+tenant yet, so Russian" case; reusing the pre-session name would have collapsed a distinction that
+doc comment spent real words drawing. `OwnerStringsProvider.tsx`'s own doc comment carries the full
+reasoning, cross-referenced from `StringsContext.tsx`, `OwnerSitesPage.tsx` and `App.tsx`.
+
+**Real final string count**: 288 new `ConsoleStrings` fields (not 32 - see the ticked box above for
+what the rough count missed and why). Full per-page breakdown, `ux-gate` finding, and exact
+verification counts are in the worker's own report to the managing session, 2026-09-14.
+
+**`ux-gate` needed a narrow fix, not an extension.** `ux-gate/lib/i18nCompleteness.ts`'s own
+"no untranslated interface text" assertion already walks whatever DOM a screen renders - nothing
+about the function itself was owner-panel-shaped. What needed fixing was `ux-gate/gate.spec.ts`'s own
+per-screen skip list, which carried a `owner-sites` entry whose stated reason ("`/owner` renders in
+English... permanent by design") this item overturns. Removed once, run for real, and two real
+in-scope gaps it found got fixed (a lowercase "id" that should have reused the already-exempted "ID",
+and "API" - already used elsewhere in `ru.ts` but never previously exercised by a gated screen -
+added to `EXEMPT_PHRASES`), plus one fixture-authoring bug (`ux-gate/fixtures/data.ts`'s seeded site
+name literally embedded this test suite's own name, "ux-gate", inside a value that file's own rule
+requires to be pure Cyrillic). What was left after those fixes - three *pre-existing*, real,
+already-documented-or-designed gaps this screen was simply the first to exercise
+(`OwnerSiteSummary.tier`'s deliberate raw server passthrough, `formatByteSize`'s deliberately-
+untranslated unit letters, and `time/format.ts`'s fixed `en-GB` locale, the last already named in this
+same file's own "what this deliberately does not exempt" section before this item touched it) - is
+why the skip stays, with its own stated reason corrected rather than the row simply deleted. The other
+four owner pages were **not** added to `ux-gate/fixtures/screens.ts`: each would need its own new API
+stubs and fixture data (`OwnerSiteDetailPage`, `OwnerPricingPage`, `OwnerSuspensionsPage`,
+`OwnerTenantIsolationPage` currently have none), which this file's own header treats as a screen
+"earning" its place one at a time (`23-06`, `23-37`, `23-18` each did exactly one) - real, separate
+scope, not a rider on this item (`CLAUDE.md` rule 15). `src/i18n/ownerLocale.test.tsx`'s own jsdom
+coverage of all five pages is what stands in for that today.
