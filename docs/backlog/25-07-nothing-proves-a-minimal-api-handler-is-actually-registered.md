@@ -1,6 +1,13 @@
 # 25-07 · Nothing proves a Minimal API endpoint's handler is actually registered in DI
 
-- **Status**: ready
+- **Status**: done — `ago-chat#290`, `ago-calendar#66`. Independently re-verified by the managing
+  session before merging (its own `dotnet build`/`test` runs against the worker's own worktrees —
+  3316/3316 `ago-chat` tests, 830/830 `ago-calendar` tests, both matching the worker's reported counts
+  exactly). `RouteHandlerDiRegistrationTests` lands in both `ago-chat` and `ago-calendar`; `adr/0170`
+  records the design and the rejected alternatives. While building it, the same test caught a real,
+  live, unfixed instance of `25-06`'s own bug class — `GetSuspensionStatusForSiteHandler` (`25-70`,
+  merged hours earlier the same night) was mapped and never registered — fixed in the same change,
+  before it could crash the API host's next real restart.
 - **Date found**: 2026-09-09, alongside `25-06`
 - **Depends on**: none
 
@@ -41,8 +48,23 @@ this new test catch it (a fails-before against the actual historical defect, not
 
 ## Done when
 
-- [ ] A test fails against `25-06`'s defect reverted, and passes with it fixed - a real fails-before
-      against a real historical bug.
-- [ ] The test runs as part of the ordinary `dotnet test` suite (not a separate manual step), so CI
-      catches the next one before a deploy does.
-- [ ] Whether `ago-calendar` needs the identical check is decided and stated, not left implicit.
+- [x] A test fails against `25-06`'s defect reverted, and passes with it fixed - a real fails-before
+      against a real historical bug. Reverted `services.AddScoped<PreviewOperatorInviteHandler>();`
+      in `ChatModule.cs`: `RouteHandlerDiRegistrationTests.EveryMappedRouteHandlerParameterResolves_ReproducesThe25_06Crash`
+      failed with the identical `handler | UNKNOWN` text `25-06`'s own pod log carried; restored,
+      confirmed green. A second, unplanned fails-before landed in the same run: the same test caught a
+      live, currently-unfixed instance of this exact bug class in `main` right now —
+      `GetSuspensionStatusForSiteHandler` (`25-70`, merged hours earlier) was mapped and never
+      registered. Fixed in the same change (one line in `ChatModule.cs`, mirroring its siblings).
+- [x] The test runs as part of the ordinary `dotnet test` suite (not a separate manual step), so CI
+      catches the next one before a deploy does. `Ago.Chat.Integration.Tests` (1218/1218) and
+      `Ago.Calendar.Integration.Tests` (332/332) both green with the new tests included, no separate
+      invocation needed.
+- [x] Whether `ago-calendar` needs the identical check is decided and stated, not left implicit.
+      **Decided: yes, and built in this same change.** `Ago.Calendar.Api`'s own `Program.cs` already
+      carries `public partial class Program;` for an existing `WebApplicationFactory<Program>`-based
+      test fixture (`CalendarApiFactory`) — every existing test using it was already triggering the
+      identical `AuthorizationPolicyCache` mechanism as an unnamed side effect, so the new
+      `RouteHandlerDiRegistrationTests` there needed no `CompositionRoot`-style extraction, only an
+      explicit, self-checking assertion of a guarantee that was real but previously undocumented. No
+      production code changed in `ago-calendar`, and no live bug was found there.
