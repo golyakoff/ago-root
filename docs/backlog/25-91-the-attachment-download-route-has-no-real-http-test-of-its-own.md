@@ -1,7 +1,12 @@
 # 25-91 · The attachment download route has no real-HTTP test of its own
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `dotnet format
+  --verify-no-changes` clean, `dotnet build -c Release` 0 warnings/0 errors, full `dotnet test`
+  3392/3392, matching the worker's own count exactly (Domain 698, Application 1287, FakeCrm 21,
+  Architecture 46, Concurrency 88, Integration 1252). No production code changed; no new bug found.
+  A genuine follow-up the worker recommended — a general, honest audit of every error code
+  `ErrorExtensions` does not map — is filed with its own number: `25-98`.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, while landing `25-83` — the worker building the hard download-block gate
   needed to prove `Attachment.DownloadBlocked` actually reaches a caller as HTTP `403` (not the
@@ -34,12 +39,46 @@ HTTP test that brushes against it.
 
 ## Done-when
 
-- [ ] A real-HTTP integration test (`TestServer`, the same shape `OwnerDownloadBlockExemptionEndpointTests`
+- [x] A real-HTTP integration test (`TestServer`, the same shape `OwnerDownloadBlockExemptionEndpointTests`
       or `RouteHandlerDiRegistrationTests` (`25-07`, `adr/0170`) already establish for other routes)
       exercises `GET /api/v1/attachments/{id}` for at least: success (presigned URL returned),
       `Attachment.NotFound` → `404`, `Attachment.NotReady` → its mapped code, `Attachment.Removed` →
       `410`, `Attachment.DownloadBlocked` → `403`.
-- [ ] Decide, and record the decision: is a single exhaustive "every `ErrorExtensions.ToProblem` case
+      **`AttachmentDownloadEndpointTests` (`ago-chat`, `tests/Ago.Chat.Integration.Tests/`)** - five
+      `[Fact]`s, a real `TestServer` over `AttachmentEndpoints.MapAttachmentEndpoints` (the actual
+      production route group, not a hand-transcribed subset), a real Postgres
+      (`OperatorOidcFixture`), and a real visitor JWT (`JwtTokenService`/`TestSigningKeys`, the
+      same minting `TokenSchemeSeparationTests` already uses). All five reached through the visitor
+      side of the dual-scheme route rather than the operator side - see the test file's own class
+      remarks for why that still exercises the identical `ToProblem` wiring every error code in this
+      item's own list goes through. `Attachment.NotReady`'s "mapped code" turned out to be `409
+      Conflict`, not `403`/`400` - read directly off `ErrorExtensions.ToProblem`'s own switch rather
+      than assumed. Confirmed with a fails-before proof per test (see the worker's own report): each
+      status mapping was individually reverted in `ErrorExtensions.cs` (and, for the success case, the
+      route mapping itself was removed), rebuilt, the corresponding test observed to fail (`500` or
+      `405` in place of the intended status), then restored - the `Attachment.DownloadBlocked` case is
+      a literal re-creation of `25-83`'s own original bug, confirmed to reproduce and confirmed fixed.
+- [x] Decide, and record the decision: is a single exhaustive "every `ErrorExtensions.ToProblem` case
       resolves to its intended status" test worth building generally (closing this failure shape for
       every route at once, not just this one), or is per-route real-HTTP coverage the right level —
       state the reasoning either way rather than defaulting silently to the narrower fix.
+      **Decided: per-route real-HTTP coverage stays the right level for now; a general exhaustive
+      `ToProblem` test is a real idea but not a safe "natural, closely related extension" of this
+      item.** The reason is not cost - a direct-call test with no `TestServer` at all
+      (`ErrorExtensionsRetryAfterTests`' own shape: a bare `DefaultHttpContext`, `error.ToProblem(...)`,
+      no hosting pipeline) would be cheap to write. The reason is that **the only sound source for
+      "every error code, and its intended status" is independent of the switch under test**, and this
+      codebase does not currently have one: `ErrorExtensions.cs`'s own inline comments are the closest
+      thing to that documentation today, and several codes are *deliberately* left unmapped there as
+      pre-existing, named debt (`Operator.SeatLimitReached`, `Billing.SeatCountUnchanged`,
+      `Billing.InvalidSeatCount`, `Billing.SubscriptionNotFound`, `Billing.SubscriptionNotActive`,
+      `Billing.PaymentProviderRefused`, among others the switch's own remarks name). A test built by
+      enumerating every `*Errors`-shaped factory method via reflection and asserting "not `500`" would
+      either have to hard-code that same exclusion list (silently freezing today's debt as
+      permanently acceptable, the opposite of what `23-72`'s own remarks ask for) or flag genuine,
+      already-known gaps as new failures on day one - neither is "closing this failure shape," both
+      are a second, different-shaped item. Building that audit honestly - one line per code, cross-
+      checked against what each code's own factory-method callers actually need, resolving each
+      debt item's own fate on purpose rather than by construction - is real, valuable work, but it is
+      `23-72`'s own scope restated, not this item's. Recommended as its own follow-up rather than
+      folded in here **so it gets that dedicated write-up**, not because it is unimportant.
