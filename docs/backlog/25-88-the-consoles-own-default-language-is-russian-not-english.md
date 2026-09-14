@@ -92,5 +92,6 @@ global flip).
 - [x] The full `ago-console` test suite passes with the change in place - not merely the three files
       expected to be affected; `permissionGating.test.tsx`'s own 18 incidental failures were found and
       fixed by pinning its shared mock's locale, not by discovering them after merge.
-- [ ] The platform owner's own screens render in Russian - **explicitly not this item's own box any
-      more**, corrected once the two-default finding above was made. See `25-89`.
+- [x] The platform owner's own screens render in Russian - **explicitly not this item's own box any
+      more**, corrected once the two-default finding above was made. Done via `25-89` (2026-09-14),
+      through its own explicit `OwnerStringsProvider`, not this item's own `resolve.ts` change.
