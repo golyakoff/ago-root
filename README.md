@@ -122,9 +122,11 @@ target."
 ## Decisions
 
 Every choice worth arguing about is an ADR, written when the decision was made and naming the
-alternative that lost: **[docs/adr/](docs/adr/)** — 51 so far, indexed in
+alternative that lost: **[docs/adr/](docs/adr/)** — 143 so far, indexed in
 [docs/adr/README.md](docs/adr/README.md), which is the list that stays current. This README does not
-keep a copy of that index; the copy it used to keep had stopped at 0027 and was quietly wrong.
+keep a copy of that index; the copy it used to keep had stopped at 0027 and was quietly wrong. The
+number above will drift the same way given enough time — treat it as a snapshot, not a promise, and
+trust the index it links to over this sentence.
 
 These are the ones a reviewer usually asks about first, and each answers "why on earth" rather than
 asserting a preference:
@@ -138,6 +140,8 @@ asserting a preference:
 | [0009](docs/adr/0009-redis-is-not-truth.md) | Redis is cache and coordination, never truth. Losing it degrades the system; it never corrupts it |
 | [0056](docs/adr/0056-schema-migrations-are-a-separate-deployable.md) | Migrations are their own deployable, and a host refuses to start against a schema older than its own build — written after a redeploy left the API three migrations behind while every page still returned 200 |
 | [0027](docs/adr/0027-operator-identity-across-products.md) | Operator identity across products — the decision that keeps a second product additive instead of a fork |
+| [0170](docs/adr/0170-a-minimal-api-di-registration-proof-composes-through-an-extracted-method-not-a-live-webapplicationfactory-or-a-second-hand-list.md) | A live demo crash (a handler mapped in `Program.cs`, never registered in DI) went uncaught because the test hand-rebuilt a subset of production's own registrations — fixed by extracting them into one method both production and the test call, so a gap is caught by construction rather than a maintained mirror |
+| [0171](docs/adr/0171-the-download-block-exemption-and-hard-threshold-are-read-from-two-stores-not-one-transaction.md) | Two live reads, on two separate connections, deliberately not one transaction — reading the exemption flag before the usage figure trades an occasional false refusal (one retried request) for never trading a false allow (an actual bypass), stated as the accepted cost rather than hidden as a closed race |
 
 ## Where to read
 
