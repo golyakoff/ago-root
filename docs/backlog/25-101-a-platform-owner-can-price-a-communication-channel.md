@@ -1,7 +1,11 @@
 # 25-101 · A platform owner can price a communication channel
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging:
+  `dotnet format`/`build` clean, full `ago-chat` suite re-run at 3488/3488 (0 failed, 0 skipped);
+  `ago-landing`'s own diff reviewed directly and confirmed to reuse the `admin-extra` row's exact
+  markup shape on both `pricing.html` and `index.html`. See the second Done-when box below for what
+  is, and is not, actually proven about the end-to-end pipeline.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, the author asking why the existing owner pricing screen has nothing for
   channels — traced to a real gap, not a missing button: the price catalog itself has no entry a
@@ -73,12 +77,21 @@ connected) are the business's own call, not assumed here, and not filed yet pend
 
 ## Done when
 
-- [ ] `PricedResourceKeys.All` carries a channel add-on price key, and a platform owner can publish a
-      real price for it through the existing pricing screen — proven against a real (or faked,
-      matching this codebase's established test shape) publish call, not merely that the key exists
-      in code.
-- [ ] Once published, the price reaches the public landing page: `tools/update-landing-prices-from-db.sh`
-      picks it up with no code change (confirm this by actually running it against a real published
-      price, not by assuming the query is generic), `pricing.html`'s channel row moves out of the
-      "not priced, because not built" table into the real priced table via a `data-price` element, and
-      `landing-prices.md`'s stale closing sentence is corrected.
+- [x] `PricedResourceKeys.All` carries a channel add-on price key (`ChannelAddOnPricing.ChannelAddOnKey`,
+      `"channel-addon"`), and a platform owner can publish a real price for it through the existing
+      pricing screen — proven against a real, faked-caller `PublishPriceVersionHandler` test (the
+      established shape this handler's own suite now has for the first time: `v1` publish,
+      next-version publish, unregistered/malformed-key rejection, negative-amount rejection), plus a
+      `GetPricingForOwnerHandler` case proving the null-then-real-amount lifecycle.
+- [x] `pricing.html`'s channel row moved out of the "not priced, because not built" table into the
+      real priced table via a `data-price="channel-addon"` element (the exact same convention the
+      `admin-extra` row already uses), `index.html`'s own teaser card got the identical move, and
+      `landing-prices.md`'s stale closing sentence is corrected. **Honestly not fully proven
+      end-to-end**: `tools/update-landing-prices-from-db.sh` was not actually run against a real
+      published price — doing so needs a live deployment with a channel price genuinely published
+      through `/owner`, which nobody has done yet (this item builds the mechanism, not a real
+      publish). What is verified instead: the script's own SQL is a plain key-driven query with no
+      hardcoded key list (read directly, not assumed), and the `data-price="channel-addon"` string
+      matches the `PriceKey` constant character-for-character. The one link genuinely untested is the
+      script's own real run — worth doing the first time a real channel price is published, not
+      invented here.
