@@ -1,7 +1,10 @@
 # a tenant can turn the AI draft on for themselves, and see what it sends
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `npm run
+  typecheck`/`lint` clean, full console suite re-run at 1453/1453, exact match to the worker's own
+  claim. Built as a second, reply-draft-framed door onto `25-04`'s own single `AiAddOnEnablement`
+  switch (`/account/ai`) rather than a new flag — see the Done-when notes below for why.
 - **Depends on**: `25-04` — hard. Until the add-on exists there is nothing for this screen to switch.
 - **Decision**: `adr/0078` chose the AI kinds; `25-04` decides how it is bought and consented to
 
@@ -46,6 +49,18 @@ and where the first one is repeated in plain words.
 
 ## Done when
 
-- [ ] A tenant with the add-on can turn the draft on and off, and it is off until they do.
-- [ ] The screen says what leaves the deployment, in the tenant's own language.
-- [ ] Without the add-on the screen explains that rather than disappearing.
+- [x] A tenant with the add-on can turn the draft on and off, and it is off until they do. New
+      `/automation/ai-suggestions` screen (`AiReplyDraftPage`), gated the way `AiAddOnPage`/
+      `OfflineAutoReplyPage` already are. **One flag, not two** — `AiAddOnEnablement` (`ago-chat`) is
+      a single per-site switch both the reply draft and the background categoriser already consult;
+      this screen reads/writes the identical `GET`/`POST .../enable`/`POST .../disable` `25-04`'s own
+      `/account/ai` calls, framed in reply-draft terms, and says on screen that it is the same switch
+      (turning it off here also stops the categoriser). Never an optimistic toggle — re-fetches status
+      after every mutating call.
+- [x] The screen says what leaves the deployment, in the tenant's own language. Shown unconditionally:
+      the conversation's own recent messages, as plain text, to YandexGPT by name, and nothing else —
+      no contact details, no attachments, no other conversation's data.
+- [x] Without the add-on the screen explains that rather than disappearing — and a tenant who has not
+      finished `25-04`'s own agreement/declaration steps is pointed at `/account/ai` rather than shown
+      a second copy of those controls here (that flow is `25-04`'s own scope, correctly not
+      duplicated).
