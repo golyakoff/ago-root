@@ -1,7 +1,11 @@
 # 25-79 · Deleting an attachment never releases its quota reservation
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#292`. Independently re-verified by the managing session before
+  merging (its own `dotnet build`/`test` run against the worker's own worktree — 3334/3334 tests,
+  matching the worker's own per-project counts exactly). Both Done-when boxes genuinely closed,
+  including the reconciliation-tool decision — built and tested locally, deliberately not run
+  against the live deployment, which is the author's own step whenever they choose to take it.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, while landing `23-80`/`23-82` — `BulkDeleteSiteAttachmentsHandler`'s own
   Done-when needed "the space freed" to be true (`23-80`'s own "show what will be freed before the
@@ -41,8 +45,29 @@ alongside the leak, not a fix to it.
 
 ## Done when
 
-- [ ] `DeleteAttachmentHandler` releases the site's budget reservation on every successful delete,
+- [x] `DeleteAttachmentHandler` releases the site's budget reservation on every successful delete,
       proven by a fails-before test (the release call removed, the test shows the reservation
       unchanged after a delete; restored, the test shows it shrink by the attachment's own size).
-- [ ] Whether the live deployment's already-leaked reservations need a one-time reconciliation is
-      decided and stated, not left implicit.
+      `DeleteAttachmentHandlerTests.HandleAsOperatorAsync_WhenTheOperatorHoldsThePermission_ReleasesTheSiteBudgetReservationForTheAttachmentsOwnSize`
+      and its stricter sibling (`...ReleasesOnlyThisAttachmentsOwnSize`, seeded with other bytes
+      already reserved so "shrinks to zero" cannot pass by accident) both fail red against the
+      pre-fix shape and pass green against the fix — proven by actually reverting the release call,
+      running the tests, and restoring, not asserted. Idempotency proven separately:
+      `...WhenAlreadyDeleted_IsIdempotent_AndDoesNotReleaseTheBudgetASecondTime` shows a retried
+      delete against an already-`Deleted` attachment releases nothing a second time (the fix's own
+      one way to introduce a new bug while fixing the old one).
+- [x] Whether the live deployment's already-leaked reservations need a one-time reconciliation is
+      decided and stated, not left implicit. **Decision: build the report, do not run it.** A
+      report-only script (`ago-chat/tools/attachment-quota-reconciliation-report.sh`,
+      `ago-chat/docs/runbooks/attachment-quota-reconciliation.md`) recomputes each site's actual
+      `Ready`-attachment byte sum and reports where `sites.attachment_bytes_reserved` disagrees with
+      it — the same "reports, never repairs" posture `ago-deploy/k8s/tenancy-reconciliation-report.sh`
+      already established for exactly this class of problem (a cross-referencing script that would be
+      catastrophic the first time its own join is wrong). Built and verified against a local,
+      disposable Postgres container only (seeded drift correctly detected and reported; a connection
+      failure found and fixed to fail loudly rather than being silently read as "no drift" by an
+      earlier draft) — **not run against the live deployment**, per this codebase's established
+      posture that a tool touching real tenant billing/quota state is the author's own act, following
+      the runbook, never a worker's or a managing session's without the author present. Whether any
+      real, already-onboarded tenant has actually accumulated drift is therefore still genuinely
+      unknown — the tool to find out exists and is ready, but nobody has run it for real yet.
