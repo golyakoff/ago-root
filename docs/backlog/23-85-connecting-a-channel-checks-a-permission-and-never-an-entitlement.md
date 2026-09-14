@@ -1,7 +1,9 @@
 # connecting a channel checks a permission and never an entitlement
 
 - **Stage**: 23
-- **Status**: ready — **the three open questions answered by the author, 2026-09-09, recorded below**
+- **Status**: ready — **the three open questions answered by the author, 2026-09-09, recorded below**.
+  Implementation drafted in a worker session, not yet reviewed, merged, or run for real — see the note
+  above Done-when.
 - **Depends on**: `adr/0151` is the decision. `23-86` is what makes payment grant one.
 - **Found**: 2026-09-07, checked in code after the author settled the rule.
 
@@ -61,6 +63,37 @@ now and then.
   shipping and this landing did so legitimately as far as the system told them. Silently breaking a
   working channel is worse than the hole it closes — see the disconnect-and-clean-up answer above, and
   the author's own requested walkthrough before it runs for real.
+
+## Implementation note, worker session, 2026-09-14
+
+Built and locally verified (full command sets green in `ago-chat` and `ago-console`; not yet run
+against `ago-business` or `ago-console` production code — that repo needed no code change, see below)
+in a background-worker session, not yet reviewed or merged. Left deliberately **not done** — not
+checked below — pending the author's own review and, for the last box, the author's own walkthrough.
+
+- The permission-then-entitlement check landed in `RegisterChannelCredentialHandler`,
+  `RevokeChannelCredentialHandler` and `GetChannelCredentialStatusHandler` (`ago-chat`,
+  `Ago.Chat.Application`), reusing `23-86`'s own `IBillingOptionEntitlementProvider`/
+  `IModuleQuantityGrantStore` pair rather than a new mechanism — a new `ChannelKind` →
+  `BillingOptionKey` mapping (`ChannelEntitlementOptionKeys`, Domain) is the only new resolution step,
+  since the price list is already one entitlement per option and the existing config shape already
+  reads by opaque key.
+- **The disconnect/cleanup mechanism is built and fully tested against fakes, and deliberately wired to
+  run only when a platform owner calls it** — two new owner-only HTTP routes
+  (`GET /api/v1/owner/channel-entitlements/non-entitled-credentials` to list, then
+  `POST .../disconnect` naming the exact reviewed ids). Nothing calls either route automatically: no
+  startup hook, no recurring job, no migration. See the worker's own report for the full reasoning and
+  the explicit confirmation that nothing was run against real data.
+- `ago-business`'s tariff doc (`docs/decisions/0012-*.md`, section 7) already stated the free-tier
+  consequence and the "credentials deleted, not just marked inactive" shape, written by the author on
+  2026-09-09 when the three questions above were answered — verified against what was actually built;
+  no `ago-business` change was needed.
+- `ago-console` needed no production code change: the existing generic problem-details rendering
+  already surfaces a handler's refusal text verbatim, so `TelegramChannelPage` already shows *why* a
+  channel can't be connected the moment the server names it. A regression test was added
+  (`TelegramChannelPage.test.tsx`, "not entitled" describe block) to prove this rather than assert it.
+- The tension in applying the entitlement gate to *revoke* (see item text below) was implemented
+  literally, per instruction, and flagged rather than resolved unilaterally — the author's call.
 
 ## Done when
 
