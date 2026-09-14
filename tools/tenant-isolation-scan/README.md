@@ -33,14 +33,14 @@ a count that isn't reproducible is the failure this tooling exists to prevent.
 
 - **`scan_entry_points.py`** -- the first three headline rows (use-case entry points, RBAC-gated,
   deliberately exempt). Approximates `TenantScopeRule.Scan`
-  (`ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeRule.cs`) at the source-text level rather
+  (`ago-chat/src/Ago.Chat.Infrastructure.TenantScopeDiagnostics/TenantScopeRule.cs`) at the source-text level rather
   than reading IL: every public method of every `*Handler` class under
   `src/Ago.Chat.Application/UseCases` is one entry point; it carries a `SiteId` if a parameter (or a
   positional-record/property member of a parameter's type, one level deep) is typed `SiteId`; it
   checks permission if its body calls `.HasPermissionAsync(` or `.GetPermissionsAsync(` -- the two
   methods `IPermissionChecker` declares, confirmed unique to that interface in this codebase. Cross-
   references every entry point's key against
-  `ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs` and reports anything
+  `ago-chat/src/Ago.Chat.Infrastructure.TenantScopeDiagnostics/TenantScopeExemptions.cs` and reports anything
   unaccounted (neither gated nor exempt-listed) or mismatched (exempt-listed but this scan also
   thinks it's gated) as a finding to check by hand, not a number to trust blindly.
 - **`scan_routes.py`** -- the routes row (HTTP routes + SignalR hub methods carrying tenant data)

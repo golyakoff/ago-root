@@ -10,18 +10,49 @@ Read `authorization.md` first for the RBAC model and the four actors — this fi
 answers a narrower question: *not* "may this operator do X", but "may this operator do X **to that
 tenant's data**".
 
+**This table is a snapshot, not the source, as of `24-17`.** The five headline numbers below drifted
+twice — for ten stages before `22-19` built a scan to re-derive them, then again for the two weeks
+after, because nothing made anyone re-run it. `24-17`'s answer is that each backend now computes its
+own numbers at runtime, by reflecting over its own handlers and its own live route table, and serves
+them to the platform owner: **`GET /owner/tenant-isolation` in the console is where to read the
+current figures**, for `ago-chat` and, new with `24-17`, for `ago-calendar` too — see *AGO Calendar's
+own figures* below for why that second product's own numbers are shaped differently and read with a
+different caveat. What is written here is a value the reader can double-check against that screen on
+the day they read it; it is not where the number lives.
+
 ## Headline numbers
 
 | | |
 |---|---|
-| Use-case entry points in `Ago.Chat.Application` | **134**, across 123 `*Handler` classes |
-| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **87** |
-| Deliberately not RBAC-gated, each with a stated reason | **47** |
-| HTTP routes and hub methods that carry tenant data | **114** |
-| Routes taking a **client-supplied** `siteId` | **55** — all permission-gated |
+| Use-case entry points in `Ago.Chat.Application` | **179**, across 166 `*Handler` classes |
+| RBAC-gated: takes a `SiteId` and checks `IPermissionChecker` | **106** |
+| Deliberately not RBAC-gated, each with a stated reason | **73** |
+| HTTP routes and hub methods that carry tenant data | **174** |
+| Routes taking a **client-supplied** `siteId` | **75** — all permission-gated |
 | Read-model queries | **15**, in nine read stores |
 | Genuinely cross-tenant reads in the whole codebase | **2** (`12-02`'s owner overview and `23-14`'s per-tenant detail read) |
 | Genuinely cross-tenant **writes** | **3** — `14-12`'s owner unlink, and `22-17`'s owner module grant and revoke |
+
+**Re-run 2026-09-14, landing `24-17`, and four of the first five had drifted again — the identical
+shape the 2026-09-06 re-run below already found, for the identical reason: nothing re-ran the scan in
+between.** `tools/tenant-isolation-scan/` reported 179 entry points against the 134 written here, 166
+handler classes against 123, 106 gated against 87, 73 exempt against 47, 174 routes-and-hub-methods
+against 114, and 75 client-supplied-`siteId` routes against 55 — run twice, byte-identical both times,
+against `Ago.Chat.Infrastructure.TenantScopeDiagnostics.TenantScopeRule`'s own new address (moved out
+of the test project by this same item; the scan's own path follows it, not a change to what it
+measures). `Unaccounted: 0`, so — as every prior re-run has also found — this is drift in the
+*documentation*, not a gap in the isolation.
+
+**This is also the run that proved the runtime figure and the source scan agree, not merely that both
+compile.** `Ago.Chat.Architecture.Tests.TenantScopeInspectorTests.Snapshot_AgreesWithTheDirectScan_OnEveryHeadlineFigure`
+scans the same, currently-built `Ago.Chat.Application.dll` through the same
+`TenantScopeRule.Scan`/`TenantScopeExemptions` both the build-time guard and the new runtime port call,
+and asserts the two counts are identical — they cannot actually drift from each other now, because both
+callers read the identical fact rather than two copies of it. `Ago.Chat.Api`'s own
+`GET /api/v1/owner/tenant-isolation` (`Ago.Chat.Api.Owner.OwnerTenantIsolationEndpoints`) is what serves
+that same computation to the platform owner, live, gated by `RequirePlatformOwner` and shown nowhere
+else — "47 entry points that do not check permissions is a hint for somebody looking for a way in"
+(`24-17`'s own words).
 
 **Re-run 2026-09-06 while landing `23-11`, and four of the five had drifted again.** The scan reported
 130 entry points against the 113 written here, 119 handler classes against 105, 83 gated against 76,
@@ -34,9 +65,10 @@ the total had not, so a reader spot-checking that one row would conclude the tab
 *documentation* and not a gap in the isolation. Saying which is not pedantry: a maintenance chore that
 reads as a security finding is how the next real one gets muted.
 
-**Nothing re-runs the scan, which is why it drifted twice** — the first time for ten stages before
-`22-19` built the tool, the second time for the two weeks since. That is `24-17`, filed the same day,
-which states three shapes for a forcing function and picks none.
+**Nothing re-ran the scan, twice, which is why `24-17` exists** — the first time for ten stages before
+`22-19` built the tool, the second time for the two weeks after. `24-17`'s own answer, above, is a
+runtime figure rather than a third forcing function for a script: a number that is *computed* cannot go
+stale the way one that is *written down* always can.
 
 **Re-derived in `22-19`, from a full scan of every mechanical row rather than a further delta.** The
 first three rows had not been re-derived since `14-04`; `Ago.Chat.Application.UseCases` had grown
@@ -167,6 +199,41 @@ The gated/exempt split is not prose — it is enforced. `Ago.Chat.Architecture.T
 the IL of every handler and fails the build unless each entry point is either RBAC-gated or listed in
 `TenantScopeExemptions` with a reason. The counts above are what that scan reports.
 
+## AGO Calendar's own figures, new with `24-17`
+
+*The three places a `site_id` can come from*, below, already recorded (`22-14`) that `ago-calendar`
+shares this platform's Keycloak realm and the same `IPermissionChecker`-shaped RBAC port
+(`Ago.Calendar.Application.Abstractions.IPermissionChecker`). `24-17` gave that product its own runtime
+read of the identical style of figure — `Ago.Calendar.Api`'s own `GET /api/v1/owner/tenant-isolation`
+(`Ago.Calendar.Api.Owner.OwnerTenantScopeEndpoints`), gated by this product's own first
+`RequirePlatformOwner` policy, computed by
+`Ago.Calendar.Infrastructure.TenantScopeDiagnostics.CalendarTenantScopeRule` the same way
+`TenantScopeRule` computes `ago-chat`'s.
+
+**Read these numbers with one real caveat this section exists to state plainly, not to bury:**
+`ago-calendar` has no equivalent of `TenantScopeExemptions` — nobody has ever read each of its
+not-RBAC-gated handlers and recorded, with a reason, why it is safe anyway. So there is no
+`Unaccounted`/exempt split for this product, only a single unclassified count that mixes legitimate
+design (worker and consumer-side handlers, the unauthenticated public-booking surface) with anything
+genuinely unreviewed. `24-17` deliberately did not invent that catalogue — assigning a reason to each
+of the 19 not-gated handlers below is a judgment call for a person to make reading the handler, the
+identical restraint `22-19`'s own scan already holds for `ago-chat`, and building a hollow one just to
+fill a table cell would be worse than stating the gap.
+
+| | |
+|---|---|
+| Use-case entry points in `Ago.Calendar.Application` | **50**, across 50 `*Handler` classes |
+| RBAC-gated: takes a `TenantId` and checks `IPermissionChecker` | **31** |
+| Not RBAC-gated, **unclassified** — not the same fact as `ago-chat`'s "deliberately exempt" row above | **19** |
+
+Verified 2026-09-14, from `Ago.Calendar.Architecture.Tests.CalendarTenantScopeInspectorTests`, which
+proves the runtime port and a direct `CalendarTenantScopeRule` scan of the same assembly agree, the
+identical property `ago-chat`'s own `TenantScopeInspectorTests` proves for itself. No routes/hub-method
+row is repeated here for space; `Ago.Calendar.Api`'s own `CalendarOperatorHub` is push-only (no hub
+method at all beyond the two SignalR lifecycle callbacks) and its HTTP route count is read live from
+the same `/owner/tenant-isolation` endpoint, not restated by hand in this document — see this file's
+own opening note on why the console screen is where the current number lives.
+
 ## The three places a `site_id` can come from
 
 Everything below reduces to this. A tenant boundary is only as good as the provenance of the value it
@@ -249,20 +316,29 @@ scoped to a site the caller named, and only the ownership check ties the object 
 ## Use cases
 
 Grouped by gate. The full machine-checked list lives in
-`ago-chat/tests/Ago.Chat.Architecture.Tests/TenantScopeExemptions.cs`; this table is the same
-information organised for a reader.
+`ago-chat/src/Ago.Chat.Infrastructure.TenantScopeDiagnostics/TenantScopeExemptions.cs` (moved there by
+`24-17`, from `tests/Ago.Chat.Architecture.Tests/` — see this file's own opening note); this table is
+the same information organised for a reader.
 
-### RBAC-gated (80 listed, 87 by scan)
+### RBAC-gated (80 listed, 106 by scan)
 
 Every one takes a `SiteId` and calls `IPermissionChecker` before doing anything else.
 
 **The two numbers differ, and the difference is the point.** This table lists 80 handlers; the scan
-that produces the headline figures counts 87. Seven gated handlers landed without a row here, and the
-heading said 75 while 76 rows sat under it even before that. The rows are prose maintained by hand and
-the count is machine-derived, so the count is the one to trust — and the gap is documentation debt,
-not an ungated handler: `scan_entry_points.py` reports `Unaccounted: 0`, meaning every entry point is
-either gated or on the exemption list, which `Ago.Chat.Architecture.Tests.TenantScopeTests` enforces at
-build time regardless of what is written here. Reconciling the rows is `24-17`.
+that produces the headline figures counts 106. The rows are prose maintained by hand and the count is
+machine-derived, so the count is the one to trust — and the gap is documentation debt, not an ungated
+handler: `scan_entry_points.py` reports `Unaccounted: 0`, meaning every entry point is either gated or
+on the exemption list, which `Ago.Chat.Architecture.Tests.TenantScopeTests` enforces at build time
+regardless of what is written here.
+
+**Correction, `24-17`: the sentence that used to stand here said "reconciling the rows is `24-17`".
+It was wrong to say so before `24-17` was actually written** — the backlog item, once filed, scoped
+itself to the five headline counts and to giving this fact a live, runtime source
+(`GET /owner/tenant-isolation`), not to hand-writing new rows for the 26 handlers this table is
+missing. Adding a truthful row for each — the permission it checks, the additional ownership check, if
+any — is a real, judgment-laden task the same size `TenantScopeExemptions.cs`'s own entries are, and no
+smaller one exists; it remains undone. Until it is, read the count above as current and this table as
+a partial, hand-maintained illustration of the same 106 handlers, not a complete list.
 
 | Use case | `siteId` from | Permission | Additional ownership check |
 |---|---|---|---|
@@ -349,7 +425,16 @@ build time regardless of what is written here. Reconciling the rows is `24-17`.
 | `GetContactRevealsForSiteHandler` | **route segment** | `site:configure` | the read store filters `site_id`; deliberately not a permission of its own, on `access_records`' own reasoning — a caller who can already read every conversation on the site is not additionally guarded by a separate permission over the log of who revealed what; `23-11` |
 | `RevealVisitorContactDetailHandler` | **operator claim** | `conversation:read` | `conversation.SiteId == command.SiteId` **and** `detail.VisitorId == conversation.VisitorId` — the second check is what stops a detail belonging to another visitor being revealed through a conversation the caller legitimately holds; `23-11` |
 
-### Not RBAC-gated, with the reason (37)
+### Not RBAC-gated, with the reason (37 listed, 73 by scan)
+
+**`24-17`: the same gap the RBAC-gated section above states for itself.** This heading's own count is
+the prose below's, hand-maintained; the current, machine-derived figure is 73, in
+`TenantScopeExemptions.cs` (now at
+`ago-chat/src/Ago.Chat.Infrastructure.TenantScopeDiagnostics/TenantScopeExemptions.cs`). The 36
+entries this list is missing are not a gap in the isolation — every one of them already has a real,
+reasoned entry in that file, or `Ago.Chat.Architecture.Tests.TenantScopeTests` would fail the build —
+only a gap in this prose restating it. Read `TenantScopeExemptions.cs` directly for the reasons this
+section has not yet copied into English prose here.
 
 **Visitor paths (9).** A visitor is outside the role system entirely (`adr/0016`), so there is nothing
 to ask `IPermissionChecker`. What replaces it is *narrower* than a site check: the handler compares
