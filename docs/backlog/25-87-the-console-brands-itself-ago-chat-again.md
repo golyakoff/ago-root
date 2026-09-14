@@ -1,7 +1,10 @@
 # 25-87 · The console brands itself "AGO Chat" again
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `npm run
+  typecheck`/`lint` clean, full `npx vitest run` — 1404/1404, matching the worker's own count
+  exactly; a fresh `grep -rn "AGO Офис" src/` finds only historical mentions inside the comments
+  explaining the reversal, no remaining literal.
 - **Depends on**: nothing
 - **Decision**: the author's own, 2026-09-14, made knowing it reverses `25-49`'s own reasoning - see
   below.
@@ -45,6 +48,20 @@ the glyph beside it).
 
 ## Done when
 
-- [ ] The workspace header reads "AGO Chat" in both locales, everywhere `25-49`'s own rename touched.
-- [ ] The code says, plainly, that this reverses `25-49` and why - a future reader finds the reasoning
+- [x] The workspace header reads "AGO Chat" in both locales, everywhere `25-49`'s own rename touched.
+      Both `AppShell.tsx` brand blocks (`AppShell`'s own workspace header and `CenteredShell`'s
+      matching block) render the literal `AGO Chat` now. Proven, not asserted: both
+      `consoleLocale.test.tsx` assertions pinned to the old wordmark - the Ru-locale test that
+      exists specifically to show the brand text does not vary by locale, and the no-Locale-set
+      default-to-Russian test - were inverted against the un-reverted code first (both failed,
+      `expected 'AGO Офис' to be 'AGO Chat'`), then restored and re-run green. `OperatorShell.tsx`'s
+      own remarks (the file `25-49`'s rename is also referenced from) and `shell.css`'s wordmark
+      comment were the two other threaded-through spots the item asked to check for - both updated
+      too, though neither renders a literal itself. Full suite: 135 test files / 1404 tests passed;
+      `npx tsc -b --noEmit` and `npx eslint src ux-gate` both clean; `npm run build` succeeded.
+- [x] The code says, plainly, that this reverses `25-49` and why - a future reader finds the reasoning
       without needing this item file.
+      All four updated comments (`AppShell.tsx` twice, `OperatorShell.tsx`, `shell.css`) now name
+      `25-87` explicitly and state the reversal is on purpose, alongside the `25-49` reasoning they
+      replace - the same pattern this item asked for, an ADR's own "Supersedes" line, without
+      inventing an ADR (`25-49` was never one).
