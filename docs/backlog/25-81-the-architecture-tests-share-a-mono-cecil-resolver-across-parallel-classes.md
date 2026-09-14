@@ -1,7 +1,12 @@
 # 25-81 · The architecture tests share a Mono.Cecil resolver across parallel classes
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: code landed — `ago-chat` branch `fix/25-81-architecture-test-mono-cecil-race`, not yet
+  pushed/PR'd (background-worker handoff; the managing session pushes, opens the PR and merges per
+  CLAUDE.md rule 9). Verified locally: `dotnet format --verify-no-changes`, `dotnet build -c Release`
+  (0 warnings, 0 errors) and a full `dotnet test -c Release` run of `ago-chat`, all green —
+  3334/3334 (Domain 692, Application 1265, FakeCrm 21, Architecture 46, Concurrency 88,
+  Integration 1222).
 - **Depends on**: nothing
 - **Found**: 2026-09-14, independently re-verifying `25-70` — a full `dotnet test` run of `ago-chat`
   failed exactly once, on `Ago.Chat.Architecture.Tests.TenantScopeTests
@@ -65,7 +70,52 @@ one, because it teaches whoever hits it to distrust red and re-run rather than t
 
 ## Done when
 
-- [ ] The race Mono.Cecil's own exception names is closed by construction (parallel test classes no
+- [x] The race Mono.Cecil's own exception names is closed by construction (parallel test classes no
       longer share unsynchronized Cecil state), not merely unreproduced.
-- [ ] A full `dotnet test` run of `ago-chat` stays green, and the fix is explained in terms of why the
+- [x] A full `dotnet test` run of `ago-chat` stays green, and the fix is explained in terms of why the
       concurrent access can no longer happen.
+
+## Resolution
+
+Fix (b), narrower variant: `Ago.Chat.Architecture.Tests.TenantScopeTests` and
+`...TenantScopeInspectorTests` now share one xUnit `[CollectionDefinition(Name, DisableParallelization
+= true)]` collection (`MonoCecilSharedResolverCollection`). `TestAssemblies.cs` is untouched.
+
+**Why this pair, and no other class.** Every class in the project touching `TestAssemblies.*.Cecil`
+was read, not guessed at. Only two code paths ever call `TypeReference.Resolve()` — the one operation
+that actually writes into a shared `DefaultAssemblyResolver`'s non-thread-safe dictionary:
+
+- `TenantScopeRule.Scan` (`Ago.Chat.Infrastructure.TenantScopeDiagnostics`), called by both
+  `TenantScopeTests` (3 of its 4 `[Fact]`s) and `TenantScopeInspectorTests` (1 of its 2), always
+  against the same statically-shared `TestAssemblies.Application.Cecil` — the exact pair that can
+  race, and the exact shape `25-70`'s own re-verification run reproduced.
+- `HubContractTests`, resolving into `TestAssemblies.Api.Cecil` — a *different*
+  `AssemblyDefinition`, loaded by its own `AssemblyDefinition.ReadAssembly` call in
+  `TestAssemblies.Load`, carrying its own separate implicit resolver and dictionary. No other class
+  resolves into `Api.Cecil`, so `HubContractTests` has nothing to race with and does not need to join
+  the collection.
+
+Every other class that touches `.Cecil` (`LayeringTests`, `PersistenceBoundaryTests`,
+`MessageOpacityTests`, `SchemaMigrationTests`, `TimeAndIdentityTests`) only reads metadata already
+loaded into the module (`MainModule.AssemblyReferences`, `MainModule.GetTypes()`, an instruction's
+`Operand` compared by name) — none of it calls `.Resolve()`, so none of it touches the one
+non-thread-safe cache this item is about.
+
+**The structural proof.** xUnit's own documented guarantee is that tests sharing one collection never
+run in parallel against each other, regardless of how many other collections run alongside it — that
+alone is sufficient once both classes are in the same collection; `DisableParallelization = true` is
+layered on top only to match this item's own suggested shape, not because anything else in the
+project shares `Application.Cecil`'s resolver. This was not just assumed: both classes' `[Fact]`s were
+temporarily instrumented with thread-id/timestamp markers (plus an artificial `Thread.Sleep` in each,
+to widen any window for overlap) and run twice. Both runs show all six `[Fact]`s executing back to
+back on the *identical* managed thread, zero gap between the end of one and the start of the next —
+e.g. run 2: `08.7267282Z start NoExemption_IsStale` immediately following
+`08.7260518Z end EveryPermissionCheck_...` on thread 24 throughout. The instrumentation was reverted
+before committing; only the `[Collection]` attributes and the new collection-definition file remain.
+
+**Verification** (background worker, local): `dotnet format --verify-no-changes` clean;
+`dotnet build -c Release` 0 warnings/0 errors; `dotnet test -c Release` full suite 3334/3334 —
+Domain.Tests 692, Application.Tests 1265, FakeCrm.Tests 21, Architecture.Tests 46, Concurrency.Tests
+88 (2m43s), Integration.Tests 1222 (11m48s). Run once for the standard command set, plus the
+Architecture.Tests project specifically run twice more under instrumentation for the reason stated
+above — not superstition, the one item tonight where repeated runs are directly probative.
