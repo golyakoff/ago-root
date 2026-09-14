@@ -1,7 +1,8 @@
 # 25-14 · No bucket CORS policy exists for presigned attachment GETs
 
-- **Status**: ready — **fixed and proven locally (`ago-deploy/seed/apply-minio-cors.sh`); not yet
-  applied to the k8s dev cluster or the demo overlay's own MinIO, see Done-when**
+- **Status**: done — applied to the real demo overlay's MinIO, 2026-09-14. `ago-deploy@968d59c`'s own
+  script is docker-compose-only (`docker run --network ...`), so the k8s application was done by hand,
+  as the item's own Done-when anticipated — see Outcome for the exact commands and the proof.
 - **Date found**: 2026-09-09, building `23-62` — a saved-conversation archive needs an attachment's
   real bytes, not a link
 - **Depends on**: none
@@ -39,14 +40,18 @@ codebase already draws for every other cross-origin call.
 
 ## Done when
 
-- [~] A presigned attachment GET succeeds via `fetch()` from an origin `sites.allowed_origins`
-      permits, proven against a real bucket (MinIO locally at minimum). — **proven locally**
-      (`docker-compose`'s own MinIO); **not yet applied to the k8s dev cluster or the demo overlay**,
-      both reachable only via `kubectl exec`. Running the script's own commands by hand against that
-      cluster is not yet a checked-in step — named as a real remaining gap, not silently assumed
-      covered by the local proof.
+- [x] A presigned attachment GET succeeds via `fetch()` from an origin `sites.allowed_origins`
+      permits, proven against a real bucket (MinIO locally at minimum). — proven locally
+      (`docker-compose`'s own MinIO) and now against the real demo overlay's MinIO: `kubectl exec`
+      into the `minio` pod itself (its own image bundles `mc`, and running against `localhost:9000`
+      from inside the pod sidesteps `minio-ingress`'s NetworkPolicy, which only admits the three chat
+      hosts) applied `mc admin config set local api cors_allow_origin="<sites.allowed_origins,
+      deduplicated>"`, then a rollout restart. Verified from the node against MinIO's own ClusterIP:
+      a `curl` with `Origin: https://office.reserve-me.ru` gets `Access-Control-Allow-Origin:
+      https://office.reserve-me.ru` back.
 - [x] An origin outside that allowlist is refused, proven the same way — the control, not just the
-      positive case.
+      positive case. — the identical `curl` with `Origin: https://evil.example` gets no
+      `Access-Control-Allow-Origin` header at all.
 - [x] `docs/architecture/file-storage.md`'s note about this gap is updated to say it is closed.
 
 ## Outcome
@@ -75,5 +80,16 @@ README rule argues against on its face. No `ago-platform` port exists for "restr
 origin set," and MinIO's mechanism has no per-request hook an application process could drive even if
 one existed — so this is accepted as the same kind of explicit operational step the bucket-provisioning
 gap already takes, not resolved by assertion. See `file-storage.md` for the full reasoning.
+
+**Applied to the real demo overlay, 2026-09-14** — the last remaining gap, closed by hand rather than
+by the checked-in script, because that script is docker-compose-only and has no k8s-native form yet.
+The commands run: the origins list read from the real `ago_chat` database
+(`select string_agg(distinct origin, ',') from sites, unnest(allowed_origins) as origin`, 7 origins on
+the day this ran), then `mc admin config set` and a rollout restart against the live `minio`
+Deployment in `ago-chat` namespace. This is still the snapshot this item's own text already named —
+nothing re-runs it when a tenant adds an origin — so a future item that makes that automatic, or a
+checked-in k8s-native form of the script, would still be real, additive work; not filed separately
+here since the item's own Outcome already names the snapshot-not-subscription limitation as accepted
+scope, not a gap this item owes a fix for.
 
 Full write-up: `docs/architecture/file-storage.md`.
