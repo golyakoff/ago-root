@@ -1,7 +1,9 @@
 # 25-78 · Erasure does not yet drain a visitor's own restriction history
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: rebased on
+  current `main`, `dotnet format`/`build` clean, full `ago-chat` suite re-run at 3491/3491, exact
+  match to the worker's own claim.
 - **Depends on**: `23-69`/`23-77` (done, `ago-chat#282`/`ago-console#221`) — built `visitor_restrictions`.
   `16-02` — the erasure cascade this item's own gap sits next to.
 - **Found**: 2026-09-13, landing `23-69`/`23-77`. Named plainly in `docs/architecture/personal-data.md`'s
@@ -44,7 +46,15 @@ found defect gets a number of its own.
 
 ## Done when
 
-- [ ] `16-02`'s erasure explicitly drains a visitor's `visitor_restrictions` rows, observable in the
-      erasure job's own count, the same way its existing drains already are.
-- [ ] The conversation-scoped-vs-visitor-scoped erasure question above is answered and the answer is
+- [x] `16-02`'s erasure explicitly drains a visitor's `visitor_restrictions` rows, observable in the
+      erasure job's own count, the same way its existing drains already are — but **only at site
+      scope**, per the decision below. `SiteErasureQuery.DeleteVisitorRestrictionsForSiteAsync`,
+      counted into the new `erasure_records.visitor_restrictions_deleted` column.
+- [x] The conversation-scoped-vs-visitor-scoped erasure question above is answered and the answer is
       stated in `personal-data.md`'s own `visitor_restrictions` row, not left as an open flag.
+      **Decided: site-scoped only, never conversation-scoped.** A restriction is the visitor's own
+      current standing on the site (`IVisitorRestrictionRepository.IsActiveAsync` gates every future
+      conversation by it), not evidence about the one conversation that triggered it — draining it on
+      a conversation-scoped erasure, narrow or wide, would silently lift an active spam mute or block
+      as a side effect of an unrelated privacy request. `VisitorRestrictionErasureGuardTests` locks
+      this in for both the narrow and wide case.
