@@ -1,7 +1,9 @@
 # 25-95 · Billing cannot self-service a seat decrease any more
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `npm run
+  typecheck`/`lint` clean, full suite re-run independently at 1443/1443 (exact match to the worker's
+  own claim).
 - **Depends on**: nothing
 - **Found**: 2026-09-14, building `25-23` — replacing `BillingPage`'s direct-edit absolute seat field
   with an add-only quantity stepper (the shape the author asked for, an e-commerce "quantity + add"
@@ -37,7 +39,14 @@ is a second promise, not a fix to the first.
 
 ## Done when
 
-- [ ] An owner can request fewer seats than they currently hold, from the console, without cancelling
-      the whole subscription.
-- [ ] The control is honest about timing — a decrease schedules rather than applies immediately, if
-      that is still the backend's own policy, and the control says so.
+- [x] An owner can request fewer seats than they currently hold, from the console, without cancelling
+      the whole subscription. A second, explicit "Reduce operators" control (own state, own floor at
+      the tier's `minSeats`), deliberately not a sign-flip on the add stepper — an increase on a
+      `Succeeded` subscription charges immediately, a decrease only ever schedules (no charge), and a
+      single control silently swapping between those by crossing zero was judged too easy to trigger
+      by accident. Calls the same `changeSubscriptionSeats` endpoint the add control already calls.
+- [x] The control is honest about timing — a decrease schedules rather than applies immediately, if
+      that is still the backend's own policy, and the control says so. No success toast of its own:
+      the request's result is told entirely through the existing persistent pending-downgrade block
+      once the post-request refetch reports it, the same discipline this screen already holds for
+      cancellation.
