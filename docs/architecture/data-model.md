@@ -456,7 +456,29 @@ denial.
   pointer a reader follows; `attachments.message_id?` is a denormalized second pointer that exists
   only so `5-04`'s orphan sweep can ask "which attachments were never linked to a message" with a
   plain `WHERE message_id IS NULL`, not an anti-join against `messages`). Neither column carries a
-  foreign key to the other table - see Keys and indexes below.
+  foreign key to the other table - see Keys and indexes below. **`23-82`/`23-80` add
+  `download_count` (`bigint`, default 0) and `last_downloaded_at?`** - written once per fresh
+  presigned GET (`GetAttachmentDownloadUrlHandler`, cache-miss only - see that handler's own remarks
+  on why this undercounts real egress and is stated as a proxy, never as fact), read back by `23-80`'s
+  "never downloaded" filter. Two partial indexes, both `WHERE state = 'Ready'`:
+  `ix_attachments_site_state_size` on `(site_id, state, size_bytes)` for the storage screen's default
+  sort, and `ix_attachments_site_state_created_download` on
+  `(site_id, state, created_at, download_count)` for its age sort and never-downloaded filter - the
+  "never downloaded" and "duplicates" filters themselves still lean on the existing
+  `ix_attachments_site_content_hash` partial index (`23-76`) via a per-row `EXISTS`, not a new index
+  of their own (`SiteAttachmentListReadStore`'s own remarks on why a window function over the whole
+  result set was rejected).
+- `site_attachment_egress` (**added in `23-82`**) - `site_id`, `period_month` (`date`, always the
+  first of its month), `download_count`, `bytes_out`, primary key `(site_id, period_month)`, cascading
+  on `site_id`. The maintained per-tenant-per-month aggregate `23-82`'s own backlog item asks for -
+  "from something maintained, not derived by summing rows on read." No EF entity at all, not even a
+  shadow property: every write is a raw upsert (`AttachmentEgressMeterStore`) and every read goes
+  through Dapper (`AttachmentEgressReadStore`), the identical "compare-and-set/running-total bypasses
+  the aggregate" shape `sites.attachment_bytes_reserved` (`23-76`) already established, one step
+  further - that column at least gets an EF shadow property for schema-model consistency; this table's
+  writer needing no ambient transaction (it runs strictly after a download URL has already been
+  issued, never inside the request that decides anything) removed even that reason to register it with
+  `AgoChatDbContext`.
 - `conversation_notes` (**added in `18-04`**) - `id`, `conversation_id`, `author_id`, `body`
   (`varchar(4000)`), `created_at`. Its own table, deliberately not a `messages` row with a `Kind`
   discriminator - `18-04`'s own backlog item and `ConversationNote`'s own remarks give the full

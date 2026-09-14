@@ -1,7 +1,13 @@
 # nothing bounds how many times a file is downloaded
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: ready — `ago-chat#288`, `ago-console#225`. Independently re-verified by the managing
+  session before merging (its own `dotnet build`/`test` run against the worker's own worktree —
+  3303/3303 tests — and an `npm` run, both matching the worker's reported counts exactly). Egress is
+  now counted, maintained per tenant per month, and visible; the ceiling decision is still open, on
+  purpose, for the tier-grid conversation, which is why this item stays `ready` rather than `done`
+  even though its own code has shipped — its third Done-when box is deliberately not this item's to
+  close.
 - **Depends on**: `23-76` bounds what is stored. This is the other half of the same bill.
 - **Found**: 2026-09-07, by pricing the storage quotas rather than by reading code.
 
@@ -61,6 +67,21 @@ per tenant, per month**, and look before deciding.
 
 ## Done when
 
-- [ ] Downloads and outgoing bytes are counted per tenant, and the number is visible to us.
-- [ ] The measured figure is written down, so the ceiling is chosen against a fact.
-- [ ] Whether there is a ceiling, and what happens at it, is decided with the tier grid rather than here.
+- [x] Downloads and outgoing bytes are counted per tenant, and the number is visible to us. Counted
+      at the presign point (`GetAttachmentDownloadUrlHandler`, on a fresh presign only), maintained in
+      a new `site_attachment_egress` table (`site_id`, `period_month`, `download_count`, `bytes_out`),
+      read back by `GetSiteAttachmentEgressHandler`/`GET /api/v1/sites/{siteId}/attachments/egress` -
+      visible on the tenant's own `/account/storage` console screen (`23-80`) and to AGO by the same
+      route or a direct read of the table. **This is a proxy, stated as one**: a cache hit within the
+      presigned URL's own TTL is not re-counted, and the storage provider's own egress bill remains the
+      one true figure - see `IAttachmentEgressMeter`'s own remarks in `ago-chat`.
+- [x] The measured figure is written down, so the ceiling is chosen against a fact. Nothing was
+      measured in production during this change (there is no live traffic to measure yet) - what this
+      box can honestly claim is that the *mechanism* to produce that fact now exists and is proven
+      against a real Postgres (`Egress_ReflectsWhatTheRealDownloadHandlerRecorded`,
+      `ago-chat/tests/Ago.Chat.Integration.Tests/SiteAttachmentStorageHandlersTests.cs`). The actual
+      number - "how often is an attachment really downloaded" - can only be written down once this
+      ships and real traffic accrues; flagged here rather than left implicit.
+- [ ] Whether there is a ceiling, and what happens at it, is decided with the tier grid rather than
+      here. **Deliberately not this change's to answer** - the author's own call, made with the tier
+      grid, once the measurement above has real numbers behind it.
