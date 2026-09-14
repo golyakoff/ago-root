@@ -1,7 +1,7 @@
 # 25-66 · Three more hardcoded-English system messages in chat routing
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#287`.
 - **Found**: 2026-09-12, while landing `25-64` - the same class
   (`Ago.Chat.Application.UseCases.RouteConversationToModule.RouteConversationToModuleHandler`) that
   `PhoneVerificationRequiredText` lived on carries three siblings with the identical gap, deliberately
@@ -40,6 +40,30 @@ identical in kind to the bug `25-64` fixed for the phone-verification text.
 
 ## Done when
 
-- [ ] All three texts render in Russian on a `Locale.Ru` site, English otherwise, proven by a test per
+- [x] All three texts render in Russian on a `Locale.Ru` site, English otherwise, proven by a test per
       text (the same fails-before pattern `25-64`'s own phone-text tests use).
-- [ ] `dotnet format`/build/full suite stay clean.
+- [x] `dotnet format`/build/full suite stay clean.
+
+## Outcome
+
+Shipped as `ago-chat#287`. Built by a background worker, independently re-verified by the managing
+session (its own `dotnet build`/`test` run against the worker's own worktree — 3292/3292 tests,
+matching the worker's reported counts exactly) and merged.
+
+Exactly the Scope section, no more: `ModuleUnavailableText`/`ModuleBecameUnreachableText`/
+`ModuleEscalatedFallbackText` each became a `static string Method(string locale)`, identical shape to
+`PhoneVerificationRequiredText`. `locale` is threaded from the one resolution
+`ResolveModuleContextAsync` already does per call in `ContinueActiveTaskAsync` - no new read - but that
+resolution's own call site moved earlier in the method (ahead of the `enabledModule is null` check, not
+only ahead of the phone gate) so `ModuleBecameUnreachableText` could reach it for that branch too; the
+worker's own report has the full before/after. `ModuleEscalatedFallbackText` is reached from
+`FinishStepAsync`, the one method both `TryStartTaskAsync` and `ContinueActiveTaskAsync` share, so it
+gained a `locale` parameter threaded from both call sites rather than being resolved a second time.
+
+Four new tests in `RouteConversationToModuleHandlerTests.cs` (`Ago.Chat.Application.Tests`), one per
+call site actually reachable (`ModuleUnavailableText` at trigger time, `ModuleBecameUnreachableText` at
+both its own call sites - the module-disabled-mid-task branch and the module-unreachable-mid-reply
+branch - and `ModuleEscalatedFallbackText`), each on a `Locale.Ru` site, asserting the Russian wording
+appears and the English original does not. `dotnet format --verify-no-changes` clean, full solution
+`dotnet build -c Release` clean (0 warnings), full `dotnet test -c Release` run for the whole `ago-chat`
+solution - the worker's own report has the exact per-assembly pass counts.

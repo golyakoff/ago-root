@@ -1,7 +1,7 @@
 # 25-65 · VK, WhatsApp and Avito channels have no status route at all
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#287`, `ago-console#224`.
 - **Verified**: 2026-09-12 — confirmed in `ago-chat/src/Ago.Chat.Api/Channels/`: `VkChannelEndpoints.cs`,
   `WhatsAppChannelEndpoints.cs` and `AvitoChannelEndpoints.cs` each map only `POST ""`
   (`HandleConnectAsync`) and `DELETE "/{channelCredentialId:guid}"` (`HandleDisconnectAsync`) — no
@@ -49,7 +49,38 @@ one.
 
 ## Done when
 
-- [ ] `VkChannelEndpoints`, `WhatsAppChannelEndpoints` and `AvitoChannelEndpoints` each answer a
+- [x] `VkChannelEndpoints`, `WhatsAppChannelEndpoints` and `AvitoChannelEndpoints` each answer a
       `GET` status route, matching `TelegramChannelEndpoints`/`MaxChannelEndpoints`'s own shape.
-- [ ] `VkChannelPage` (`ago-console`) reads the new route on mount and shows the real persisted
+- [x] `VkChannelPage` (`ago-console`) reads the new route on mount and shows the real persisted
       connection state after a reload, replacing the current in-memory-only workaround.
+
+## Outcome
+
+Shipped as `ago-chat#287`, `ago-console#224`. Built by a background worker, independently re-verified
+by the managing session (its own `dotnet build`/`test` and `npm` runs against the worker's own
+worktrees, not just the worker's claim — 3292/3292 `ago-chat` tests, 1373/1373 `ago-console` tests,
+both matching the worker's reported counts exactly) and merged.
+
+All three `GET` routes copy `MaxChannelEndpoints.HandleStatusAsync`'s shape exactly (no live check,
+three-field response) — this item's own "Where this is likely to go wrong" asked to name explicitly if
+any of the three needed something richer, and none did: VK's own live `groups.getById` check stays
+connect-time-only, the same reasoning `MaxChannelEndpoints`'s own doc comment already gives for MAX.
+
+Proven with a new `ChannelStatusEndpointsTests.cs` (`Ago.Chat.Integration.Tests`) — real HTTP calls
+against a real Testcontainers Postgres + Keycloak host, seeding an active `ChannelCredential` row
+directly and asserting each of the three new routes returns it, plus the not-connected case for each.
+Worth naming: neither `TelegramChannelEndpoints`'s own live-checked status route nor
+`MaxChannelEndpoints`'s non-live one had an HTTP-level test anywhere in the existing suite before this
+item — both were proven only at the `GetChannelCredentialStatusHandler` level. This file is the first of
+either kind for any channel; the worker's own report has the full reasoning for building it that way
+rather than skipping the HTTP layer.
+
+`VkChannelPage` now loads status on mount (`MaxChannelPage`'s own `useCallback`+`useEffect` shape) and
+splits "server-confirmed connected" (`status`, persists across a reload) from "this page visit's own
+just-connected secrets" (`justConnected`, holds `callbackUrl`/`webhookSecret` - `VkChannelStatusDto`
+never carries either, since `GetChannelCredentialStatusHandler` never had them to give back). A reload
+now shows the real connected state with a `vkChannelSecretsShownOnceHint` in place of the setup panel,
+instead of the connect form the pre-`25-65` screen always showed. `WhatsAppChannelEndpoints`/
+`AvitoChannelEndpoints` gained the identical `GET` route but have no console screen to wire yet
+(unchanged scope boundary from this item's own text) - `WhatsAppChannelPage`/`AvitoChannelPage` do not
+exist.
