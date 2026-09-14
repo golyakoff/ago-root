@@ -1,7 +1,10 @@
 # 25-94 · The saved-conversation archive cannot say a file was removed either
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `npm run
+  typecheck`/`lint` clean, full `npm test` — 375/375, matching the worker's own count exactly. The
+  new `AttachmentLookupFailure` string-literal type correctly respects `archive.ts`'s own module
+  boundary — no import back into `ui/widget.ts`/`attachments.ts`.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, building `25-80` — the widget's live rendering path (`renderAttachmentInto`)
   now distinguishes a permanently-removed attachment (`Attachment.Removed`, HTTP 410) from every other
@@ -60,8 +63,19 @@ in-conversation render).
 
 ## Done when
 
-- [ ] A saved-conversation archive built for a conversation referencing a since-deleted attachment
+- [x] A saved-conversation archive built for a conversation referencing a since-deleted attachment
       shows a distinct "this file was removed" line in the transcript, not the generic unavailable
       one - proven by a test, fails-before checked against today's collapsed-to-`null` behavior.
-- [ ] Every other export-time attachment failure still renders the existing generic message in the
+      Proven end-to-end (real click, real `getAttachmentDownload` fetch, real `buildConversationArchive`
+      rendering) by `ui/saveConversation.test.ts`'s "shows the distinct removed line for a message
+      whose attachment was permanently deleted (410 Attachment.Removed)", and at the unit level by
+      `archive.test.ts`'s two new tests on `buildTranscriptHtml`/`buildConversationArchive`. Fails-before:
+      reverting `fetchAttachmentLocationForExport`'s new branch to always return `"unavailable"` made
+      the end-to-end test fail (transcript held `Attachment unavailable.`, not `This file was
+      removed.`); restoring it passes again (`ago-widget` PR, `feat/25-94-*`).
+- [x] Every other export-time attachment failure still renders the existing generic message in the
       archive, unchanged - proven by a test, not only by inspection.
+      Proven by `ui/saveConversation.test.ts`'s "keeps the generic unavailable line for every other
+      download failure (a network error)" and "... for a still-Pending upload (400
+      Attachment.NotReady)", plus `archive.test.ts`'s existing and new unit tests for the
+      `"unavailable"` outcome - none of these regressed by this change (full suite: 375/375 passing).
