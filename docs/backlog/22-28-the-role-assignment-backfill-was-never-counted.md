@@ -1,7 +1,8 @@
 # the role-assignment backfill was never counted
 
 - **Stage**: 22
-- **Status**: ready
+- **Status**: done — counted on the live node, 2026-09-14, by the managing session directly (not a
+  code change; see the Outcome section).
 - **Depends on**: `22-16` (the backfill), `22-26` and `22-27` (the three reasons it could not run).
   All shipped.
 - **Carried out of**: `22-16`, whose first Done-when this is. Filed under CLAUDE.md rule 14.
@@ -65,8 +66,58 @@ row is exactly what would stop them while looking like an ordinary absence of pe
 
 ## Done when
 
-- [ ] The backfill has run to completion on the node, and the run's own output is quoted rather than
-      summarised.
-- [ ] Roles in `ago_chat` carrying a calendar permission and rows in `role_assignment_projections` are
-      counted on the same day and the two numbers are stated together.
-- [ ] Both numbers, and the date, are written where somebody looking at `22-16` will find them.
+- [x] The backfill has run to completion on the node, and the run's own output is quoted rather than
+      summarised. — see Outcome.
+- [x] Roles in `ago_chat` carrying a calendar permission and rows in `role_assignment_projections` are
+      counted on the same day and the two numbers are stated together. — see Outcome.
+- [x] Both numbers, and the date, are written where somebody looking at `22-16` will find them. — this
+      section.
+
+## Outcome
+
+Counted directly on the live node, 2026-09-14, by the managing session (`kubectl exec` into the
+`postgres` pod, real SQL, no code change — this item is a measurement, not a build).
+
+**The backfill had already run**, 5 days 20 hours before this count (`ago-chat-roleassignment-backfill`
+Job, `Completed`, 0 restarts). Its own quoted output:
+
+```
+Cannot load library libgssapi_krb5.so.2
+Error: libgssapi_krb5.so.2: cannot open shared object file: No such file or directory
+11 candidate operator(s) considered (currently active, external identity linked).
+11 RoleAssignmentsChanged event(s) staged to the outbox.
+  site 00000000-0000-0000-0000-000000000001: 3 operator(s) republished
+  site 00000000-0000-0000-0000-000000000008: 2 operator(s) republished
+  site 01a0437a-5f2e-7fab-936f-b70a95f681f9: 1 operator(s) republished
+  site 01a06262-d4f0-7fb6-94e0-9ff702db8a43: 1 operator(s) republished
+  site 01a07c5b-12ab-7ce3-9359-a263b27ee3cc: 1 operator(s) republished
+  site 01a07c71-dad7-7eed-80b7-9e91b8d6d38a: 1 operator(s) republished
+  site 01a07f9c-087b-7485-ba0e-91db99613d94: 1 operator(s) republished
+  site 01a08013-179e-7357-960e-8efdcb2ca9a6: 1 operator(s) republished
+Nothing here talks to the broker - Ago.Chat.Worker's own OutboxDispatcher publishes these on its next
+poll, exactly like every other publisher of this event.
+```
+
+The `libgssapi_krb5` lines are a non-fatal warning (an unused optional Kerberos library path Npgsql
+probes for) — the run itself completed and staged all 11 events; not investigated further here, out of
+this item's own scope.
+
+**The two counts, today**: `ago_chat` currently holds **7 operators total** (all active, all with a
+linked external identity, down from the 11 the backfill saw 5 days 20 hours ago — the population
+shrank via `DemoTenantExpiryJob`, not via any removal this item touched). Of those 7, **1** holds a role
+carrying `calendar:configure`, on 1 of `ago_chat`'s 4 currently-live sites. `role_assignment_projections`
+holds **77 rows** (60 carrying `calendar:configure`) for **74 distinct tenants**.
+
+**Do the two numbers agree?** For what is live right now: yes. The one real operator who currently holds
+`calendar:configure` has a projection row, and it is current (`updated_at` matches this backfill run,
+confirmed by cross-referencing `external_subject_id` and `tenant_id` — the projection's own
+`operator_id` is a value `ago_calendar` derives itself, not a copy of `ago_chat`'s internal operator row
+id, which cost one wrong join before this was found). No live tenant with a real calendar grant is
+missing its projection today.
+
+**A second, different finding, filed separately.** Of the 74 distinct tenants the projection table holds
+an opinion about, only 4 still exist in `ago_chat` — the other **70 (≈95%) are gone**, deleted by
+`DemoTenantExpiryJob`'s raw `DELETE FROM sites`, which `personal-data.md`'s own existing row already
+documents as never reaching the outbox. Nothing ever told `ago_calendar` those tenants were erased, so
+their role-assignment rows simply stay. This is not what `22-16`/`22-28` were counting — filed as its own
+item, `25-82`, per CLAUDE.md rule 14.
