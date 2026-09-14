@@ -272,6 +272,11 @@ compares against.
    permission check is the entire defence**, which is why
    `CrossTenantRouteIsolationTests` exercises them over real HTTP with a real Keycloak token and the
    real `PermissionChecker`, rather than at the handler level with a fake.
+   **`23-80`/`23-82` add a twentieth**: `SiteAttachmentStorageEndpoints`'s own five routes
+   (`GET .../attachments`, `.../attachments/largest-conversations`, `.../attachments/storage-summary`,
+   `.../attachments/egress`, `POST .../attachments/bulk-delete`) - the tenant's own storage screen,
+   the widest single read of attachment metadata this product has, gated identically to the group
+   above it and exercised by the same test class (`SiteAttachmentStorageRoutes_RefuseAnotherTenantsSite_AndDeleteNothing`).
 4. **Nowhere, or from a route the caller chose — the platform owner's five.**
    `GET /api/v1/owner/sites` (`12-02`) has no `site_id` at all; since `23-14`,
    `GET /api/v1/owner/sites/{siteId}` (the per-tenant detail read) takes one the caller names, gated
@@ -660,6 +665,11 @@ is exactly what makes it interesting. See *The guard* below.
 | `POST /api/v1/sites/{siteId}/consent-documents/{purpose}` | `RequireOperatorIdentity` | **client-supplied**; `24-05` — never added here at the time, found and added by `23-37` |
 | `GET /api/v1/sites/{siteId}/consent-documents` | `RequireOperatorIdentity` | **client-supplied**; `23-37` |
 | `GET /api/v1/sites/{siteId}/consent-documents/{purpose}/acceptances` | `RequireOperatorIdentity` | **client-supplied**; `23-37` |
+| `GET /api/v1/sites/{siteId}/attachments` | `RequireOperatorIdentity` | **client-supplied**; `23-80` |
+| `GET /api/v1/sites/{siteId}/attachments/largest-conversations` | `RequireOperatorIdentity` | **client-supplied**; `23-80` |
+| `GET /api/v1/sites/{siteId}/attachments/storage-summary` | `RequireOperatorIdentity` | **client-supplied**; `23-80` |
+| `GET /api/v1/sites/{siteId}/attachments/egress` | `RequireOperatorIdentity` | **client-supplied**; `23-82` |
+| `POST /api/v1/sites/{siteId}/attachments/bulk-delete` | `RequireOperatorIdentity` | **client-supplied**; `23-80` |
 | `POST`/`GET /api/v1/sites/{siteId}/webhooks` | `RequireOperatorIdentity` | **client-supplied** |
 | `DELETE /api/v1/sites/{siteId}/webhooks/{id}` | `RequireOperatorIdentity` | **client-supplied** |
 | `GET /api/v1/sites/{siteId}/webhooks/{id}/deliveries` | `RequireOperatorIdentity` | **client-supplied** |

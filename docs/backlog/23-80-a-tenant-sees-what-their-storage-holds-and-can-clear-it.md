@@ -1,7 +1,12 @@
 # a tenant sees what their storage holds and can clear it
 
 - **Stage**: 23
-- **Status**: ready
+- **Status**: done — `ago-chat#288`, `ago-console#225`. Independently re-verified by the managing
+  session before merging (its own `dotnet build`/`test` and `npm` runs against the worker's own
+  worktrees — 3303/3303 and 1380/1380, both matching the worker's reported counts exactly). Two real
+  gaps found during that review, neither fixed here since both are out of this item's own scope: a
+  pre-existing defect in `5-08`'s own delete path (`25-79`), and a named, non-regressing residual in
+  `ago-widget` (`25-80`).
 - **Depends on**: `23-76` enforces the quota. This is what a tenant does when it fills.
 - **Decision**: the author's, 2026-09-07 — quotas need a way to act on them, not only a number.
 
@@ -70,10 +75,49 @@ Three more worth having, and they are the ones that make the screen more than a 
 
 ## Done when
 
-- [ ] A tenant sees how much of their quota is used, and it agrees with what enforcement believes.
-- [ ] They see every attachment across every conversation, sortable by size, type, age, conversation and
-      sender.
-- [ ] They can select many and delete them, seeing the space to be freed before confirming.
-- [ ] A deleted attachment leaves a readable transcript rather than a hole.
-- [ ] Never-downloaded and duplicate views exist, because they are the two that carry judgement.
-- [ ] The read is tenant-scoped, proven by fault injection rather than by inspection.
+- [x] A tenant sees how much of their quota is used, and it agrees with what enforcement believes.
+      `/account/storage`'s own quota bar reads `GetSiteAttachmentStorageSummaryHandler`, which reads
+      `sites.attachment_bytes_reserved` - the exact column `23-76`'s own `ISiteAttachmentStorageBudget`
+      already maintains, through a new bare-read port rather than a second computation. Proven against
+      real Postgres: `StorageSummary_UsedBytes_AgreesWithTheBudgetEnforcementFigure`
+      (`ago-chat/tests/Ago.Chat.Integration.Tests/SiteAttachmentStorageHandlersTests.cs`).
+- [x] They see every attachment across every conversation, sortable by size, type, age, conversation and
+      sender. All five sort orders and both judgement filters are real, keyset-paginated queries against
+      real Postgres. **One honest gap**: there is no "name" column - `Attachment` (`ago-chat`) has never
+      captured an uploaded file's original filename (`personal-data.md`'s own existing line: "Attachments
+      never carry the visitor's filename"), and adding one would be a wire-shape change reaching the
+      widget's own upload call, out of this change's repository scope (`ago-chat`/`ago-console` only).
+      Content type stands in for it on the screen, named as a substitution rather than hidden.
+- [x] They can select many and delete them, seeing the space to be freed before confirming. The
+      dialog states the selected count and total bytes before the destructive action, sourced from the
+      already-fetched rows client-side (no extra round trip). **Not built**: the "obvious undo window"
+      the item's own "Where this is likely to go wrong" section names as worth more than anywhere else on
+      the console - the delete is immediate and permanent, same as `5-08`'s own single-attachment delete
+      already was. Flagged, not silently dropped.
+- [x] A deleted attachment leaves a readable transcript rather than a hole. The message row itself is
+      never touched by a delete (`Attachment.MarkDeleted` never rewrites `Message.AttachmentId`) - proven
+      by sending a real message through the real pipeline, bulk-deleting its attachment, and reading the
+      row back (`BulkDelete_LeavesTheMessagesAttachmentReferenceIntact_AndDownloadNowAnswersRemoved`).
+      Resolving that reference now answers a new, distinct, permanent `Attachment.Removed` code rather
+      than the pre-existing `Attachment.NotReady` (which also covers a merely-still-uploading attachment -
+      a different, retryable case that must not read the same way). Reaches all the way to both consoles'
+      own UI: `ago-console`'s `ConversationPage` renders the identical "Attachment deleted" marker for a
+      removal it did not itself perform (another operator, or a tenant's own bulk-delete) as it already
+      did for its own local delete action - proven by
+      `ConversationPage.test.tsx`'s two new cases, with a fails-before run confirming the mutation is
+      caught (see the session's own report). `ago-widget` was not touched - out of this change's
+      repository scope; the visitor-facing widget still needs the identical fix, named here as a
+      residual, not assumed done by association.
+- [x] Never-downloaded and duplicate views exist, because they are the two that carry judgement. Both
+      are real `WHERE` predicates against real Postgres, the duplicates one reusing `23-76`'s own
+      `ix_attachments_site_content_hash` partial index via a per-row `EXISTS` rather than a whole-table
+      window function (`SiteAttachmentListReadStore`'s own remarks on the cost tradeoff). Proven:
+      `ListSiteAttachments_NeverDownloadedFilter_...`/`ListSiteAttachments_DuplicatesFilter_...`.
+- [x] The read is tenant-scoped, proven by fault injection rather than by inspection. All five routes
+      (`GET .../attachments`, `.../largest-conversations`, `.../storage-summary`, `.../egress`,
+      `POST .../bulk-delete`) proven over real HTTP with a real Keycloak token and a real, privileged
+      caller naming another tenant's `siteId` - `SiteAttachmentStorageRoutes_RefuseAnotherTenantsSite_AndDeleteNothing`
+      in `CrossTenantRouteIsolationTests`, the same class and shape `tenant-isolation.md` already
+      documents as this codebase's standard for exactly this claim, extended rather than duplicated. A
+      fails-before run (the permission check disabled) confirmed the test actually catches the
+      regression before this change restored it.
