@@ -1,7 +1,11 @@
 # 25-93 · ADR-0169 has an index row and no actual file
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: the ADR's own
+  specific claims (pricing figures, port/error-code names) cross-checked against the real source
+  (`23-82`'s own backlog file, real merged code); the `queue-audit.sh` extension independently
+  re-run (removed a real ADR file, confirmed the check catches it, restored byte-identical, re-ran
+  clean) rather than trusting the worker's own report alone.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, refreshing the root `README.md`'s own "Decisions" table (a request to make
   the repository presentable as a portfolio reference) — linking to `docs/adr/0169-*.md` 404'd.
@@ -42,9 +46,15 @@ included) hits a 404.
 
 ## Done when
 
-- [ ] `docs/adr/0169-*.md` exists, and reads as a real ADR (Context/Decision/Consequences/Alternatives,
-      per `adr-writer`'s own template), not a copy-paste of the index row's own prose.
-- [ ] `tools/queue-audit.sh` fails loudly on an index row with no backing file, proven by a
+- [x] `docs/adr/0169-*.md` exists, and reads as a real ADR (Context/Decision/Consequences/Alternatives,
+      per `adr-writer`'s own template), not a copy-paste of the index row's own prose. Written from
+      `23-82`'s/`23-80`'s own backlog reasoning, cross-checked against the real merged code (the three
+      port names, `Attachment.Removed`/410, `ix_attachments_site_content_hash`) — not invented.
+- [x] `tools/queue-audit.sh` fails loudly on an index row with no backing file, proven by a
       fails-before: temporarily remove one ADR file with a real row and show the script now catches it,
-      then restore it.
-- [ ] The root `README.md`'s link to `0169` (or whichever ADR the Decisions table cites) resolves.
+      then restore it. Excludes the three intentionally-vacant `n/a`-status numbers (`0052`, `0062`,
+      `0126`) by design, not by accident.
+- [x] The root `README.md`'s link to `0169` (or whichever ADR the Decisions table cites) resolves.
+      The root README's own Decisions table never cited `0169` at all (it cites `0170`/`0171`) — this
+      box was vacuously satisfied, not broken to begin with. A scan for other index rows with no
+      backing file found none beyond the three intentional `n/a` placeholders.
