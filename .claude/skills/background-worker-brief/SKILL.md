@@ -220,6 +220,44 @@ before concluding, and if a child is genuinely running, let it finish: telling t
 over is what creates the collision. Send the parent an instruction for what to do *when the child
 returns* instead.
 
+## 0.9. Check on a running worker every 15 minutes — a dead one gives no notification at all
+
+**Decided by the author, 2026-09-14**, after `25-83`'s own worker died silently roughly 3.5 hours
+before anyone noticed — no crash message, no completion notification, nothing. The worktrees sat
+with their last real file edit timestamped 11:31 while the managing session went on to other work,
+and the gap was only found because the author asked "what's going on with 25-83, check the files —
+how long since anything changed?"
+
+**A completion notification is not a heartbeat.** It fires when a worker finishes or is stopped by
+someone; it does not fire on a schedule, and a worker that is simply gone — killed by the harness,
+crashed, whatever the cause — produces exactly the same silence as one that is still working
+normally on a long step (a slow build, a long test run, a large investigation). Nothing distinguishes
+"still going" from "dead" except actually looking.
+
+**So look, every 15 minutes, while a worker is running:**
+
+1. Check whether its worktree files have changed in the last 15 minutes — `find <worktree>/src
+   <worktree>/tests -type f -newer <some-15-minutes-old-reference>`, or simply compare `stat`
+   timestamps against now. Build-artifact churn (`bin/`/`obj/`) counts as activity; it means a build
+   or test run is genuinely in flight.
+2. If nothing has changed, that alone is not proof of death — a long verification step can run
+   quiet for a while. Give it one more 15-minute window before concluding anything.
+3. If a **second** 15-minute window also shows no file activity, check directly rather than keep
+   waiting: `SendMessage` to the worker's own `agentId` with a plain status question. A genuinely
+   live worker answers or its next tool round picks the message up; a dead one refuses immediately —
+   `"Agent ... was stopped ... and won't be resumed"` — which is the actual, unambiguous proof
+   `25-83`'s own case turned out to give the moment anyone asked, after 3.5 hours of nobody asking.
+4. **Once confirmed dead, reopen on the same worktrees — do not discard them and do not create
+   new ones.** A dead worker's own uncommitted work is not devalued by its process having ended;
+   `25-83`'s own case had a fully working `dotnet build`/`npm run typecheck`, real migrations, real
+   endpoints, and 17 passing tests already sitting there. Brief the replacement explicitly as a
+   finish-the-work task against the existing directories (name them), not a from-scratch build —
+   see `land-a-slice`'s own "verify independently" habit applied one level earlier: read what exists
+   before assuming it needs redoing.
+
+This is the managing session's own ongoing practice while a worker runs, not a line to paste into
+the brief itself — the worker being checked on has no way to check on itself.
+
 ## 1. Standing rules — put every one of these in every brief
 
 These do not vary by item. Restating them from memory is how they drift; copy them.
