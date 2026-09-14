@@ -2,8 +2,9 @@
 
 - **Stage**: 23
 - **Status**: ready — **the three open questions answered by the author, 2026-09-09, recorded below**.
-  Implementation drafted in a worker session, not yet reviewed, merged, or run for real — see the note
-  above Done-when.
+  Code independently reviewed, verified and merged — `ago-chat#284`, `ago-console#223`. Four of six
+  Done-when boxes are genuinely closed; the item stays `ready`, not `done`, because the disconnect
+  walkthrough is the author's own to run against real accounts — see the note above Done-when.
 - **Depends on**: `adr/0151` is the decision. `23-86` is what makes payment grant one.
 - **Found**: 2026-09-07, checked in code after the author settled the rule.
 
@@ -64,12 +65,11 @@ now and then.
   working channel is worse than the hole it closes — see the disconnect-and-clean-up answer above, and
   the author's own requested walkthrough before it runs for real.
 
-## Implementation note, worker session, 2026-09-14
+## Implementation note, worker session, 2026-09-14, independently verified and merged the same night
 
-Built and locally verified (full command sets green in `ago-chat` and `ago-console`; not yet run
-against `ago-business` or `ago-console` production code — that repo needed no code change, see below)
-in a background-worker session, not yet reviewed or merged. Left deliberately **not done** — not
-checked below — pending the author's own review and, for the last box, the author's own walkthrough.
+Built in a background-worker session, then independently re-verified by the managing session (its own
+`dotnet build`/`test` and `npm` runs, not just the worker's own claim) and merged: `ago-chat#284`
+(3280/3280 tests), `ago-console#223` (1370/1370 tests).
 
 - The permission-then-entitlement check landed in `RegisterChannelCredentialHandler`,
   `RevokeChannelCredentialHandler` and `GetChannelCredentialStatusHandler` (`ago-chat`,
@@ -97,12 +97,28 @@ checked below — pending the author's own review and, for the last box, the aut
 
 ## Done when
 
-- [ ] Connecting a channel without an entitlement is refused, in the handler, proven by fault injection.
-- [ ] The refusal says what is missing rather than only that it is forbidden.
-- [ ] A tenant with an entitlement can still supply and rotate their own token.
-- [ ] The entitlement is per channel kind, not class-wide, per the author's decision above.
+- [x] Connecting a channel without an entitlement is refused, in the handler, proven by fault injection.
+      — `RegisterChannelCredentialHandler`/`RevokeChannelCredentialHandler`; the check was temporarily
+      neutralized, the new refusal tests shown red, then restored and shown green (`ago-chat#284`).
+- [x] The refusal says what is missing rather than only that it is forbidden. — `ChannelEntitlement.Refusal`
+      names the channel kind: "this account has no channel entitlement for {kind} channels."
+- [x] A tenant with an entitlement can still supply and rotate their own token. — the existing
+      success-path tests (e.g. `HandleAsync_WhenPermitted_RegistersAnActiveCredential`) exercise the
+      entitled path and pass; the entitlement check adds a gate, not a new obstacle for a paying tenant.
+- [x] The entitlement is per channel kind, not class-wide, per the author's decision above. —
+      `ChannelEntitlementOptionKeys.For(ChannelKind)`, one `BillingOptionKey` per kind, a `switch` that
+      fails to compile on an unhandled new kind rather than deriving a plausible-looking key silently.
 - [ ] Accounts already connected without an entitlement are disconnected and their channel credentials
       cleaned up, reconnectable once entitled — and the author has walked through this flow end to end
-      before it runs against real accounts.
-- [ ] `23-36`'s live status read stops for a lapsed entitlement, and the free tier's own description in
-      `ago-business` is updated to say so in the same change.
+      before it runs against real accounts. **The tool exists** (owner-only, two-step: list, then
+      disconnect the exact reviewed ids — `GET`/`POST /api/v1/owner/channel-entitlements/...`) and is
+      fully tested against fakes, but nothing has run it against real accounts, and nothing may until the
+      author does so personally, per this item's own explicit requirement above.
+- [x] `23-36`'s live status read stops for a lapsed entitlement, and the free tier's own description in
+      `ago-business` is updated to say so in the same change. — `GetChannelCredentialStatusHandler`
+      gated the same way; `ago-business`'s `docs/decisions/0012-*.md` section 7 already stated this
+      consequence in the author's own words from 2026-09-09, verified against what was actually built.
+
+**One box left open on purpose.** The item is not `done` until the author has run the disconnect
+walkthrough — this is not a formality: it is the specific safeguard the author asked for, and closing
+the item without it would be the exact "switch on silently" outcome that safeguard exists to prevent.
