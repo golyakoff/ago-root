@@ -1,7 +1,8 @@
 # 25-102 · `SchemaVersionGuardTests` asserts an exact poll count under a tight, real-time clock
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `dotnet
+  format`/`build` clean, full `ago-chat` suite re-run at 3491/3491.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, `25-101`'s own full-suite verification run — the worker's own full
   `Ago.Chat.Integration.Tests` run failed once, on a test `25-101`'s own diff never touches. Confirmed
@@ -54,9 +55,21 @@ each one's own fix actually covers.
 
 ## Done when
 
-- [ ] `WhenTheSchemaCatchesUpWhileWaiting_ItProceeds` no longer requires zero scheduling jitter to pass
-      - proven by demonstrating the original assertion shape fails under artificial delay (or citing
-        the real failure this item was found from, `25-101`'s own worker report, as the fails-before
-        evidence) and the fixed assertion passes under the same artificial delay.
-- [ ] The other two tests in the same file are checked for the identical fragility, and the item's own
-      closing states plainly whether either needed the same fix.
+- [x] `WhenTheSchemaCatchesUpWhileWaiting_ItProceeds` no longer requires zero scheduling jitter to
+      pass. **Chosen fix: widen the timeout margin, not loosen the assertion** — a new
+      `PatientlyWaiting` options constant (30s `WaitTimeout`, same 20ms `PollInterval`), used only by
+      this one test. `Assert.Equal(3, looks)` stays exact, because the fake delegate's own call count
+      (not wall-clock time) decides when it reports current — the timeout only had to stop being the
+      thing racing against real scheduling delay. Proven with a real, temporary 150ms delay injected
+      into the fake delegate (reverted before committing): failed against the old `Impatient` config
+      exactly the way `25-101`'s own log showed (`SchemaOutOfDateException` after 0.3s), passed
+      against the fixed `PatientlyWaiting` config with the identical delayed delegate (554ms).
+- [x] The other two tests in the same file are checked for the identical fragility — **and a third,
+      not named in this item's own Scope, was checked too** (`WithAZeroWaitTimeout_ItStillInspectsOnce`).
+      **Neither needed a fix.** Confirmed by reading `SchemaVersionGuard.EnsureCurrentAsync` directly
+      rather than assumed: the first inspect happens once, unconditionally, before the wait loop's own
+      condition is ever evaluated. `WhenTheSchemaIsAlreadyCurrent_ItReturnsWithoutWaiting`'s delegate
+      always reports current on that first call, so the loop is never entered at all.
+      `WithAZeroWaitTimeout_ItStillInspectsOnce`'s zero `WaitTimeout` makes the loop's own
+      `started.Elapsed < options.WaitTimeout` false on its first evaluation regardless of how much real
+      time the first inspect itself took. Neither count can be perturbed by scheduling delay.
