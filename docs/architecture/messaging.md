@@ -304,8 +304,20 @@ an event through this outbox and inherits at-least-once delivery with it.
   renewed at 2.5 - was proven by genuinely stopping the broker mid-lease (`TenantSuspensionBrokerStoppedTests`):
   a claim still refuses for the remainder of an already-established lease with the broker down, and is
   no longer refused once that lease fully lapses with nothing left to renew it.
+- **A demo tenant's erasure crosses too, deliberately not narrowed to the one row that measured it.**
+  `Ago.Chat.Worker.DemoTenantExpiryJob` hard-deletes a demo tenant's site with no other cross-product
+  signal (`personal-data.md`'s own `DemoTenantExpiryJob` row already named `outbox` on its own "does
+  not reach" list) - so nothing ever told the calendar the tenant was gone, and its own
+  `role_assignment_projections` (`22-16`) accumulated rows for tenants `ago_chat.sites` had already
+  forgotten: 70 of 74 distinct `tenant_id`s measured live, 2026-09-14
+  ([`adr/XXXX`](../adr/XXXX-a-demo-tenants-erasure-reaches-calendar-through-the-outbox-not-a-sweep.md)).
+  Chat now publishes `SiteErased` (`site_id`, `occurred_at`, `correlation_id`) in the same transaction
+  as the site `DELETE` (rule 4), only when a row was actually removed. The calendar's
+  `SiteErasedConsumer` reuses `22-30`'s own `EraseTenantDataHandler` wholesale - the identical
+  whole-tenant erasure the module-registration endpoint already performs, reached here by a fact
+  rather than a synchronous call, and idempotent for the identical reason that port already is.
 
-All four are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same
+All five are the ordinary cost of two schemas stated plainly: correct on chat's side is not the same
 as usable on the calendar's, and only the consumer's own copy decides what a tenant can do.
 
 ## Outbox dispatcher
