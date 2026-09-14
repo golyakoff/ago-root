@@ -139,6 +139,32 @@ that gap and each of its checks names the incident it came from.
   parallelism; revisit (a small bounded concurrency count instead of strict 1) if that assumption
   stops holding.
 
+### A Minimal API host's own DI-registration completeness
+
+`25-06`/`25-07`/`adr/0170`: a route mapped with a handler-shaped parameter Minimal API cannot classify
+crashes the whole host the first time anything forces its endpoint metadata to build (`AuthorizationPolicyCache`'s
+own constructor does this, once, at host start - not lazily per request). A test that hand-rebuilds a
+subset of a host's own registrations, the way most files in this suite compose their `TestHost`, cannot
+catch this: an omission in the real composition and an omission in the test's own hand-built one look
+identical from inside the test.
+
+The pattern that does catch it, one file per host (`Ago.Chat.Api/RouteHandlerDiRegistrationTests`,
+`Ago.Calendar.Integration.Tests/RouteHandlerDiRegistrationTests`):
+
+- Compose the *real* registration/route-mapping code, never a second hand-written list. A host whose
+  `Program.cs` is top-level statements needs an extract-method seam for this (`CompositionRoot.cs`,
+  `ago-chat`'s own shape); a host that already exposes `public partial class Program;` for
+  `WebApplicationFactory<Program>` (`ago-calendar`'s own shape) needs nothing extra.
+- Assert the DI graph is structurally satisfiable with `services.BuildServiceProvider(new ServiceProviderOptions
+  { ValidateOnBuild = true, ValidateScopes = true })` - verified experimentally to invoke no factory
+  delegate or constructor, so this never opens a live Postgres/Redis/RabbitMQ connection regardless of
+  how those are registered elsewhere in the graph.
+- Separately, build the real host and call `app.StartAsync()` with no `IHostedService` registered (strip
+  them first if the composition registers any) - the actual trigger a route's own unregistered parameter
+  needs to surface, reproduced with no HTTP request ever sent.
+- Assert the mapped-route count stays above an observed floor, so a route group that silently stops
+  being mapped fails the test loudly rather than passing with quietly-reduced coverage.
+
 ## Concurrency tests
 
 These are the project's headline claims, so they are explicit:
