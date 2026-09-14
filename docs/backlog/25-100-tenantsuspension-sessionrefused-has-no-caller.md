@@ -1,7 +1,9 @@
 # 25-100 · `TenantSuspension.SessionRefused` has no caller anywhere
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `dotnet
+  format`/`build` clean, full `ago-chat` suite re-run at 3488/3488, `Ago.Chat.Architecture.Tests`
+  specifically at 49/49 (confirms the code catalog and exemption list stay in sync after deletion).
 - **Depends on**: nothing
 - **Found**: 2026-09-14, `25-98`'s own reflection-based audit of every `*Errors`-shaped factory
   method — the one code, of 165, with no caller at all, not even a test.
@@ -39,5 +41,11 @@ nothing calls.
 
 ## Done when
 
-- [ ] `TenantSuspension.SessionRefused` either has a real caller going through `ToProblem` with a
-      recorded, deliberate status, or no longer exists in the codebase.
+- [x] `TenantSuspension.SessionRefused` either has a real caller going through `ToProblem` with a
+      recorded, deliberate status, or no longer exists in the codebase. **Deleted**, not wired in —
+      `AuthEndpoints` never went through `Result<T>`/`Error` at all (`3-05`), so wiring this one
+      refusal onto `ToProblem` would have made it the sole inconsistent line in a file that
+      deliberately hand-builds every one of its own `Results.Problem` calls. The one real fact the
+      deleted doc comment carried (why the refusal message is deliberately generic, not
+      distinguishing) moved onto the actual live code path in `AuthEndpoints.cs` rather than being
+      lost.
