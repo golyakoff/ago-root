@@ -1,7 +1,9 @@
 # 25-104 · The console cannot set — or preserve — the attachment-upload default
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — independently re-verified by the managing session before merging: `npm run
+  typecheck`/`lint` clean, full console suite re-run at 1459/1459, exact match to the worker's own
+  claim.
 - **Depends on**: nothing
 - **Found**: 2026-09-15, the author testing attachments live: "не вижу в консоли разрешения слать
   файлы" (no setting in the console to permit sending files).
@@ -56,9 +58,13 @@ its own at all.
 
 ## Done when
 
-- [ ] A tenant, through whichever permission already gates `WidgetConfigPage.tsx` (check
-      `site:configure` against that page's own guard rather than assuming), can turn the site-level
-      attachment default on and off from the console, and the console shows the real current value,
-      not an assumed one.
-- [ ] Saving any other widget setting from the console no longer resets this flag — proven by a test
-      that sets it on, saves an unrelated field, and asserts it is still on afterward.
+- [x] A tenant, through whichever permission already gates `WidgetConfigPage.tsx`, can turn the
+      site-level attachment default on and off from the console — a new "Attachments" panel, kept
+      separate from the page's other four panels since it answers its own distinct question
+      (`25-24`'s own precedent for what earns a panel of its own). The console reads the real current
+      value from `GET`, never an assumed one.
+- [x] Saving any other widget setting from the console no longer resets this flag. The field was
+      given the identical four-part lifecycle (state, load-from-GET, include-in-PUT, resync-from-PUT)
+      every other boolean on this form already has — proven by a test that sets it on, saves through
+      an unrelated field, and asserts it is still on afterward; fails-before confirmed by reverting
+      the PUT-body inclusion and watching that exact test fail.
