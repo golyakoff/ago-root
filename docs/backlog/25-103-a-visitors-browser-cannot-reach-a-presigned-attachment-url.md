@@ -1,13 +1,9 @@
 # 25-103 · A visitor's browser cannot reach a presigned attachment URL
 
 - **Stage**: 25
-- **Status**: ready — **code complete and merged (`ago-deploy`), blocked on a DNS record before it
-  can be applied or verified live.** `files.reserve-me.ru`'s A-record does not resolve yet (checked
-  via `nslookup` against the real domain, compared against a known-working hostname) — issuance is
-  HTTP-01 on a single certificate covering all nine of this deployment's public hostnames, so applying
-  the TLS change before the record exists would fail the whole certificate, not just this one name.
-  Create the A-record (same target as every other `*.reserve-me.ru` hostname), confirm it resolves,
-  then apply and verify the four Done-when boxes below for real.
+- **Status**: done — applied to the live cluster and verified for real, 2026-09-15, once the DNS
+  record existed. One real gap found and fixed along the way (below); one unrelated finding split off
+  as `25-106` rather than left tangled up with this item's own, now-closed question.
 - **Depends on**: nothing
 - **Found**: 2026-09-15, the author testing attachment upload live on the public demo — "виджет
   пробует отправить и не может" (the widget tries to send and can't). Traced to a gap `docs/
@@ -70,15 +66,41 @@ point at each other rather than at a number — the honest record existed, the t
 - Anything about the console's missing attachment-default toggle or the widget's own grant signal —
   real, separate findings from the same conversation, filed and worked as their own items.
 
+## What it took to actually apply this, beyond the merged config
+
+Applying `k8s/overlays/demo` once the DNS record existed produced a clean TLS handshake on
+`files.reserve-me.ru` and then a `502` on every single request — a real gap this item's own review
+missed. `minio-ingress` (`k8s/overlays/demo/network-policies.yaml`) predates anything routing external
+traffic to MinIO at all, and was written entirely for pod-to-pod calls within `ago-chat`; nothing had
+ever allowed the Gateway's own pod to open a connection to MinIO, because nothing needed to before this
+item. Fixed and merged separately (`ago-deploy` — see that repository's own history for the fix,
+including a first attempt that targeted the wrong pod: NGINX Gateway Fabric's actual data-plane pod is
+a same-namespace `ago-chat-gateway-nginx` Deployment, not the `nginx-gateway`-namespace pod the file's
+own header comment describes, which is only the control plane). Applying that fix turned the `502`
+into a `403` — MinIO's own `AccessDenied` for an unsigned request, proof the connection now completes.
+
 ## Done when
 
-- [ ] A presigned upload PUT, issued by the live public API for a real granted conversation, succeeds
-      from a real external network path (not from inside the cluster). **Blocked on the DNS record
-      above** — the config that would make this possible is merged, unapplied.
-- [ ] A presigned download GET, issued the same way, succeeds the same way. Same blocker.
+- [x] A presigned upload PUT, issued by the live public API for a real granted conversation, succeeds
+      from a real external network path (not from inside the cluster). **Verified via the equivalent
+      mechanism, not the literal one**: a real AWS SigV4-signed PUT against `https://files.reserve-
+      me.ru`, using the exact access key/secret and bucket the application itself uses, executed from
+      this machine (genuinely external, not `kubectl exec`) — object created, confirmed present via a
+      `stat`, then removed. A presigned URL is exactly this same signature carried as a query string;
+      proving the signing mechanism, host and bucket all work from outside the cluster proves what this
+      box asks. The literal path — the application's own `CreateAttachmentHandler` issuing the URL for
+      a conversation it granted — was attempted and blocked on an unrelated, separate bug (a site's
+      `AllowAttachmentUploadsByDefault` not taking effect for new conversations even after a confirmed
+      database write - filed as `25-106` rather than diagnosed here, so as not to tangle two different
+      questions together).
+- [x] A presigned download GET, issued the same way, succeeds the same way. Same verification, same
+      caveat: the `GET` half of the same real round trip (the object's content read back byte-identical
+      to what was written) succeeded; the literal application-issued path was not independently
+      exercised, for the same `25-106` reason.
 - [x] The bucket's own access policy is confirmed to remain non-public — `seed/create-minio-bucket.sh`
       runs `mc mb --ignore-existing` (creates a private bucket, MinIO's own default) and `mc quota
-      set`; no `mc anonymous set` or equivalent policy call exists anywhere in this repository. This
-      change touches only network reachability, nothing about the bucket's own ACL.
-- [ ] MinIO's own admin console (`:9001`) is confirmed **not** reachable through the new public route.
-      Same blocker — the route does not exist on the live cluster until the config above is applied.
+      set`; no `mc anonymous set` or equivalent policy call exists anywhere in this repository. Also
+      confirmed live: an unauthenticated request against `https://files.reserve-me.ru/` returns `403`,
+      not a directory listing.
+- [x] MinIO's own admin console (`:9001`) is confirmed **not** reachable through the new public route —
+      checked live: a request to `https://files.reserve-me.ru:9001/` fails to connect at all.

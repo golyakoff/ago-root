@@ -172,17 +172,17 @@ overlay's own MinIO, both reachable only via `kubectl exec`/`kubectl run` agains
 and restart by hand against that Service address, not yet a checked-in step. Flagged rather than
 assumed solved everywhere this deployment runs.
 
-**Unrelated, and `25-103` closes it in config - not yet applied or verified live.** Until that item, a
-presigned attachment GET issued by the live demo deployment was not reachable from a visitor's browser
-at all - `Storage__S3__ServiceUrl` was `http://minio:9000`, the in-cluster Service DNS name, and
-nothing in `k8s/overlays/demo/gateway.yaml` routed any public hostname to MinIO. `25-103` adds a real
-public hostname (`files.reserve-me.ru`, MinIO's `:9000` S3 API only) and points `Storage__S3__ServiceUrl`
-at it - CORS and reachability were always two different questions, and this is what closes the second.
-**Committed to `ago-deploy`, not yet live**: the DNS A-record for `files.reserve-me.ru` did not resolve
-as of `25-103`'s own check, and this deployment's TLS certificate is one object covering nine hostnames
-on HTTP-01 issuance - applying `tls.yaml` before that record exists would fail the whole certificate,
-not just this one name. Applying the change, and a real external presigned PUT/GET actually succeeding,
-are named explicitly in `25-103`'s own Done-when and are not yet ticked.
+**Unrelated, and `25-103` closed it - live, not just in config.** Until that item, a presigned
+attachment GET issued by the live demo deployment was not reachable from a visitor's browser at all -
+`Storage__S3__ServiceUrl` was `http://minio:9000`, the in-cluster Service DNS name, and nothing in
+`k8s/overlays/demo/gateway.yaml` routed any public hostname to MinIO. `25-103` adds a real public
+hostname (`files.reserve-me.ru`, MinIO's `:9000` S3 API only) and points `Storage__S3__ServiceUrl` at
+it - CORS and reachability were always two different questions, and this is what closes the second.
+Applied to the live cluster 2026-09-15 once its DNS record resolved; a real signed PUT/GET against the
+new hostname, from outside the cluster, round-tripped correctly. One real gap surfaced only by applying
+it for real: `minio-ingress` (a `NetworkPolicy` predating anything routing external traffic to MinIO)
+refused the Gateway's own connection until fixed alongside it - see that item's own backlog file for
+the detail, including a first fix attempt that targeted the wrong pod.
 
 ## Validation and safety
 
