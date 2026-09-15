@@ -172,16 +172,17 @@ overlay's own MinIO, both reachable only via `kubectl exec`/`kubectl run` agains
 and restart by hand against that Service address, not yet a checked-in step. Flagged rather than
 assumed solved everywhere this deployment runs.
 
-**Unrelated, and still genuinely open**: even with CORS now correctly scoped, a presigned attachment
-GET issued by the live demo deployment is not reachable from a visitor's browser at all yet -
-`Storage__S3__ServiceUrl` is `http://minio:9000`, the in-cluster Service DNS name
-(`k8s/base/api.yaml`, `k8s/base/worker.yaml`), and nothing in `k8s/overlays/demo/gateway.yaml` routes
-any public hostname to MinIO. This is the same gap this document already names further down ("nothing
-in `ago-deploy` currently routes a public hostname to MinIO at all") - CORS and reachability are two
-different questions, and closing the first does not touch the second. A visitor's `fetch()` against a
-presigned URL on the real deployment fails today on DNS resolution before CORS is ever evaluated, and
-degrades exactly as gracefully (silently) as the CORS gap did - worth knowing before assuming `23-62`
-now works end to end on the public demo just because this note is closed.
+**Unrelated, and `25-103` closes it in config - not yet applied or verified live.** Until that item, a
+presigned attachment GET issued by the live demo deployment was not reachable from a visitor's browser
+at all - `Storage__S3__ServiceUrl` was `http://minio:9000`, the in-cluster Service DNS name, and
+nothing in `k8s/overlays/demo/gateway.yaml` routed any public hostname to MinIO. `25-103` adds a real
+public hostname (`files.reserve-me.ru`, MinIO's `:9000` S3 API only) and points `Storage__S3__ServiceUrl`
+at it - CORS and reachability were always two different questions, and this is what closes the second.
+**Committed to `ago-deploy`, not yet live**: the DNS A-record for `files.reserve-me.ru` did not resolve
+as of `25-103`'s own check, and this deployment's TLS certificate is one object covering nine hostnames
+on HTTP-01 issuance - applying `tls.yaml` before that record exists would fail the whole certificate,
+not just this one name. Applying the change, and a real external presigned PUT/GET actually succeeding,
+are named explicitly in `25-103`'s own Done-when and are not yet ticked.
 
 ## Validation and safety
 
@@ -199,15 +200,22 @@ now works end to end on the public demo just because this note is closed.
   visitor is refused before the upload starts rather than after a progress bar has run — a courtesy
   check only, per the embeddable-widget skill's Uploads section; the two layers below are what
   actually enforce it.
-  **The gateway's own body-size ceiling does not contradict this.** `ago-deploy`'s
-  `ago-chat-gateway-body-size` `ClientSettingsPolicy` caps requests to `ago-chat-gateway` at `1m` —
-  smaller than 5 MiB, and it would make the widget's own check unreachable if attachment bytes ever
-  crossed it. They do not: per `adr/0008`, an attachment PUT goes browser → object storage directly
-  on a presigned URL, never through this gateway at all, so the two ceilings answer different
-  questions (a JSON request body; a file) and were never in tension. Unrelated, and not this item's
-  to fix: nothing in `ago-deploy` currently routes a public hostname to MinIO at all, so no presigned
-  upload URL is reachable from outside the cluster on this deployment today — a pre-existing gap, not
-  new here (see "Still open" below).
+  **`25-103` made the gateway's own body-size ceiling actually matter here, and raised it.** Until
+  that item, `ago-deploy`'s `ago-chat-gateway-body-size` `ClientSettingsPolicy` capped requests to
+  `ago-chat-gateway` at `1m` — smaller than 5 MiB — on the strength of "an attachment PUT goes
+  browser → object storage directly on a presigned URL, never through this gateway at all"
+  (`adr/0008`). **That premise is what `25-103` breaks on purpose**: its new `https-files` listener
+  puts MinIO's S3 API behind this same `ago-chat-gateway` object, so a presigned attachment PUT now
+  does cross this Gateway and this cap. The fix was not to leave the two ceilings "never in tension"
+  as a stale claim — it was to raise the cap: `k8s/overlays/demo/gateway.yaml`'s own
+  `ClientSettingsPolicy` now sets `maxSize: "10m"`, double `AttachmentOptions.MaxSizeBytes` (5 MiB,
+  `23-81`), chosen as simple, defensible headroom over the real application ceiling rather than a
+  value trimmed tight to today's number. SigV4 signs the exact declared `Content-Length` into a
+  presigned PUT, so nothing legitimate ever actually sends more than 5 MiB through this path
+  regardless of what the edge allows — the two ceilings now share one edge and answer the same
+  question at two different layers (application intent; edge backstop) instead of two unrelated ones.
+  Every *other* body this Gateway accepts (a message, a visitor-session request, a presign request)
+  is still small, so the raised cap does not weaken their own protection.
   **A ceiling on what is accepted is never retroactive.** Nothing in this item's own change path
   touches `attachments.size_bytes` or an existing row's `state` - lowering `MaxSizeBytes` changes what
   a *new* `CreateAttachmentHandler` call accepts, and nothing else; an attachment already `ready`

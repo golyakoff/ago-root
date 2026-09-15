@@ -1,7 +1,13 @@
 # 25-103 · A visitor's browser cannot reach a presigned attachment URL
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — **code complete and merged (`ago-deploy`), blocked on a DNS record before it
+  can be applied or verified live.** `files.reserve-me.ru`'s A-record does not resolve yet (checked
+  via `nslookup` against the real domain, compared against a known-working hostname) — issuance is
+  HTTP-01 on a single certificate covering all nine of this deployment's public hostnames, so applying
+  the TLS change before the record exists would fail the whole certificate, not just this one name.
+  Create the A-record (same target as every other `*.reserve-me.ru` hostname), confirm it resolves,
+  then apply and verify the four Done-when boxes below for real.
 - **Depends on**: nothing
 - **Found**: 2026-09-15, the author testing attachment upload live on the public demo — "виджет
   пробует отправить и не может" (the widget tries to send and can't). Traced to a gap `docs/
@@ -67,8 +73,12 @@ point at each other rather than at a number — the honest record existed, the t
 ## Done when
 
 - [ ] A presigned upload PUT, issued by the live public API for a real granted conversation, succeeds
-      from a real external network path (not from inside the cluster).
-- [ ] A presigned download GET, issued the same way, succeeds the same way.
-- [ ] The bucket's own access policy is confirmed to remain non-public — stated with what was actually
-      checked.
+      from a real external network path (not from inside the cluster). **Blocked on the DNS record
+      above** — the config that would make this possible is merged, unapplied.
+- [ ] A presigned download GET, issued the same way, succeeds the same way. Same blocker.
+- [x] The bucket's own access policy is confirmed to remain non-public — `seed/create-minio-bucket.sh`
+      runs `mc mb --ignore-existing` (creates a private bucket, MinIO's own default) and `mc quota
+      set`; no `mc anonymous set` or equivalent policy call exists anywhere in this repository. This
+      change touches only network reachability, nothing about the bucket's own ACL.
 - [ ] MinIO's own admin console (`:9001`) is confirmed **not** reachable through the new public route.
+      Same blocker — the route does not exist on the live cluster until the config above is applied.
