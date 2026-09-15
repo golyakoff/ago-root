@@ -32,6 +32,35 @@ Every FK from `conversations` (`messages`, `module_tasks`, `attachments`, `conve
 not assumed) is `ON DELETE CASCADE`, so this one statement is enough; nothing else needs deleting by
 hand. Confirm with `select count(*) from conversations where site_id = '...'` - should read `0`.
 
+## An operator's own counters drift too - reset them, not just delete conversations
+
+`demo_site`'s seeded operator is left `Online` by default, and its `active_chats` counter only ever
+moves relative to whatever it already held - `capacity-ramp` never closes a conversation, so nothing
+ever decrements it back down. Found live: one seeded operator's `active_chats` read **11 041** against
+a `capacity` of **5**, purely from drift accumulated across the day's earlier runs, and Postgres's own
+`pg_stat_activity` showed a live lock convoy on `operators`/`conversation_assignments` -
+`ConversationAssignmentJob`'s own "overload pass" (assigns even past a site's real capacity once
+penalty seconds elapse) was actively churning the entire leftover `Waiting` pile against this one
+corrupted counter, at the exact moment a comparison run was trying to measure something else entirely.
+This is invisible from `demo_site`'s own conversation count or RabbitMQ's own queue depths - check it
+separately:
+
+```bash
+kubectl exec -n ago-chat deploy/postgres -- psql -U ago -d ago_chat \
+  -c "SELECT id, status, active_chats, capacity FROM operators WHERE site_id = '00000000-0000-0000-0000-000000000001';"
+```
+
+`capacity-ramp` is deliberately visitor-only and never assigns to an operator on purpose - so the
+clean reset is `Offline`, not merely a zeroed counter, which also stops `ConversationAssignmentJob`
+from having anything to claim during the run in the first place:
+
+```bash
+kubectl exec -n ago-chat deploy/postgres -- psql -U ago -d ago_chat \
+  -c "UPDATE operators SET status = 'Offline', active_chats = 0 WHERE site_id = '00000000-0000-0000-0000-000000000001';"
+```
+
+Do this immediately before every comparison run, alongside the two cleanups below.
+
 ## The broker accumulates too - purge it the same way, every time
 
 Postgres is not the only place a dirty run hides. RabbitMQ's own dead-letter queues and per-consumer
