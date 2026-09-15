@@ -32,6 +32,33 @@ Every FK from `conversations` (`messages`, `module_tasks`, `attachments`, `conve
 not assumed) is `ON DELETE CASCADE`, so this one statement is enough; nothing else needs deleting by
 hand. Confirm with `select count(*) from conversations where site_id = '...'` - should read `0`.
 
+## The broker accumulates too - purge it the same way, every time
+
+Postgres is not the only place a dirty run hides. RabbitMQ's own dead-letter queues and per-consumer
+queues (`unread-counter`, `module-task-routing`, `connection-fanout`, `link-identity-command`, and
+their own `.dlq`/`.retry` siblings) keep whatever a crashed or forcefully-torn-down earlier run never
+finished consuming - and unlike `demo_site`, nothing in this workflow ever drains them on its own.
+
+Found the same way `demo_site`'s own rule was: two runs against the *identical* config and topology
+landed at step 8 clean (4 000 connections) and step 2 with a 38.8% error rate at just 1 000 - not the
+topology, not noise. `rabbitmqctl list_queues name messages` showed **17 734 messages sitting in
+`unread-counter.dlq` alone** (plus similar counts in the other three `.dlq` queues), left over from the
+session's own earlier interrupted runs, with a live backlog of 300+ still-queued `MessageAccepted`
+messages competing with the fresh run's own traffic the moment it started.
+
+```bash
+kubectl exec -n ago-chat deploy/rabbitmq -- rabbitmqctl list_queues name messages
+# purge anything non-zero (skip the header rows and the "Timeout:" progress line):
+kubectl exec -n ago-chat deploy/rabbitmq -- rabbitmqctl list_queues name messages \
+  | awk 'NR>1 && $2>0 && $1!="Timeout:" {print $1}' \
+  | while read q; do kubectl exec -n ago-chat deploy/rabbitmq -- rabbitmqctl purge_queue "$q"; done
+```
+
+Run this immediately before every comparison run, in the same breath as the `demo_site` cleanup above -
+not just once at the start of a session. `OperatorPresenceLost.operator-disconnect-grace` may refuse to
+reach zero on its own (a delayed-message queue unrelated to the visitor-message path this scenario
+exercises) - that one is not a confound for `capacity-ramp` and is not worth chasing.
+
 ## Bring-up
 
 1. Normal `local-cluster` bring-up first (`kubectl apply -k k8s/overlays/local`), then layer
