@@ -15,6 +15,7 @@ and in `docs/`.
 | `testing-guide` | Deciding what level to test at, writing tests, or chasing a flaky one. |
 | `local-cluster` | Running the stack, changing manifests, or debugging why it will not come up. |
 | `load-test` | Before any performance claim; tuning batch sizes or worker counts; Stage 6. |
+| `capacity-ramp` | Finding AGO Chat's local concurrent-conversation ceiling on Docker Desktop, or comparing resource configurations against it — the hands-on playbook `load-test` doesn't carry: bring-up, the NodePort workaround, cleaning `demo_site` between runs. |
 | `adr-writer` | A decision was made between real alternatives, or a rule was deliberately bent. |
 | `embeddable-widget` | Any change to the script that runs on third-party sites. |
 | `finish-an-item` | **The moment the last PR for an item merges.** Merging the code feels like finishing and is not: the documentation half, the issue closed *with a reason*, the remote branch, the worktrees, the audit. Six checks, one minute. Written after the same session dropped this three times in one day. |
