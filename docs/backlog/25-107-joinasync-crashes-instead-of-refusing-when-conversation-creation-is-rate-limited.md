@@ -1,7 +1,7 @@
 # 25-107 · `JoinAsync` crashes instead of refusing when conversation creation is rate-limited
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — fixed and merged (`ago-chat` [PR #309](https://github.com/golyakoff/ago-chat/pull/309)).
 - **Depends on**: nothing
 - **Found**: 2026-09-15, running the first real `capacity-ramp` load test locally (`load/reports/2026-
   09-15-local-capacity-ramp.md`) - a burst of new conversations against one site tripped
@@ -57,6 +57,12 @@ already established, correctly, right below it.
 
 ## Done when
 
-- [ ] A rate-limited `JoinAsync`/`JoinWithTrafficSourceAsync` call returns a `HubException` naming the
-      real reason, not an unhandled `InvalidOperationException`.
-- [ ] A test proves it - fails against today's code, passes after the fix.
+- [x] A rate-limited `JoinAsync`/`JoinWithTrafficSourceAsync` call returns a `HubException` naming the
+      real reason, not an unhandled `InvalidOperationException` - `JoinCoreAsync` now checks
+      `started.IsFailure` and throws `new HubException(started.Error!.Value.Message)`, the same shape
+      `SendAsync`'s own established `sent.IsFailure` branch already uses two methods below in the same
+      file.
+- [x] A test proves it - `VisitorJoinRateLimitedTests.JoinAsync_WhenConversationCreateIsRateLimited_
+      ThrowsAHubExceptionNamingTheRealReason`, fails-before confirmed live (reverting the fix, the
+      test's own `Assert.ThrowsAsync<HubException>` failed with `InvalidOperationException` instead),
+      restored from the staged fix, full suite re-run clean (3492/3492, 0 failed).
