@@ -2,9 +2,9 @@
 
 **Date**: 2026-09-15
 **Commits**: `ago-chat` `1756492df25edd131c26f27466efb2d8cd356fb9` (`main`, carries `capacity-ramp`
-itself, landed same day), `ago-deploy` `8ff0a40833ec2b15263ad89755c513f9ba9850d1` (`main`, carries
-`k8s/overlays/local-capacity-ramp`, also landed same day, including two rate-limit fixes this run's
-own method found live and folded back in).
+itself, landed same day), `ago-deploy` `fc115f7bc972b1cf4674517d3cb41c05e4b0c2bb` (`main`, carries
+`k8s/overlays/local-capacity-ramp` through both runs below - three rate-limit fixes after Run 1, the
+`postgres` 4x memory/CPU bump after Run 1's own finding, before Run 2).
 **Hardware**: one Windows 11 development workstation - 11th Gen Intel Core i7-11800H, 8 cores / 16
 logical processors, allocated to Docker Desktop as 16 CPUs / ~31.2 GiB. Same CPU model as `7-04`/`7-05`'s
 own workstation, different machine.
@@ -69,13 +69,15 @@ conversation), then one visitor message roughly every 45 s while held open - del
 
 ## Topology
 
-`k8s/overlays/local-capacity-ramp` on Docker Desktop: `ago-chat-api` ×3, `ago-chat-worker` ×3 (both
-per-pod limits unchanged from `base` - 512 MiB/0.5 CPU and 512 MiB/1 CPU respectively, the same numbers
-production runs under), one `postgres` (512 MiB/0.5 CPU), one `redis`, one `rabbitmq`, one `minio`, one
-`keycloak`. Same per-pod ceilings as the public demo; only the replica counts and the surrounding
-machine's own headroom differ.
+`k8s/overlays/local-capacity-ramp` on Docker Desktop: `ago-chat-api` ×3, `ago-chat-worker` ×3 throughout
+both runs (both per-pod limits unchanged from `base` in either run - 512 MiB/0.5 CPU and 512 MiB/1 CPU
+respectively, the same numbers production runs under), one `redis`, one `rabbitmq`, one `minio`, one
+`keycloak`. `postgres` is the one thing that differs between the two runs below: 512 MiB/0.5 CPU (Run 1,
+`base`'s own stock number, same as production) vs. 2 048 MiB/2 CPU (Run 2, 4x both, at the author's own
+request after Run 1's finding). Otherwise the same per-pod ceilings as the public demo; only the replica
+counts and the surrounding machine's own headroom differ.
 
-## Results
+## Results - Run 1 (stock resource limits)
 
 | Step | Target | Reached | Connect errors | Connect p50/p95/p99/max | Message errors this step | Outcome |
 |---|---|---|---|---|---|---|
@@ -112,7 +114,7 @@ and the WebSocket disconnects in the CSV come from. Recovery itself was fast and
 time from an operator mistake rather than real load) - the finding is that it happened at all, not that
 it took long to come back.
 
-## Interpreting
+## Interpreting - Run 1
 
 **The real bottleneck at this scale is not connection count, CPU, or any of the three rate limiters -
 it is Postgres's own 512 MiB memory ceiling**, the identical number the public demo runs under. 500
@@ -122,10 +124,7 @@ itself take a backend down hard enough to trigger full crash-recovery. Three `ag
 three `ago-chat-worker` replicas were all comfortably idle throughout (single digit-to-low-teens CPU
 percent) - replicating the stateless hosts bought nothing here, because they were never the constraint.
 This directly answers the "does scaling the stateless layer help" question this overlay was built to
-ask: **not until Postgres's own memory budget is addressed first** - either a larger `postgres` pod
-limit, or a load pattern this project has not yet needed to reason about (connection pooling limits,
-`shared_buffers` sizing, or `work_mem` per connection - not diagnosed here, out of this report's own
-scope).
+ask: **not until Postgres's own memory budget is addressed first**.
 
 **Read this against `2026-08-24-connection-storm.md`'s own 300-connection, fully-idle run** (`1.5%`
 scale, `~37 KB/connection`, no failures) rather than as a contradiction: that scenario deliberately held
@@ -134,33 +133,84 @@ real write traffic (a message roughly every 45 s per conversation) at a comparab
 (500 vs. 300) and finds the write path, not the connection count itself, as the actual limit - the two
 reports are answering different questions and neither one's numbers transfer to the other's topology.
 
+## Results - Run 2 (`postgres` at 4x memory and CPU: 2048Mi/2000m, from 512Mi/500m)
+
+Same author, same day, direct follow-up: "можешь поднять в 4 раза память постгресу и ещё раз
+попробовать?" (raise postgres's memory 4x and try again), then "добавь cpu тоже" (add CPU too) once
+Run 1's own finding named memory specifically but left CPU untouched. `postgres` rolled cleanly this
+time - `LOG: database system was shut down` (its normal shutdown message), not Run 1's "was not
+properly shut down" - confirming the resize itself was uneventful.
+
+| Step | Target | Reached | Connect errors | Connect p50/p95/p99/max | Message errors this step | Outcome |
+|---|---|---|---|---|---|---|
+| 1 | 500 | 500 | 0/500 (0.0%) | 125.4 / 364.9 / 3993.6 / 4957.5 ms | 0/500 (0.0%) | clean |
+| 2 | 1 000 | 1 000 | 0/500 (0.0%) | 98.1 / 189.2 / 205.9 / 257.0 ms | 0/1 121 (0.0%) | clean |
+| 3 | 1 500 | 1 500 | 0/500 (0.0%) | 143.4 / 252.4 / 309.5 / 596.9 ms | 0/1 856 (0.0%) | clean |
+| 4 | 2 000 | 2 000 | 0/500 (0.0%) | 143.9 / 202.2 / 243.8 / 256.8 ms | 0/2 463 (0.0%) | clean |
+| 5 | 2 500 | 2 329 | 171/500 (34.2%) | 231.3 / 689.3 / 1216.0 / 3642.4 ms | 2 034/3 104 (65.5%) | **Safety valve fired** |
+
+Four full steps (2 000 concurrently open conversations, 8 038 messages sent, zero errors of any kind)
+against the identical stateless-side resources Run 1 never got past 500 with. `postgres` itself stayed
+healthy throughout step 5's own collapse - `docker stats` immediately after teardown: 278.9 MiB / 2 GiB
+(13.6%), 0 container restarts. **What broke this time was `ago-chat-api`/`ago-chat-worker` themselves**,
+confirmed from `kubectl get events`: a sequence of `Readiness probe failed: HTTP probe failed with
+statuscode: 503` → `Liveness probe failed: ... context deadline exceeded` → `Container api failed
+liveness probe, will be restarted` → `Liveness probe failed: ... connection refused` on multiple
+`ago-chat-api` and `ago-chat-worker` pods within the same ~90 s window as step 5. Each restarted pod's
+own `lastState` shows `exitCode: 0, reason: "Completed"` - a graceful Kubernetes-initiated restart after
+the probe stopped answering in time, not a crash - but every live WebSocket connection on that pod was
+still dropped (`The remote party closed the WebSocket connection without completing the close
+handshake.`, dozens of instances in the CSV), which is where step 5's own connect and message failures
+come from.
+
+## Interpreting - Run 2
+
+**Postgres's own 512 MiB ceiling was masking a second, higher one**: once memory stopped being the
+first thing to break, the stateless hosts' own `base`-defined limits (512 MiB/0.5 CPU per `ago-chat-api`
+replica, 512 MiB/1 CPU per `ago-chat-worker` replica - unchanged in this run, three replicas each) turned
+out to be real after all, just further out - somewhere between 2 000 (clean) and 2 329 (probes already
+timing out) concurrently open conversations. This is a materially different failure shape than Run 1's:
+not a crash with a recovery cycle, but individual pods going too slow to answer their own health check
+in time and being cycled by Kubernetes, each cycle dropping every WebSocket connection it was holding.
+**The same lesson Run 1 taught about Postgres applies again, one layer up**: three replicas gave roughly
+4x the connection count before failing (500 → ~2 300) compared to a hypothetical single replica at the
+same per-pod limit - replicating the stateless hosts *did* help this time, because this time they were
+the actual constraint, unlike Run 1 where they never got the chance to matter.
+
 ## What was tuned, and what regressed
 
-- Tuned: three per-site rate limiters raised in `overlays/local-capacity-ramp` only (never in `base` or
-  `demo`) - `VisitorSessionRateLimit`, `ConversationCreateRateLimit`, `MessageSendRateLimit`, each found
-  live by actually hitting its default.
+- Tuned (Run 1): three per-site rate limiters raised in `overlays/local-capacity-ramp` only (never in
+  `base` or `demo`) - `VisitorSessionRateLimit`, `ConversationCreateRateLimit`, `MessageSendRateLimit`,
+  each found live by actually hitting its default.
+- Tuned (between runs, the author's own explicit follow-up): `postgres`'s memory (512Mi→2048Mi) and CPU
+  (500m→2000m) raised 4x, same overlay, requests scaled proportionally.
 - Regressed/found, not fixed here: `25-107` - `VisitorHub.JoinCoreAsync` throws an unhandled
   `InvalidOperationException` (surfaced to the client as a raw `500`) instead of a `HubException` when
   `ConversationCreateRateLimit` refuses a join, unlike every other rate-limited path in the same file.
   Filed as its own item rather than fixed inline, since this report's own scope is measurement, not a
   code change to the hub.
-- Not reached: steps 2-10 (1 000-5 000 connections). The safety valve did exactly what `25-102`'s own
-  design intends - it stopped escalating rather than compounding a failure already in progress. A
-  second run, after `postgres`'s own memory budget is revisited, would be the way to see step 2 for
-  real.
+- Not reached: Run 1's steps 2-10, Run 2's steps 6-10. Both safety-valve trips did exactly what
+  `25-102`'s own design intends - stopped escalating rather than compounding a failure already in
+  progress.
 
 ## Honest gaps in this run
 
-- **One data point, not a distribution.** A single `docker stats` snapshot caught the 89.9% memory
-  reading; no continuous time series exists (this Prometheus instance scrapes no cAdvisor/container-
+- **One data point per run, not a distribution.** A single `docker stats` snapshot per run caught each
+  finding; no continuous time series exists (this Prometheus instance scrapes no cAdvisor/container-
   level metrics - `container_cpu_usage_seconds_total` and friends are simply absent from it, confirmed
-  by querying `__name__` directly). A second run instrumented with `docker stats --no-stream` polled on
-  an interval, or a metrics-server, would turn "we caught it once" into a real curve.
-- **No independent confirmation the OOM killer specifically fired** (vs. some other Postgres-internal
+  by querying `__name__` directly). A third run instrumented with `docker stats --no-stream` polled on
+  an interval, or a metrics-server, would turn "we caught it once" into a real curve for either finding.
+- **No independent confirmation Run 1's OOM killer specifically fired** (vs. some other Postgres-internal
   fault) - the evidence (memory near the container's own limit, then a crash-recovery log, then memory
   back near zero, no Kubernetes-level pod restart) is strong but circumstantial; `dmesg`/kernel OOM logs
   were not captured from inside the node.
-- **The live public demo was not re-tested this way.** This run is local-only, by design (squeeze what
+- **Run 2's own probe timeouts were not root-caused past "the pod got too slow."** CPU throttling,
+  thread-pool starvation, and the connection pool to a (still-healthy) Postgres are all plausible and
+  none was directly measured - the same missing container-level metrics as the point above.
+- **Where the real ceiling sits between 2 000 and 2 500 was not narrowed further** - `capacity-ramp`'s
+  own step size (500) is coarser than this specific boundary; a re-run with a smaller step size in that
+  range would pin it down, not attempted here.
+- **The live public demo was not re-tested this way.** Both runs are local-only, by design (squeeze what
   the workstation offers before touching the deployment other people can see) - a matching run against
-  the real VPS, with its own single-replica-everything topology and the same 512 MiB Postgres limit, is
-  the natural next step and was explicitly deferred to a second, separate, human-warned run.
+  the real VPS, with its own single-replica-everything topology, is the natural next step and was
+  explicitly deferred to a separate, human-warned run.
