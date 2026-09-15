@@ -1,12 +1,13 @@
 # Local capacity ramp: how many open conversations before something breaks
 
 **Date**: 2026-09-15
-**Commits**: `ago-chat` `39e425e903bf11665d4c5557742ad4fe0dec499a` (`main`, carries `capacity-ramp`
-itself and `25-107`'s fix, both landed same day - Run 3 below is the first of the three run against
-`25-107`'s fixed `JoinAsync`), `ago-deploy` `83074409a8244d92318c21b046dc8d3c0495ec57` (`main`, carries
-`k8s/overlays/local-capacity-ramp` through all three runs below - three rate-limit fixes after Run 1,
-the `postgres` 4x memory/CPU bump after Run 1's own finding before Run 2, `max_connections=300` after
-Run 2's own finding before Run 3).
+**Commits**: `ago-chat` `434ce2a1d4604dafa7df35225294207dd710da30` (`main`, carries `capacity-ramp`
+itself, `25-107`'s fix and `25-108`'s fix - Run 3 is the first run against `25-107`'s fixed `JoinAsync`,
+Run 4 the first against both fixes together), `ago-deploy` `fc5f18171c9f036baee8a2b001aed5fb323be6b5`
+(`main`, carries `k8s/overlays/local-capacity-ramp` through all four runs below - three rate-limit
+fixes after Run 1, the `postgres` 4x memory/CPU bump after Run 1's own finding before Run 2,
+`max_connections=300` after Run 2's own finding before Run 3, the 8 GiB memory/`shared_buffers`
+change after Run 3's own finding before Run 4).
 **Hardware**: one Windows 11 development workstation - 11th Gen Intel Core i7-11800H, 8 cores / 16
 logical processors, allocated to Docker Desktop as 16 CPUs / ~31.2 GiB. Same CPU model as `7-04`/`7-05`'s
 own workstation, different machine.
@@ -254,6 +255,84 @@ app side wants to open, decoupling "how many app replicas/threads want a connect
 processes Postgres has to run." Not built or measured in this report - named as the next real step, not
 guessed at further.
 
+## An interlude the ramp itself did not cause: `25-108`
+
+Profiling Run 3's own successor attempt (before the memory hypothesis below), `Ago.Chat.Worker`
+crashed outright rather than degrading. Cause: `MaxLongPollingService`/`TelegramLongPollingService`
+(`Ago.Chat.Infrastructure.MaxBot`/`Ago.Chat.Infrastructure.Telegram`) call `RefreshPollersAsync` with
+no protection beyond an `OperationCanceledException` catch scoped to shutdown - any other exception
+(a transient DB hiccup during a credential refresh) is unhandled, and .NET's default
+`HostOptions.BackgroundServiceExceptionBehavior=StopHost` takes down the entire worker process on an
+unhandled exception from *any* `BackgroundService`, not just the one that threw. The per-credential
+poll loop one level down already had proper `catch/log/backoff/retry` resilience - this was an isolated
+omission at one call site, the same shape as `25-107`. Fixed with a scoped `try/catch` around the one
+call (not a blanket `BackgroundServiceExceptionBehavior=Ignore`, deliberately - that would also
+silence genuinely fatal bugs in the other 40+ `BackgroundService` subclasses in `Ago.Chat.Worker`,
+none of which this fix touches or claims safe). `ago-chat` PR #310, merged; full suite 3493/3493.
+Run 4 below is the first run against the fixed worker.
+
+**A second, unrelated confound found the same day, cleaned before Run 4**: `demo_site` had
+accumulated 14 843 conversations across the day's runs, 11 222 stuck in `Waiting` (never closed) -
+enough to make two identical-configuration runs disagree (one reached step 7, the next step 3) for
+reasons that had nothing to do with the resource change under test. All conversation-linked tables
+cascade from `conversations` (`ON DELETE CASCADE`, confirmed live via
+`information_schema.referential_constraints`), so `DELETE FROM conversations WHERE site_id = '...'`
+is sufficient. This whole procedure - bring-up, the NodePort workaround, this exact cleanup step - is
+now `.claude/skills/capacity-ramp/SKILL.md`, so the next run of this scenario does not re-learn it.
+
+## Results - Run 4 (`postgres` at 8 GiB, `shared_buffers=2GB`, `effective_cache_size=6GB`)
+
+Testing the author's own hypothesis, not assuming it: Run 3 found `postgres` CPU-saturated (194-200%
+of its 2-CPU limit) while its memory sat mostly idle (`shared_buffers` still at the stock 128 MB the
+whole time, confirmed live, never touched by any change before this one). Does giving `postgres`
+memory it can actually use - not just a bigger idle cgroup ceiling - reduce that CPU saturation, by
+shrinking checkpoint/WAL-flush churn under write load? Sized to Yandex Cloud's own cheapest Managed
+PostgreSQL tier (`s4a-c2-m8`: 2 vCPU / 8 GB) - CPU deliberately left at 2000m/unchanged, so this run
+isolates memory as the one new variable against Run 3. `max_connections=300` carried over unchanged.
+Run against a `demo_site` cleaned per the note above, and the first run against both `25-107`'s and
+`25-108`'s fixes together.
+
+| Step | Target | Reached | Connect errors | Connect p50/p95/p99/max | Message errors this step | Outcome |
+|---|---|---|---|---|---|---|
+| 1 | 500 | 500 | 0/500 (0.0%) | 106.4 / 291.1 / 4163.2 / 4785.9 ms | 0/500 (0.0%) | clean |
+| 2 | 1 000 | 1 000 | 0/500 (0.0%) | 103.4 / 209.8 / 288.7 / 300.8 ms | 2/1 135 (0.2%) | clean |
+| 3 | 1 500 | 1 500 | 0/500 (0.0%) | 203.9 / 376.7 / 616.0 / 864.6 ms | 2/1 553 (0.1%) | clean |
+| 4 | 2 000 | 2 000 | 0/500 (0.0%) | 401.8 / 890.5 / 1103.1 / 2302.4 ms | 70/2 252 (3.1%) | clean, errors starting |
+| 5 | 2 500 | 2 500 | 0/500 (0.0%) | 404.9 / 1002.9 / 1594.1 / 1789.9 ms | 234/2 192 (10.7%) | **Safety valve fired** |
+
+Five steps, 2 500 connections, **zero connect errors at every step** - the connection-slot ceiling
+stays gone, same as Run 3. But the message-error climb that took until step 8 in Run 3 (48.9% at
+4 000) arrived at step 5 here (10.7% at 2 500), and `docker stats` mid-step-5 read `postgres` at
+**198.00% CPU** - the same saturated-2-core signature as Run 3, not a lower one - while memory sat at
+**1.857 GiB of its new 8 GiB limit (23%)**, `shared_buffers` included. `postgres` itself never
+restarted (0 restarts, confirmed after teardown) - a graceful degradation again, not a crash.
+`demo_site` was cleaned again immediately after teardown (2 500 conversations deleted), per the same
+skill.
+
+## Interpreting - Run 4
+
+**The hypothesis is not confirmed, and the data points the other way.** More memory did not relieve
+CPU pressure - `postgres` saturated its 2 CPUs at essentially the same reading as Run 3 (198% vs
+199.83%) while using barely a quarter of the memory it was given - and the point where message errors
+became visible moved *earlier* (step 4, 2 000 connections) rather than later. This is one run against
+one other run, not a distribution (this report's own honest-gaps section already names that limit),
+so "worse" is stated as what this specific pair of runs showed, not as a proven regression - but it is
+the opposite of what the hypothesis predicted, on the one number (CPU%) the hypothesis was about.
+
+The plausible mechanism, not confirmed further here: a 2 GB `shared_buffers` is not free to manage -
+the background writer and checkpointer both do more work sweeping a larger buffer pool, and that work
+competes for the same 2 CPUs the query-serving backends are already saturating. The checkpoint log
+lines captured during Run 4 show ordinary 5-minute time-triggered checkpoints, not the "checkpoints are
+occurring too frequently" warning that would indict WAL churn directly - so this mechanism is a
+plausible explanation for the CPU reading, not one confirmed by a distinct log signature.
+
+**What this means for "the best configuration"**: on the one clean comparison this report has, Run 3's
+plainer setup (2 GiB memory, stock `shared_buffers`, `max_connections=300`) reached more than the 8 GiB
+setup did before degrading - 4 000 clean connections against 2 500. The 8 GiB/`shared_buffers=2GB`
+change is live in `k8s/overlays/local-capacity-ramp/kustomization.yaml` (`ago-deploy` `main`) as of
+this report; whether to keep it, revert to Run 3's numbers, or run a repeat to rule out one-off
+variance is an open call this report surfaces rather than makes on its own.
+
 ## What was tuned, and what regressed
 
 - Tuned (Run 1): three per-site rate limiters raised in `overlays/local-capacity-ramp` only (never in
@@ -268,9 +347,16 @@ guessed at further.
   `ConversationCreateRateLimit` refused a join, unlike every other rate-limited path in the same file.
   Found live during Run 1, filed as its own item, fixed and merged (`ago-chat` PR #309) before Run 3 -
   Run 3 is the first of the three runs against the fixed `JoinAsync`.
-- Not reached: Run 1's steps 2-10, Run 2's steps 6-10, Run 3's steps 9-10. All three safety-valve trips
-  did exactly what `25-102`'s own design intends - stopped escalating rather than compounding a failure
-  already in progress.
+- Tuned (between Run 3 and Run 4, testing the author's own hypothesis): `postgres` memory 2048Mi→8192Mi,
+  `shared_buffers=2GB`/`effective_cache_size=6GB` added via `args`, CPU left unchanged at 2000m
+  (`ago-deploy` PR #215) - **regressed**, not improved: see Run 4's own interpretation above.
+- Fixed, not just found (between Run 3 and Run 4): `25-108` - `MaxLongPollingService`/
+  `TelegramLongPollingService` crashed the whole `Ago.Chat.Worker` process on any transient DB hiccup
+  during `RefreshPollersAsync`, via .NET's default `BackgroundServiceExceptionBehavior=StopHost`.
+  Found running Run 3's own successor attempt, fixed and merged (`ago-chat` PR #310) before Run 4.
+- Not reached: Run 1's steps 2-10, Run 2's steps 6-10, Run 3's steps 9-10, Run 4's steps 6-10. All four
+  safety-valve trips did exactly what `25-102`'s own design intends - stopped escalating rather than
+  compounding a failure already in progress.
 
 ## Honest gaps in this run
 
