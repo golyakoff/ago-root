@@ -471,7 +471,12 @@ denial.
 - `site_attachment_egress` (**added in `23-82`**) - `site_id`, `period_month` (`date`, always the
   first of its month), `download_count`, `bytes_out`, primary key `(site_id, period_month)`, cascading
   on `site_id`. The maintained per-tenant-per-month aggregate `23-82`'s own backlog item asks for -
-  "from something maintained, not derived by summing rows on read." No EF entity at all, not even a
+  "from something maintained, not derived by summing rows on read." **`adr/0169`**'s decision: three
+  small, dedicated `Application/Abstractions` ports alongside `ISiteAttachmentStorageBudget` rather
+  than one widened budget port - `IAttachmentEgressMeter` (the write half maintaining this table),
+  `IAttachmentEgressReadStore` (its read half), and a third for the "resolved attachment says it was
+  deleted" read `23-80`'s own console screen needs - none of this is a write decision the way `23-76`'s
+  reservation is, so none of it belongs on that port. No EF entity at all, not even a
   shadow property: every write is a raw upsert (`AttachmentEgressMeterStore`) and every read goes
   through Dapper (`AttachmentEgressReadStore`), the identical "compare-and-set/running-total bypasses
   the aggregate" shape `sites.attachment_bytes_reserved` (`23-76`) already established, one step
@@ -505,6 +510,12 @@ denial.
   (all nullable text/`timestamptz`) - the platform owner's own free, indefinite bypass of the hard
   download-block threshold (`Site.DownloadBlockExempt`'s own remarks on why this is a plain scalar, not
   a full append-only ledger: there is no console screen yet for a reader to page through a history on).
+  **`adr/0171`**: this flag (`AgoChatDbContext`) and the egress figure below it (Dapper, its own raw
+  `NpgsqlDataSource` connection) are structurally two different connections with no shared transaction
+  to read both from atomically - decided to read the exemption flag first and the egress figure only if
+  it says not exempt, two separate live reads rather than one snapshot, accepting that a request racing
+  an owner's grant by a moment can be refused once more before the exemption takes effect (never the
+  more dangerous direction: it cannot let a request through it should have blocked).
 - `tier_download_thresholds` (**added in `25-83`**) - `tier` (`text`, primary key, no foreign key -
   the same "a tier is a string this codebase names in code" convention `sites.tier` itself already
   uses), `soft_threshold_bytes`, `hard_threshold_bytes` (`bigint`, `hard > soft` enforced by a check
@@ -521,6 +532,11 @@ denial.
   per tier while the price itself is deployment-wide: a price answers "what does a gigabyte cost",
   which does not vary by customer, while a cap answers "how much exposure should this kind of customer
   be allowed", which does.
+  **`adr/0174`**'s decision sits on both of the last two bullets: overage is invoiced from this
+  table's own `bytes_out` proxy meter (never a reconciled provider-side figure - there is no
+  per-tenant figure to reconcile against, this deployment sharing one bucket across every tenant), and
+  only up to `auto_bill_cap_rub` before `25-83`'s hard block returns despite the tenant being on
+  auto-bill - the owner's own exposure ceiling, not a tenant-facing setting.
 - `download_overage_charges` (**added in `25-84`**) - `id`, `site_id` (cascading), `period_month`
   (`date`, the same first-of-month bucket key `site_attachment_egress` uses, so the two join on plain
   equality), `source` (`Checkout`/`Invoice`, stored as the member name), `status`

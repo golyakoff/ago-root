@@ -1,8 +1,11 @@
 # 25-76 · The owner can see and fix a tenant's actual role permissions
 
 - **Stage**: 25
-- **Status**: code landed — `ago-chat#280`/`ago-console#219`. Add-only, as scoped; removal carried to
-  `25-77`. Not yet run against the real deployment's own two live gaps — see Done when.
+- **Status**: deployed — `ago-chat#280`/`ago-console#219`, confirmed live on the demo deployment
+  2026-09-16 (both commits are ancestors of the currently-running `ago-chat-api`/`ago-console`
+  builds). Add-only, as scoped; removal carried to `25-77`. The tool exists and is reachable; it has
+  not yet actually been run against the two live gaps — that needs the platform owner's own login, not
+  a deploy step. See Done when.
 - **Found**: 2026-09-13, twice in the same evening. First `25-69` — no seeded role anywhere grants
   `conversation:close`, discovered because closing a real duplicate conversation was refused for an
   account's own founder. Second, checking that same class of gap live while verifying `25-08`: querying

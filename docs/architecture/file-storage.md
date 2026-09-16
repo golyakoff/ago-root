@@ -360,3 +360,15 @@ object storage before a tenant downloads it, while a person-scoped export is sma
 conversation, or one visitor's own conversations, never a whole tenant's history) to build and stream
 back as the HTTP response body in the same request - synchronous, but never holding attachment bytes
 in that process either, exactly like the whole-site case above.
+
+## Saved-conversation archives: the one case that embeds bytes (`23-62`, `adr/0162`)
+
+`23-62`'s "keep a copy of this conversation" is the mirror image of the tenant export above: a
+visitor's own browser, not a server process, builds the archive, and it **does** embed the real
+attachment bytes rather than referencing them - the whole point is a `.zip` the visitor can keep after
+the conversation (and its presigned URLs) are gone. The widget's own `fetch()` of each attachment
+(this doc's own Access-control section above) supplies the bytes; the browser's built-in
+`CompressionStream` writes the `.zip` container client-side, deliberately not a bundled library -
+`ago-widget`'s hard, CI-enforced gzip ceiling (`embeddable-widget` skill) has no room for one, and
+`CompressionStream` is a platform API with no polyfill needed. `adr/0162` has the full reasoning and
+the alternatives it rejected.

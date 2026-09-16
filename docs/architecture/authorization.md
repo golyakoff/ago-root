@@ -244,6 +244,18 @@ rejects a `sub` only when it already resolves to an `Operator` row on *that invi
 "resolves to an operator row anywhere", the older, single-tenant rule that predated `13-07`'s composite
 `(external_subject_id, site_id)` uniqueness.
 
+**`25-73`/`adr/0167`: an invitee with no Keycloak identity at all now gets one, through Keycloak's own
+native invite primitive, not a bespoke passwordless flow.** `CreateOperatorInviteHandler` still mints
+the same high-entropy invite code `13-01` always has; `OperatorInviteEmailProvisioner`
+(`Ago.Chat.Infrastructure.Keycloak`) additionally creates (or finds) a Keycloak user for the invited
+address and triggers Keycloak's own `execute-actions-email` Admin API against it, carrying the invite
+code in the redirect's own query string so a first-time invitee lands on registration, then back on
+`RedeemInvitePage` pre-filled, rather than a bare login page with nothing to do. `25-85` found and
+fixed the case where that redirect's query string does not survive Keycloak's own required-actions
+chain (a user created with `emailVerified: false` picks up an unrequested `VERIFY_EMAIL` step first) -
+see that item and `RedeemPendingOperatorInviteForCallerHandler` for the authenticated-redemption
+fallback this now has.
+
 **`23-22` gave the permission its first console-side check, and a fifth handler.** `ago-console` had
 never checked `site:manage_operators` at all before this item - `ui-inventory.md` §13.4's own finding.
 `GetOperatorTeamHandler` (`GET /api/v1/sites/{siteId}/operators`, `Ago.Chat.Application.UseCases.
@@ -772,6 +784,23 @@ properties and this is the file that collects them:
   link neither. An already-linked operator can never be a candidate (the query filters
   `external_subject_id IS NULL`). A `sub` once bound can never be re-bound, because the direct subject
   lookup always runs first.
+
+## A Chat-side config flag relaxes a guarantee Calendar depends on: `25-39`/`adr/0163`
+
+**The mirror case of the section above**: not a chat operator acting inside Calendar, but a chat-side
+tenant setting that changes what Calendar's own booking flow may assume. `adr/0082`/`20-09`
+established that a chat-driven booking requires a verified phone before a slot is held - a real
+commitment against a worker's calendar is not made against a self-reported string. That guarantee
+assumed `14-15`'s SMS/voice verification would have a live gateway account behind it; it does not,
+which makes `RequiresVerifiedPhone: true` currently refuse every chat-driven booking rather than
+protect anything.
+
+`WidgetConfig.AcceptUnverifiedPhone` (`Ago.Chat.Domain`) is the tenant-level, off-by-default escape
+hatch this forces: a temporary relaxation the console labels as a workaround, not a feature, decided
+by the same actor and mechanism as every other `WidgetConfig` flag on this file's own terms - a
+tenant's own configuration, not a platform grant. `adr/0163` has the full reasoning for why this is a
+config flag rather than a Calendar-side change, and what it stops meaning the day a real gateway
+exists.
 
 ## A caller may now name a tenant, and it is an ordinary operator who does it: shipped in `22-14`
 
