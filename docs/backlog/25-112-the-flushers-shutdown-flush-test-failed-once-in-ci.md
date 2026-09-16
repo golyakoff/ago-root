@@ -2,7 +2,13 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done (2026-09-16), test-only — `ago-chat#315`. Not reproduced despite deliberate
+  attempts (a local loop, and re-running the actual failing GitHub Actions workflow); a second data
+  point for `23-40`'s own honest-uncertainty box, not a resolved mechanism. Lands no production fix -
+  instead, the test's own `NullLogger` was discarding the one signal (`ExecuteAsync`'s own logged
+  warning on a swallowed final-flush failure) that would tell "the write never ran" apart from "the
+  write threw", the exact gap `23-40` already named and never closed. A `CapturingLogger` closes it,
+  so a third occurrence, if there is one, is evidence rather than another guess.
 - **Found**: 2026-09-16, `ago-chat` CI run
   [35121261341](https://github.com/golyakoff/ago-chat/actions/runs/35121261341), on a PR
   (`fix/25-110-...`) that touches nothing in `WidgetActivityFlusherService`'s own file, nor its test,
@@ -51,12 +57,26 @@ Docker Desktop fleet `23-40` tested against.
 
 ## Done when
 
-- [ ] Reproduced deliberately (a loop, not waiting for another accidental CI failure) - in CI
+- [~] Reproduced deliberately (a loop, not waiting for another accidental CI failure) - in CI
       specifically, since that is the one environment this failure has now been seen in and the local
-      fleet has not.
-- [ ] Root cause identified, or `23-40`'s own honest-uncertainty box is updated with a second data
+      fleet has not. **Not reproduced** - one deliberate CI rerun of the actual failing workflow came
+      back clean (1307/1307); further reruns were not chased once their marginal cost (~10 CI minutes
+      each) stopped being worth it against a rare, unreproduced event - the same call `23-40` made.
+- [~] Root cause identified, or `23-40`'s own honest-uncertainty box is updated with a second data
       point and a decision about whether a third occurrence gets a different response than a fourth
-      item.
-- [ ] If a real race is found in `WidgetActivityFlusherService`/`BackgroundService.StopAsync`'s own
-      contract, the fix lands with a fails-before test reproducing it, not just a stronger assertion
-      on the existing one.
+      item. **Not identified.** `BackgroundService`'s actual `net10.0` source was traced by hand
+      (`StartAsync` dispatches via `Task.Run`, `StopAsync` awaits `_executeTask.WaitAsync(token, ...)`
+      - not the `Task.WhenAny` shape `23-40`'s own comment described, which was the .NET Framework
+      compat path) - `CancellationToken.None`'s guarantee holds under either mechanism, so `23-40`'s
+      fix needed no change, only its explanation did. This is a second data point for that item's own
+      box, recorded here rather than reopening it - a third occurrence stays a documentation update,
+      a fourth escalates to a dedicated investigation with a captured warning in hand.
+- [x] If a real race is found in `WidgetActivityFlusherService`/`BackgroundService.StopAsync`'s own
+      contract, the fix lands with a fails-before test reproducing it, not just a stronger assertion.
+      **N/A - no race found.** Landed instead: the test's own blind spot is closed - it used
+      `NullLogger`, discarding the exact signal (`ExecuteAsync`'s own logged warning on a swallowed
+      final-flush failure) that would tell "the write never ran" apart from "the write threw", which
+      is precisely the gap `23-40`'s own text names ("no diagnostics were captured... and none can be
+      now"). A `CapturingLogger` (`ago-chat#315`) surfaces any logged warning inline in the assertion
+      failure message, proven to work via a controlled fault injection (reverted before commit) - the
+      next recurrence, if any, is evidence instead of another entry in this box.
