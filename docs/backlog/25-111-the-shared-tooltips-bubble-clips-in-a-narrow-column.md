@@ -2,7 +2,12 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-console#247`. Built in a background-worker session, independently
+  re-verified by the managing session (typecheck/lint/vitest/ux-gate all rerun, matching counts
+  exactly). Root cause turned out to be two-layered: a real positioning gap in `Tooltip.tsx` (fixed),
+  plus a second, genuinely separate bug the fix's own new test exposed - the test's own single-read
+  assertion raced two React commits a correction takes, fixed with `expect.poll` rather than touching
+  the component.
 - **Found**: 2026-09-16, the author hovering the "(?)" trigger next to "ПОСЕТИТЕЛЬ" in the
   conversation page's right-hand visitor panel: the bubble renders overlapping the panel's own text,
   clipped at the panel's right edge, unreadable past the first few words.
@@ -52,9 +57,11 @@ component's own reasoning did not distinguish.
 
 ## Done when
 
-- [ ] The bubble in `VisitorPanel`'s "(?)" trigger renders fully readable, no clipping, no overlap
+- [x] The bubble in `VisitorPanel`'s "(?)" trigger renders fully readable, no clipping, no overlap
       with surrounding text, at the console's real supported widths.
-- [ ] A fails-before test/screenshot proving the clip happens against the code before the fix and is
-      gone after (this component has no existing test that would have caught a rendering-position
-      regression - state whether one exists after this item, and at what level).
-- [ ] The other six call sites are re-verified unaffected by whatever positioning change was made.
+- [x] A fails-before test/screenshot proving the clip happens against the code before the fix and is
+      gone after — a new real-browser (Playwright) spec, `ux-gate/tooltipPositioning.spec.ts`; jsdom
+      has no layout engine to assert bubble geometry with at all.
+- [x] The other six call sites are re-verified unaffected — and a second, previously unreported clip
+      was found and fixed by the same generic change (`ConversationList`'s own "assigned" tooltip
+      against the rail's scroll container).
