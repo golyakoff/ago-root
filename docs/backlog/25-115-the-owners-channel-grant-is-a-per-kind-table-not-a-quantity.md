@@ -3,7 +3,13 @@
 - **Stage**: 25
 - **Depends on**: `25-114` (built the "channel" quantity mechanism this item replaces), `25-113`
   (the deployment-config path this item extends to four more channel kinds)
-- **Status**: ready
+- **Status**: done (backend + console + config), live E2E walk pending — `ago-chat#318`, `ago-console#249`,
+  `ago-deploy#222` (config) and `#223` (image pins). Deployed live and smoke-tested (46/46), including
+  the real `Stage25AddModuleQuantityGrantUnconditionalGrantExpiresAt` migration applied via
+  `apply-demo.sh`. Built by two parallel background workers (backend, console) against an agreed wire
+  contract; the console's own guessed endpoint shape was reconciled against the real merged backend
+  route before either PR opened. The actual owner-grants-a-channel-then-a-tenant-connects walk needs a
+  real platform-owner session, which this managing session does not hold - left for the author to run.
 - **Found**: 2026-09-16, the author testing `25-114` live: the delivered "Право на канал" section
   asked for a numeric "quantity" for one hardcoded channel (Telegram), when the real request was a
   dropdown to add any of the platform's channel kinds, shown in a table with provenance (paid vs
@@ -95,16 +101,18 @@ production.
 
 ## Done when
 
-- [ ] `ModuleQuantityGrant` carries `UnconditionalGrantExpiresAt`; a migration applies it; an expired
+- [x] `ModuleQuantityGrant` carries `UnconditionalGrantExpiresAt`; a migration applies it; an expired
       unconditional grant reads as not-entitled.
-- [ ] The owner can grant and revoke each of the five named channel kinds independently, with a
+- [x] The owner can grant and revoke each of the five named channel kinds independently, with a
       required reason and an optional expiry, from a dedicated `/owner/sites/{siteId}` section - not
       the numeric quantity form `25-114` shipped.
-- [ ] The table shows, per currently entitled channel: kind, provenance (owner-granted today - the
+- [x] The table shows, per currently entitled channel: kind, provenance (owner-granted today - the
       "paid" case is real but unreachable until a self-service channel purchase exists; do not fake
       data to populate it), and expiry (or "бессрочно").
-- [ ] `ago-deploy` configures all five channel kinds' `BillingOptionEntitlements` on both
-      `api.yaml`/`worker.yaml`.
-- [ ] A real end-to-end walk: grant MAX (or VK) through the new UI, confirm the tenant's own existing
+- [x] `ago-deploy` configures all five channel kinds' `BillingOptionEntitlements` on both
+      `api.yaml`/`worker.yaml` - live and confirmed via smoke (46/46).
+- [~] A real end-to-end walk: grant MAX (or VK) through the new UI, confirm the tenant's own existing
       connect screen (`/channels/max`, `/channels/vk`) now accepts a real credential where it was
-      refused before.
+      refused before. **Not yet walked** - needs a real platform-owner session and a real bot token,
+      neither of which this managing session holds; the UI itself is live at `/owner/sites/{siteId}`
+      for the author to try.
