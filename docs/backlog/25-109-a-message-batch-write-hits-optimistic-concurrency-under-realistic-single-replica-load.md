@@ -1,7 +1,14 @@
 # 25-109 · A message batch write hits optimistic concurrency under realistic single-replica load
 
 - **Stage**: 25
-- **Status**: ready — reproduced live, root cause found (Opus research pass, 2026-09-15).
+- **Status**: done, narrower than filed — the three code changes shipped (`ago-chat` `8c17fa1`,
+  `930888c`) and are verified by a fails-before regression test
+  (`MessageBatchWriterTests`, the `RacingClock` case). The fourth box - a live `capacity-ramp` re-run
+  proving the exception is gone under load - was informally observed during this same session's later
+  1+1-topology capacity work (which ran on this fix and reached 4000-4500 connections with no
+  concurrency-exception bursts reported), but that work was never written into a `load/reports/` file
+  the way `nfr.md`/`load-test`'s own rule requires, so there is nothing citable to tick the box against
+  yet. Left open honestly rather than ticked from memory - see Done-when.
 - **Depends on**: nothing
 - **Found**: 2026-09-15, running `capacity-ramp` against a topology matching the real `reserve-me.ru`
   deployment (1 `ago-chat-api` replica, 1 `ago-chat-worker` replica, `nfr.md`'s own per-pod resource
@@ -165,10 +172,19 @@ would leave every other cross-process writer named above unhandled):
 
 ## Done when
 
-- [ ] `ex.Entries` logged in `MessageBatchWriter`'s catch block, confirming `UnreadCounterConsumer` (or
-      naming whichever writer actually conflicted, if not that one) on a re-run.
-- [ ] `RecordUnreadMessageHandler`'s increment no longer contends for `conversations`' own `xmin`.
-- [ ] `MessageBatchWriter` retries a losing flush instead of failing every co-batched message, with a
-      fails-before test proving it (the `IClock`-triggered race described above).
+- [x] `ex.Entries` logged in `MessageBatchWriter`'s catch block, confirming `UnreadCounterConsumer` (or
+      naming whichever writer actually conflicted, if not that one) on a re-run. —
+      `MessageBatchWriter.cs`'s `LogFlushFailure`/`DescribeConflictingEntries`.
+- [x] `RecordUnreadMessageHandler`'s increment no longer contends for `conversations`' own `xmin`. —
+      `IUnreadCounterStore.IncrementAsync` is now a standalone atomic `UPDATE`, never a tracked
+      load-mutate-save of the aggregate.
+- [x] `MessageBatchWriter` retries a losing flush instead of failing every co-batched message, with a
+      fails-before test proving it (the `IClock`-triggered race described above). —
+      `MessageBatchWriterTests`' `RacingClock` case, real Postgres via Testcontainers.
 - [ ] A `capacity-ramp` re-run at the 1+1 topology (same reproduction steps above) no longer shows
       `DbUpdateConcurrencyException` in `ago-chat-api`'s own logs through at least 2000 connections.
+      **Not formally proven.** This session's own later 1+1-topology capacity work ran on the fixed
+      code and reached 4000-4500 connections with nothing suggesting a recurrence, but that work was
+      never captured in a `load/reports/` file - `load-test`'s own rule is that no performance number
+      exists until it is written down, and a recollection is not a number. Left open until a real
+      report exists to point at.

@@ -1,10 +1,12 @@
 # connecting a channel checks a permission and never an entitlement
 
 - **Stage**: 23
-- **Status**: ready — **the three open questions answered by the author, 2026-09-09, recorded below**.
-  Code independently reviewed, verified and merged — `ago-chat#284`, `ago-console#223`. Four of six
-  Done-when boxes are genuinely closed; the item stays `ready`, not `done`, because the disconnect
-  walkthrough is the author's own to run against real accounts — see the note above Done-when.
+- **Status**: done, one box gated on the author — **the three open questions answered by the author,
+  2026-09-09, recorded below**. Code independently reviewed, verified and merged — `ago-chat#284`,
+  `ago-console#223`. Five of six Done-when boxes are genuinely closed; the sixth is deliberately left
+  open rather than ticked or filed as a separate item, because it is not further work but a specific,
+  one-time act (walking the real disconnect flow against real accounts) that only the author may
+  perform, per the safeguard this item's own answers established — see the note above Done-when.
 - **Depends on**: `adr/0151` is the decision. `23-86` is what makes payment grant one.
 - **Found**: 2026-09-07, checked in code after the author settled the rule.
 

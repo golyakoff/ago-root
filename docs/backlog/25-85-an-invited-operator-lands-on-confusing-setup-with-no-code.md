@@ -1,15 +1,15 @@
 # 25-85 · An invited operator lands on confusing setup with no code
 
 - **Stage**: 25
-- **Status**: ready — `ago-chat#291`, `ago-console#232`. Independently re-verified by the managing
-  session before merging (its own `dotnet build`/`test` and `npm` runs against the worker's own
-  worktrees — 3331/3331 `ago-chat` tests, 1392/1392 `ago-console` tests, both matching the worker's
-  reported counts exactly; the new redemption endpoint's claim-sourcing reviewed directly - email and
-  subject come only from the authenticated JWT, never a client-supplied value). Three of four
-  Done-when boxes are closed; the first stays open on purpose - see its own note - for the author's
-  own live re-walk of the real flow, the same one that found this bug. Point 4 (the email's own
-  fallback text) is its own item, `25-90`, pending the author's decision on the plaintext-storage
-  trade-off it names.
+- **Status**: done, narrower than filed — `ago-chat#291`, `ago-console#232`. Independently re-verified
+  by the managing session before merging (its own `dotnet build`/`test` and `npm` runs against the
+  worker's own worktrees — 3331/3331 `ago-chat` tests, 1392/1392 `ago-console` tests, both matching the
+  worker's reported counts exactly; the new redemption endpoint's claim-sourcing reviewed directly -
+  email and subject come only from the authenticated JWT, never a client-supplied value). Three of
+  four Done-when boxes are closed; the first stays open on purpose - see its own note - for the
+  author's own live re-walk of the real flow, the same one that found this bug. Point 4 (the email's
+  own fallback text) is carried to its own item, `25-90`, pending the author's decision on the
+  plaintext-storage trade-off it names.
 - **Depends on**: nothing
 - **Found**: 2026-09-14, the author's own live walkthrough of `25-73`'s invite flow — sent a real
   invite, received the real email, followed the real link. Everything downstream of the click worked;
