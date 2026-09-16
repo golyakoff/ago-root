@@ -2,7 +2,15 @@
 
 - **Stage**: 25
 - **Depends on**: `25-113` (the config gap that made this genuinely untestable end to end)
-- **Status**: ready
+- **Status**: done (grant UI + persisted read), live E2E walk pending the demo redeploy —
+  `ago-chat#316` (backend: `OwnerSiteDetailResponse.ChannelQuantity`) and `ago-console#248`
+  (owner-console UI, in two commits). The console-only UI was built first, in a background-worker
+  session, which honestly reported one Done-when box as unreachable without a backend change
+  (`OwnerSiteDetailResponse` had no field for a site's real, persisted channel quantity - the screen
+  could only show what the current browser session had itself just granted). Per the author's own
+  explicit call ("исследование добавило скоуп - обычное дело"), the managing session added that field
+  directly rather than filing a separate item for it, since it is the same one promise ("the owner can
+  grant and see a channel entitlement") this item already named.
 - **Found**: 2026-09-16, while diagnosing `25-113`: even once a channel's entitlement mapping is
   correctly configured, the platform owner has no way to actually grant one from the console - the
   mechanism exists in the backend, the wiring to reach it from a screen does not.
@@ -59,10 +67,12 @@ it, ever** - not "hidden until granted once", genuinely unreachable through this
 
 ## Done when
 
-- [ ] The platform owner can grant a site's `"channel"` quantity from `/owner/sites/{siteId}` with no
+- [x] The platform owner can grant a site's `"channel"` quantity from `/owner/sites/{siteId}` with no
       pre-existing `enabled_modules` row for it.
-- [ ] The owner can see the current granted quantity (or that none exists) for `"channel"` on the same
-      screen, not only immediately after granting it.
-- [ ] A real end-to-end walk, once this ships and `25-113`'s config fix is live: grant a real tenant's
+- [x] The owner can see the current granted quantity (or that none exists) for `"channel"` on the same
+      screen, not only immediately after granting it — `OwnerSiteDetailResponse.ChannelQuantity`
+      (`ago-chat#316`), read and prefilled on every load (`ago-console#248`).
+- [~] A real end-to-end walk, once this ships and `25-113`'s config fix is live: grant a real tenant's
       Telegram entitlement through this new UI, then confirm that tenant's own `/channels/telegram`
-      connect attempt (a real bot token) succeeds where it was refused before.
+      connect attempt (a real bot token) succeeds where it was refused before. **Not yet walked** - the
+      demo stand has not been redeployed with these images yet; queued as the next step.
