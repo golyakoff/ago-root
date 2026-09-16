@@ -32,6 +32,7 @@ appsettings.*.Local.json
 # Load test output (reports are committed, raw output is not)
 load/output/
 load/**/*.json.gz
+load-local-run/
 
 # OS
 Thumbs.db
