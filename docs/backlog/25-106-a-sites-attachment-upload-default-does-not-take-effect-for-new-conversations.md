@@ -1,8 +1,9 @@
 # 25-106 · A site's attachment-upload default does not take effect for new conversations
 
 - **Stage**: 25
-- **Status**: ready — found live, not yet diagnosed. This is a reproducible observation with the
-  obvious explanations already ruled out, not a root cause.
+- **Status**: done — diagnosed 2026-09-16. Not a product defect: the live investigation's own raw
+  `UPDATE sites ...` bypass is what skipped cache invalidation, not a bug in the real write path. See
+  "Root cause" below.
 - **Depends on**: nothing
 - **Found**: 2026-09-15, verifying `25-103` end to end on the live public demo. Not a network or
   storage problem - it surfaced while trying to prove a *permission-gated* presigned upload succeeds,
@@ -65,6 +66,46 @@ to `false` immediately after the investigation (`UPDATE ... SET widget_allow_att
 default = false ...`, re-read back to confirm), so the live deployment is not left in an
 inconsistent, hand-patched state. `attachment_bytes_reserved`/other columns were not touched.
 
+## Root cause
+
+Diagnosed 2026-09-16, by reproducing this item's own step 3-4 against fresh, isolated Testcontainers
+(Postgres + Redis, no shared state with anything else) rather than reasoning about the live system
+further:
+
+- **Warm the `site-config:id:{siteId}` cache with the flag off** (exactly what a visitor's own
+  conversation-start read does, per this item's own step 2), **then flip the column with a raw
+  `UPDATE sites ...`** (exactly this item's own step 3): a fresh read afterward still returns the old,
+  cached value. Reproduced on the first try, deterministically - this is real, and it is exactly what
+  the live investigation saw.
+- **The reason is not a bug in the invalidation chain - it is that a raw SQL `UPDATE` publishes no
+  event for anything to react to.** `SiteCacheInvalidationConsumer` only ever runs in response to a
+  `SiteSettingsChanged` message, and nothing produces one for a hand-written `UPDATE`. This is the
+  same reason a raw SQL write bypasses every other invalidation path in this codebase (`caching.md`'s
+  event-driven model, not a special case for this field) - it was never going to invalidate anything,
+  by design, the moment the investigation chose to bypass the application layer to isolate the
+  question from `25-104`.
+- **The real write path does not have this problem.** A second reproduction, through
+  `UpdateWidgetConfigHandler` itself (the actual console → API path, real Postgres, real RabbitMQ, real
+  Redis, the full `OutboxDispatcher` -> `SiteCacheInvalidationConsumer` -> `Ago.Platform.Caching.Redis.
+  CacheInvalidationConsumer` -> `ICache.RemoveAsync` chain wired by hand the way
+  `WidgetConfigCacheInvalidationEndToEndTests` already does for the public-key-keyed cache) shows a
+  fresh id-keyed read correctly sees the new value within the poll window, no pod restart needed. This
+  is now a permanent regression test:
+  `tests/Ago.Chat.Integration.Tests/SiteConfigByIdCacheInvalidationEndToEndTests.cs`.
+- **The actual gap this item found is a coverage gap, not a product defect.** `14-04` fixed
+  `SiteCacheInvalidationConsumer` to publish an invalidation for *both* of `SiteCacheKeys`' entries
+  (public-key and id-keyed), but `WidgetConfigCacheInvalidationEndToEndTests` - the only end-to-end
+  proof this chain works - only ever exercised the public-key one (the widget handshake read). The
+  id-keyed entry (`GetSiteConfigByIdHandler`, the one `StartConversationHandler` actually reads to seed
+  a new conversation's attachment grant) had never been proven end to end until now. Nobody had reason
+  to doubt it until this item's own live investigation used the one write path (raw SQL) that could
+  never have exercised it either way.
+- **Why this item's own Done-when's "fails-before" line does not apply as written**: there is no code
+  change to have a fails-before pair around, because the code was not wrong. The closest honest
+  equivalent is the pairing actually run: the raw-SQL scenario fails (reproduced, thrown away, not
+  committed - `capacity-ramp`'s own "ad-hoc, throwaway test files" convention), and the real-write-path
+  scenario passes, committed as the permanent test named above.
+
 ## Out of scope
 
 - `25-103`'s own concern (network reachability of a presigned URL) - fully and separately verified: a
@@ -77,10 +118,14 @@ inconsistent, hand-patched state. `attachment_bytes_reserved`/other columns were
 
 ## Done when
 
-- [ ] A root cause is identified - not just a location that works around the symptom.
-- [ ] A regression test exists that fails against the code before the fix and passes after
+- [x] A root cause is identified - not just a location that works around the symptom. See "Root
+      cause" above: a raw SQL bypass publishes no invalidation event, by design - not a defect.
+- [~] A regression test exists that fails against the code before the fix and passes after
       (fails-before, this project's own standing rule) - through the real handler path, not a
-      database-level assertion, since the database was never the layer in question.
-- [ ] Confirmed, once fixed, that `UpdateWidgetConfigHandler`'s own normal write path (console →
+      database-level assertion, since the database was never the layer in question. No code changed,
+      so there is no fails-before pair for a fix; the closest honest equivalent (a throwaway
+      raw-SQL-bypass reproduction that fails, thrown away; a permanent real-write-path test that
+      passes, committed) was run instead - see "Root cause" above.
+- [x] Confirmed, once fixed, that `UpdateWidgetConfigHandler`'s own normal write path (console →
       API, not a hand-rolled `UPDATE`) takes effect for a genuinely new conversation without a pod
-      restart.
+      restart. Proven by `SiteConfigByIdCacheInvalidationEndToEndTests` (`ago-chat`).
