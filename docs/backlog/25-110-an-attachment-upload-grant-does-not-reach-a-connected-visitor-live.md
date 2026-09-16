@@ -2,7 +2,10 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-chat#314`, `ago-widget#89`. Built in a background-worker session, resumed
+  once mid-task after it stopped waiting on its own background test run, then independently
+  re-verified by the managing session (its own `dotnet build`/`test`/`npm` runs against the worker's
+  own worktrees, matching counts exactly) before merging.
 - **Found**: 2026-09-16, the author testing 23-78's per-conversation toggle live on a real tenant: an
   operator ticks "разрешаю пользователю отправлять файлы" and the visitor's own widget, held open the
   whole time, does not show the attach icon until the page is reloaded - unlike an operator's ordinary
@@ -71,15 +74,18 @@ in this codebase uses to reach a live connection.
 
 ## Done when
 
-- [ ] `GrantAttachmentUploadHandler`/`RevokeAttachmentUploadHandler` enqueue an outbox event when (and
-      only when) the grant state actually changes.
-- [ ] A Worker consumer delivers that event live to the one visitor connection holding the affected
-      conversation, reusing the platform's existing per-node delivery primitive rather than a new one.
-- [ ] `ago-widget` reacts to the pushed event immediately - a fails-before test proving a visitor whose
-      connection never drops still sees the icon change with no reload, for both grant and revoke.
-- [ ] The existing reconnect-riding fallback (`onAttachmentUploadGrantChange`'s current behaviour)
-      still works unchanged - a dropped-and-recovered connection still catches up correctly.
-- [ ] Real end-to-end proof, not just unit-level: real Postgres, real RabbitMQ, real SignalR connection
+- [x] `GrantAttachmentUploadHandler`/`RevokeAttachmentUploadHandler` enqueue an outbox event when (and
+      only when) the grant state actually changes. — only on `Applied`, never `AlreadyInState`/`NotFound`.
+- [x] A Worker consumer delivers that event live to the one visitor connection holding the affected
+      conversation, reusing the platform's existing per-node delivery primitive rather than a new one. —
+      `AttachmentUploadGrantFanoutConsumer` sits on the existing `NodeFanoutPublisher`/`NodeDeliveryConsumer`.
+- [x] `ago-widget` reacts to the pushed event immediately - a fails-before test proving a visitor whose
+      connection never drops still sees the icon change with no reload, for both grant and revoke. —
+      `connection.test.ts`'s new cases, and the real-infrastructure proof below.
+- [x] The existing reconnect-riding fallback (`onAttachmentUploadGrantChange`'s current behaviour)
+      still works unchanged - a dropped-and-recovered connection still catches up correctly. — kept
+      verbatim as the backstop; its own test still passes.
+- [x] Real end-to-end proof, not just unit-level: real Postgres, real RabbitMQ, real SignalR connection
       held open across the operator's own grant/revoke call (matching this codebase's own
       `WidgetConfigCacheInvalidationEndToEndTests`-style real-infrastructure discipline for a
       live-propagation claim).
