@@ -2,7 +2,8 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready — design decided (see "Answered" below), dispatched for implementation.
+- **Status**: done — `ago-chat#319`, `ago-deploy#226`. Applied live (no migration needed - the query
+  and handler change alone), smoke 46/46.
 - **Found**: 2026-09-17, split out of `25-117`: the author compared AGO's widget against Jivo's
   (embedded on `golyakov.net` for the comparison) and asked for widget conversations to stay resumable
   as long as a visitor's own identity does (7 days). Investigation found this needs a real, currently
@@ -128,15 +129,17 @@ if it turns out to matter in practice, not solved speculatively here.
 ## Done when
 
 - [x] A design decision is written down - see "Answered" above.
-- [ ] A returning widget visitor whose previous conversation was only *released* (not yet closed) can
+- [x] A returning widget visitor whose previous conversation was only *released* (not yet closed) can
       resume it - same conversation id, full prior history, through the existing
-      `GetActiveForVisitorAsync`/`StartConversationHandler` path, no widget or API change needed for
-      this part.
-- [ ] An `Assigned` widget conversation idle past `WidgetInactivityWindow` (unchanged, 1 hour) is
-      released back to `Waiting` and frees the operator's capacity slot - not closed.
-- [ ] A widget conversation (`Assigned` or `Waiting`) idle past the new `WidgetCloseWindow` (7 days) is
-      actually closed.
-- [ ] Channel-kind (MAX/Telegram/etc.) auto-close behaviour is provably unchanged - existing tests for
-      it still pass unmodified, and new tests do not touch that code path.
-- [ ] No new migration, no new read endpoint, no `personal-data.md` change - confirm this stays true
-      given the chosen design touches no new data-visibility surface.
+      `GetActiveForVisitorAsync`/`StartConversationHandler` path, unchanged and untouched by this item.
+- [x] An `Assigned` widget conversation idle past `WidgetInactivityWindow` (unchanged, 1 hour) is
+      released back to `Waiting` and frees the operator's capacity slot - not closed. Proven live by a
+      real integration test against Postgres (fails-before confirmed).
+- [x] A widget conversation (`Assigned` or `Waiting`) idle past the new `WidgetCloseWindow` (7 days) is
+      actually closed. Same proof shape as above.
+- [x] Channel-kind (MAX/Telegram/etc.) auto-close behaviour is provably unchanged - its own existing
+      tests pass unmodified; the query and handler it uses are untouched.
+- [x] No new migration, no new read endpoint, no `personal-data.md` change - confirmed: the fix is a
+      new SQL query variant (`state IN ('Assigned','Waiting')` instead of `= 'Assigned'`) plus a new
+      single-conversation release handler, reusing the domain's own existing `Waiting` state and
+      `ReleaseToQueue` method. No new data-visibility surface at all.
