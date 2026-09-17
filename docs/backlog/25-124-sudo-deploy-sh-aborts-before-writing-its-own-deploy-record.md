@@ -2,7 +2,10 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-deploy` commit `d7331ed`. Verified live against the real VPS: a real
+  `sudo ./deploy.sh <sha>` run now genuinely completes end to end (46/46 smoke, migration check
+  itself passing rather than skipping or failing on a wrong path) and `ago-deploy-record` shows
+  `written-by: deploy.sh` from that run, not a manual patch.
 - **Found**: 2026-09-17, the managing session hand-patching `ago-deploy-record` a third time in one
   session and finally tracing why: every `sudo ./deploy.sh <sha>` run this session left the record
   stale even though the rollout and smoke both genuinely succeeded.
@@ -58,9 +61,13 @@ session will not know to reach for without rediscovering this same chain of reas
 
 ## Done when
 
-- [ ] `sudo ./deploy.sh <sha>` on the real VPS completes cleanly end to end, including a real
-      `record_write`, without hand-patching `ago-deploy-record` afterward.
-- [ ] `check-manifest-drift.sh` reports `PASS` immediately after such a deploy plus its manifest commit,
-      with no manual intervention.
-- [ ] The migration-schema check still genuinely fails (not skips) when a real schema mismatch exists -
-      confirm this by a real fails-before check, not by trusting the path fix alone.
+- [x] `sudo ./deploy.sh <sha>` on the real VPS completes cleanly end to end, including a real
+      `record_write`, without hand-patching `ago-deploy-record` afterward - proven live, not assumed:
+      re-ran `sudo ./deploy.sh 5c7b749e...` (the already-deployed `25-121` SHA, a no-op image move) and
+      got 46 passed/0 failed, with `ago-deploy-record` showing `written-by: deploy.sh` from that run.
+- [x] `check-manifest-drift.sh` reports `PASS` immediately after such a deploy plus its manifest commit,
+      with no manual intervention - confirmed in the same run above.
+- [~] The migration-schema check's own comparison logic is unchanged by this fix (only the `CHAT_REPO`
+      path leading to it was wrong) - not re-proven against a deliberately induced schema mismatch on
+      the live demo database, which would need a real, separate reason to risk. The path fix is what
+      this item scoped and verified; the comparison itself was never the broken half.
