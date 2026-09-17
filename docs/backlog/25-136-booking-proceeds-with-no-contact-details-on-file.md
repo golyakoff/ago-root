@@ -1,7 +1,7 @@
 # 25-136 · Booking proceeds with no contact details on file
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#94`
 - **Found**: 2026-09-17, live, reported by the author: triggering `/записаться` and picking a service
   and a worker required no name, phone, email, or personal-data consent at any point - the visitor
   simply progresses.
@@ -59,12 +59,23 @@ the form was never actually submitted, consistent with it being decorative rathe
 
 ## Done when
 
-- [ ] A widget visitor with no contact detail on file who triggers the booking module is shown the
+- [x] A widget visitor with no contact detail on file who triggers the booking module is shown the
       contact-capture form before the service-choice step will accept a reply, and cannot answer that
       step until the form is submitted
-- [ ] A visitor who already has a contact detail on file is not shown the form again and proceeds
+- [x] A visitor who already has a contact detail on file is not shown the form again and proceeds
       straight to the service step
-- [ ] A site with `RequireContactConsent` on cannot submit the form without the consent tick (already
+- [x] A site with `RequireContactConsent` on cannot submit the form without the consent tick (already
       true today - confirm it still holds once the form's display condition changes)
-- [ ] A text-channel (Telegram/MAX) visitor's booking path is unaffected by this item
-- [ ] `25-138` is filed (done - see that item) so the server-side question this defers is not lost
+- [x] A text-channel (Telegram/MAX) visitor's booking path is unaffected by this item
+- [x] `25-138` is filed (done - see that item) so the server-side question this defers is not lost
+
+## Outcome
+
+Landed as scoped: client-side only, gated on a new `has-known-contact-detail` flag in
+`WidgetStorage` (set once any of the three contact-capture entry points succeeds, cleared on
+identity replacement per `17-07`). A module step's own buttons/inputs are disabled until the
+form is submitted. One honest, named limitation carried into the item file's own storage
+disclosure: this is a client-local convenience, not a source of truth - a contact detail an
+operator enters directly in the console is not reflected in it, so that visitor sees the gate
+again on a new device/browser. `ago-widget#94`. Verified independently alongside `25-133`
+(same combined test run: 35 files, 407 tests, 0 failed).
