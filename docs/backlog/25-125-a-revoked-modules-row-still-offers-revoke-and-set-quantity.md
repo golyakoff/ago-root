@@ -2,7 +2,8 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-console#253`. Not yet deployed live (bundled with the next console deploy,
+  alongside `25-126`..`25-130`).
 - **Found**: originally 2026-09-08 ("the first real revoke, minutes after the first real grant"), on
   a leftover branch (`docs/23-103-revoked-shown-as-expired`) recovered 2026-09-17 while triaging
   unmerged branches. Half of what that branch found was fixed properly, as its own commit message
@@ -52,7 +53,12 @@ regression in what `25-11` shipped.
 
 ## Done when
 
-- [ ] A revoked module's row no longer offers to revoke it again.
-- [ ] "Set quantity" on a revoked row either does something meaningful (a real re-grant) or is hidden -
-      whichever was decided above, stated in the code.
-- [ ] Active and Expired rows keep their existing actions, unchanged.
+- [x] A revoked module's row no longer offers to revoke it again - confirmed against the real
+      `RevokeModuleForSiteAsOwnerHandler`: a repeat revoke would have read as `Module.NotEnabled`
+      (its own repository excludes an already-revoked row), surfaced as a confusing generic error.
+- [x] "Set quantity" on a revoked row is hidden, not repurposed - `GrantModuleQuantityAsOwnerHandler`
+      never checks module status at all, so it would have silently written a quantity nothing reads;
+      no clean re-grant route exists through this action (`EnableModuleForSiteAsOwner` is a different
+      route entirely).
+- [x] Active and Expired rows keep their existing actions, unchanged - both buttons are withheld only
+      for `status === "Revoked"`, proven by a dedicated three-row regression test.
