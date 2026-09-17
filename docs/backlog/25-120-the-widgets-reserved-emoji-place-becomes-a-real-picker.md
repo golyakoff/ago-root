@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing (completes `23-61`'s own deferred scope)
-- **Status**: ready — dispatched for implementation.
+- **Status**: done — `ago-widget#90`, deployed live (`ago-deploy` pin `87d949a`), smoke 42/42.
 - **Found**: 2026-09-17, the author asking for an emoji picker in the widget - investigation found
   `23-61` had already reserved this exact spot and explicitly deferred it: "An emoji picker. This
   reserves its place; choosing and building one is a separate item."
@@ -71,13 +71,13 @@ the save-conversation place in the same row - this item is the same move for the
 
 ## Done when
 
-- [ ] The reserved emoji place is a real, working button - `emojiComingSoon`'s "(coming soon)" wording
+- [x] The reserved emoji place is a real, working button - `emojiComingSoon`'s "(coming soon)" wording
       is gone from both locales.
-- [ ] Clicking it opens a 40-emoji grid; clicking an emoji inserts it at the cursor and returns focus
+- [x] Clicking it opens a 40-emoji grid; clicking an emoji inserts it at the cursor and returns focus
       to the composer.
-- [ ] The picker is fully keyboard-operable (arrow-key grid navigation, `Enter`/`Space` to pick,
-      `Escape` to close) and closes on an outside click, returning focus to the trigger button.
-- [ ] A real-browser (Playwright/`ux-gate`) test proves the picker actually renders, is keyboard-
-      navigable, and an insert actually lands in the textarea - the same "jsdom cannot prove this"
-      discipline this project's own widget items already follow for anything visual/interactive.
-- [ ] The widget's own gzip budget check still passes.
+- [x] The picker is fully keyboard-operable (arrow-key grid navigation, `Enter`/`Space` to pick,
+      `Escape` to close) and closes on an outside click, returning focus to the trigger button. `role=
+      "grid"` with roving tabindex, per ARIA APG's own worked example for an emoji picker.
+- [x] A real-browser (Playwright/`ux-gate`) test proves the picker actually renders, is keyboard-
+      navigable, and an insert actually lands in the textarea - 16/16 `ux-gate` passed, both viewports.
+- [x] The widget's own gzip budget check still passes - 36.4 KB gzipped (budget 45 KB).
