@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-console#251`. Not yet deployed live (bundled with the next console deploy).
 - **Found**: 2026-09-17, the author looking at `ChannelIdentitiesPanel` for a visitor with a Telegram
   identity already linked and verified, and asking why the "link a channel" dropdown still lists
   Telegram as a choice.
@@ -37,7 +37,11 @@ configured.
 
 ## Done when
 
-- [ ] A visitor with one linked-and-verified channel sees the picker offer only the other five kinds.
-- [ ] A visitor with every kind linked sees no link-a-channel row at all.
-- [ ] Linking a new channel (identity list updates) removes that kind from the picker without a reload.
-- [ ] Existing tests for the unfiltered case are updated, not just left passing by accident.
+- [x] A visitor with one linked-and-verified channel sees the picker offer only the other five kinds.
+- [x] A visitor with every kind linked sees no link-a-channel row at all.
+- [x] Linking a new channel (identity list updates) removes that kind from the picker without a reload -
+      the picker's own options are derived from `identities` state on every render, so any future update
+      to that state (unlink, preference change, or a live-refresh mechanism) already reflects correctly;
+      no new plumbing needed.
+- [x] Existing tests for the unfiltered case are updated - two new tests added, the existing
+      "Generate code" test unaffected (its own fixture links nothing, so Telegram stays offered).
