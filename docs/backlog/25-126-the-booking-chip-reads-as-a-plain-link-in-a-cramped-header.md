@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-widget#92`. Deployed live (`ago-deploy` pin `c4c3b73`), smoke 42/0.
 - **Found**: 2026-09-17, the author screenshotting the live widget: the booking chip ("Запись") sits
   squeezed into the header between the title and the close button, styled by `.ago-module-chip`
   (`ui/styles.ts`) as `border: none; background: transparent; color: inherit` - a real `<button>`
@@ -41,9 +41,10 @@
 
 ## Done when
 
-- [ ] The chip reads "Записаться", styled as a real, visually distinct button (not a plain link).
-- [ ] It renders lower and to the right of its current header position, without crowding the composer
-      row - confirmed with a real screenshot from `ux-gate` or a manual preview, not assumed from CSS
-      alone.
-- [ ] Keyboard tab order still reaches it, and its own click behavior (inserting/sending the trigger
-      text) is unchanged.
+- [x] The chip reads "Записаться", styled as a real, visually distinct button - a solid accent pill
+      matching `.ago-contact-capture-submit`, not a plain link.
+- [x] It renders lower and to the right, moved out of the header to sit right above the composer -
+      confirmed with real `ux-gate` screenshots in both viewports (375×812, 1280×800), not assumed
+      from CSS alone.
+- [x] Keyboard tab order still reaches it, and its own click behavior (inserting/sending the trigger
+      text) is unchanged - it stays the same already-wired `<button>`, only restyled and repositioned.
