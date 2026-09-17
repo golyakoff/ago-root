@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-widget#92`. Deployed live (`ago-deploy` pin `c4c3b73`), smoke 42/0.
 - **Found**: 2026-09-17. `25-120`'s own emoji picker trigger button
   (`ui/widget.ts:568`, `this.emojiButton.textContent = "🙂"`) renders its own *trigger* as a literal
   emoji character - inconsistent with every other composer-row control (`.ago-attach`, `.ago-save`),
@@ -30,7 +30,8 @@
 
 ## Done when
 
-- [ ] The emoji-picker trigger button renders a real SVG icon, not a literal emoji character.
-- [ ] It visually matches the weight/sizing of `.ago-attach`/`.ago-save` in both light rendering and at
-      a glance in `ux-gate`'s own screenshots.
-- [ ] The picker's own 40-emoji grid, and the trigger's `aria-label`, are unchanged.
+- [x] The emoji-picker trigger button renders a real SVG icon (Material Symbols Outlined
+      `sentiment_satisfied`, via the existing `createSvgIcon` helper), not a literal emoji character.
+- [x] It visually matches the weight/sizing of `.ago-attach`/`.ago-save` - same `createSvgIcon`
+      convention, confirmed in a live browser.
+- [x] The picker's own 40-emoji grid, and the trigger's `aria-label`, are unchanged.

@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-widget#92`. Deployed live (`ago-deploy` pin `c4c3b73`), smoke 42/0.
 - **Found**: 2026-09-17, the author's own request: the message textarea should be at least three lines
   tall from the start, not grow from a single line.
 
@@ -23,6 +23,7 @@ but no minimum - the textarea renders at its native single-row height until cont
 
 ## Done when
 
-- [ ] The composer textarea renders at roughly three lines tall on open, before any text is typed.
-- [ ] It still grows up to its existing `max-height` as content wraps further, and the composer row's
-      other controls stay aligned to its bottom edge at every height.
+- [x] The composer textarea renders at roughly three lines tall on open (`min-height: 5.5rem`,
+      documented arithmetic against padding/border/line-height), before any text is typed.
+- [x] It still grows up to its existing `max-height` as content wraps further, and the composer row's
+      other controls (`align-items: flex-end`) stay aligned to its bottom edge at every height.

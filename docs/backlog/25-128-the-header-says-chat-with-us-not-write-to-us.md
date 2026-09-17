@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-widget#92`. Deployed live (`ago-deploy` pin `c4c3b73`), smoke 42/0.
 - **Found**: 2026-09-17, the author's own wording preference for the widget's fixed header title.
 
 ## Scope
@@ -16,5 +16,6 @@
 
 ## Done when
 
-- [ ] The Russian widget header reads "Напишите нам".
-- [ ] No other string, test, or snapshot still asserts the old "Чат с нами" text.
+- [x] The Russian widget header reads "Напишите нам".
+- [x] No other string, test, or snapshot still asserts the old "Чат с нами" text - full suite green
+      (401/401).

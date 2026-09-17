@@ -2,7 +2,9 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-chat#322` (additive migration), `ago-console#254`, `ago-widget#92`. Deployed
+  live in dependency order (backend migration first via `apply-demo.sh`, backup taken first; then
+  console/widget already live), smoke 42/0 across all three.
 - **Found**: 2026-09-17, the author noticing the widget's own post-"Представиться" confirmation text
   ("Спасибо - мы свяжемся с вами.") is both wrong (the visitor is already mid-conversation; nobody is
   going to separately "get back to" them) and un-configurable.
@@ -62,8 +64,10 @@ fixed and must not survive as the unconfigured fallback either.
 
 ## Done when
 
-- [ ] A tenant can set a custom confirmation text in the console's widget settings, and it renders
-      (with `{name}` substituted) in the widget after a real contact-capture submission.
-- [ ] A tenant who has not configured one sees the new, better default - never the old "мы свяжемся с
-      вами" wording.
-- [ ] The setting is genuinely tenant-scoped - no operator- or conversation-level path to set it exists.
+- [x] A tenant can set a custom confirmation text in the console's widget settings
+      (`WidgetConfigPage.tsx`, next to "Contact consent"), and it renders (with `{name}` substituted
+      client-side) in the widget after a real contact-capture submission.
+- [x] A tenant who has not configured one sees the new, better default ("Спасибо, {name}, ваши
+      контакты добавлены.") - never the old "мы свяжемся с вами" wording, which is gone everywhere.
+- [x] The setting is genuinely tenant-scoped - `WidgetConfig.ContactCaptureConfirmationText`, set only
+      through the tenant's own widget-settings screen, no operator- or conversation-level path exists.
