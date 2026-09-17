@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready — config written, not yet applied live.
+- **Status**: done — `ago-deploy#225`. Applied live, confirmed on the running pod, smoke 46/46.
 - **Found**: 2026-09-17, the author's own live use of the console after `25-115`/`25-116`.
 
 ## What this item covers, and what it does not
@@ -45,6 +45,8 @@ no code change - the option was already bound from configuration.
 
 ## Done when
 
-- [ ] A browser tab idle long enough to drop its SignalR connection, then reconnecting within 3
-      minutes, does not release the operator's conversations.
-- [ ] The change is deployment configuration only - no code change.
+- [~] A browser tab idle long enough to drop its SignalR connection, then reconnecting within 3
+      minutes, does not release the operator's conversations. **Config confirmed live** (the running
+      `ago-chat-worker` pod carries `OperatorDisconnectGraceConsumer__GracePeriod=00:03:00`) - not
+      independently stress-tested against a real disconnect/reconnect cycle.
+- [x] The change is deployment configuration only - no code change.
