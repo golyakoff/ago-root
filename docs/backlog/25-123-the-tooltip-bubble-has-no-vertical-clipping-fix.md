@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing (extends `25-111`'s own fix to the other axis)
-- **Status**: ready
+- **Status**: done — `ago-console#252`. Deployed live (`ago-deploy` pin `0b8ffb1`), smoke 45/45.
 - **Found**: 2026-09-17, the author reporting "tooltips intermittently break the layout, going outside
   their bounds" with a screenshot of `Thread.tsx`'s delivery-scope tooltip bubble clipped at the bottom.
 
@@ -72,10 +72,12 @@ on fixture state) without ever actually reproducing the clipped case.
 
 ## Done when
 
-- [ ] A tooltip trigger near the bottom of a scrollable ancestor's own bounds opens its bubble upward
+- [x] A tooltip trigger near the bottom of a scrollable ancestor's own bounds opens its bubble upward
       instead of clipping downward, proven by a real Playwright reproduction (fails before, passes
-      after).
-- [ ] Every existing tooltip call site the current `ux-gate/tooltipPositioning.spec.ts` already checks
-      still reports zero overflow - rerun, not just left green by omission.
-- [ ] The asymmetry (no vertical "shrink" analogue to the horizontal `max-width` shrink) is stated in
-      code, not left for a reader to wonder about.
+      after) - `Thread`'s own delivery-scope tooltip against a short conversation plus a genuine
+      "load older messages" state.
+- [x] Every existing tooltip call site the current `ux-gate/tooltipPositioning.spec.ts` already checks
+      still reports zero overflow - rerun (66 passed, 0 failed across the full `ux-gate` suite), not
+      just left green by omission.
+- [x] The asymmetry (no vertical "shrink" analogue to the horizontal `max-width` shrink) is stated in
+      code at the exact point it would otherwise be reached for.
