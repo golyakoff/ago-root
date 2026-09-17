@@ -1,7 +1,7 @@
 # 25-135 · A relayed booking confirmation echoes the visitor's own message
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#323` (bundled with `25-134`, same file)
 - **Found**: 2026-09-17, while investigating the author's report of duplicated text and buttons in
   the booking flow (`25-133`) - not itself reported by the author, but a real defect on the same code
   path, filed per the standing rule that a found defect gets filed without waiting to be asked.
@@ -54,8 +54,16 @@ content at all. `25-121` (which built exactly this relay path) did not cover thi
 
 ## Done when
 
-- [ ] A Telegram/MAX booking confirmation shows the card's title and every line, not the visitor's
+- [x] A Telegram/MAX booking confirmation shows the card's title and every line, not the visitor's
       own last message
-- [ ] `MessageOpacityTests` (or equivalent) passes unchanged
-- [ ] Widget rendering is unaffected by this item alone (the visible widget-side symptom is already
+- [x] `MessageOpacityTests` (or equivalent) passes unchanged
+- [x] Widget rendering is unaffected by this item alone (the visible widget-side symptom is already
       fixed by `25-133`; this item is about what a text channel receives)
+
+## Outcome
+
+Landed bundled with `25-134` in one PR (`ago-chat#323`). `PrimitiveTextRenderer.Render` gained a
+`confirmation_card` branch, checked ahead of the generic choice-shaped path, reading the payload's
+`title`/`lines` fields (the same two fields `ago-widget`'s own `render.ts` already reads) and
+rendering them as real text instead of falling through to the caller's fallback body. Malformed/
+missing shape still falls back safely, never a throw. `MessageOpacityTests` passed unchanged.

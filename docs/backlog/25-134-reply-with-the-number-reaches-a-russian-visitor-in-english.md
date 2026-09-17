@@ -1,7 +1,7 @@
 # 25-134 · "Reply with the number." reaches a Russian visitor in English
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#323` (bundled with `25-135`, same file)
 - **Found**: 2026-09-17, live, reported by the author: a Russian-language booking response ends with
   an English instruction line.
 - **Depends on**: none. Touches `ago-chat` only. Shares files with `25-135` - land in the same lane,
@@ -59,10 +59,19 @@ the same change since it's the same mechanism and the same file.
 
 ## Done when
 
-- [ ] A Russian-locale site's Telegram/MAX visitor (and, until `25-133` lands, a widget visitor too)
+- [x] A Russian-locale site's Telegram/MAX visitor (and, until `25-133` lands, a widget visitor too)
       sees the instruction line in Russian
-- [ ] `RouteConversationToModuleHandler`'s own fallback "Done - thank you." message is localized the
+- [x] `RouteConversationToModuleHandler`'s own fallback "Done - thank you." message is localized the
       same way
-- [ ] An unset/unrecognised locale still renders English
-- [ ] Widget behaviour is otherwise unaffected - after `25-133` lands, the widget never shows this
+- [x] An unset/unrecognised locale still renders English
+- [x] Widget behaviour is otherwise unaffected - after `25-133` lands, the widget never shows this
       text at all, but this item does not depend on `25-133`
+
+## Outcome
+
+Landed bundled with `25-135` in one PR (`ago-chat#323`) - both touch `PrimitiveTextRenderer.cs`, the
+same reasoning `25-37`/`25-38`/`25-39` already used. A new `PrimitiveTextRenderer.Strings`
+English/Russian table (mirroring `Ago.Calendar`'s own shape) covers both the instruction line and
+`RouteConversationToModuleHandler`'s "Done - thank you." fallback; `Render` gained a `string? locale`
+parameter threaded through both call sites. Verified independently: full suite green (Domain 737,
+Application 1371, FakeCrm 21, Architecture 49, Concurrency 89, Integration 1320).
