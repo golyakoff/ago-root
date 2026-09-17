@@ -2,10 +2,9 @@
 
 - **Stage**: 25
 - **Depends on**: nothing (closes a gap `14-07`/`adr/0070` named and deliberately deferred)
-- **Status**: done (infra), live E2E walk pending — `ago-deploy#224`. Applied live, smoke 46/46, and
-  the relay's own logs show it actively proxying real `api.telegram.org:443` connections from the API
-  pod (confirmed via `kubectl logs`). The actual "does a real bot token now connect" walk needs the
-  author to retry - not yet confirmed by this managing session.
+- **Status**: done — `ago-deploy#224`. Applied live, smoke 46/46, relay confirmed proxying real
+  `api.telegram.org:443` connections from the API pod, and the author confirmed a real bot connected
+  cleanly through the console on the first retry after this fix landed.
 - **Found**: 2026-09-16, the author connecting a real Telegram bot through the new channel-entitlement
   UI (`25-115`): the "Подключить" button stayed on "Подключаем..." indefinitely.
 
@@ -65,9 +64,8 @@ readiness probe was added rather than left absent.
 - [x] `Ago.Chat.Api`'s own outbound Telegram calls (`getMe`, credential registration) route through the
       same relay `Ago.Chat.Worker` already used - confirmed live, the relay's own logs show
       `accepted tcp:api.telegram.org:443` from the API pod's own IP.
-- [~] A real end-to-end walk: connect a real Telegram bot token through the console. **Not yet
-      confirmed** - the author hit the original bug on this exact flow; needs a retry now that the fix
-      is live.
+- [x] A real end-to-end walk: connect a real Telegram bot token through the console - confirmed by the
+      author, connected cleanly on the first retry after this fix landed.
 - [x] The old sidecar-only shape is fully removed, not left running alongside the new Service -
       `ago-chat-worker`'s own Deployment carries no `initContainers` block any more (confirmed via
       `kubectl get deployment ago-chat-worker -o yaml`).
