@@ -1,7 +1,7 @@
 # 25-133 · The booking widget shows the same choice twice
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#93`
 - **Found**: 2026-09-17, live, reported by the author mid-booking: every choice-shaped step (which
   service, which worker, which date, which time) renders as a numbered text list *and* real buttons
   for the identical options, one directly under the other.
@@ -66,13 +66,20 @@ lands) the English "Reply with the number." line bleeding into an otherwise-Russ
 
 ## Done when
 
-- [ ] A widget visitor on a `choice_list` / `date_time_picker` step sees the prompt once (from the
+- [x] A widget visitor on a `choice_list` / `date_time_picker` step sees the prompt once (from the
       rendered primitive, not from a text bubble) and buttons below it - no numbered list, no
       "reply with the number" line, anywhere in the widget
-- [ ] A step whose `contentKind` the widget does not recognise (or does not yet render, e.g.
+- [x] A step whose `contentKind` the widget does not recognise (or does not yet render, e.g.
       `verified_phone_form`/`escalate`) still shows its `body` text exactly as today - proven by a
       test, not left to reasoning
-- [ ] The operator console's own view of the conversation is provably unchanged (it reads `body`,
+- [x] The operator console's own view of the conversation is provably unchanged (it reads `body`,
       which is untouched by this item)
-- [ ] Telegram/MAX delivery is provably unchanged (it re-renders from `Content` independently at
+- [x] Telegram/MAX delivery is provably unchanged (it re-renders from `Content` independently at
       relay time, which is untouched by this item)
+
+## Outcome
+
+Landed exactly as scoped, `ago-widget`-only: `renderBubble` gained a `showBody` parameter, and
+`appendMessageBubble` now computes `renderPrimitiveContent`'s result before deciding whether the
+plain-text bubble needs its text at all. Verified independently (typecheck/lint/build clean; 35
+files, 407 tests passed; 38.0 KB gzipped against the 45 KB budget). `ago-widget#93`.
