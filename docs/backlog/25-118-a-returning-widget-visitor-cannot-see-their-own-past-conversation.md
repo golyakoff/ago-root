@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready — needs a real design pass before implementation, not a config change.
+- **Status**: ready — design decided (see "Answered" below), dispatched for implementation.
 - **Found**: 2026-09-17, split out of `25-117`: the author compared AGO's widget against Jivo's
   (embedded on `golyakov.net` for the comparison) and asked for widget conversations to stay resumable
   as long as a visitor's own identity does (7 days). Investigation found this needs a real, currently
@@ -83,14 +83,60 @@ reasoning explicitly rather than picking the first one that compiles.
 - **Whatever ships must survive `16-02`'s erasure guarantee** - a visitor's erased conversation must
   not resurface through this new read path.
 
+## Answered, 2026-09-17
+
+**Chosen: a fourth shape, not listed above** - found re-reading `AutoCloseInactiveConversationsJob`'s
+own SQL rather than assuming its three named alternatives were exhaustive. `FindStaleAssignedBatchAsync`
+only ever selects `state = 'Assigned'` rows - a `Waiting` conversation is never touched by this job at
+all today, and `IConversationRepository.GetActiveForVisitorAsync` (`StartConversationHandler`'s own
+resume check) already treats `Waiting` as active exactly like `Assigned`. That means the widget side of
+this problem needs **no new read mechanism and no new domain state**: a conversation already knows how
+to sit in `Waiting`, indefinitely, fully resumable by the same visitor through the exact code path that
+exists today.
+
+**The fix is splitting one job's single window into two, for the widget bucket only:**
+
+1. **Release** (short window, unchanged default - the existing `WidgetInactivityWindow`, 1 hour): an
+   `Assigned` widget conversation with no message either direction for this long is released back to
+   `Waiting` - `Conversation.ReleaseToQueue`, the identical domain method `OperatorConversationReleaser`
+   already calls for `4-04`'s disconnect case, generalised to a per-conversation caller instead of a
+   per-operator one. Frees the operator's capacity slot immediately, same as today.
+2. **Close** (new, long window - `WidgetCloseWindow`, default matched to `JwtTokenService.
+   VisitorTokenLifetime`'s 7 days): *any* widget conversation - `Assigned` or `Waiting` - with no
+   message for this much longer stretch is actually `Close()`d, through the unchanged
+   `AutoCloseConversationHandler` path. This is what keeps a genuinely abandoned conversation from
+   sitting in `Waiting` forever once the visitor's own identity has also lapsed.
+
+Channel-kind conversations (MAX/Telegram/etc.) are **untouched** - they keep their existing single-
+window, `Assigned`-only auto-close exactly as `18-06` built it. This item is scoped to the widget
+bucket alone, the same scope the author's own comparison (against Jivo, a widget product) named.
+
+**Rejected, and why:**
+- **A visitor-facing equivalent of `18-07`'s panel** (option 2 above) - would have needed a new
+  access-control surface, a `personal-data.md` update and an erasure review for a genuinely new way a
+  visitor's own messages become newly readable across conversation boundaries. All of that is
+  unnecessary once the real fix turns out to need no new conversation boundary crossed at all.
+- **Widening the single existing window** (option 1 / `25-117`'s original attempt) - still conflates
+  capacity with memory; the two-window split is what actually separates them.
+
+**Known cost, stated because it is real**: a `Waiting` conversation now sits, visible in whatever the
+operator's own queue view considers "waiting," for up to `WidgetCloseWindow` instead of disappearing
+after `WidgetInactivityWindow`. Whether the console's own Waiting list needs a "stale" visual
+distinction or a recency sort is a real UX question this item does not resolve - named as a follow-up
+if it turns out to matter in practice, not solved speculatively here.
+
 ## Done when
 
-- [ ] A design decision is written down (an ADR, or at minimum this item's own "Answered" section)
-      naming which of the three shapes above - or a fourth - was chosen, and why.
-- [ ] A returning widget visitor whose previous conversation was auto-closed can see that
-      conversation's own prior messages, without needing an operator to still be assigned to it.
-- [ ] Operator capacity still releases on the short, `25-117`-unrelated timescale `18-06` originally
-      intended - this item must not reopen the capacity-vs-memory conflation `25-117` was split apart
-      to avoid.
-- [ ] `docs/architecture/personal-data.md` reflects the new read path, and `16-02`'s erasure guarantee
-      is confirmed to still cover it.
+- [x] A design decision is written down - see "Answered" above.
+- [ ] A returning widget visitor whose previous conversation was only *released* (not yet closed) can
+      resume it - same conversation id, full prior history, through the existing
+      `GetActiveForVisitorAsync`/`StartConversationHandler` path, no widget or API change needed for
+      this part.
+- [ ] An `Assigned` widget conversation idle past `WidgetInactivityWindow` (unchanged, 1 hour) is
+      released back to `Waiting` and frees the operator's capacity slot - not closed.
+- [ ] A widget conversation (`Assigned` or `Waiting`) idle past the new `WidgetCloseWindow` (7 days) is
+      actually closed.
+- [ ] Channel-kind (MAX/Telegram/etc.) auto-close behaviour is provably unchanged - existing tests for
+      it still pass unmodified, and new tests do not touch that code path.
+- [ ] No new migration, no new read endpoint, no `personal-data.md` change - confirm this stays true
+      given the chosen design touches no new data-visibility surface.
