@@ -2,7 +2,9 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready — design decided, dispatched for implementation.
+- **Status**: done — `ago-chat#320`, `ago-widget#91`, `ago-console#250`, `ago-deploy` (backend pin
+  `6bcfc6b`, frontend pin `87d949a`). Migration applied live via `apply-demo.sh`, backup taken first
+  (`ago-backup-20260917T103620Z.tar.gpg`), smoke 42/42.
 - **Found**: 2026-09-17, the author comparing the console's own existing "Доставлено"/"Не доставлено"
   badge (shown on an operator's own message in a Telegram/MAX conversation) against the widget, which
   shows nothing at all for the identical case.
@@ -84,11 +86,19 @@ shape (`AttachmentUploadGrantChanged`/`AttachmentUploadGrantFanoutConsumer`) rat
 
 ## Done when
 
-- [ ] An operator's message to a widget visitor shows no badge until the visitor's own live connection
+- [x] An operator's message to a widget visitor shows no badge until the visitor's own live connection
       has actually received it, then shows the identical "Доставлено" badge Telegram/MAX conversations
       already show - live, without a reload, when the operator is still looking at the conversation.
-- [ ] A visitor reconnecting later (their own client never having acked) still sees the message; a late
-      ack still sets `DeliveredAt` and still updates the console if the operator is now looking.
-- [ ] Channel-kind delivery (`ChannelDelivery`, `Thread.tsx`'s existing badge) is provably unchanged.
-- [ ] The new migration is additive/reversible, and this remains the only migration in flight in
-      `ago-chat` for its own duration.
+      Proven by `MessageDeliveredLiveDeliveryEndToEndTests` (real Kestrel, real `VisitorHub`/
+      `OperatorHub`, real `HubConnection`) and confirmed the deployed widget bundle carries the ack
+      call (`curl .../widget.js | grep AcknowledgeDeliveredAsync`).
+- [x] A visitor reconnecting later (their own client never having acked) still sees the message; a late
+      ack still sets `DeliveredAt` and still updates the console if the operator is now looking. The
+      widget's own `connection.ts` acks every operator message on initial history replay too, not only
+      on a live push, for exactly this case.
+- [x] Channel-kind delivery (`ChannelDelivery`, `Thread.tsx`'s existing badge) is provably unchanged -
+      its own tests pass unmodified; `deliveredAt` is only ever read for a message `channelDeliveries`
+      has no entry for.
+- [x] The new migration is additive/reversible (`messages.delivered_at`, nullable), applied live via
+      `apply-demo.sh` (backup taken first) as the only migration in flight in `ago-chat` for its
+      duration.

@@ -422,9 +422,13 @@ denial.
   already established; it stays a directly-tested Infrastructure query rather than a port method, since
   a port is shaped by its real callers and this one has none until `23-17`/`23-18`.
 - `messages` - `id` (uuid v7), `conversation_id`, `sequence`, `author_kind`, `author_id`, `body`,
-  `created_at`, `delivered_at?`, `read_at?`, and - added by `14-06` - `content_kind?`,
-  `content?`, `actions?`. See **Structured message content** below for why those three are
-  `text` rather than `jsonb` and why they are three columns rather than one.
+  `created_at`, and - added by `14-06` - `content_kind?`, `content?`, `actions?`. See
+  **Structured message content** below for why those three are `text` rather than `jsonb` and why
+  they are three columns rather than one. `25-119` added `delivered_at?` - set once the recipient's
+  own live connection has acked an operator-authored message (`VisitorHub.AcknowledgeDeliveredAsync`),
+  never a raw "the server sent it" flag. No `read_at` column exists - a per-message read receipt was
+  never built; `Conversation`'s own last-read tracking (`2-05`'s unread counter) is a different,
+  conversation-scoped concept.
 - `outbox` - `id`, `occurred_at`, `type`, `version`, `payload` (jsonb), `partition_key`,
   `correlation_id`, `published_at?`, `attempts`. See `adr/0005`. `version`/`correlation_id` were
   missing from the first cut - added once `2-04`'s dispatcher needed to reconstruct a complete
