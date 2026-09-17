@@ -1,7 +1,7 @@
 # 25-132 · The booking module's Russian copy reads wrong
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#68`
 - **Found**: 2026-09-17, live, reported by the author mid-booking on the real deployment.
 - **Depends on**: none. Touches `ago-calendar` only.
 
@@ -38,8 +38,14 @@ reworded, having now actually read them mid-flow rather than only checked that t
 
 ## Done when
 
-- [ ] A Russian-locale site's service step reads "Выберите услугу для записи:"
-- [ ] The worker step reads "К кому вы хотите записаться?"
-- [ ] The confirmation card's title reads "✅ Готово!"
-- [ ] Every existing test asserting the old Russian strings is updated to the new ones, and the full
+- [x] A Russian-locale site's service step reads "Выберите услугу для записи:"
+- [x] The worker step reads "К кому вы хотите записаться?"
+- [x] The confirmation card's title reads "✅ Готово!"
+- [x] Every existing test asserting the old Russian strings is updated to the new ones, and the full
       `ago-calendar` suite is green
+
+## Outcome
+
+Landed exactly as scoped - three strings in `ModuleStepFactory`'s Russian table, six test assertions
+across two test files updated to match. Full `ago-calendar` suite green: Application 209, Domain 235,
+Architecture 28, Concurrency 26, Integration 334 - 832 tests, 0 failed. `ago-calendar#68`.
