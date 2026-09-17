@@ -2,7 +2,8 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-chat#321`. No migration needed. Deployed live (`ago-deploy` pin `0b8ffb1`),
+  smoke 45/45.
 - **Found**: 2026-09-17, the author testing `/записаться` for real over Telegram: the operator console
   showed the booking module's own system message ("Что вы хотите забронировать? 1) Консультация...
   Reply with the number.") but the same conversation's Telegram chat stayed empty.
@@ -47,10 +48,14 @@ already has to hand a text-only step.
 
 ## Done when
 
-- [ ] A `/записаться` (or any other module trigger) conversation over a real text channel (Telegram at
+- [x] A `/записаться` (or any other module trigger) conversation over a real text channel (Telegram at
       minimum, ideally verified against MAX too) shows the module's own prompt in that channel, not
-      only in the console/widget.
-- [ ] `14-04`'s offline auto-reply is confirmed still not relayed to a channel (unrelated scope,
-      protect it explicitly with a test).
-- [ ] A widget conversation's own module-task rendering is unchanged (structured payload, not the
-      primitive-text fallback).
+      only in the console/widget. Fixed in the shared `DeliverChannelMessageHandler`, so every
+      channel-kind adapter benefits identically - `Message.Content` presence (set only by
+      `RouteConversationToModuleHandler`'s own step rendering) is the fact that distinguishes a
+      module-task prompt from `14-04`'s offline auto-reply, with no new column or enum member.
+- [x] `14-04`'s offline auto-reply is confirmed still not relayed to a channel - a dedicated regression
+      test proves it (`HandleAsync_ForASystemMessageWithNoContent_LikeTheOfflineAutoReply_DoesNotRelayIt`).
+- [x] A widget conversation's own module-task rendering is unchanged (structured payload, not the
+      primitive-text fallback) - this item only touches the outbound-channel delivery path, never the
+      widget's own `MessageAccepted` rendering.
