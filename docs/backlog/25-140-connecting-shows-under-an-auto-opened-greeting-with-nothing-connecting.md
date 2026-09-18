@@ -1,7 +1,7 @@
 # 25-140 · "Connecting…" shows under an auto-opened greeting with nothing connecting
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#95`
 - **Found**: 2026-09-18, live, reported by the author: turning on the auto-open greeting and letting
   the panel reveal itself shows "Подключение…" ("Connecting…") under the greeting, before the visitor
   has typed anything - confusing, since nothing is actually trying to connect at that point.
@@ -47,9 +47,14 @@ use.
 
 ## Done when
 
-- [ ] Auto-opening the panel (greeting shown, composer enabled, no connection yet) shows no status
+- [x] Auto-opening the panel (greeting shown, composer enabled, no connection yet) shows no status
       text at all under the greeting
-- [ ] Sending the first message still shows "Подключение…" while the real connection is being made,
+- [x] Sending the first message still shows "Подключение…" while the real connection is being made,
       exactly as before this item
-- [ ] The ordinary visitor-initiated `open()` path is unaffected - "Подключение…" still shows
+- [x] The ordinary visitor-initiated `open()` path is unaffected - "Подключение…" still shows
       immediately, since that path really does connect right away
+
+## Outcome
+
+Landed exactly as scoped - one line (`this.status.textContent = ""`) in `openForAutoGreeting`.
+Fails-before confirmed by reverting it and rerunning the new tests. `ago-widget#95`.
