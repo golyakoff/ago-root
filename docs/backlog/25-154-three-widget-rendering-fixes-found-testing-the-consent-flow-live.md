@@ -1,7 +1,7 @@
 # 25-154 · Three widget rendering fixes, found testing the consent flow live
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#70`, `ago-widget#103`
 - **Found**: 2026-09-18, the author testing `25-153`'s consent gate live on the demo stand.
 - **Depends on**: nothing. Touches `ago-calendar` (date format) and `ago-widget` (the other two).
   One worker, both repositories - the widget half needs the calendar half's own context to avoid
@@ -84,13 +84,27 @@ of `14-04` should not conclude the label still exists.
 
 ## Done when
 
-- [ ] A `choice_list`/`date_time_picker` step's `content.prompt` renders in the widget before its
+- [x] A `choice_list`/`date_time_picker` step's `content.prompt` renders in the widget before its
       buttons, mirroring `confirmation_card`'s own title pattern - proven for the consent step
       specifically (the prompt naming the tenant's document now visible), and spot-checked against at
       least one existing choice-shaped step to confirm no visible regression
-- [ ] A date-choice button reads `"Вт, 18 сентября 2026"` (ru) / the equivalent English short form -
+- [x] A date-choice button reads `"Вт, 18 сентября 2026"` (ru) / the equivalent English short form -
       the confirmation card's own "Когда" line is unaffected, proven by a test naming both call sites
-- [ ] No trace of the automatic-reply label remains in `ago-widget` - the CSS rule, the custom-property
+- [x] No trace of the automatic-reply label remains in `ago-widget` - the CSS rule, the custom-property
       write, and the now-unused string keys, with a note in the PR that this deliberately reverses part
       of `14-04`'s own disclosure design
-- [ ] Full test suites green in both repositories, re-verified independently
+- [x] Full test suites green in both repositories, re-verified independently
+
+## Outcome
+
+`ago-widget#103`: `render.ts`'s `choice_list`/`date_time_picker` now renders `content.prompt` as a
+`.ago-primitive-title` div before the buttons, mirroring `confirmation_card`; spot-checked against
+the existing service/worker/date pickers with no regression. The auto-reply label removed entirely
+(CSS rule, custom property, and `autoReplyLabel` string, confirmed no other reader) - base bubble
+styling unchanged. 453/453 tests green.
+
+`ago-calendar#70`: new `Strings.FormatDateShort` beside `FormatDate` (a dedicated method, not a
+boolean parameter, so every other `FormatDate` caller stays untouched by construction) - `DateChoice`'s
+button labels abbreviate the weekday; `DescribeRange`'s confirmation-card line is unaffected. English
+gets the equivalent treatment. Full suite green: Domain 235, Application 214, Architecture 28,
+Concurrency 26, Integration 346.
