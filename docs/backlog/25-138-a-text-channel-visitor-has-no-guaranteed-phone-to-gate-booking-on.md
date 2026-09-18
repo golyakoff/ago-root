@@ -1,12 +1,16 @@
 # 25-138 · A text-channel visitor has no guaranteed phone to gate booking on
 
 - **Stage**: 25
-- **Status**: needs analysis — filed as a question, not yet scoped for implementation
+- **Status**: ready — decided by the author, 2026-09-18: build a `form`-primitive name+phone step,
+  inserted by `RouteConversationToModuleHandler` before routing a conversation's first booking reply.
+  Channel-neutral, reuses the existing primitive vocabulary - no new wire shape.
 - **Found**: 2026-09-17, while scoping `25-136` (booking's contact-details gate). Filed at the
   author's own explicit request: do the contact gate client-side, in the widget, for now - but file
   the harder question of a server-side equivalent so it isn't lost.
 - **Depends on**: `25-136` (establishes the widget-side gate this item's eventual server-side version
-  would generalize).
+  would generalize). `25-153` (the general "insert a step before routing to the module, general and
+  channel-neutral" pattern this item reuses - read that item's own `RouteConversationToModuleHandler`
+  changes first, they are the direct precedent and the reason this stopped being merely analysis).
 
 ## The question
 
@@ -38,10 +42,26 @@ Candidate shapes, none evaluated yet:
 
 ## Scope
 
-None yet. This item is the analysis itself - whoever picks it up next should read `25-136`'s own
-Outcome once it lands, check what a real Telegram Bot API or MAX conversation actually exposes about
-a user's phone/contact today, and bring back a scoped proposal (or a recommendation to leave the gate
-client-side-only) for the author to decide, rather than a built change.
+**Decided, 2026-09-18** - build the `form`-primitive shape, the first of the three candidates above,
+using `25-153`'s own consent-gate as the direct implementation precedent:
+
+- Before `RouteConversationToModuleHandler` routes a conversation's **first** reply into a module (the
+  same `TryStartTaskAsync` entry point `25-153`'s own gate hooks), check whether this visitor already
+  has a known name+phone on file (`IVisitorContactDetailRepository`, the same read `25-151`'s own
+  `RecordChannelVisitorContact` writes through). If not, insert a `form`-primitive step asking for
+  name+phone instead of forwarding the reply to the module - general, not booking-specific, so any
+  future module gets the identical gate with no changes here.
+- On a reply, record the contact via the existing `RecordChannelVisitorContact`/
+  `RecordVisitorContactDetailHandler` write path (`25-151`) - the identical consent-gate-aware,
+  rate-limited path, never a second one. If `RequireContactConsent` is on, `25-153`'s own gate applies
+  here too, in the same order it already applies before a module's own phone-collection step -
+  reuse that check, do not duplicate it.
+- Once satisfied (already on file, or just recorded), forward the original reply to the module exactly
+  as today - this step must never eat the visitor's first real message, only precede it.
+- **Only for a channel with no equivalent capture already** (Telegram/MAX today - the widget's own
+  `25-136` client-side gate already covers the widget). Gate on `ChannelKind`, not on "not the widget" -
+  a future channel with its own native contact mechanism should be excluded explicitly, by name, not
+  by exclusion of the widget alone.
 
 ## Where this is likely to go wrong
 
@@ -55,6 +75,12 @@ client-side-only) for the author to decide, rather than a built change.
 
 ## Done when
 
-- [ ] Not yet defined - this item's own first deliverable is a proposal with the tradeoffs above
-      actually checked against each channel adapter's real capability, handed back to the author as a
-      decision, per this item's own Scope.
+- [ ] A Telegram/MAX visitor with no name/phone on file is asked for one, as a `form`-primitive step,
+      before their first reply ever reaches a module
+- [ ] A visitor who already has a name+phone on file (e.g. from a prior conversation, or `25-151`'s own
+      contact-share recording) skips the step entirely - forwarded straight through
+- [ ] `RequireContactConsent`-on sites still gate correctly - the same consent step `25-153` built
+      applies here too, reused rather than duplicated
+- [ ] A widget visitor is completely unaffected - this item is Telegram/MAX only
+- [ ] The recorded contact is the identical `VisitorContactDetail` shape/write-path every other source
+      already produces, findable by `ResolveKnownPhoneAsync` and visible in the operator queue
