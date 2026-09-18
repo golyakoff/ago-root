@@ -130,23 +130,35 @@ full test suites re-run in both repos (`ago-chat`: 664+1171+21+44+87+1148 tests;
 tests plus the full `ux-gate` suite), the security-critical redemption rewrite and the new
 Keycloak-writing class read in full and judged sound.
 
-**What is not proven, because this project's own local Keycloak (the `docker-desktop` cluster's
-`ago-demo-provisioner` service-account client) has drifted admin credentials unrelated to this change**
-— `client_credentials` grant refused, and fixing that local-environment drift was out of scope for
-landing this item. Needs checking against the real deployment realm before this reaches actual
-invitees, not assumed from code review alone:
+**Local `docker-desktop` Keycloak's `ago-demo-provisioner` service-account credential drift - fixed,
+2026-09-18.** The `client_credentials` grant was refused because the Keycloak-side client secret had
+been rotated/regenerated at some point without updating the `infra-credentials` k8s secret to match -
+found by comparing the two directly via the Admin API, fixed by resetting the Keycloak-side secret
+back to the `infra-credentials` value (`ago-local-dev`), confirmed by a real `client_credentials`
+grant succeeding afterward.
 
-- Whether `KeycloakAdminOptions.ConsoleClientId` (`"ago-console"`) is the console's actual registered
-  client id, and whether its valid-redirect-uri pattern permits this design's `?inviteCode=` query
-  parameter.
-- Whether the realm has email-template internationalization on for more than one locale — if not, an
-  invite still sends, just not necessarily in the inviting site's own language.
-- What Keycloak's Admin REST API actually returns on a real SMTP relay failure — `SmtpFailureDetail`
-  captures the most specific value the HTTP response can offer, unconfirmed against a real failure.
-- The whole create-or-find-by-email round trip and the hosted `execute-actions-email` page itself, not
-  exercised against any live Keycloak at all (the integration-test host uses a fake
-  `IOperatorInviteEmailProvisioner`, deliberately — no admin service-account client exists in that
-  fixture's own realm).
+**Verified live against the real demo-stand realm, 2026-09-18** (`kcadm.sh` inside the live Keycloak
+pod, replicating `OperatorInviteEmailProvisioner`'s own exact calls - `client_id=ago-console`,
+`redirect_uri=https://office.reserve-me.ru/redeem-invite?inviteCode=...`, `lifespan=604800`,
+`requiredActions=[UPDATE_PASSWORD,UPDATE_PROFILE]`, `locale=ru`):
+
+- **`ConsoleClientId`/redirect-uri pattern**: confirmed. `ago-console`'s registered redirect URIs
+  include `https://office.reserve-me.ru/*`, which permits this design's `?inviteCode=` query parameter.
+- **Create-or-find-by-email + `execute-actions-email`**: confirmed against a real, pre-existing
+  Keycloak identity (`a@golyakov.net`) - the call returned `204 No Content`, and the node's own Postfix
+  log shows the real send: `to=<a@golyakov.net>, relay=mx.yandex.net[...]:25, ...
+  status=sent (250 2.0.0 Ok: queued on mail-nwsmtp-mxfront-production-41...)`. The mechanism this item
+  was least sure of - a real Keycloak Admin API call producing a real, accepted outbound email - works.
+- **Locale-driven template language**: send triggered with the user's `locale` attribute set to `ru`;
+  confirming which language the email actually rendered in needs a human reading the inbox - pending
+  the author's own check.
+- **The hosted `execute-actions-email` page and the full redemption round trip**: still not exercised
+  end to end - this test drove Keycloak's own API directly rather than a real operator session through
+  `ago-chat`'s own live API, since no real operator credential was available. Opening the real emailed
+  link and completing redemption is the one piece still to prove.
+- **What Keycloak returns on a genuine SMTP failure**: still unconfirmed - this send succeeded, so it
+  proves nothing about the failure path. Would need a deliberately broken relay to observe, not
+  attempted here.
 
 **One Done-when is met by a deliberate, stated deviation, not as literally written**: Keycloak's own
 hosted self-registration duplicate-email refusal happens entirely inside Keycloak's themed pages and
@@ -159,19 +171,26 @@ company" form *before* any collision could occur, rather than catching the colli
 
 - [x] Creating an invite without an email is refused by the API, not merely hidden in the console. —
       `CreateOperatorInviteHandlerTests`, and the column is `NOT NULL` by migration.
-- [ ] Inviting an email that already holds a Keycloak identity (on this site, a different site, or
+- [~] Inviting an email that already holds a Keycloak identity (on this site, a different site, or
       no site at all) succeeds without creating a duplicate account — proven against a real, already-
-      existing identity, not only the fresh-account path. **Code sound, unverified against a live
-      realm** — see above.
+      existing identity, not only the fresh-account path. **The underlying Keycloak mechanism is now
+      live-verified** (2026-09-18, see Outcome above) - `execute-actions-email` against a real,
+      pre-existing identity produced a real, accepted send. **Not yet driven through
+      `OperatorInviteEmailProvisioner`'s own real 409-then-find-by-email branch** - this test targeted
+      the existing user directly rather than exercising the create-call's own 409 response, so the
+      code path that decides "create vs. find" is still unverified against a live realm, only its
+      final step.
 - [ ] The invited user's flow never surfaces the "create your own company" form — an invitee who opens
       the email link ends up as an operator on the inviting site with no branch point where a new
       tenant could be created instead. **Console routing (`CallbackPage`→`/redeem-invite`, auto-submit
-      on arrival) unit-tested; the real Keycloak-hosted round trip unverified.**
+      on arrival) unit-tested; the real Keycloak-hosted round trip unverified** - a real invite email
+      was sent 2026-09-18 (see Outcome) but not yet clicked through.
 - [ ] An invitee who self-registers first (before opening the invite email) sees the specific
       "you have an invitation, check your email" message, not a raw Keycloak error. **Not met as
       literally written — see the deliberate deviation above.**
-- [ ] The invite email's language matches the inviting site's own configured `Locale`. **Sent as a
-      Keycloak user `locale` attribute; whether the realm's own templates honor it is unverified.**
+- [ ] The invite email's language matches the inviting site's own configured `Locale`. **Sent 2026-09-18
+      with the Keycloak user's own `locale` attribute set to `ru` (see Outcome) - pending the author's
+      own confirmation of which language the email actually arrived in.**
 - [x] A sixth invite from the same site on the same day is refused with a message naming the limit; the
       limit itself is one config value, not hardcoded in a handler. — 3 tests in
       `CreateOperatorInviteHandlerTests`, real rate-limiter, not mocked.
