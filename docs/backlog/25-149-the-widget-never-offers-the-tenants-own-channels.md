@@ -1,7 +1,7 @@
 # 25-149 · The widget never offers the tenant's own channels
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#101`
 - **Found**: 2026-09-18. The author's own request, reference: a Jivo-style card - Telegram, MAX (and
   every other channel a tenant has connected), each a tappable row with an icon, plus a "Написать в
   чат" row that falls through to the ordinary in-page conversation.
@@ -64,16 +64,28 @@
 
 ## Done when
 
-- [ ] A site with two connected channels shows two rows plus "Написать в чат"; a site with none shows
+- [x] A site with two connected channels shows two rows plus "Написать в чат"; a site with none shows
       no card at all
-- [ ] Tapping a Telegram row opens the tenant's own bot (`https://t.me/<username>?start=<code>` per
+- [x] Tapping a Telegram row opens the tenant's own bot (`https://t.me/<username>?start=<code>` per
       `25-148`) in a new tab
-- [ ] "Написать в чат" hides the card, focuses the composer, sends nothing, and never forces a
+- [x] "Написать в чат" hides the card, focuses the composer, sends nothing, and never forces a
       connection
-- [ ] The card reappears on every subsequent open until dismissed, then stays hidden for that visitor
+- [x] The card reappears on every subsequent open until dismissed, then stays hidden for that visitor
       identity across a reload - with its own `WIDGET_STORAGE_DISCLOSURE` entry
-- [ ] The card renders correctly on an auto-opened panel without reintroducing `25-140`'s phantom
+- [x] The card renders correctly on an auto-opened panel without reintroducing `25-140`'s phantom
       status text
-- [ ] An unrecognised `kind` renders with a fallback icon rather than being dropped or crashing the
+- [x] An unrecognised `kind` renders with a fallback icon rather than being dropped or crashing the
       list
-- [ ] A visitor with unread messages still sees their own transcript, unaffected by this card
+- [x] A visitor with unread messages still sees their own transcript, unaffected by this card
+
+## Outcome
+
+Built at session-resolve time, spliced above the composer on `loadBookingModuleChip`'s own timing/
+anchor. Dismissal (row click or first sent message) persists per visitor identity via a new
+`channel-switcher-dismissed` `WidgetStorage` key, `has-known-contact-detail`'s exact convention,
+including a new `WIDGET_STORAGE_DISCLOSURE` entry and `17-07` per-identity clearing. **One deviation
+from scope, disclosed in the PR**: MAX/VK/WhatsApp icons and brand colours are this widget's own
+placeholder approximations, not verified official brand assets - no licensed source was available
+during implementation. Telegram reuses the existing verified glyph. Code comments name exactly which
+four constants a later design pass replaces. 38 test files / 448 tests green (10 new, 0 regressions),
+typecheck/lint clean. `ago-widget#101`.

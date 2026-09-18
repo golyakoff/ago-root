@@ -1,7 +1,7 @@
 # 25-151 · A contact shared on a text channel is thrown away
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#329`
 - **Found**: 2026-09-18, scoping `25-138` (a read-only Opus analysis, verified against the code
   directly). Both Telegram's and MAX's inbound parsers drop any message with no text - a Telegram
   `contact` message or a MAX `contact`-type attachment is silently discarded today, whether the
@@ -57,15 +57,29 @@
 
 ## Done when
 
-- [ ] A Telegram `contact` message whose `user_id` matches the sender records a `Phone`
+- [x] A Telegram `contact` message whose `user_id` matches the sender records a `Phone`
       `VisitorContactDetail` for that visitor
-- [ ] A Telegram `contact` message whose `user_id` does not match the sender is rejected and logged,
+- [x] A Telegram `contact` message whose `user_id` does not match the sender is rejected and logged,
       never recorded
-- [ ] A MAX `contact` attachment whose `hash` verifies against the site's own bot token records a
+- [~] A MAX `contact` attachment whose `hash` verifies against the site's own bot token records a
       `Phone` `VisitorContactDetail`; one that fails verification is rejected and logged - verified
-      against a real MAX capture, not only the documented wire shape
-- [ ] A visitor's next booking finds the recorded phone via `ResolveKnownPhoneAsync`; the operator
+      against a real MAX capture, not only the documented wire shape. **Delivered against the
+      documented wire shape only** - no real MAX bot token or captured `request_contact` payload was
+      available; the exact field names, hash construction and digest encoding (assumed lowercase hex)
+      are flagged as best-effort in `MaxDtos.cs` and the parser's own remarks, the same standing gap
+      that file already carried. Live verification is a follow-up when a real MAX token exists.
+- [x] A visitor's next booking finds the recorded phone via `ResolveKnownPhoneAsync`; the operator
       queue shows their name
-- [ ] On a site with `RequireContactConsent` on and no consent on file, the write is refused cleanly
+- [x] On a site with `RequireContactConsent` on and no consent on file, the write is refused cleanly
       (no crash, no visitor-facing error) - this item does not need to fix that gap, only not break on
       it
+
+## Outcome
+
+New sibling command `RecordChannelVisitorContact` reuses `RecordVisitorContactDetailHandler`'s
+existing write path (rate limits and consent gate included) rather than widening
+`ReceiveChannelMessage` - `ChannelPortTests.ReceiveChannelMessage_CarriesNoTimestamp` still passes
+unchanged. Telegram trust is `contact.user_id == message.from.id` (the entire mechanism - Telegram
+signs nothing); MAX trust is HMAC-SHA256 of `vcf_info` keyed with the site's bot token, constant-time
+compared. Full suite green: Domain 741, Application 1395, FakeCrm 21, Architecture 50, Concurrency
+89, Integration 1363. `ago-chat#329`.
