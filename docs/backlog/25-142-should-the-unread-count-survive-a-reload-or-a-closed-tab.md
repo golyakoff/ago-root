@@ -1,7 +1,7 @@
 # 25-142 · Should the unread count survive a reload or a closed tab?
 
 - **Stage**: 25
-- **Status**: needs a decision - filed as the question, not yet scoped for implementation
+- **Status**: done - answered directly by the author in chat, folded into `25-141`
 - **Found**: 2026-09-18, while scoping `25-141` (the closed-launcher unread badge). Filed at the
   point CLAUDE.md's own rule names: an honest version of this item would decide something the author
   should decide, not something this session should assume either way.
@@ -49,8 +49,11 @@ formally: does "unread" mean "unread since the panel last closed in this page lo
   engineering one - don't let the technical path (what's cheap to build) silently decide the user-
   facing definition.
 
-## Done when
+## Outcome
 
-Not yet defined - this item's own first deliverable is the author's answer to the question above,
-which then determines whether this item is implemented, split further, or closed as "the in-tab-only
-version in `25-141` is enough."
+Asked directly in chat rather than left as a filed-and-waiting question (the author's own correction,
+2026-09-18: a quick question the author can answer right now belongs in chat, not a separate backlog
+item - see `feedback_dont_inflate_ticket_creation` in the managing session's own memory). Answer: yes,
+persist across a reload and a closed-then-reopened tab, same browser - cross-device stays out of
+scope, unasked for. Implemented as part of `25-141` itself, not as a separate item - see that item's
+own Outcome for what was built.
