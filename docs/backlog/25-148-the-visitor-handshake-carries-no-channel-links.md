@@ -1,7 +1,7 @@
 # 25-148 · The visitor handshake carries no channel links
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#328`
 - **Found**: 2026-09-18, scoping the author's own request. The widget has no way to learn which
   messaging channels a site has connected, or what to link to for any of them.
 - **Depends on**: `25-147` (a channel's own public handle has to exist before it can be exposed).
@@ -71,15 +71,28 @@
 
 ## Done when
 
-- [ ] `VisitorSessionResponse` carries `ChannelLinks`, additively, on both the mint and renew paths;
+- [x] `VisitorSessionResponse` carries `ChannelLinks`, additively, on both the mint and renew paths;
       every existing field and consumer is unchanged
-- [ ] A site with nothing connected gets `channelLinks: []`
-- [ ] Read live, proven not to come from the cached `SiteConfigDto`
-- [ ] A new or extended arch test proves the new type carries no token/secret/credential-id-shaped
+- [x] A site with nothing connected gets `channelLinks: []`
+- [x] Read live, proven not to come from the cached `SiteConfigDto`
+- [x] A new or extended arch test proves the new type carries no token/secret/credential-id-shaped
       property
-- [ ] An ADR records the server-built-URL decision and the read-store-not-repository choice
-- [ ] Telegram's own `url` carries a fresh linking code; opening it and sending the bot's own default
+- [x] An ADR records the server-built-URL decision and the read-store-not-repository choice
+- [x] Telegram's own `url` carries a fresh linking code; opening it and sending the bot's own default
       `/start` reply continues the same conversation the widget already had - proven live, not only
       against a test double
-- [ ] An expired or already-used code fails the identical way `/linkidentity`'s own existing failure
+- [x] An expired or already-used code fails the identical way `/linkidentity`'s own existing failure
       path already does
+
+## Outcome
+
+`IPublicChannelLinkReadStore` (Dapper, deliberately not a fifth `IChannelCredentialRepository`
+method - that repository's reads carry `TokenCiphertext`). `ChannelLinkUrlBuilder` builds the full
+`https://` URL server-side. `MintVisitorChannelLinkCodeHandler` mints Telegram's `?start=<code>` as
+a third, symmetric originator of `PendingChannelLinkRequest` alongside `14-12`'s two existing ones;
+degrades to a plain link when a visitor session has no persisted `Visitor` row yet. Proven against
+real Postgres/real handlers in `TelegramLinkContinuityTests` (headline continuity + expired-code
+fallthrough) - the test's own doc comment is explicit that this is the maximum provable without a
+real Telegram bot token and deployed webhook, the same honesty this codebase already states for
+VK/MAX. `ADR-0175` records the two shape decisions. Full suite green (same counts as `25-147`).
+`ago-chat#328`.

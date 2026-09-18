@@ -1,7 +1,7 @@
 # 25-147 · A connected channel never records its own public address
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#327`
 - **Found**: 2026-09-18, scoping the author's own request for a Jivo-style "message us on Telegram/
   MAX/..." switcher in the widget. A bot token proves a tenant controls a channel; it is not, by
   itself, a link a browser can open. No channel today captures, stores, or exposes the one public fact
@@ -68,14 +68,22 @@
 
 ## Done when
 
-- [ ] Connecting Telegram stores the bot's `username`; an already-connected tenant's handle backfills
+- [x] Connecting Telegram stores the bot's `username`; an already-connected tenant's handle backfills
       on the next status read
-- [ ] Connecting MAX stores its bot `username`, via a new, correctly-documented `GET /me` call
-- [ ] VK's handle is available (stored or derived - this item's own decision) from the already-stored
+- [x] Connecting MAX stores its bot `username`, via a new, correctly-documented `GET /me` call
+- [x] VK's handle is available (stored or derived - this item's own decision) from the already-stored
       `ProviderAccountId`, with no new VK API call
-- [ ] Connecting WhatsApp stores `display_phone_number`
-- [ ] Avito stores nothing, with the reason recorded in a code comment
-- [ ] `phone_number_id` and every other provider-internal id stay exactly as private as before -
+- [x] Connecting WhatsApp stores `display_phone_number`
+- [x] Avito stores nothing, with the reason recorded in a code comment
+- [x] `phone_number_id` and every other provider-internal id stay exactly as private as before -
       confirmed by the existing `ChannelPortTests.MaxChannelResponses_CarryNoTokenOrSecretProperty`-
       style arch test still passing unchanged
-- [ ] No existing connect/status response gains a new property
+- [x] No existing connect/status response gains a new property
+
+## Outcome
+
+`ChannelCredential.PublicHandle` (nullable, one additive migration). MAX's own `GetMeAsync` is a new,
+best-effort call - never a connect-time gate, since it is genuinely new API surface MAX's flow never
+exercised before. VK's handle is deliberately **not stored** - derived at read time in `25-148` from
+`ProviderAccountId`, so it can never drift from it. Full suite green (Domain 741, Application 1388,
+FakeCrm 21, Architecture 50, Concurrency 89, Integration 1351). `ago-chat#327`.
