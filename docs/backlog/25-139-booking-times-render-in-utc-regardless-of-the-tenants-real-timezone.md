@@ -1,7 +1,7 @@
 # 25-139 · Booking times render in UTC regardless of the tenant's real timezone
 
 - **Stage**: 25
-- **Status**: backlog — filed, not scheduled
+- **Status**: not planned — superseded by `25-145`
 - **Found**: 2026-09-17, while investigating the author's reported booking-flow issues (not itself
   reported by the author) - filed per the standing rule that a found defect gets a number of its own
   rather than being folded into an unrelated item or left unfiled.
@@ -47,3 +47,11 @@ Not yet determined - this needs a decision, not just an implementation:
 
 Not yet defined - this item needs its own scoping pass (see Scope) before a Done-when list can be
 written honestly.
+
+## Outcome
+
+Superseded by `25-145` (filed 2026-09-18, after the author hit this exact gap live and reported it in
+detail): `25-16` had already given the calendar a real, tenant-configured `TimeZone` before this item
+was even filed - the actual scoping pass this item deferred - so `25-145` carries the real fix rather
+than this placeholder. Closed as not-planned rather than done; the promise this item represented is
+being carried out under `25-145`'s own number, not this one.
