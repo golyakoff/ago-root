@@ -1,7 +1,7 @@
 # 25-153 · A text-channel visitor has no way to give PD consent
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#331`
 - **Found**: 2026-09-18, scoping `25-138`. `RecordVisitorContactDetailHandler.
   ConsentSatisfiedAsync` already refuses to record a contact detail when a site has
   `RequireContactConsent` on and no consent is on file - but a text-channel visitor has no checkbox to
@@ -76,13 +76,27 @@ new wire vocabulary:
 
 ## Done when
 
-- [ ] A Telegram/MAX visitor on a site with `RequireContactConsent` on sees the consent step before
+- [x] A Telegram/MAX visitor on a site with `RequireContactConsent` on sees the consent step before
       any phone question, text-channel-rendered as an ordinary numbered choice
-- [ ] Accepting proceeds to the phone step exactly as today, and records the identical acceptance fact
+- [x] Accepting proceeds to the phone step exactly as today, and records the identical acceptance fact
       `24-01`'s own mechanism already produces for the widget
-- [ ] Declining does not cancel the task - it re-offers the same choice with an explanation of why
+- [x] Declining does not cancel the task - it re-offers the same choice with an explanation of why
       consent is required, and a visitor can accept on a later attempt
-- [ ] A booking cannot reach `BookEventHandler` without consent on a `RequireContactConsent` site -
+- [x] A booking cannot reach `BookEventHandler` without consent on a `RequireContactConsent` site -
       proven by a test that exercises the real path, not just that the step renders
-- [ ] A site with `RequireContactConsent` off is completely unaffected - no new step, no behavior
+- [x] A site with `RequireContactConsent` off is completely unaffected - no new step, no behavior
       change
+
+## Outcome
+
+**Premise correction**: the design section's own landmark classes (`ReplyToModuleTaskHandler`,
+`ModuleStepFactory`, `BookEventHandler`) live in `ago-calendar`, not `ago-chat` - this item's own
+"touches `ago-chat` only" was still correct, but the actual gate lives in `ago-chat`'s
+`RouteConversationToModuleHandler` (confirmed by a comment in `ago-calendar` naming that class as
+"Chat's own separate gate"). `PrimitiveKinds.IsPhoneCollectionStep` shared with `25-152`'s own
+discriminator rather than duplicated. The compliance-closure test
+(`HandleAsync_ConsentGate_NeverForwardsAnythingToTheModuleUntilAccepted_ThenLetsTheRealReplyThrough`)
+proves `gateway.SubmitReplyAsync` - the one call that can reach `BookEventHandler` - is never invoked
+until consent is accepted, even when a visitor types a real phone number before answering. Full suite
+green: Domain 750, Application 1405, FakeCrm 21, Architecture 52, Concurrency 89, Integration 1375.
+`ago-chat#331`.
