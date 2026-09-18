@@ -1,7 +1,7 @@
 # 25-157 · Prove a real send through NotificationMailSender's own HTML path
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: closed - not planned, decided by the author, 2026-09-19
 - **Found**: 2026-09-19, closing out `25-155`. That item's own Done-when list asked for "a real send"
   proving `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` and
   `OperatorInviteCodeMailTemplate` all render through the shared HTML shell in production - `25-155`
@@ -31,9 +31,19 @@ already use), rather than waiting for a real site to cross an inactivity or down
 
 ## Done when
 
-- [ ] At least one of `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` or
+- [-] At least one of `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` or
       `OperatorInviteCodeMailTemplate` is proven to render through the shared HTML shell by a real send,
       landing in a real inbox this session (or its author) controls - no real tenant's own operator is
       the recipient
-- [ ] The received email is visually confirmed - plain-text part unchanged from what shipped before
+- [-] The received email is visually confirmed - plain-text part unchanged from what shipped before
       `25-155`, HTML part rendering the shared shell correctly
+
+## Outcome
+
+Not planned - decided by the author, 2026-09-19. The author confirmed a real send from the *Keycloak*
+side of `25-155` (the invite action-email, live against `a@golyakov.net`, matching this same HTML shell)
+and judged that, combined with `NotificationMailSenderTests`'s own real SMTP-protocol round-trip already
+proving `NotificationMailSender`'s multipart path end-to-end, a second, separate live send through this
+specific sender was not worth the extra live-tenant setup this item's own scope required to do safely.
+No code changed; nothing here was left half-finished - the decision is that the remaining gap does not
+need closing.
