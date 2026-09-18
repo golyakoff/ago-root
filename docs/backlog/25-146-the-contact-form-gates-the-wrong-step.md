@@ -1,7 +1,7 @@
 # 25-146 · The contact form gates the wrong step
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#99`
 - **Found**: 2026-09-18, live, reported by the author after completing a real booking: the
   contact-capture form (`25-136`) appears immediately, glued onto the *service-choice* step's own
   message, before the visitor has invested anything in the booking - and it reads as an unexplained
@@ -80,13 +80,21 @@ same way it already is today.
 
 ## Done when
 
-- [ ] The contact-capture form no longer appears on the service-choice step, or any step before the
+- [x] The contact-capture form no longer appears on the service-choice step, or any step before the
       phone-collection one
-- [ ] The form appears exactly once, as its own standalone message, immediately after a time slot is
+- [x] The form appears exactly once, as its own standalone message, immediately after a time slot is
       chosen and before the booking is finalized - proven live, not just against a test fixture
-- [ ] Submitting it both records the contact detail and completes the booking, with no further phone
+- [x] Submitting it both records the contact detail and completes the booking, with no further phone
       question
-- [ ] A returning visitor with a known contact detail never sees this step at all (unchanged,
+- [x] A returning visitor with a known contact detail never sees this step at all (unchanged,
       server-side skip already in place)
-- [ ] A `form`-kind step with a `fieldId` other than `"phone"` still renders the plain generic input,
+- [x] A `form`-kind step with a `fieldId` other than `"phone"` still renders the plain generic input,
       unchanged
+
+## Outcome
+
+Landed as scoped, `ago-widget`-only. The generic bare-input form is still built for the phone step
+(so `setPrimitiveControlsDisabled` can lock it) but never attached to the DOM - "in place of, not
+alongside," literally. `appendContactCaptureControl` gained an `onSubmitted` hook so only this caller
+answers the step itself (`sendStructuredReply("form", phone, phone)`, the identical shape a plain
+form reply already uses). `ago-widget#99`, 438 tests green.
