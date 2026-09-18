@@ -1,7 +1,8 @@
 # 25-141 · A closed launcher shows no unread count
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#96` (reload persistence split out as `25-143`, per the author's own
+  decision on how to build it)
 - **Found**: 2026-09-18, live, reported by the author, who tested it as if it already existed: opened
   the widget, sent a message, closed it, had an operator send two replies, and expected a small badge
   with "2" on the closed launcher bubble (the same badge shown on the landing page's own launcher
@@ -57,10 +58,24 @@ not asked for, and would need a server-side "last read" concept rather than anyt
 
 ## Done when
 
-- [ ] Sending two operator messages while the panel is closed shows "2" on the closed launcher
-- [ ] Opening the panel (either path) clears the count and hides the badge
-- [ ] The badge never shows "0" - it is absent, not a visible zero
-- [ ] The toggle's accessible name reflects the unread count when nonzero
-- [ ] Reloading the page, or closing and reopening the tab, after unread messages arrived still shows
-      the correct count on next load, same browser
-- [ ] A visitor with no unread messages sees no badge after a reload, same as a fresh visitor
+- [x] Sending two operator messages while the panel is closed shows "2" on the closed launcher
+- [x] Opening the panel (either path) clears the count and hides the badge
+- [x] The badge never shows "0" - it is absent, not a visible zero
+- [x] The toggle's accessible name reflects the unread count when nonzero
+- [~] Reloading the page, or closing and reopening the tab, after unread messages arrived still shows
+      the correct count on next load, same browser — **not met here**: doing this without changing
+      the widget's lazy-connect timing needs a small new server-side read, split out as `25-143` per
+      the author's own decision, so this item's live, same-page-load behavior could land today
+- [x] A visitor with no unread messages sees no badge after a reload, same as a fresh visitor (true
+      today because the count starts at zero either way - `25-143` is what makes a nonzero case correct)
+
+## Outcome
+
+Landed exactly as scoped for the live, same-page-load case: an in-memory count on `ChatWidget`,
+incremented in `handleIncoming` for any non-`Visitor` message while closed, rendered as
+`.ago-unread-badge` on the launcher, reset by both `open()` and `openForAutoGreeting()`. New
+`openChatWithUnreadCount` locale string (en/ru, with Russian's own count-agreement rule) keeps the
+toggle's accessible name in sync. Reload persistence needs a small new server-side read and is split
+into `25-143` rather than blocking this item - the architecture question it raised (eager-connect on
+every page load vs. a lightweight REST read) was asked directly and answered by the author rather than
+guessed at. `ago-widget#96`.
