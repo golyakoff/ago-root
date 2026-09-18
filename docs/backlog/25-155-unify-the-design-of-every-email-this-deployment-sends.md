@@ -1,7 +1,8 @@
 # 25-155 · Unify the design of every email this deployment sends
 
 - **Stage**: 25
-- **Status**: needs analysis — filed to hold the idea, not yet scoped for implementation
+- **Status**: ready — scoped for implementation by the author, 2026-09-18, once the mockup and the
+  inventory below existed. Two independent lanes, no shared files - see Scope.
 - **Found**: 2026-09-18, testing `25-73` live. The real invite-code-update email that reached
   `a@golyakov.net` is Keycloak's own stock plain-text template - no branding, no styling, nothing that
   reads as coming from this product. Separately, `25-90`'s own fallback invite-code email
@@ -57,29 +58,45 @@ Outlook desktop's own Word rendering engine, which was designed for but not exer
 
 ## Scope
 
-**Not yet decided how far this goes - this item's own first deliverable is a proposal, not a build**,
-per the same "analysis first, decision recorded, then implementation" shape `25-138` used. At minimum,
-scope should answer:
+**Decided by the author, 2026-09-18** - two lanes, touching disjoint files, safe to build in parallel:
 
-- **A shared visual identity across both kinds of email** - likely a simple HTML template (logo,
-  accent color, consistent typography) that both `NotificationMailSender`'s own callers and a new
-  Keycloak `emailTheme` can each render into, rather than two independently-designed looks.
-- **The Keycloak `emailTheme` half**: `25-90`'s own Scope already investigated this mechanism in
-  outline (a custom theme overriding `executeActions.ftl`/`executeActions-text.ftl` and friends,
-  mounted the same way the existing `loginTheme` is, `emailTheme` set via `keycloak-realm-import.json`
-  + `apply-realm-settings.sh`) - read that item's own text before re-deriving it. Real work: FreeMarker
-  templates (HTML **and** plain-text - Keycloak sends both parts to every recipient) for every action
-  type this deployment actually triggers (password reset, email verification, the invite action-token
-  email), each in `en`/`ru`, verified against a real send in both locales.
-- **The `NotificationMailSender` half**: does `SendAsync`/`NotificationMailMessage` grow an HTML body
-  alongside (or instead of) plain text? Every existing caller (`InactivityWarningMailTemplate`,
-  `DownloadThresholdWarningMailTemplate`, `OperatorInviteCodeMailTemplate`) would need updating to the
-  new shared look - decide whether that happens in this item or is carried out as smaller follow-ups
-  once the shared template exists.
-- **Whether `EmailChannelAdapter`'s own visitor-facing conversation emails** (a different thing - an
-  operator's actual reply, not a system notification) are in scope at all. They plausibly should stay
-  exactly as plain as an ordinary conversation reads today; naming this explicitly rather than
-  assuming either way is this item's own job.
+### Lane A - `ago-chat`: `NotificationMailSender` grows an HTML part
+
+- **`EmailMimeMessageBuilder` is deliberately `text/plain`-only today** (`14-09`'s own scope cut,
+  shared by `EmailChannelAdapter` and `NotificationMailSender` alike) - confirmed by reading the code,
+  not assumed. Add a **new** build path (a new method/overload, e.g. `BuildMultipartAlternative`) that
+  produces a real `multipart/alternative` body (`text/plain` part first, `text/html` part second - the
+  order every mail client expects, so a client with no HTML support falls back cleanly), each part
+  base64-encoded exactly like the existing single-part path already does. **Never touch the existing
+  plain-only path** - `EmailChannelAdapter`'s own visitor-facing conversation replies stay exactly as
+  plain as they are today; only `NotificationMailSender`'s own call site opts into the new path.
+- Build one shared HTML "shell" (logo row, hero icon, heading, body copy, one CTA, a warm secondary
+  note, muted footer) matching `docs/backlog/25-155-email-template-mockup.html`'s own tokens and
+  layout exactly - the same file this item's own mockup already is, not a fresh design.
+- Rewire `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` and `25-90`'s own
+  `OperatorInviteCodeMailTemplate` through the shared shell, each supplying its own heading/body copy/
+  CTA - **in this item**, not deferred as a follow-up, since two of three otherwise stay unstyled and
+  defeat this item's own point.
+- `EmailChannelAdapter`'s own visitor-facing conversation emails are **explicitly out of scope** -
+  an operator's real reply reads as plain conversation text today and should keep doing so; this item
+  does not touch that adapter at all.
+
+### Lane B - `ago-deploy`: a real Keycloak `emailTheme`
+
+- `25-90`'s own Scope already investigated this mechanism in outline - read that item's text first.
+  A new custom theme (the same `ago-deploy/k8s/base/keycloak-theme/` mounting mechanism the existing
+  `loginTheme: "ago"` already uses, at `/opt/keycloak/themes/ago/email` instead of `.../login`),
+  covering every Keycloak-native email this realm actually triggers (the invite's own
+  `execute-actions-email`, the self-service password-reset flow, self-registration's email
+  verification - `25-155`'s own inventory table names all three).
+- FreeMarker templates, **both HTML and plain-text** for each (Keycloak sends both parts to every
+  recipient - read Keycloak's own base theme templates, extractable from the running container or
+  Keycloak's own public source, as the starting point rather than writing these from nothing), styled
+  to the identical shell Lane A uses, in `messages_en.properties`/`messages_ru.properties`.
+- `emailTheme: "ago"` added to `keycloak-realm-import.json`, applied via `apply-realm-settings.sh` -
+  the exact mechanism `25-73`'s own `internationalizationEnabled` fix just used live, 2026-09-18.
+- Verified against a real send, in both locales, for at least the invite email (the one this session
+  already has a working live-test recipe for, from `25-73`).
 
 ## Out of scope
 
@@ -91,6 +108,15 @@ scope should answer:
 
 ## Done when
 
-- [ ] Not yet defined - this item's own first deliverable is a scoped proposal (a shared visual
-      identity, which emails it covers, HTML-vs-plain-text for each sender) handed back to the author
-      as a decision, per this item's own Scope.
+- [ ] `NotificationMailSender` can send a real `multipart/alternative` email; `EmailChannelAdapter`'s
+      own plain-text-only path is provably untouched (its own tests still pass unchanged)
+- [ ] `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` and
+      `OperatorInviteCodeMailTemplate` all render through the one shared HTML shell, proven by a real
+      send for at least one of them
+- [ ] A custom Keycloak `emailTheme` renders the invite action-email, password-reset and
+      email-verification flows in the same shell, in both `en`/`ru`, `emailTheme: "ago"` applied via
+      `apply-realm-settings.sh`
+- [ ] At least the invite email verified against a real send in both locales, matching `25-73`'s own
+      live-verification recipe
+- [ ] `EmailChannelAdapter`'s own visitor-facing conversation emails are confirmed unchanged - byte-
+      identical output for the one path this item deliberately does not touch
