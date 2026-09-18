@@ -1,8 +1,10 @@
 # 25-155 · Unify the design of every email this deployment sends
 
 - **Stage**: 25
-- **Status**: ready — scoped for implementation by the author, 2026-09-18, once the mockup and the
-  inventory below existed. Two independent lanes, no shared files - see Scope.
+- **Status**: done — both lanes merged and deployed live, 2026-09-19 (`ago-chat#334`, `ago-deploy#233`).
+  One promise this item made - a real send through `NotificationMailSender`'s own path - could not be
+  closed here without risking an unwanted email to a real tenant's operators, and is split into `25-157`
+  rather than left as an unsettled box. See Outcome.
 - **Found**: 2026-09-18, testing `25-73` live. The real invite-code-update email that reached
   `a@golyakov.net` is Keycloak's own stock plain-text template - no branding, no styling, nothing that
   reads as coming from this product. Separately, `25-90`'s own fallback invite-code email
@@ -111,15 +113,49 @@ Outlook desktop's own Word rendering engine, which was designed for but not exer
 
 ## Done when
 
-- [ ] `NotificationMailSender` can send a real `multipart/alternative` email; `EmailChannelAdapter`'s
+- [x] `NotificationMailSender` can send a real `multipart/alternative` email; `EmailChannelAdapter`'s
       own plain-text-only path is provably untouched (its own tests still pass unchanged)
-- [ ] `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` and
-      `OperatorInviteCodeMailTemplate` all render through the one shared HTML shell, proven by a real
-      send for at least one of them
-- [ ] A custom Keycloak `emailTheme` renders the invite action-email, password-reset and
+- [x] `InactivityWarningMailTemplate`, `DownloadThresholdWarningMailTemplate` and
+      `OperatorInviteCodeMailTemplate` all render through the one shared HTML shell - built and proven
+      by a real SMTP round-trip in `NotificationMailSenderTests` (a genuine `FakeSmtpServer` TCP
+      connection, not a mock). A real send through this path against production mail infrastructure is
+      a separate promise, deliberately not attempted here against a real tenant's own operators -
+      carried forward as `25-157`.
+- [x] A custom Keycloak `emailTheme` renders the invite action-email, password-reset and
       email-verification flows in the same shell, in both `en`/`ru`, `emailTheme: "ago"` applied via
       `apply-realm-settings.sh`
-- [ ] At least the invite email verified against a real send in both locales, matching `25-73`'s own
+- [x] At least the invite email verified against a real send in both locales, matching `25-73`'s own
       live-verification recipe
-- [ ] `EmailChannelAdapter`'s own visitor-facing conversation emails are confirmed unchanged - byte-
+- [x] `EmailChannelAdapter`'s own visitor-facing conversation emails are confirmed unchanged - byte-
       identical output for the one path this item deliberately does not touch
+
+## Outcome
+
+Both lanes merged and deployed live to `reserve-me.ru`, 2026-09-19:
+
+- **Lane A** (`ago-chat#334`, `eb7dc01`): `EmailMimeMessageBuilder.BuildMultipartAlternative`, the
+  shared `Ago.Chat.Application.Emailing.EmailHtmlShell`, and all three `NotificationMailSender`
+  templates rewired through it. Independently re-verified: `dotnet format`/`build`/`test` all clean in
+  one run (Domain 750, Application 1426, FakeCrm 21, Architecture 52, Concurrency 89, Integration 1380 -
+  0 failed), `EmailChannelAdapter.cs` provably untouched. Deployed and smoke-tested live (46/46).
+- **Lane B** (`ago-deploy#233`, `737c597`): the `ago` Keycloak `emailTheme`, covering
+  `execute-actions-email`/password-reset/email-verification. Deployed live, `emailTheme: "ago"` applied
+  via `apply-realm-settings.sh` and confirmed on the running realm. Real send verified against
+  `a@golyakov.net` in both locales (`ru`, then `en` via the test user's own `locale` attribute,
+  restored to `ru` afterward) - both arrived as the new branded HTML, matching `25-73`'s own recipe.
+- **A footer-copy bug caught before merge**: both lanes' shared shell, ported from this item's own
+  mockup, originally claimed "replies are read." Every email either lane sends goes out from a fixed
+  no-reply address (`notifications@{domain}` for Lane A - confirmed in `NotificationMailSender`'s own
+  remarks; Keycloak's realm SMTP config for Lane B - confirmed live in `25-73`), so that claim was false
+  advertising. Fixed in the mockup and both lanes' copy before either PR merged, to say only that the
+  address can't receive replies.
+- **A wrong drift fix caught and reverted**: `ago-deploy`'s own `deploy.sh` reported the deploy record
+  disagreeing with the manifest for `ago-console` (recorded `904e1d3c`, manifest pinned `ea90a80`).
+  Trusting that record without checking the live cluster, the manifest was bumped to `904e1d3c` -
+  `apply-demo.sh`'s own rollback guard then correctly refused to apply, because the *actual* running
+  image was still `ea90a80`. Reverted to match reality; the record/reality mismatch itself is
+  unexplained and unrelated to this item - not investigated further here.
+- One promise this item made - a real send through `NotificationMailSender`'s own path specifically
+  (as opposed to the Keycloak-native flows Lane B covers) - was not closed here: doing so would need a
+  real operator-invite flow against a real tenant, and this session had no safe way to trigger one
+  without risking an email landing on a real tenant's own operators. Carried forward as `25-157`.
