@@ -26,6 +26,35 @@ neither is styled at all:
    and `25-90`'s own `OperatorInviteCodeMailTemplate` all build a plain-text subject+body string with
    no HTML part, no shared visual identity, each composed independently.
 
+## Every trigger, surveyed 2026-09-18
+
+| # | Trigger | Sender | Subject (ru / en) | Content |
+|---|---|---|---|---|
+| 1 | Admin creates an operator invite | **Keycloak** (`execute-actions-email`, called from `Ago.Chat.Api`) | ru: «Обновление Вашей учетной записи» / en: "Update Your Account" | Password+profile action-token link, 7-day expiry - Keycloak's own stock template, uncustomized |
+| 2 | Same event, `25-90`'s own second, independent channel | **`Ago.Chat.Api`** (`CreateOperatorInviteHandler` → `NotificationMailSender`) | «Резервный код приглашения AGO Chat» / "Your AGO Chat backup invite code" | Plain-text invite code, fallback |
+| 3 | Visitor clicks "forgot password" on the hosted login page | **Keycloak** | Keycloak's own stock subject, uncustomized | Password reset link |
+| 4 | Self-registration, email verification | **Keycloak** | Keycloak's own stock subject, uncustomized | Verify-email link |
+| 5 | A site's operators have gone inactive, account nearing deletion | **`Ago.Chat.Worker`** (`InactivityWatchdogJob` → `NotificationMailSender`) | «Аккаунт {siteName} в AGO Chat будет удалён через {N} дн.» / "...will be deleted in {N} days" | Deletion warning to every operator email on the site |
+| 6 | A site crosses its plan's download threshold | **`Ago.Chat.Worker`** (`DownloadThresholdWatchdogJob` → `NotificationMailSender`) | «...приближается к месячному лимиту скачиваний» / "...approaching its monthly download limit" | Overage warning, not yet a block |
+| 7 | An operator replies in a conversation whose channel is Email | **`Ago.Chat.Api`/`Worker`** (`EmailChannelAdapter`, `14-09`) | Dynamic - the visitor's own thread subject | An ordinary threaded conversation reply - structurally different from 1-6, probably out of this item's own scope (see below) |
+
+`Ago.Calendar.*` (API and Worker): sends no email at all, confirmed by search, not assumed.
+
+## A starting mockup
+
+`docs/backlog/25-155-email-template-mockup.html` - a real, standalone, cross-client HTML email built
+2026-09-18 against `reserve-me.ru`'s own live light-theme tokens (read directly from the site, not
+guessed): `--blue:#2F6CE0`, `--violet:#7C4DFF` (the logo mark's own gradient), `--ink:#0F1728`,
+`--bg:#F4F6FB`, Onest for headings + IBM Plex Sans for body text - the identical pairing the landing
+page itself uses. Table-based layout, every style inlined, MSO/VML conditionals for a real Outlook
+desktop button and logo fallback, a hidden preheader, and a `max-width:600px` fluid card that
+collapses to full width under 600px. Content shown is the operator-invite scenario (`25-73`/`25-90`),
+written as a fill-in-the-blanks example rather than the only email this template could carry - the
+same card shape (logo row, hero icon, heading, body copy, one CTA, a warm secondary note, muted
+footer) should serve every trigger in the table above with different copy and a different icon/CTA
+label. Open it directly in a browser to preview; a real send is the only way to confirm it survives
+Outlook desktop's own Word rendering engine, which was designed for but not exercised against here.
+
 ## Scope
 
 **Not yet decided how far this goes - this item's own first deliverable is a proposal, not a build**,
