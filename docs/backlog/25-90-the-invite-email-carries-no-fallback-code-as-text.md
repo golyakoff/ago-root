@@ -1,7 +1,7 @@
 # 25-90 · The invite email carries no fallback code as text
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#332`
 - **Depends on**: nothing
 - **Found**: `25-85`'s own point 4 — "the invite email itself should also carry the code as visible
   text, as a second, independent channel" — investigated and deliberately not built in that item's own
@@ -69,8 +69,22 @@ inbox; neither depends on the other arriving, and Keycloak's own template is unt
 
 - [x] The plaintext-in-Keycloak trade-off has an explicit answer from the author: rejected. A second,
       independent email is sent instead.
-- [ ] A second `NotificationMailSender` email fires from `CreateOperatorInviteHandler`, carrying the
+- [x] A second `NotificationMailSender` email fires from `CreateOperatorInviteHandler`, carrying the
       invite code as plain, copyable text with instructions for where it goes — proven against a real
       send, not asserted from a template file.
-- [ ] Both `en` and `ru` render correctly.
-- [ ] Keycloak's own `execute-actions-email` template and its call are untouched by this item.
+- [x] Both `en` and `ru` render correctly.
+- [x] Keycloak's own `execute-actions-email` template and its call are untouched by this item.
+
+## Outcome
+
+`OperatorInviteCodeMailTemplate` builds one bilingual (ru above en) message, following
+`NotificationMailSender`'s own two existing callers' established convention rather than a per-locale
+switch. `CreateOperatorInviteHandler.SendInviteCodeFallbackEmailAsync` fires unconditionally,
+independent of the Keycloak send outcome, wrapped in its own fault boundary (logged and swallowed on
+failure - never allowed to fail invite creation). The redeem instructions point at the real
+`/redeem-invite` console route (verified against `ago-console`'s own `App.tsx`). Proven through the
+real handler and real HTTP endpoint wiring with a recording fake - the identical "fake this port,
+trust `EmailSmtpClient`'s own wire-level tests separately" precedent `InactivityWatchdogJobTests`
+already set for this same port, not a gap this item introduced. Keycloak's own template/call confirmed
+untouched by diff. Full suite green: Domain 741, Application 1404, FakeCrm 21, Architecture 52,
+Concurrency 89, Integration 1376. `ago-chat#332`.
