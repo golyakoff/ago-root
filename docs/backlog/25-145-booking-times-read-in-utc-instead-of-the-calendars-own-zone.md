@@ -1,7 +1,7 @@
 # 25-145 · Booking times read in UTC instead of the calendar's own zone
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-calendar#69`
 - **Found**: 2026-09-18, live, reported by the author after completing a real booking end to end: the
   confirmation and every date/time choice read like "2026-09-20 13:00 UTC - 14:00 UTC" instead of the
   calendar's own local time - and the date labels ("пт, 18 сен") give no year and abbreviate both the
@@ -73,14 +73,23 @@ projection rows (`OpenSlotRow`, etc.), which carry no timezone field either.
 
 ## Done when
 
-- [ ] A booking's confirmation reads e.g. "20 сентября 2026, воскресенье, 16:00 МСК" for a
+- [x] A booking's confirmation reads e.g. "20 сентября 2026, воскресенье, 16:00 МСК" for a
       Europe/Moscow calendar, not "2026-09-20 13:00 UTC - 14:00 UTC"
-- [ ] The date-choice step's own labels read "пятница, 18 сентября 2026" - full weekday, full month,
+- [x] The date-choice step's own labels read "пятница, 18 сентября 2026" - full weekday, full month,
       year - not the old three-letter abbreviations with no year
-- [ ] The time-choice step's own labels read the calendar's local time with a Russian zone
+- [x] The time-choice step's own labels read the calendar's local time with a Russian zone
       abbreviation ("12:00 - 13:00 МСК"), not UTC
-- [ ] A text-channel (Telegram/MAX) delivery of the same steps shows the identical converted times and
+- [x] A text-channel (Telegram/MAX) delivery of the same steps shows the identical converted times and
       full-form dates, proven without any `ago-chat` change - confirming the fix lives entirely in the
       one shared label source
-- [ ] English locale gets the equivalent full-form date (a documented, deliberate choice either way,
+- [x] English locale gets the equivalent full-form date (a documented, deliberate choice either way,
       not left unstated)
+
+## Outcome
+
+Landed as scoped: `IWallClockResolver.ToLocal` + a new `IBookingSurfaceReadStore.GetTimeZoneAsync`
+(a lightweight row read, not a `BookingCalendar` aggregate load - that port's own "rows, not
+aggregates" posture already fit a single-scalar lookup better). Hand-written Russian federal-zone
+abbreviation table, matching `ago-console`'s own `time/format.ts` table byte-for-byte. Verified live
+against the real tz database (all eleven canonical zones) and a real Postgres row via
+`ChatModuleTaskEndpointTests`. `ago-calendar#69`, full suite green (848 tests).
