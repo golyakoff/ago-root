@@ -1,7 +1,7 @@
 # 25-150 · The tooltip clipping fix works on every other open
 
 - **Stage**: 25
-- **Status**: done — `ago-console#{PR}`
+- **Status**: done — `ago-console#255`
 - **Found**: 2026-09-17, live, reported by the author on `Tooltip.tsx`'s own vertical-clipping fix
   (`25-123`, deployed as `e883ba0`): "работает строго через раз" - hover the trigger once, the bubble
   positions correctly; move away, hover again, it overflows; and this alternates indefinitely, not a
