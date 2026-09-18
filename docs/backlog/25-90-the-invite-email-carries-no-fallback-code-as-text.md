@@ -43,22 +43,34 @@ action-token URL, not the `redirect_uri`; the invite code embedded in that `redi
 
 ## Scope
 
-- Decide, first, whether the plaintext-code-as-Keycloak-user-attribute trade-off above is acceptable —
-  this item should not proceed to the theme work until that is settled, since it changes what the theme
-  work is even allowed to reference.
-- If accepted: a custom Keycloak email theme (`ago-deploy`) rendering the invite code as visible text,
-  with instructions for where it goes ("after creating your account, paste this into the invite-code
-  field on [screen]"), in both `en`/`ru`, verified against a real send.
-- If not accepted: name the alternative actually taken instead (a different, still-redundant channel
-  that does not require Keycloak to hold the plaintext at all — e.g., a separate transactional email
-  this codebase sends itself, outside Keycloak's own relay, the same way `14-09`'s own product email
-  channel already sends other mail) or close this as not-planned with the reason.
+**Decided by the author, 2026-09-18: the plaintext-in-Keycloak trade-off is rejected.** The code must
+never sit in Keycloak's own storage. Instead: a separate, second email, sent by `ago-chat` itself,
+outside Keycloak's relay entirely.
+
+`INotificationMailSender`/`NotificationMailSender`
+(`Ago.Chat.Infrastructure.Email/NotificationMailSender.cs`) already exists and is already used for
+exactly this shape of transactional mail (operator inactivity warnings via `InactivityWatchdogJob`) -
+`SendAsync(NotificationMailMessage(To, Subject, Body), ct)`, generic, not coupled to the visitor-
+conversation shape `EmailChannelAdapter` owns. **No new SMTP infrastructure is needed.**
+
+`CreateOperatorInviteHandler.HandleAsync` already has both the operator's email address and the
+plaintext code in hand at the point it calls `OperatorInviteEmailProvisioner.ProvisionAndSendAsync`
+(`OperatorInviteProvisionRequest.Code`) - fire a second `INotificationMailSender.SendAsync` call from
+that same call site, right after (or before) the Keycloak action-email, carrying the code as plain,
+copyable text plus instructions for where it goes. Two independent emails land in the operator's
+inbox; neither depends on the other arriving, and Keycloak's own template is untouched.
+
+- Both `en`/`ru` subject+body strings, resolved the same way this codebase's other locale-aware
+  transactional copy already is (check `NotificationMailSender`'s existing callers for the convention).
+- Verified against a real send, not asserted from a template - the same standing bar every other email
+  path in this codebase already gets held to.
 
 ## Done when
 
-- [ ] The plaintext-in-Keycloak trade-off has an explicit answer from the author, recorded here or in
-      an ADR.
-- [ ] The invite email (by whichever mechanism the answer above picks) carries the code as plain,
-      copyable text, with instructions for where it goes — proven against a real send, not asserted
-      from a template file.
+- [x] The plaintext-in-Keycloak trade-off has an explicit answer from the author: rejected. A second,
+      independent email is sent instead.
+- [ ] A second `NotificationMailSender` email fires from `CreateOperatorInviteHandler`, carrying the
+      invite code as plain, copyable text with instructions for where it goes — proven against a real
+      send, not asserted from a template file.
 - [ ] Both `en` and `ru` render correctly.
+- [ ] Keycloak's own `execute-actions-email` template and its call are untouched by this item.
