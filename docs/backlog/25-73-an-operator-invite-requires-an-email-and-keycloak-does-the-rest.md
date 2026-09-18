@@ -161,9 +161,13 @@ pod, replicating `OperatorInviteEmailProvisioner`'s own exact calls - `client_id
   which the next realm-settings apply would have silently reverted). Confirmed applied
   (`internationalizationEnabled: true` read back from the live realm) and re-verified with a second
   real send to the same address - full demo-stand smoke suite green afterward (46/46, including
-  operator sign-in, proving the Keycloak restart this required broke nothing). **Pending the author's
-  own confirmation that the second email actually arrived in Russian** - the mechanism is now
-  correctly configured, but only a human reading the inbox closes this box.
+  operator sign-in, proving the Keycloak restart this required broke nothing). **Confirmed by the
+  author, 2026-09-18**: a third send (after also fixing a self-inflicted mistake along the way - an
+  `-f`-based `kcadm` user update without `-m` silently wiped the test user's own `email` field, caught
+  immediately by the next send's own `"User email missing"` refusal, fixed by restoring it via merge-
+  safe `-s` syntax before resending) arrived fully in Russian: *"Обновление Вашей учетной записи...
+  Администратор просит Вас обновить данные Вашей учетной записи AGO Chat..."* Locale-driven template
+  language is proven end to end, live.
 - **The hosted `execute-actions-email` page and the full redemption round trip**: still not exercised
   end to end - this test drove Keycloak's own API directly rather than a real operator session through
   `ago-chat`'s own live API, since no real operator credential was available. Opening the real emailed
@@ -200,9 +204,10 @@ company" form *before* any collision could occur, rather than catching the colli
 - [ ] An invitee who self-registers first (before opening the invite email) sees the specific
       "you have an invitation, check your email" message, not a raw Keycloak error. **Not met as
       literally written — see the deliberate deviation above.**
-- [ ] The invite email's language matches the inviting site's own configured `Locale`. **Sent 2026-09-18
-      with the Keycloak user's own `locale` attribute set to `ru` (see Outcome) - pending the author's
-      own confirmation of which language the email actually arrived in.**
+- [x] The invite email's language matches the inviting site's own configured `Locale`. **Confirmed live,
+      2026-09-18** - the realm's own `internationalizationEnabled: false` was the real blocker (see
+      Outcome), fixed via `ago-deploy`'s own documented mechanism; a real send with the user's `locale`
+      attribute set to `ru` arrived fully in Russian.
 - [x] A sixth invite from the same site on the same day is refused with a message naming the limit; the
       limit itself is one config value, not hardcoded in a handler. — 3 tests in
       `CreateOperatorInviteHandlerTests`, real rate-limiter, not mocked.
