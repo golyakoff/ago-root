@@ -3,8 +3,10 @@
 - **Stage**: 23
 - **Status**: ready. The three product questions were answered by the author on 2026-09-07 and are
   recorded below; one assumption is named rather than buried.
-- **Depends on**: `24-04` (the operator's own lawful basis and what they are shown at first sign-in)
-  is the natural place for the consent this needs. It is open. See "The dependency worth arguing about".
+- **Depends on**: `24-04` — **decided, 2026-09-18**: AGO is processor, not controller, for operator
+  data; the tenant's own contract with its staff covers consent, entirely outside AGO's system. This
+  item no longer needs to build a refusable-consent control of its own - see the revised "personal-data
+  work" section below.
 - **Decision**: the author's, 2026-09-07 — an operator has a photo and the visitor sees it. Their
   framing is the point: *now that personal data is handled properly, functionality stops being cut out
   of fear of handling it.*
@@ -41,10 +43,14 @@ detail it is data we ask a member of our tenant's staff to hand over so that str
 That is not a reason to refuse it. It is a reason to do it once, properly, and write down what was
 done:
 
-- **The lawful basis is consent, and consent must be refusable without consequence.** An operator who
-  declines a photo must lose nothing — no degraded screen, no nag on every sign-in, no implication
-  that the tenant will be told. `24-04` is where an operator is told what we hold about them; this is
-  a second thing to tell them there.
+- **The lawful basis is `24-04`'s own decision, not a consent control this item builds.** AGO is
+  processor for operator data - the tenant's own contract with its staff already covers this, outside
+  AGO's system entirely. What this item owes an operator is not a refusable consent gate but an
+  ordinary, honest feature choice: uploading a photo is optional, and not uploading one costs nothing
+  - no degraded screen, no nag on every sign-in, no implication anything is reported to the tenant.
+  `24-04`'s own first-sign-in notice is where an operator is told AGO holds their data at all; this
+  item's photo upload is simply a feature they can decline the way they would decline any optional
+  profile field, with no separate legal machinery of its own.
 - **`personal-data.md` gains a row**: what is held, where, on what basis, and how it is removed. Today
   that document knows nothing about operator photographs.
 - **Retention on departure.** A deactivated operator's photo should not survive them. `22-08`

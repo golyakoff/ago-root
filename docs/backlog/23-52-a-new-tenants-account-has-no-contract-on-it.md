@@ -42,6 +42,11 @@ this item makes ordinary rather than special.
   builds for their own documents, pointed at ours.
 - **`required_documents` is what decides**, which means this item and `24-16` meet: `24-16` is about
   nothing making a document required anywhere, and this is the first thing that genuinely needs one.
+- **`24-04`'s own decision, 2026-09-18, lands here**: the contract text must instruct AGO to process
+  the tenant's staff data (operator names, photos, anything else AGO holds about them) and have the
+  tenant warrant it has obtained its own staff's consent to that - AGO is processor, not controller,
+  for operator data, and this clause is what makes that true rather than merely asserted. Content for
+  the lawyer's draft, not built here.
 
 ## The questions inside it, and they are the author's
 

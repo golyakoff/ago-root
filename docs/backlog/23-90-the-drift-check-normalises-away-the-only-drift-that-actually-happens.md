@@ -1,9 +1,7 @@
 # the drift check normalises away the only drift that actually happens
 
 - **Stage**: 23
-- **Status**: done — `ago-deploy#199`. Live-cluster confirmation of the DRIFT case (rather than the
-  local `docker-desktop` proof this PR shipped with) is carried to the redeploy this item is batched
-  with.
+- **Status**: done — `ago-deploy#199`. Live-cluster confirmation landed 2026-09-18 - see Outcome.
 - **Depends on**: `15-21` built the check; `adr/0144` is its decision. This is the gap that item's own
   second Done-when names and could not close.
 - **Found**: 2026-09-07, by watching the check pass on a cluster that had drifted eleven ways.
@@ -82,11 +80,27 @@ never recorded as committed. Chosen over the other two, for stability specifical
 - [x] Tags left unrecorded after a deploy are noticed by something, and the item says which of the
       three readings above it took and why. — **reading B, see Answered above.** "Noticed by
       something" is not yet built; the remaining two boxes cover that.
-- [~] Whatever notices is shown noticing, against a real recorded-versus-running gap. — **proven
-      against a real Kubernetes API server (a local `docker-desktop` cluster, scratch namespace and
-      overlay), not yet against the live demo cluster.** A simulated two-deploy sequence with no
-      commit between them reproduced 2026-09-07 exactly and was caught. The live-cluster confirmation
-      is carried to the redeploy this item is batched with.
+- [x] Whatever notices is shown noticing, against a real recorded-versus-running gap. — **proven
+      against the live demo cluster, 2026-09-18**: deploying `ago-chat` to a new commit via `deploy.sh`
+      before committing the tag produced exactly the predicted "recorded X, manifest still pins Y"
+      warning; committing the tag and re-running cleared it for that component. The mechanism notices,
+      on the real cluster, exactly as reading B predicted.
 - [x] The normal case — a deploy in progress — stays quiet, so the check does not become one more
       banner nobody reads. — proven live: an ordinary single deploy followed by committing the moved
       tags produces no warning on the next run.
+
+## Outcome
+
+Reading B, live-confirmed. **One known limitation, found while confirming it, recorded here rather
+than opened as a new item**: `record_write` only fires inside `deploy.sh`'s own imperative
+`kubectl set image` path. A tag corrected via `apply-demo.sh`/`kubectl apply -k` (the manifest-first
+path this project also uses, e.g. for a migration-carrying pin) never calls it - so if a `deploy.sh`
+move is later superseded by an `apply-demo.sh` apply rather than another `deploy.sh` call, the record
+is left pointing at the first, now-stale move indefinitely, and reports a "drift" that no longer
+exists on the live cluster. Observed live, 2026-09-18: `ago-calendar-api/worker` and `ago-console`
+each showed exactly this - a record stuck on an old `deploy.sh` rollout, while the live cluster and
+the manifest agreed on a later value applied through `apply-demo.sh`. Not a correctness bug in what this item promised - the record only ever fails safe (a false "still
+drifted" after the cluster was already corrected another way, never a false "all clear" while real
+drift exists) - and not scoped to this item to fix. Noted as a standing characteristic of the
+mechanism for whoever next reads a DRIFT report from it: a DRIFT line naming a tag nowhere in the
+manifest's own history is worth a second look before assuming the cluster itself has moved.
