@@ -1,7 +1,7 @@
 # 25-144 · Image publish depends on an external site's uptime
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#326`
 - **Found**: 2026-09-18. Publishing `ago-chat`'s images failed identically five times in a row -
   `curl: (35) Recv failure: Connection reset by peer` fetching the Russian Trusted Root CA certificate
   from `gu-st.ru` at build time (`Dockerfile`, added by `14-02`). Unrelated to any of that day's actual
@@ -30,10 +30,18 @@ since the base SDK image already ships both.
 
 ## Done when
 
-- [ ] `ago-chat`'s Docker build no longer makes any network call to `gu-st.ru` (or any external host)
+- [x] `ago-chat`'s Docker build no longer makes any network call to `gu-st.ru` (or any external host)
       to fetch a trust-store certificate
-- [ ] A full `docker build` for at least one host image succeeds locally, and the resulting image's
+- [x] A full `docker build` for at least one host image succeeds locally, and the resulting image's
       trust store carries the vendored certificate (verified inside the build stage, since the final
       Chiseled stage has no shell to inspect)
-- [ ] CI's `publish-images` job succeeds on the next push, ending the run of failures this item was
+- [x] CI's `publish-images` job succeeds on the next push, ending the run of failures this item was
       filed for
+
+## Outcome
+
+Landed and verified live the same day: after four consecutive `publish-images` failures at the
+identical `gu-st.ru` step, the certificate was fetched from the (Russia-hosted) demo node instead of
+GitHub Actions' own runners, verified with `openssl x509`, and committed. `publish-images` succeeded
+on the very next push (`ago-chat#326`), and the resulting images were deployed to the demo stand the
+same day.
