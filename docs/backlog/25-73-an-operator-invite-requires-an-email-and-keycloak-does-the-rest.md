@@ -149,9 +149,21 @@ pod, replicating `OperatorInviteEmailProvisioner`'s own exact calls - `client_id
   log shows the real send: `to=<a@golyakov.net>, relay=mx.yandex.net[...]:25, ...
   status=sent (250 2.0.0 Ok: queued on mail-nwsmtp-mxfront-production-41...)`. The mechanism this item
   was least sure of - a real Keycloak Admin API call producing a real, accepted outbound email - works.
-- **Locale-driven template language**: send triggered with the user's `locale` attribute set to `ru`;
-  confirming which language the email actually rendered in needs a human reading the inbox - pending
-  the author's own check.
+- **Locale-driven template language - real bug found and fixed, 2026-09-18.** The author confirmed the
+  first test email arrived in English despite `locale=ru`. Root cause: the `ago-chat` realm had
+  `internationalizationEnabled: false` - a realm-wide switch, completely independent of any user's own
+  `locale` attribute, that forces every themed page and email into a single language regardless. Fixed
+  the honest way, not an ad-hoc live edit: added `internationalizationEnabled: true`,
+  `supportedLocales: ["en","ru"]`, `defaultLocale: "en"` to `ago-deploy`'s own
+  `k8s/base/keycloak-realm-import.json` (`ago-deploy@0c15e73`), applied via `apply -k` (rolled the
+  Keycloak pod onto the new ConfigMap) then `k8s/apply-realm-settings.sh` (the realm's own documented
+  mechanism, `docs/runbooks/realm-operations.md` - never a bare `kcadm` edit against the live pod,
+  which the next realm-settings apply would have silently reverted). Confirmed applied
+  (`internationalizationEnabled: true` read back from the live realm) and re-verified with a second
+  real send to the same address - full demo-stand smoke suite green afterward (46/46, including
+  operator sign-in, proving the Keycloak restart this required broke nothing). **Pending the author's
+  own confirmation that the second email actually arrived in Russian** - the mechanism is now
+  correctly configured, but only a human reading the inbox closes this box.
 - **The hosted `execute-actions-email` page and the full redemption round trip**: still not exercised
   end to end - this test drove Keycloak's own API directly rather than a real operator session through
   `ago-chat`'s own live API, since no real operator credential was available. Opening the real emailed
