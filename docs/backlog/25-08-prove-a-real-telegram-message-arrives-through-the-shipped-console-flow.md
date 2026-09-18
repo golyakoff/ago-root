@@ -1,7 +1,6 @@
 # 25-08 · Prove a real Telegram message arrives through the shipped console flow
 
-- **Status**: ready — **needs the author's own bot and a real message; nothing in this codebase can
-  stand in for either**
+- **Status**: done — confirmed by the author, 2026-09-18: done repeatedly, on both Telegram and MAX
 - **Date found**: 2026-09-09, splitting `23-36`'s own last Done-when box off into its own number
 - **Depends on**: `23-36` (built and merged, `ago-chat#213`/`ago-console#142`/`adr/0143`)
 
@@ -23,5 +22,10 @@ hold the one remaining fact open until it is checked, not to describe new work.
 
 ## Done when
 
-- [ ] A tenant connects a real Telegram bot from the console.
-- [ ] A real message sent to that bot arrives as a conversation in the console.
+- [x] A tenant connects a real Telegram bot from the console.
+- [x] A real message sent to that bot arrives as a conversation in the console.
+
+## Outcome
+
+Confirmed by the author, 2026-09-18 - done repeatedly already, on both Telegram and MAX. Nothing was
+built for this item; it existed only to hold the fact open until someone checked it.
