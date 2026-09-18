@@ -3,12 +3,12 @@
 > **Status: live.** A shop can embed AGO Chat right now — try it at the links below. This is a
 > portfolio project: **AGO Platform** is a backend platform (hosting, realtime transport, messaging,
 > persistence, caching, object storage, observability); **AGO Chat** is the first product on it, a
-> customer-support chat a shop embeds with one script tag. **AGO Calendar** (planned, `docs/roadmap.md`
-> Stage 20) is the second — a real product decision, not a stand-in, chosen because it shares nothing
-> with chat except the platform underneath and proves the platform boundary holds for an unrelated
-> product, not just in theory. The whole thing exists to demonstrate concurrency, database work under
-> load, message-broker work, and Clean Architecture, in a form another engineer can review — end to
-> end, not just in slides.
+> customer-support chat a shop embeds with one script tag. **AGO Calendar** (booking/scheduling,
+> `docs/roadmap.md` Stage 20) is the second, and is live too — a real product decision, not a stand-in,
+> chosen because it shares nothing with chat except the platform underneath and proves the platform
+> boundary holds for an unrelated product, not just in theory. The whole thing exists to demonstrate
+> concurrency, database work under load, message-broker work, and Clean Architecture, in a form another
+> engineer can review — end to end, not just in slides.
 
 ## Try it live
 
@@ -81,6 +81,28 @@ production, Docker Desktop locally) · OpenTelemetry → Prometheus/Grafana/Jaeg
                   +----+-----+
                   |  Redis   |  cache + rate limits + connection registry + presence
                   +----------+
+
+
+   AGO Calendar — additive (adr/0027): its own repo, its own two hosts, platform unchanged.
+   The one place it touches Chat directly:
+
+        operator console                          visitor's chat conversation
+        [    SPA      ]                                    |
+              |                                (rendered as a module step - a form/
+              |  REST, its own JWT               choice - never a direct connection
+              v                                   to Calendar; 22-18)
+      +---------------------+      module hop     +--------------------------+
+      |  Calendar.Api       |  <----------------  |  Chat.Api / Chat.Worker  |
+      |  booking/scheduling |  (TLS, signed        +--------------------------+
+      +----+------------+---+   assertion -
+           |            |       adr/0137, adr/0094)
+     outbox write   publish/subscribe
+           |            |
+           v            v
+   (same PostgreSQL,   (same RabbitMQ - its own topics:
+    own ago_calendar    BookingConfirmed, ModuleQuantityImpact*,
+    database, same      contact-collected, entitlement/lease...)
+    Redis too)
 ```
 
 Three hosts (`Api`, `Worker`, a third `Webhooks` bulkhead not pictured) share the same
