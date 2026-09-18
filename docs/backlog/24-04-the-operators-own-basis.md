@@ -3,8 +3,16 @@
 - **Stage**: 24
 - **Status**: ready
 - **Depends on**: `24-01` (the record), `24-02` (the version)
-- **Decision**: **open — this item exists to close it.** `docs/adr/0076-*` settles the tenant and the
-  visitor; the operator is the role it does not resolve.
+- **Decision**: **made by the author, 2026-09-18 — reading 1.** The tenant's own contract with AGO
+  (`23-52`) instructs AGO to process the tenant's staff data, and the tenant is the one who obtains
+  its own operator's consent - **entirely outside AGO's system**, the same way an employer's own HR
+  paperwork covers a new hire today. AGO is therefore **processor**, not controller, for operator
+  data - this contradicts `docs/adr/0076-*` as written, which must be **superseded, not edited**, per
+  this project's own ADR rule (`adr-writer`). At first sign-in an operator sees a **notice** naming
+  what AGO holds and why, never a refusable consent control - there is nothing here for AGO to ask
+  permission for, since the tenant already holds it. Consequence for `23-52`: that contract's own text
+  needs a clause where the tenant instructs AGO to process staff data and warrants it has obtained
+  the necessary consent from its own staff to do so - add this to `23-52`'s own Scope, not built here.
 
 ## Goal
 
@@ -49,17 +57,23 @@ is worse than none, because it looks like compliance.
 
 ## Scope
 
-- The reading is chosen, with the reasoning recorded as an ADR. If it contradicts `adr/0076`, that ADR
-  is **superseded, not edited** — its original text stands, per the ADR rules.
-- Whatever the chosen reading requires at first sign-in is built. If it requires nothing, the item ships
-  the ADR and a test that first sign-in asks for nothing, so a later reader does not add a control on the
+- **Reading 1 is chosen** (see Decision above) - write it up as an ADR naming the two rejected
+  readings and why each lost, superseding `docs/adr/0076-*` rather than editing it, per the ADR rules.
+- First sign-in shows a **notice**, not a consent control - name what AGO holds about the operator and
+  why (the tenant's own instruction, per its contract), with no accept/decline to wire up. Ship a test
+  proving first sign-in asks for nothing to *agree to*, so a later reader does not add a control on the
   assumption one was forgotten.
-- `personal-data.md`'s "Who answers to whom" section is corrected if the reading changes it.
+- `personal-data.md`'s "Who answers to whom" section is corrected: AGO is processor, not controller,
+  for operator data specifically (visitor and tenant data are unaffected by this item).
+- `23-52`'s own Scope gains a line (cross-referenced, not built here): the tenant-AGO contract must
+  instruct AGO to process staff data and have the tenant warrant it holds its own staff's consent.
 
 ## Out of scope
 
 - The tenant's own acceptance — `24-03`.
-- The processing instruction's contents — `24-06`, though reading 3 would put the operator inside it.
+- The processing instruction's contents — `24-06`. Reading 1 makes staff data part of what the
+  tenant's own instruction to AGO covers, the same way any other tenant-supplied data already is -
+  `24-06`'s own scope, not built here.
 
 ## The exemption `24-01` leaves behind does not extend to this item
 
