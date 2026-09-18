@@ -12,15 +12,13 @@
   `lastKnownSequence` reconciliation cursor in `storage.ts`, not an unread count).
 - **Depends on**: none. Touches `ago-widget` only.
 
-## Scope (deliberately narrower than the original request - see `25-142` for what this defers)
+## Scope
 
-Covers exactly the scenario the author tested: **while the panel is closed, in the same page load**,
-an incoming message increments a small count badge on the launcher button; opening the panel clears
-it. It does **not** cover a badge surviving a page reload or a closed-then-reopened browser tab - that
-needs knowing how many messages arrived while nothing was running at all, which is a materially
-different mechanism (deriving unread count from the reconciliation cursor against the server's latest
-sequence, on reconnect) and its own design question, filed separately as `25-142` so this item can
-land and be tested today without waiting on that answer.
+Covers the scenario the author tested (an incoming message while the panel is closed shows a count on
+the launcher, cleared on open) **and** survives a page reload or a closed-then-reopened browser tab,
+same browser - confirmed directly by the author (2026-09-18, see `25-142`'s own Outcome) once the
+question came up while scoping this item. Cross-device/cross-browser persistence stays out of scope -
+not asked for, and would need a server-side "last read" concept rather than anything client-local.
 
 - A count, incremented once per incoming message (`handleIncoming`) with `authorKind !== "Visitor"`
   while `this.isOpen` is `false` - the same "the other side of the conversation" test this file already
@@ -33,9 +31,14 @@ land and be tested today without waiting on that answer.
 - Cleared (count reset to zero, badge hidden) the moment the panel opens, by either path: the ordinary
   `open()` and the auto-open reveal `openForAutoGreeting()` - both put the transcript in front of the
   visitor, so both count as "read."
-- In-memory for this page load only, matching the scope above. No new `WidgetStorage` key, no
-  reconciliation-cursor arithmetic - this is deliberately the simplest version that satisfies what was
-  actually tested.
+- Persisted via a new `WidgetStorage` key (e.g. `last-read-sequence`, per conversation) - **not** a
+  reuse of the existing `lastKnownSequence` cursor, which tracks "received for reconnection" and
+  updates the instant a message arrives regardless of whether the panel is open, making it the wrong
+  fact for "read." The new cursor advances only when the visitor actually sees the transcript (panel
+  opens, either path). On a fresh page load, the initial count comes from comparing this cursor against
+  what `connect()`'s own history replay already fetches, rather than a second network round-trip.
+  Follows the existing `WIDGET_STORAGE_DISCLOSURE` convention for a new key (see `has-known-contact-
+  detail`, added the same way for `25-136`).
 
 ## Where this is likely to go wrong
 
@@ -58,5 +61,6 @@ land and be tested today without waiting on that answer.
 - [ ] Opening the panel (either path) clears the count and hides the badge
 - [ ] The badge never shows "0" - it is absent, not a visible zero
 - [ ] The toggle's accessible name reflects the unread count when nonzero
-- [ ] `25-142` is filed (done - see that item) so the reload-persistence question this defers is not
-      lost
+- [ ] Reloading the page, or closing and reopening the tab, after unread messages arrived still shows
+      the correct count on next load, same browser
+- [ ] A visitor with no unread messages sees no badge after a reload, same as a fresh visitor
