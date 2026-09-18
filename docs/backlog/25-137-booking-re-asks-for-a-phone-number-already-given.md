@@ -1,7 +1,7 @@
 # 25-137 · Booking re-asks for a phone number already given
 
 - **Stage**: 25
-- **Status**: ready — likely a configuration action, not a code change; see Scope
+- **Status**: done — configuration only, no code
 - **Found**: 2026-09-17, live, reported by the author: after already providing a phone number, the
   booking flow asks for it again at the phone step, which the author called out as actively
   off-putting to a real customer.
@@ -56,10 +56,21 @@ setting already exists and is exposed in the console (`ago-console`'s `WidgetCon
 
 ## Done when
 
-- [ ] The relevant site's `AcceptUnverifiedPhone` is on, set through the console's own settings page
-- [ ] With `25-136` also landed, a live widget booking (service → worker → date → time) with the
+- [x] The relevant site's `AcceptUnverifiedPhone` is on, set through the console's own settings page -
+      confirmed live against the database (`widget_accept_unverified_phone = true` for the author's own
+      test tenant)
+- [x] With `25-136` also landed, a live widget booking (service → worker → date → time) with the
       contact form completed goes straight to confirmation with no phone question at all - verified
-      live, not by unit test alone
-- [ ] Whether `WidgetConfig.Default` itself should change, and whether `ADR-0163` needs a superseding
+      live: the author completed a real booking end to end with no repeated phone question
+- [x] Whether `WidgetConfig.Default` itself should change, and whether `ADR-0163` needs a superseding
       ADR to stop calling this "temporary," is recorded as an open question for the author rather than
-      decided here
+      decided here - left open; the per-site toggle is what the author actually used, not a default
+      change
+
+## Outcome
+
+Pure configuration, no code: the author turned `AcceptUnverifiedPhone` on for their own test tenant
+through the console (`Каналы → Виджет на сайте → Бронирование (временно)`). Confirmed live, both
+against the database and by the author's own successful end-to-end booking with no repeated phone
+question. The question of whether this should become the platform-wide default, and whether `ADR-0163`
+needs superseding to stop calling the mechanism "temporary," remains open and undecided.
