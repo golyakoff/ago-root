@@ -1,7 +1,7 @@
 # 25-143 · The unread badge does not survive a reload
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#325`, `ago-widget#98`
 - **Found**: 2026-09-18. `25-141` built the closed-launcher unread badge in-memory only, because the
   widget never fetches message history before the panel opens (`connect()`, the only thing that
   fetches history, is only ever triggered by opening it - eagerly connecting on every page load would
@@ -49,9 +49,19 @@ On the widget side (`ago-widget`):
 
 ## Done when
 
-- [ ] A visitor who received messages while the tab was closed sees the correct count on the next
+- [x] A visitor who received messages while the tab was closed sees the correct count on the next
       page load, before opening the panel
-- [ ] A brand-new visitor (no stored conversation) makes no extra call and shows no badge
-- [ ] The endpoint never starts or resumes a conversation - a read against a conversation the visitor
+- [x] A brand-new visitor (no stored conversation) makes no extra call and shows no badge
+- [x] The endpoint never starts or resumes a conversation - a read against a conversation the visitor
       never returns to has no side effect at all
-- [ ] A visitor cannot query another conversation's unread count
+- [x] A visitor cannot query another conversation's unread count
+
+## Outcome
+
+New `GET /api/v1/conversations/{conversationId}/unread-count?afterSequence={n}` on `ago-chat`,
+visitor-authenticated, a single indexed `COUNT(*)` behind `GetConversationHistoryHandler`'s new
+`HandleUnreadCountAsVisitorAsync` sibling entry point - never touches `JoinCoreAsync`. `ago-widget`'s
+`bootstrapSession` seeds the badge from it before first render, using a new `last-read-sequence`
+storage key (distinct from the existing receive-cursor `lastKnownSequence`, which updates regardless
+of whether the panel is open and would have made the count always read zero). `ago-chat#325`,
+`ago-widget#98`.
