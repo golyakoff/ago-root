@@ -1,7 +1,7 @@
 # A minted tenant's page copy arrives in English, on a page written in Russian
 
 - **Stage**: 8
-- **Status**: ready
+- **Status**: done — `ago-widget#102`
 - **Depends on**: nothing.
 
 ## What is wrong
@@ -43,13 +43,23 @@ have read this way since `8-11`.
 
 ## Done when
 
-- The two swapped sentences come from the widget's own string table (`WidgetStrings`, both locales),
-  resolved the same way every other visitor-facing string is, rather than being literals in
-  `boot.ts`.
-- A minted tenant's page reads in the same language as the page it replaced text on, verified on both
-  demo pages rather than only in a unit test.
-- `boot.test.ts` covers the Russian resolution as well as the English one, so a future locale cannot
-  regress it silently.
+- [x] The two swapped sentences come from the widget's own string table (`WidgetStrings`, both locales),
+      resolved the same way every other visitor-facing string is, rather than being literals in
+      `boot.ts`.
+- [x] A minted tenant's page reads in the same language as the page it replaced text on, verified on both
+      demo pages rather than only in a unit test.
+- [x] `boot.test.ts` covers the Russian resolution as well as the English one, so a future locale cannot
+      regress it silently.
+
+## Outcome
+
+New `resolveDemoPageLocale(doc)` reads the page's own `<html lang>` - the one locale signal available
+this early (before `session.widgetLocale` exists). Both sentences moved into `WidgetStrings`
+(`demoOwnTenantBannerNotice`/`demoOwnTenantPrivacyNote`). **Correction to this item's own premise**:
+`public-demo-2/index.html` is actually `lang="en"`, not Russian as originally stated - only
+`public-demo` is Russian; the fix resolves per-page regardless, so this doesn't change the outcome.
+Verified live in a browser against both real demo pages, not only via `boot.test.ts` (which also gained
+the Russian-resolution coverage). 453/453 tests green (+5). `ago-widget#102`.
 
 ## Considered and not chosen
 
