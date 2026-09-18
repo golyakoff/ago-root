@@ -1,7 +1,7 @@
 # 25-152 · A phone step on a text channel cannot offer a contact button
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#330`
 - **Found**: 2026-09-18, scoping `25-138`. Both Telegram and MAX have a native "share your own
   contact" affordance - a tappable button that sends the account's own registered phone number, no
   typing required. Neither is wired into `ago-chat`; both channels ask for a phone the same way today,
@@ -63,13 +63,26 @@
 
 ## Done when
 
-- [ ] The phone step reaches a Telegram visitor with a working `request_contact` reply-keyboard button
+- [x] The phone step reaches a Telegram visitor with a working `request_contact` reply-keyboard button
       alongside the unchanged prose prompt
-- [ ] The phone step reaches a MAX visitor with a working `request_contact` inline button - verified
-      against a real MAX bot, not only the documented shape
-- [ ] Typing a phone number in reply to either still works, unchanged
-- [ ] VK/WhatsApp/Avito/Email relay is byte-identical to today - the new flag changes nothing for a
+- [~] The phone step reaches a MAX visitor with a working `request_contact` inline button - verified
+      against a real MAX bot, not only the documented shape. **Delivered against the documented outline
+      only** - no real MAX bot/token was available, the same gap `25-151` already carries. Live
+      verification is a follow-up once a real MAX token exists.
+- [x] Typing a phone number in reply to either still works, unchanged
+- [x] VK/WhatsApp/Avito/Email relay is byte-identical to today - the new flag changes nothing for a
       channel that ignores it
-- [ ] An arch test proves no provider-specific button/keyboard vocabulary crosses above
+- [x] An arch test proves no provider-specific button/keyboard vocabulary crosses above
       `Infrastructure.*`
-- [ ] An ADR records the flag-vs-structured-content decision
+- [x] An ADR records the flag-vs-structured-content decision (`ADR-0176`)
+
+## Outcome
+
+`OutboundChannelMessage.RequestContactIfSupported: bool` (default `false`) - intent, never a rendering
+instruction. `DeliverChannelMessageHandler` sets it via the identical `isPhoneCollectionStep`
+discriminator `25-146` uses on the widget side. Telegram builds a `ReplyKeyboardMarkup`; MAX builds an
+`inline_keyboard` attachment - both a `JsonIgnore(WhenWritingNull)` away from a byte-identical ordinary
+reply (a real bug caught by the byte-identical proof tests before it shipped). Button label is a fixed,
+unlocalized string - a named, accepted cosmetic gap (`ADR-0176`). Full suite green: Domain 741,
+Application 1400, FakeCrm 21, Architecture 52, Concurrency 89, Integration 1375. `ago-chat#330`,
+`ADR-0176`.
