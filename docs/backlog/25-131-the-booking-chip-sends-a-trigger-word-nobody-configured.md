@@ -2,7 +2,7 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: ready
+- **Status**: done — `ago-chat#324`, `ago-widget#97`
 - **Found**: 2026-09-17, the author clicking the widget's own "Записаться" button on a real tenant's
   site: it inserted `/booking`, not `/записаться` - the trigger word actually configured for that
   tenant's calendar module.
@@ -75,8 +75,19 @@ tenant-replaceable at all, and the one endpoint that already returns real trigge
 
 ## Done when
 
-- [ ] The widget's own booking chip sends the site's actual configured trigger word, proven against a
+- [x] The widget's own booking chip sends the site's actual configured trigger word, proven against a
       site whose trigger words do not include `/booking` at all (the real, live-reported case).
-- [ ] The visitor-facing session response's new field is additive and does not change any existing
+- [x] The visitor-facing session response's new field is additive and does not change any existing
       consumer's behavior for a site that never customized its trigger words.
-- [ ] A site with no calendar module enabled at all still shows no chip, unchanged.
+- [x] A site with no calendar module enabled at all still shows no chip, unchanged.
+
+## Outcome
+
+`AuthEndpoints.VisitorSessionResponse` gained `EnabledModuleTriggerWords: IReadOnlyDictionary<string,
+IReadOnlyList<string>>` (a parallel field, not a reshape of `EnabledModules` - `OperatorPermissionsResponse`
+is a separate type in `Ago.Chat.Contracts` untouched by this, and `ago-widget`'s own bare
+`enabledModules: string[]` consumers stayed unaffected). `loadBookingModuleChip` reads the site's real
+first configured trigger word; an empty/missing entry hides the chip entirely, defensive-only since
+`EnabledModule`'s own constructor already refuses an empty list. `ago-chat#324`, `ago-widget#97` -
+landed 2026-09-18, a day later than built, after sitting unmerged in worktrees while other work took
+priority (caught only when the author re-tested live and the bug was still there).
