@@ -2,8 +2,8 @@
 
 - **Stage**: 25
 - **Depends on**: nothing
-- **Status**: done — `ago-console#253`. Not yet deployed live (bundled with the next console deploy,
-  alongside `25-126`..`25-130`).
+- **Status**: done — `ago-console#253`. Deployed live (confirmed 2026-09-18: the deployed console
+  commit `904e1d3` descends from this PR's own merge commit `697235d`).
 - **Found**: originally 2026-09-08 ("the first real revoke, minutes after the first real grant"), on
   a leftover branch (`docs/23-103-revoked-shown-as-expired`) recovered 2026-09-17 while triaging
   unmerged branches. Half of what that branch found was fixed properly, as its own commit message
