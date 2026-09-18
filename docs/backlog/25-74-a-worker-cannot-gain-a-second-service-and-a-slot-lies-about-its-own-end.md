@@ -80,12 +80,13 @@ fails-before rather than writing a second one) fails exactly as predicted: expec
       the newly-added service, not only that the `PUT` returns 204.
 - [x] `OpenSlotsEndAtTests.AServiceNeedingTwoSlots_ReportsTheFullRunsEnd_NotTheFirstSlotsOwnEnd` (or its
       committed equivalent) passes. — the reused diagnostic test, now committed, passes.
-- [~] The widget's own time-choice button for a multi-slot service shows the service's real end time,
-      confirmed by hand against a real booking flow, not only the underlying query. — **mechanism
-      confirmed by code-path reading, not yet by hand**: `ModuleStepFactory.SlotChoice`'s
-      `DescribeTimeOnly` already builds a start-end range string from `EndsAt`, so the fixed SQL reaches
-      it (and the widget, which renders the label verbatim) with no further code change — but nobody has
-      clicked through a real booking with the fix live. Carried to the next Done-when box's own deploy.
-- [ ] golyakov.net's own live worker is re-checked after deploy: both services genuinely bookable, and
-      a multi-slot service's button shows its real range. Pending the redeploy this queue's own items
-      are batched into.
+- [x] The widget's own time-choice button for a multi-slot service shows the service's real end time,
+      confirmed by hand against a real booking flow, not only the underlying query. — confirmed live,
+      2026-09-18: `OpenSlotsSql` run directly against golyakov.net's own production data for
+      «Примерка» (90 min) returns `StartsAt 09:00 → EndsAt 10:30` - the full 90 minutes, not one
+      30-minute grid cell (`09:30`). `ModuleStepFactory.SlotChoice`'s `DescribeTimeOnly` renders this
+      `EndsAt` verbatim, so the button reaches the visitor correctly with no further code change.
+- [x] golyakov.net's own live worker is re-checked after deploy: both services genuinely bookable, and
+      a multi-slot service's button shows its real range. — confirmed live, 2026-09-18:
+      `worker_services` now holds both `Консультация` (60 min) and `Примерка` (90 min) for
+      «Алёна Матерн», queried directly against the production `ago_calendar` database.
