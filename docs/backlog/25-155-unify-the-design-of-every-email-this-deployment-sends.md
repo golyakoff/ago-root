@@ -67,9 +67,9 @@ Outlook desktop's own Word rendering engine, which was designed for but not exer
   not assumed. Add a **new** build path (a new method/overload, e.g. `BuildMultipartAlternative`) that
   produces a real `multipart/alternative` body (`text/plain` part first, `text/html` part second - the
   order every mail client expects, so a client with no HTML support falls back cleanly), each part
-  base64-encoded exactly like the existing single-part path already does. **Never touch the existing
-  plain-only path** - `EmailChannelAdapter`'s own visitor-facing conversation replies stay exactly as
-  plain as they are today; only `NotificationMailSender`'s own call site opts into the new path.
+  base64-encoded exactly like the existing single-part path already does. **Keep the existing
+  plain-only method too** - do not delete or repurpose it; the new method is additive. Only
+  `NotificationMailSender`'s own call site opts into it in this item.
 - Build one shared HTML "shell" (logo row, hero icon, heading, body copy, one CTA, a warm secondary
   note, muted footer) matching `docs/backlog/25-155-email-template-mockup.html`'s own tokens and
   layout exactly - the same file this item's own mockup already is, not a fresh design.
@@ -77,9 +77,12 @@ Outlook desktop's own Word rendering engine, which was designed for but not exer
   `OperatorInviteCodeMailTemplate` through the shared shell, each supplying its own heading/body copy/
   CTA - **in this item**, not deferred as a follow-up, since two of three otherwise stay unstyled and
   defeat this item's own point.
-- `EmailChannelAdapter`'s own visitor-facing conversation emails are **explicitly out of scope** -
-  an operator's real reply reads as plain conversation text today and should keep doing so; this item
-  does not touch that adapter at all.
+- **`EmailChannelAdapter`'s own visitor-facing conversation emails are explicitly out of scope here,
+  carved into their own item.** The author's own reasoning, 2026-09-18: these should eventually be
+  branded too, but with the **tenant's own** brand, not AGO's - a visitor emailing a shop expects that
+  shop's identity in the reply, not "AGO Chat". That needs real design work this item's own shell does
+  not answer (does a tenant have a logo today? checked: no - `Site` carries `WidgetPrimaryColorHex`
+  and `Name` only, no logo image field), so it is `25-156`, not built here.
 
 ### Lane B - `ago-deploy`: a real Keycloak `emailTheme`
 
