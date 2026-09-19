@@ -1,7 +1,8 @@
 # 25-162 · "Мои" conversation cards: sort order and emoji size
 
 - **Stage**: 25
-- **Status**: ready — reported live 2026-09-19, queued behind `25-161`
+- **Status**: code merged — `ago-console#256`. Live confirmation of the emoji size still open — see
+  Outcome.
 - **Found**: 2026-09-19, live-testing the console's "Диалоги > Мои" ("Assigned to me") panel. Two
   small, related legibility issues on the same card list, bundled the way `25-154` already bundles
   several small live-found rendering issues under one item, since neither is worth its own number on
@@ -38,7 +39,18 @@
 
 ## Done when
 
-- [ ] "Мои" cards render most-recently-active conversation first, oldest last - proven by a test with
-      cards seeded out of order
-- [ ] The visitor emoji-pair icon is visibly larger on both the card list and the individual
-      conversation page header, confirmed live, not only by a snapshot
+- [x] "Мои" cards render most-recently-active conversation first, oldest last - proven by
+      `ConversationList.test.tsx` with cards seeded out of order
+- [~] The visitor emoji-pair icon is visibly larger (1.75em, `.ago-visitor-emoji`) on both the card list
+      and the individual conversation page header, proven by DOM-structure tests at both render sites -
+      **"confirmed live, not only by a snapshot" is not done**: the sandboxed build environment cannot
+      reach the real authenticated console, left for the author
+
+## Outcome
+
+Merged 2026-09-19: `ago-console#256` - a session-local "last activity" reducer extending
+`attention.ts` (no new field on `ConversationSummaryDto`; recency is fed by the same real-time message
+event the unread badge already reacts to), and `.ago-visitor-emoji` at both render sites. Extended to the
+"Waiting" row's emoji too, for consistency with the resized "Мои" row - not asked for explicitly, but the
+same file/same code shape, called out rather than left as a silent scope grow. 139 files / 1509 tests,
+independently re-verified by the managing session, matching counts exactly.
