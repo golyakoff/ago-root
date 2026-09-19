@@ -1,20 +1,41 @@
 # a visitor is talking to a person and cannot see one
 
 - **Stage**: 23
-- **Status**: ready. The three product questions were answered by the author on 2026-09-07 and are
-  recorded below; one assumption is named rather than buried.
+- **Status**: ready on product decisions; **not picked up yet - two open questions found while planning
+  implementation, 2026-09-19 (see below), need answers first.** One ticket, kept as one - the scope is
+  wide but it is one promise (an operator is a real, seen presence in the widget), not several stapled
+  together.
 - **Depends on**: `24-04` — **decided, 2026-09-18**: AGO is processor, not controller, for operator
   data; the tenant's own contract with its staff covers consent, entirely outside AGO's system. This
   item no longer needs to build a refusable-consent control of its own - see the revised "personal-data
-  work" section below.
+  work" section below. **Coordinate with `25-160`** (tenant logo upload, in flight) - not a hard
+  dependency, but see the implementation note below before building a second upload/validate pipeline.
 - **Decision**: the author's, 2026-09-07 — an operator has a photo and the visitor sees it. Their
   framing is the point: *now that personal data is handled properly, functionality stops being cut out
   of fear of handling it.*
 
 ## What is actually true today
 
-A visitor writes into the widget and a person answers. The widget shows that person's **name**, and
-nothing else. The transcript is a wall of text with no face in it.
+A visitor writes into the widget and a person answers. The transcript is a wall of text with no face in
+it.
+
+**Correction, found while planning implementation, 2026-09-19: the widget does not show that person's
+name today either.** `ago-widget/src/ui/widget.ts`'s header renders a static, generic
+`strings.chatWithUs` string ("Chat with us") - never the site's name, never the operator's own name -
+and the transcript's own message bubbles (`drawMessage`) carry no author element at all, only a CSS
+modifier class (`ago-message--operator`/`visitor`/`auto`/`system`). There is no name anywhere in the
+widget today, on either the header or a message.
+
+**Open question**: does this item's own scope now include rendering the operator's name for the first
+time - in the header and beside each of their messages - or was it written assuming a name slot already
+existed to put a photo beside? The Done-when list below ("A visitor sees it in the widget header and
+beside that operator's messages") reads as the latter, and that premise is not true today.
+
+**Also found while planning, 2026-09-19**: no operator "my profile" self-service screen exists anywhere
+in `ago-console` for this item's own upload control to live on. `OperatorsTeamPage.tsx`
+(`/settings/operators`) manages *other* operators from an admin's view - invite, role, seat, remove -
+never "edit my own info." This item's own console work starts from nothing here, not from extending an
+existing self-service page.
 
 Every product this competes with shows a photo, and not for decoration: a photograph is the cheapest
 signal a visitor gets that somebody is actually there. A shop's own customers decide whether to keep
@@ -42,6 +63,31 @@ An operator's photograph is **personal data about the operator**, and unlike a v
 detail it is data we ask a member of our tenant's staff to hand over so that strangers can look at it.
 That is not a reason to refuse it. It is a reason to do it once, properly, and write down what was
 done:
+
+**Open question, found while planning implementation, 2026-09-19**: `docs/architecture/personal-data.md`
+(around line 52, citing `adr/0031`) currently carries a dated, explicit author decision that this item
+directly reverses and has not yet formally superseded:
+
+> "it is also why an operator avatar has deliberately **not** been added: an image of a person's face is
+> a further category of data plus another upload path with its own deletion, quota and moderation
+> surface, for a benefit initials already provide (author's decision, 2026-08-25)."
+
+This item's own 2026-09-07 decision line above says the reversal in spirit ("functionality stops being
+cut out of fear of handling it"), but `personal-data.md` itself still states the old position as current
+fact, with no dated entry pointing back at it the way this project's own convention treats a reversed
+decision elsewhere (`adr-writer`'s "supersede, never edit" rule). **Confirm before implementation
+starts**: does this item's own `personal-data.md` row (Done-when item below) also carry an explicit
+"supersedes the 2026-08-25 decision, see `adr/0031`" note, or does the reversal need its own dated ADR
+first, separate from the row itself?
+
+**Implementation note, found while planning, 2026-09-19**: `25-160` (tenant logo upload, in flight) is
+building generic upload/validate/public-URL infrastructure this item can extend rather than duplicate -
+an `ISiteLogoPublicUrlBuilder`-shaped port (a public, non-expiring URL over presign-only `IFileStorage`,
+deliberately not widening the platform port for one caller), a synchronous-push submission handler, and
+a not-yet-written `Ago.Chat.Worker` SkiaSharp-validating consumer. Worth generalising that pipeline's
+object-key scheme past `site/{id}/logo/...` to also cover `operator/{id}/photo/...` and
+`site/{id}/machine-avatar/...` rather than building a second one - coordinate sequencing with whoever
+lands `25-160` first rather than starting this item's own upload plumbing independently.
 
 - **The lawful basis is `24-04`'s own decision, not a consent control this item builds.** AGO is
   processor for operator data - the tenant's own contract with its staff already covers this, outside
