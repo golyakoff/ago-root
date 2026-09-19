@@ -1,7 +1,7 @@
 # 25-159 · A consent choice typed by a widget visitor is never resolved
 
 - **Stage**: 25
-- **Status**: ready — diagnosed 2026-09-19, root cause confirmed against `origin/main`
+- **Status**: code merged 2026-09-19 (`ago-chat#335`) — live verification still open, see Done-when
 - **Found**: 2026-09-19, live-testing a calendar booking flow through the widget. After answering the
   consent step (`25-153`'s own gate) by clicking "Согласен(na)", nothing happened - no recap, no
   confirmation, no follow-up message of any kind.
@@ -75,13 +75,24 @@ Domain or Infrastructure change, no widget change.
 
 ## Done when
 
-- [ ] A widget-shaped Accept reply (structured `content.value = "consent-accept"`,
+- [x] A widget-shaped Accept reply (structured `content.value = "consent-accept"`,
       `contentKind = "choice_list"`, arbitrary display text as `Body`) grants consent and reveals the
       real (phone) step - proven by a new test mirroring
       `HandleAsync_WithAWidgetShapedReply_SubmitsTheResolvedActionValue`'s own pattern, which fails on
       current code and passes after the fix
-- [ ] The same holds for a widget-shaped Decline reply
-- [ ] Every existing text-channel consent-gate test (`MessageBody("1")`/`MessageBody("2")`, no
+- [x] The same holds for a widget-shaped Decline reply
+- [x] Every existing text-channel consent-gate test (`MessageBody("1")`/`MessageBody("2")`, no
       structured content) still passes unchanged
 - [ ] The exact repro from this item - answering "Согласен(na)" through a real widget in a real booking
-      flow - immediately shows the next (phone) prompt, proven live, not only by a unit test
+      flow - immediately shows the next (phone) prompt, proven live, not only by a unit test. Not yet
+      checked: the fix is merged to `main` but not yet deployed to any stand this session has verified
+      against.
+
+## Outcome so far
+
+Fixed and merged 2026-09-19: `ContinueConsentGateAsync` now resolves structured-first against
+`PrimitiveKinds.ChoiceList`, reusing the existing `TryReadReplyValue` helper (`ago-chat#335`, commit
+`b74ddf6`). Both new tests confirmed red on pre-fix code, green after; all six `Ago.Chat.*` test
+projects green (750+1428+21+52+89+1380 passing). The one remaining Done-when box (live confirmation)
+needs a deploy to a stand carrying this commit; left open rather than ticked or split off, since it is
+the same live check this item asked for from the start, not a new piece of work.
