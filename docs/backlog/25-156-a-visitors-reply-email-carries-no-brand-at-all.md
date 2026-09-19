@@ -1,8 +1,10 @@
 # 25-156 · A visitor's reply email carries no brand at all - and it should be the tenant's, not ours
 
 - **Stage**: 25
-- **Status**: ready — decided by the author, 2026-09-18: shape 1, text-and-color only, using what
-  `Site` already carries. No new field, no upload path, no console screen.
+- **Status**: code merged 2026-09-19 (`ago-chat#336`, commit `b189c64`) — live verification (a real,
+  threaded reply chain) still open, see Done-when. Decided by the author, 2026-09-18: shape 1,
+  text-and-color only, using what `Site` already carries. No new field, no upload path, no console
+  screen.
 - **Found**: 2026-09-18, scoping `25-155`. Carved out deliberately rather than folded in - the
   author's own reasoning: `25-155`'s emails (invite, account warnings, Keycloak's own flows) are all
   AGO's own words to AGO's own account holders, so AGO's own brand is correct there. This one is
@@ -63,9 +65,24 @@ this item's own name to invent.
 
 ## Done when
 
-- [ ] A visitor's reply email renders the tenant's own name and (when set) its own accent color in a
-      light HTML shell, proven by a real send
-- [ ] A site with no `WidgetPrimaryColorHex` set still renders correctly, with a neutral default color
+- [x] A visitor's reply email renders the tenant's own name and (when set) its own accent color in a
+      light HTML shell - proven by a test decoding the real rendered HTML from the wire transcript.
+      Not yet proven by a real send (see the open box below)
+- [x] A site with no `WidgetPrimaryColorHex` set still renders correctly, with a neutral default color
       - proven by a test, not only the happy path
-- [ ] The plain-text part of the email carries the reply exactly as it does today, unadorned
-- [ ] Threading (`In-Reply-To`/`References`) is proven unaffected by a real, verified reply chain
+- [x] The plain-text part of the email carries the reply exactly as it does today, unadorned - proven
+      by a test
+- [ ] Threading (`In-Reply-To`/`References`) is proven unaffected by a real, verified reply chain -
+      header-level tests pass, but a real send through a live mailbox has not been checked yet
+
+## Outcome so far
+
+Fixed and merged 2026-09-19: `TenantReplyEmailShell` (new, `Ago.Chat.Infrastructure.Email`) renders
+`Site.Name` and `WidgetConfig.PrimaryColorHex` into a light HTML shell, a deliberate smaller sibling of
+`25-155`'s `EmailHtmlShell` rather than a second call into it (that shell's logo row and footer text
+are both wrong for a tenant-branded reply - see the new type's own doc comment). `EmailChannelAdapter`
+now loads the conversation's `Site` and attaches the shell as `HtmlBody`, reusing `25-155`'s
+`BuildMultipartAlternative`. 9 tests (4 new, 5 existing extended for the new dependency), all green;
+5 new tests fails-before/passes-after proven. `ago-chat#336`, commit `b189c64`. The remaining Done-when
+box (a real, live send through a threaded reply chain) needs a live mailbox this session did not use -
+left open rather than ticked or split off.
