@@ -1,7 +1,8 @@
 # 25-170 · A tenant can run past what it is entitled to, with nothing noticing
 
 - **Stage**: 25
-- **Status**: ready — designed with the author 2026-09-19, in detail, before any code was written
+- **Status**: code merged — `ago-chat#342`, `ago-console#260`. Live verification (a real subscription
+  downgrade / a real channel entitlement lapse on the demo stand) not yet done — see Outcome.
 - **Found**: 2026-09-19, discussing a future item (a platform-owner override on the Operator-role and
   Admin-role seat counts, mirroring the existing channel-quantity override). Checked directly whether
   today's entitlement system actually *enforces* anything once granted, or only *reports* it - it only
@@ -164,19 +165,64 @@ naturally if the seat itself lives on the role assignment, not on the account.
 
 ## Done when
 
-- [ ] `operator_roles.HoldsSeat`/`GrantedAt` exist, migrated correctly from today's data, and
-      `Operator.HoldsSeat` is gone
-- [ ] `CanSignIn` is the one-rule form; an account disabled on its Admin-role seat cannot sign in, proven
-      by a test
-- [ ] Inviting past `SeatLimit` or `AdminLimit` is refused by the one shared capacity procedure, proven by
-      tests for both roles
-- [ ] A subscription downgrade that drops either limit below current headcount results in the excess
+- [x] `operator_roles.HoldsSeat`/`GrantedAt` exist, migrated correctly from today's data, and
+      `Operator.HoldsSeat` is gone — `Stage25AddOperatorRoleSeatColumns`, add-then-backfill-then-drop,
+      read in full and judged correct
+- [x] `CanSignIn` is the one-rule form; an account disabled on its Admin-role seat cannot sign in, proven
+      by a test — `OperatorSignInEligibilityTests`/`OperatorTests`
+- [x] Inviting past `SeatLimit` or `AdminLimit` is refused by the one shared capacity procedure, proven by
+      tests for both roles — `OperatorRoleSeatCapacity`, both invite/role-change call sites moved to it
+- [x] A subscription downgrade that drops either limit below current headcount results in the excess
       being disabled (not demoted, not deleted) within one minute, most-recently-granted-first, proven by
-      a test seeding `GrantedAt` out of order for both roles
-- [ ] `AdministratorLimitEnforcer` and its call sites are gone; nothing references it
-- [ ] A channel whose `ModuleQuantityGrant` has expired stops being processed - proven by a test that
+      a test seeding `GrantedAt` out of order for both roles — `OperatorRoleSeatReconcilerTests`,
+      `EntitlementWatchdogJobTests`
+- [x] `AdministratorLimitEnforcer` and its call sites are gone; nothing references it — interface,
+      implementation and its own test file all deleted, confirmed via `git status`
+- [x] A channel whose `ModuleQuantityGrant` has expired stops being processed - proven by a test that
       lets a grant expire and confirms `ReceiveChannelMessageHandler` refuses what arrives after, and
-      (for a long-polling channel) that the poll loop itself pauses within one minute
-- [ ] Re-enabling a seat on either role still enforces that role's own capacity limit, proven by a test
-- [ ] The console shows the same over-limit banner and manual toggle for the Admin role that the Operator
-      role already has, proven by a test
+      (for a long-polling channel) that the poll loop itself pauses within one minute —
+      `EntitlementWatchdogJobTests`, `ChannelPollerReapTests`
+- [x] Re-enabling a seat on either role still enforces that role's own capacity limit, proven by a test —
+      `ToggleOperatorSeatHandlerTests`
+- [x] The console shows the same over-limit banner and manual toggle for the Admin role that the Operator
+      role already has, proven by a test — `OperatorsTeamPage.test.tsx`, and (found only by CI, see
+      Outcome) `ux-gate`'s own `operators-team` screen render
+
+## Outcome
+
+Merged 2026-09-19/20: `ago-chat#342` — seat-holding moved from `Operator.HoldsSeat` to
+`operator_roles.HoldsSeat`/`GrantedAt`; one `OperatorRoleSeatCapacity`/`OperatorRoleSeatReconciler` pair
+governs both roles; `AdministratorLimitEnforcer` retired outright; new `EntitlementWatchdogJob`
+(one-minute cadence) reconciles both role capacity and channel entitlement; `ReceiveChannelMessageHandler`/
+`ReceiveChannelAttachmentHandler` gained a live entitlement guard. Full suite independently re-verified:
+Domain 754, Application 1448, FakeCrm 21, Architecture 52, Concurrency 90, Integration 1433, all 0 failed
+(one Docker-container-networking flake seen once under load, clean on a re-run in isolation).
+
+**A real bug found and fixed along the way**: `OperatorRepository.AnyOnlineForSiteAsync` had narrowed "is
+any staff member on duty" to Operator-role holders only, incorrectly excluding an online Admin-role-only
+operator from triggering offline auto-replies - fixed to check any held seat, matching `CanSignIn`'s own
+rule, and covered by a new test.
+
+`ago-console#260` — `OperatorsTeamPage.tsx`'s seat badge/toggle/over-limit banner generalised to both
+roles; `OwnerSiteDetailPage.tsx` updated for the changed wire shape. 141 files / 1531 tests, independently
+re-verified.
+
+**A real gap in verification, caught only by CI, not by the managing session or the worker**:
+`npm run typecheck`/`lint`/`test -- --run` were all green, but `ago-console`'s actual CI also runs
+`npm run ux-gate` (a real-browser Playwright pass) - neither the worker nor the managing session ran it
+before opening the PR. It failed: `ux-gate/fixtures/data.ts` still mocked the pre-`25-170` flat
+`holdsSeat`/`roleNames`/`heldSeats`/`seatLimit`/`overSeats` shapes, which `OperatorsTeamPage` no longer
+parses, so the `operators-team` screen never rendered. Fixed (the fixture updated to the new
+`roles: OperatorRoleSeatDto[]` shape, preserving the same over-limit scenario it always tested) and
+re-verified green, `ux-gate` included, before merging. Recorded as a standing lesson: this repo's real
+verification set is four commands, not three.
+
+**A pre-deploy backup was taken** (`take-a-backup`) before this lands on the demo stand, specifically
+because the migration is destructive - `Stage25AddOperatorRoleSeatColumns` drops `operators.holds_seat`
+in the same migration that backfills its replacement, with no separate expand-then-contract release, so
+a code rollback after this migration cannot fall back to the previous schema (`docs/runbooks/redeploy.md`'s
+own stated rule). Confirmed fresh (`ago-backup-20260919T211017Z.tar.gpg`, pulled and sha256-verified).
+
+Two Done-when-adjacent facts remain to prove live rather than by test, not blocking the merge: a real
+subscription downgrade actually disabling the right people within a minute on the demo stand, and a real
+channel's long-polling loop actually pausing when its entitlement lapses there.
