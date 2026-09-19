@@ -1,7 +1,7 @@
 # 25-163 · "Общение" (team chat) carries no unread-count badge, unlike "Мои"
 
 - **Stage**: 25
-- **Status**: ready — reported live 2026-09-19, queued behind `25-161` and `25-162`
+- **Status**: code merged — `ago-console#258`
 - **Found**: 2026-09-19. The console's "Диалоги > Мои" nav item already shows an unread-message-count
   badge (`consoleNav.ts`'s `buildTalkItems`, `badge: badgeFor(unreadCount, strings.queueUnreadMessageOne,
   strings.queueUnreadMessageOther)`, landed by `25-51` deliberately only on "Мои", never "Все
@@ -26,7 +26,22 @@
 
 ## Done when
 
-- [ ] "Общение" shows an unread-count badge in the nav when there are unread team-chat messages, using
-      the same `badgeFor` shape "Мои" already uses, proven by a test
-- [ ] The badge clears (or decrements) when those messages are read, proven by a test
-- [ ] "Мои"'s own existing badge test still passes unchanged
+- [x] "Общение" shows an unread-count badge in the nav when there are unread team-chat messages, using
+      the same `badgeFor` shape "Мои" already uses, proven by `TeamChatUnreadProvider.test.tsx` and
+      `consoleNav.test.ts`
+- [x] The badge clears when the page is open, proven by `TeamChatUnreadProvider.test.tsx`'s own
+      clear-on-open case
+- [x] "Мои"'s own existing badge test still passes unchanged, proven by `consoleNav.test.ts`
+
+## Outcome
+
+Merged 2026-09-19: `ago-console#258` - `TeamChatUnreadProvider`/`TeamChatUnreadContext`, the sole owner
+of `OperatorConnection.onTeamMessage` (previously a single-listener setter `TeamChatPage` called
+directly; now fans pushes out to subscribers so it can also own the badge). Excludes the operator's own
+echoed sends via a new `operatorId` field on `PermissionsState` (already on the wire from
+`/operators/me`, never surfaced before). Wired into `consoleNav.ts`'s `buildTeamItems` via a third
+`buildTenantNavSections` parameter; `OperatorShell` reads it through a tolerant
+`useTeamChatUnreadBadge()` (0 with no provider) so existing shell-only test harnesses keep passing
+unchanged. Rebased cleanly onto `25-160`'s merged `EmailChannelPage` nav entry - both touch
+`consoleNav.ts`/`i18n`/`App.tsx` but in disjoint regions. 141 files / 1528 tests, independently
+re-verified by the managing session, matching counts exactly.

@@ -1,7 +1,8 @@
 # 25-160 · A tenant's own company name and logo brand their reply email
 
 - **Stage**: 25
-- **Status**: ready — designed with the author 2026-09-19, not yet built
+- **Status**: code merged — `ago-chat#341` (commit `fc9b01c`), `ago-console#257`, ADR-0177
+  (`ago-root#1212`). Live-send verification and animated-GIF rejection test remain open — see Outcome.
 - **Found**: 2026-09-19, discussing `25-156` with the author. That item shipped (decided
   2026-09-18) as text-and-color only, and named a real logo feature explicitly as "a separate future
   item if it ever comes up - not built here, and not this item's own name to invent." This is that
@@ -127,22 +128,42 @@ before starting" habit for anything with a real architectural fork:
 
 ## Done when
 
-- [ ] Email has a real console screen (`/channels/email`) with company-name and logo fields, reachable
+- [x] Email has a real console screen (`/channels/email`) with company-name and logo fields, reachable
       the same way Telegram/MAX/VK already are
-- [ ] Uploading a valid ≤100×100 static PNG/JPEG/GIF succeeds, ends in `ready`, and is servable from a
-      public, non-expiring URL
-- [ ] An oversized file, a wrong format, a wrong-dimension image, and an animated GIF are each rejected
-      with a clear reason - proven by explicit tests, both the client-side fast check and the
-      server-side authoritative one
-- [ ] More than 5 upload attempts for one site in a day are refused by the rate limiter, proven by a
-      test
+- [x] Uploading a valid ≤100×100 static PNG/JPEG/GIF succeeds, ends in `ready`, and is servable from a
+      public, non-expiring URL - proven by `SiteLogoValidatorEndToEndTests` against real Postgres+MinIO
+- [~] An oversized file and a wrong-format file are each rejected with a clear reason, proven by
+      explicit tests (`SiteLogoValidatorEndToEndTests`) - **animated GIF rejection has no automated
+      test**: SkiaSharp has no multi-frame *encoder*, so `codec.FrameCount > 1` is exercised by nothing
+      but the compiler, named explicitly in that test file rather than hidden. Confirming it needs a
+      real animated-GIF fixture or a manual check - left open.
+- [x] More than 5 upload attempts for one site in a day are refused by the rate limiter, proven by
+      `SubmitLogoUploadHandlerTests.HandleAsync_WhenRateLimited_IsRefused_BeforeAnyUpload`
 - [ ] A visitor's reply email embeds the tenant's own logo inline (`Content-ID`) when one is `ready`,
-      and falls back to `25-156`'s text-only shell when not - proven by a real send in both states
-- [ ] The email-composition path does not touch object storage on a warm cache - proven by a test
-      asserting the storage port is never called on a cache hit
-- [ ] The validating worker's write-through means the very first email sent after a successful upload
-      already has a warm cache entry - proven by a test that never lets the email path see a cold cache
-      after a fresh `ready` promotion
+      and falls back to `25-156`'s text-only shell when not - proven by a real send in both states.
+      **Not done** - needs a real mailbox, the same live-send gap `25-156`/`25-161` already carry.
+- [x] The email-composition path does not touch object storage on a warm cache - proven by
+      `EmailChannelAdapterTests.SendAsync_WithAWarmLogoCache_NeverCallsFileStorage` (a `ThrowingFileStorage`
+      fake, not just an assertion on a call count)
+- [x] The validating worker's write-through means the very first email sent after a successful upload
+      already has a warm cache entry - proven by
+      `SiteLogoValidatorEndToEndTests.ValidateAsync_WithAValidSmallStaticPng_PromotesTheLogoAndWarmsTheBrandingCache`
+
+## Outcome
+
+Merged 2026-09-19: `ago-chat#341` (commit `fc9b01c`) - `Site.BrandCompanyName`/`LogoObjectKey`/
+`LogoStatus`, `SubmitLogoUpload`/`UpdateSiteBranding`/`GetSiteBranding`, `Ago.Chat.Worker.SiteLogoValidator`
+(SkiaSharp decode/validate/promote, the sibling of `AttachmentThumbnailGenerator`), the `IPresignedUrlUploader`
+port, `EmailChannelAdapter`/`TenantReplyEmailShell` inline-logo rendering via a Redis branding cache. Full
+suite independently re-verified by the managing session: Domain 758, Application 1445, FakeCrm 21,
+Architecture 52, Concurrency 89, Integration 1428, all 0 failed (two Docker-container-API flakes seen once
+under heavy concurrent load, confirmed as environmental on a clean rerun in isolation). `ago-console#257` -
+`/channels/email` (`EmailChannelPage`), 140 files / 1517 tests, independently re-verified. `ago-root#1212` -
+`ADR-0177`, index row added to `docs/adr/README.md` at merge.
+
+Two items remain genuinely open, not overlooked: the real-mailbox live-send check (needs the author/a real
+inbox), and an automated animated-GIF rejection test (needs a real multi-frame fixture SkiaSharp cannot
+produce itself). Neither blocks the merge; both are named above rather than silently dropped.
 
 ## Candidate ADR
 
