@@ -1,8 +1,9 @@
 # 25-161 · A MAX visitor's image is accepted with no permission check, and never arrives either way
 
 - **Stage**: 25
-- **Status**: ready — reported live 2026-09-19, root cause **not yet diagnosed by this session**,
-  deliberately - see "How this item is meant to be worked" below.
+- **Status**: code merged 2026-09-19 (`ago-chat#337`, commit `ee85027`) — live verification through the
+  real MAX bot still open, see Done-when. Root cause below, confirmed by the worker this item's own
+  "analyze first" instruction asked for.
 - **Found**: 2026-09-19, live-testing the MAX channel. Two distinct symptoms, both real:
   1. A MAX visitor can attach and send an image with **no prompt or gate at all** - the product already
      has an operator-facing "allow this visitor to send files" control (`23-78`,
@@ -60,10 +61,39 @@ by the time this item closes:
 
 ## Done when
 
-- [ ] The real root cause of both symptoms is written down in this file, with the actual code path
-      named - not a guess
-- [ ] A MAX visitor with no attachment-upload grant is refused with a clear, visitor-facing message
+- [x] The real root cause of both symptoms is written down in this file, with the actual code path
+      named - see Root cause, confirmed below
+- [x] A MAX visitor with no attachment-upload grant is refused with a clear, visitor-facing message
       when they try to send a file, proven by a test
-- [ ] A MAX visitor's image, sent after a grant, is confirmed to arrive as a real attachment on the
-      operator's side, proven by a test - and, if reachable, by a real send through the live MAX bot
-- [ ] Every existing widget-channel attachment/grant test still passes unchanged
+- [x] A MAX visitor's image, sent after a grant, is confirmed to arrive as a real attachment on the
+      operator's side, proven by a test. Not yet proven by a real send through the live MAX bot (see
+      the open box below)
+- [x] Every existing widget-channel attachment/grant test still passes unchanged
+- [ ] The exact repro from this item - two images through a real MAX conversation, one refused, one
+      delivered - confirmed live, not only by tests
+
+## Root cause, confirmed
+
+One cause for both symptoms: `MaxInboundMessageParser` had **no attachment handling at all**, only a
+text path. A caption-less MAX photo failed the parser's own blank-body bail-out and vanished entirely;
+a captioned one kept its caption but silently dropped the image. Because nothing on that path ever
+created an `Attachment` domain object, nothing ever reached `CreateAttachmentHandler.HandleAsVisitorAsync`
+- the one place the `23-78` grant (`Conversation.HasAttachmentUploadGrant`) is actually checked - so
+symptom 1 ("no permission check") was a consequence of the missing ingestion path, not a second,
+independent bug. Confirmed against MAX's own published Go client schema for the wire shape of an
+inbound image attachment, not assumed from local code alone.
+
+## Outcome
+
+Fixed and merged 2026-09-19 (`ago-chat#337`, commit `ee85027`): `MaxInboundMessageParser`/`MaxDtos` now
+extract an image attachment's `url`; `MaxApiClient.DownloadImageAsync` fetches the bytes; a new
+`ReceiveChannelAttachmentHandler` composes the widget's own `CreateAttachmentHandler`/
+`ConfirmAttachmentHandler`/`SendVisitorMessageHandler` path so the `23-78` grant, rate limits and
+storage budgets apply to a MAX-sourced image for free, with a real visitor-facing refusal message when
+ungranted; `MaxInboundAttachmentDispatch` (`Infrastructure.MaxBot`) does the one presigned-URL PUT
+Application isn't allowed to do itself (`IFileStorage` is presign-only, `adr/0008`), mirroring
+`AttachmentThumbnailGenerator`'s own precedent. 10 new tests, each fails-before/passes-after proven;
+independently re-verified twice (once pre-rebase, once after rebasing onto a `main` that had moved -
+`25-156` merged in between). The one remaining Done-when box (a real send through the live MAX bot)
+needs the live channel this session did not use for verification - left open rather than ticked or
+split into a new number, since it is the same live check this item asked for from the start.
