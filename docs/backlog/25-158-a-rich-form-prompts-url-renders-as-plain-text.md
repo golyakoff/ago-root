@@ -1,7 +1,7 @@
 # 25-158 · A rich-form prompt's URL renders as plain text
 
 - **Stage**: 25
-- **Status**: ready — diagnosed 2026-09-19, root cause confirmed against `origin/main`
+- **Status**: code merged 2026-09-19 (`ago-widget#104`) — live verification still open, see Done-when
 - **Found**: 2026-09-19, live-testing a calendar booking flow through the widget. The consent step's
   prompt (`25-153`'s own gate) rendered a policy link as raw, non-clickable text:
 
@@ -62,11 +62,20 @@ helper, so every rich-form primitive gets it - not a special case for the consen
 
 ## Done when
 
-- [ ] A `choice_list`/`date_time_picker` prompt containing an `http(s)://` URL renders it as a real,
+- [x] A `choice_list`/`date_time_picker` prompt containing an `http(s)://` URL renders it as a real,
       clickable `<a>` (correct `href`, `target="_blank"`, `rel="noreferrer"`), proven by a unit test
-- [ ] The same holds for `confirmation_card`'s title/lines and `form`'s field label
-- [ ] A prompt with no URL renders exactly as before (regression safety - unchanged text output)
-- [ ] A URL-shaped string on a disallowed scheme (e.g. `javascript://…`) is confirmed, by an explicit
+- [x] The same holds for `confirmation_card`'s title/lines and `form`'s field label
+- [x] A prompt with no URL renders exactly as before (regression safety - unchanged text output)
+- [x] A URL-shaped string on a disallowed scheme (e.g. `javascript://…`) is confirmed, by an explicit
       test, never turned into a live anchor
 - [ ] The exact consent-step message from this item's own repro renders its link as clickable in a
-      real, live booking flow - not only proven by a unit test
+      real, live booking flow - not only proven by a unit test. Not yet checked: the fix is merged to
+      `main` but not yet deployed to any stand this session has verified against.
+
+## Outcome so far
+
+Fixed and merged 2026-09-19: `appendLinkedText` added to `render.ts`, all four call sites switched to
+it, five new tests (`ago-widget#104`, commit `2c4000f`) — typecheck/lint/458 tests all green. The one
+remaining Done-when box (live confirmation in the actual booking flow) needs a deploy to a stand
+carrying this commit; left open rather than ticked or split off, since it is the same live check this
+item asked for from the start, not a new piece of work.
