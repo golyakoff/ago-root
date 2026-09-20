@@ -1,7 +1,21 @@
 # 25-182 · demo-shop2.reserve-me.ru is a dead deployment
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-deploy#242` (`14036cf`), `ago-widget#110` (`a548549`). Independently
+  re-verified before merging: full diff review across both repos plus every operational script the
+  worker's own scope didn't cover (`deploy.sh`/`rollback.sh`/`redeploy.sh`/`smoke.sh`/
+  `build-static-images.sh`/`dependabot.yml`, all fixed by the managing session in the same change,
+  since `smoke.sh` in particular would have started failing for a host now deliberately unserved).
+  Deployed and confirmed live: `apply-demo.sh` run against the real cluster; **a real gap found and
+  fixed live** - `apply -k` without `--prune` left the old `Deployment`/`Service`/`HTTPRoute` for
+  `ago-demo-shop2` still running even after the manifest no longer listed them, found by checking
+  rather than trusting the apply's own clean output, and deleted explicitly by name (filed as its own
+  standing-risk item, `25-188`, since this will recur for any future resource removal). The reissued
+  certificate's actual served SAN list was checked directly via `openssl s_client` (not just the
+  `Certificate` object's own spec) and confirmed to have dropped `demo-shop2.reserve-me.ru` while
+  keeping all eight other names; every other hostname re-checked live and still serving correctly;
+  `demo-shop2.reserve-me.ru` itself now returns a genuine connection failure, not a stale cached
+  response; `check-manifest-drift.sh` clean afterward.
 - **Depends on**: nothing
 - **Found**: 2026-09-20, the author - `ago-landing` no longer links to `demo-shop2.reserve-me.ru`
   (confirmed: `grep -rn "demo-shop2" ago-landing/*.html ago-landing/*.js` returns nothing), so the
@@ -57,15 +71,19 @@ running one:
 
 ## Done when
 
-- [ ] `demo-shop2.reserve-me.ru` no longer resolves to a running service - confirmed live (a real
-      request against the real hostname), not asserted from the manifest diff.
-- [ ] `ago-public-tls`'s certificate no longer lists `demo-shop2.reserve-me.ru`, and every other
-      hostname on that same certificate still serves correctly after the reissue.
-- [ ] `ago-widget`'s CI no longer builds or publishes `ago-demo-shop2`, and the fate of
+- [x] `demo-shop2.reserve-me.ru` no longer resolves to a running service - confirmed live (a real
+      request against the real hostname), not asserted from the manifest diff. — genuine connection
+      failure confirmed live.
+- [x] `ago-public-tls`'s certificate no longer lists `demo-shop2.reserve-me.ru`, and every other
+      hostname on that same certificate still serves correctly after the reissue. — served SAN list
+      checked directly via `openssl s_client`; all eight remaining hostnames re-checked live.
+- [x] `ago-widget`'s CI no longer builds or publishes `ago-demo-shop2`, and the fate of
       `public-demo-2/`'s own content (kept as dead code with a stated reason, or removed) is decided
-      explicitly rather than left ambiguous.
-- [ ] `k8s/overlays/demo/kustomization.yaml`'s own resource/image lists, `network-policies.yaml`, and
+      explicitly rather than left ambiguous. — kept as dead code (nothing builds from it any more);
+      the real behavioral removal in `ui/widget.ts`/`boot.ts` filed separately as `25-187`.
+- [x] `k8s/overlays/demo/kustomization.yaml`'s own resource/image lists, `network-policies.yaml`, and
       every file this item's own Scope names are updated - `bash tools/queue-audit.sh`-style drift check
-      (or this deployment's own `check-manifest-drift.sh`) run clean afterward.
-- [ ] The author is told, explicitly, that the teardown is confirmed live and the DNS record is now
-      his to remove.
+      (or this deployment's own `check-manifest-drift.sh`) run clean afterward. — clean; also found and
+      fixed the same gap in six operational scripts the Scope didn't name (see Status).
+- [x] The author is told, explicitly, that the teardown is confirmed live and the DNS record is now
+      his to remove. — see this session's own chat record.
