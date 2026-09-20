@@ -1,7 +1,13 @@
 # 25-183 · The brandbook is one page and shows no real components
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: ready — code merged as `ago-brandbook#2` (`605c37d`), independently re-verified before
+  merging (`components.css`'s copied rules spot-checked byte-for-byte against the real
+  `ago-console/src/components/components.css`, the font-loading claims confirmed directly in both
+  `ago-console/index.html` and `ago-landing/index.html`, license claims checked, local `docker build`
+  + all 5 pages/assets served 200, and a live browser pass: buttons render all tones/sizes/hover/
+  disabled states, both dialog variants render open and correctly positioned, typography page renders
+  as intended). **Not yet deployed to the live site** — see Done when.
 - **Depends on**: `25-180` (the live site this item expands - `brandbook.reserve-me.ru`, `ago-brandbook`)
 - **Found**: 2026-09-20, the author, moments after `25-180` went live: wants more pages - controls,
   dialogs, and other real UI elements, plus a closer look at typography ("у нас кстати бесплатный
@@ -64,13 +70,17 @@ Turn the single page into a small, real multi-page reference site:
 
 ## Done when
 
-- [ ] The type discrepancy (`ago-console` vs `ago-landing`'s own current font stacks) is shown
-      explicitly, with real specimens and each family's real license named.
-- [ ] Every component in `ago-console/src/components/` has a real-states showcase on the new
-      components page(s), styled from the real `components.css`, not approximated.
-- [ ] The site has real navigation between pages (color, type, icons, components, logo) - not one long
-      scroll.
-- [ ] `docker build` still succeeds with the new files (`Dockerfile`'s `COPY` list updated), and the
+- [x] The type discrepancy (`ago-console` vs `ago-landing`'s own current font stacks) is shown
+      explicitly, with real specimens and each family's real license named. — `typography.html`,
+      font-loading claims confirmed against both real `index.html` files, licenses confirmed
+      (SIL OFL 1.1 for five families, Apache 2.0 for JetBrains Mono).
+- [x] Every component in `ago-console/src/components/` has a real-states showcase on the new
+      components page(s), styled from the real `components.css`, not approximated. — `components.html`
+      + new `components.css`, all 12 components, spot-checked byte-for-byte against the real file.
+- [x] The site has real navigation between pages (color, type, icons, components, logo) - not one long
+      scroll. — shared `<nav>` in the header, confirmed every link resolves.
+- [x] `docker build` still succeeds with the new files (`Dockerfile`'s `COPY` list updated), and the
       built image serves every new page - checked by running it locally, not asserted from the file list.
+      — local build + run, all 5 pages and new assets (`components.css`) return 200.
 - [ ] Deployed and confirmed live the same way `25-180` was - `curl https://brandbook.reserve-me.ru/
       version.json` returns the new commit, every new page reachable over the real hostname.
