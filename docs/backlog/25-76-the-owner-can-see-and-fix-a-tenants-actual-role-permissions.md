@@ -92,7 +92,8 @@ query."
 - [x] Whether a removal path ships in this same change or is explicitly carried to its own number is
       decided, not left implicit. — carried to `25-77`, decided before this change was built, not
       after.
-- [ ] The two real gaps this item was found from (`25-69`'s `conversation:close`, `channel:manage`
+- [~] The two real gaps this item was found from (`25-69`'s `conversation:close`, `channel:manage`
       missing from two live tenants) are each closed through this tool, not through a hand-run `UPDATE`
-      — proof that the tool actually works, not only that it exists. **Needs this merged and deployed,
-      then actually run by hand against the two real tenants — not provable before that.**
+      — proof that the tool actually works, not only that it exists. **Left open on purpose**: the tool
+      is merged, deployed and reachable, but actually running it against the two real tenants needs the
+      platform owner's own login — not a step the managing session can perform or prove on his behalf.

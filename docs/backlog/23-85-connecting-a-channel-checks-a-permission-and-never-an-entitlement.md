@@ -110,12 +110,12 @@ Built in a background-worker session, then independently re-verified by the mana
 - [x] The entitlement is per channel kind, not class-wide, per the author's decision above. —
       `ChannelEntitlementOptionKeys.For(ChannelKind)`, one `BillingOptionKey` per kind, a `switch` that
       fails to compile on an unhandled new kind rather than deriving a plausible-looking key silently.
-- [ ] Accounts already connected without an entitlement are disconnected and their channel credentials
+- [~] Accounts already connected without an entitlement are disconnected and their channel credentials
       cleaned up, reconnectable once entitled — and the author has walked through this flow end to end
-      before it runs against real accounts. **The tool exists** (owner-only, two-step: list, then
-      disconnect the exact reviewed ids — `GET`/`POST /api/v1/owner/channel-entitlements/...`) and is
-      fully tested against fakes, but nothing has run it against real accounts, and nothing may until the
-      author does so personally, per this item's own explicit requirement above.
+      before it runs against real accounts. **Left open on purpose, per the note below**: the tool
+      exists (owner-only, two-step: list, then disconnect the exact reviewed ids —
+      `GET`/`POST /api/v1/owner/channel-entitlements/...`) and is fully tested against fakes, but
+      nothing has run it against real accounts, and nothing may until the author does so personally.
 - [x] `23-36`'s live status read stops for a lapsed entitlement, and the free tier's own description in
       `ago-business` is updated to say so in the same change. — `GetChannelCredentialStatusHandler`
       gated the same way; `ago-business`'s `docs/decisions/0012-*.md` section 7 already stated this

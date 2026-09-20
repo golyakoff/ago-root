@@ -181,7 +181,7 @@ would leave every other cross-process writer named above unhandled):
 - [x] `MessageBatchWriter` retries a losing flush instead of failing every co-batched message, with a
       fails-before test proving it (the `IClock`-triggered race described above). —
       `MessageBatchWriterTests`' `RacingClock` case, real Postgres via Testcontainers.
-- [ ] A `capacity-ramp` re-run at the 1+1 topology (same reproduction steps above) no longer shows
+- [~] A `capacity-ramp` re-run at the 1+1 topology (same reproduction steps above) no longer shows
       `DbUpdateConcurrencyException` in `ago-chat-api`'s own logs through at least 2000 connections.
       **Not formally proven.** This session's own later 1+1-topology capacity work ran on the fixed
       code and reached 4000-4500 connections with nothing suggesting a recurrence, but that work was

@@ -51,8 +51,8 @@ administrator sign in without holding a seat, which is a different thing.
 
 - [x] The invite message names the role ("место Оператора" / "место Администратора") rather than
       speaking of "a seat" abstractly.
-- [ ] **Not done, honestly**: the count and limit shown are that role's own. No separate Administrator
+- [~] **Not done, honestly**: the count and limit shown are that role's own. No separate Administrator
       limit exists to show — the message still shows the one combined figure the server actually
-      enforces, stated as a deliberate limitation in code rather than a fabricated number. `25-25`
-      files the missing backend half.
+      enforces, stated as a deliberate limitation in code rather than a fabricated number. **Carried out
+      to its own item, `25-25`**, which files the missing backend half.
 - [x] A test exercises both roles and asserts the message text differs between them.

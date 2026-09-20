@@ -78,7 +78,7 @@ operator on `/redeem-invite` today, and only one of them carries the code:
 
 ## Done when
 
-- [ ] An invited operator's first screen after registering reads as "you're joining an existing
+- [~] An invited operator's first screen after registering reads as "you're joining an existing
       site," not "set up your own," proven by walking the real flow (not asserted from the code).
       **Left open, honestly.** `OnboardingPage`'s heading now swaps to the invite framing whenever
       `hasPendingOperatorInvite` answers true, proven by a real component-level walk (`OnboardingPage.test.tsx`,
@@ -117,10 +117,10 @@ operator on `/redeem-invite` today, and only one of them carries the code:
       (that would need a real SMTP relay this suite's realm does not carry) - stated as the honest
       limit of this reproduction in the worker's own report, alongside why point 2's own fix does not
       depend on the answer either way (it never needed the redirect to carry anything).
-- [ ] The invite email itself also carries the code as plain text, with instructions for where it
+- [~] The invite email itself also carries the code as plain text, with instructions for where it
       goes - proven against whatever email templating mechanism turns out to be the real one
       (Keycloak's own theme, most likely).
-      **Scoped down to its own item, `25-90`**, not built here. Keycloak's `execute-actions-email` Admin
+      **Carried out to its own item, `25-90`**, not built here. Keycloak's `execute-actions-email` Admin
       API takes no custom-template-variable parameter at all - the only real route is a custom email
       theme, and rendering the code inside it would need the plaintext code to reach Keycloak's own
       FreeMarker context somehow (most directly, a Keycloak user attribute), which is a real trade-off
