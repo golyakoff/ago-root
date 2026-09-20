@@ -1,7 +1,13 @@
 # 25-171 · The landing page's channel marks are hand-drawn placeholders too
 
 - **Stage**: 25
-- **Status**: ready — **not yet verified against the real code**
+- **Status**: done — `ago-landing` (`21af60f`). Independently re-verified by the managing session
+  before merging: all five icon files byte-identical to `25-172`'s canonical source (checked both
+  in the worktree and pulled back out of the built container), `Dockerfile`'s new `COPY icons/` line
+  confirmed necessary (local `docker build` + all five icon paths return 200), and a live browser
+  check against the running container — real icons render correctly (MAX circle-cropped, Avito sized
+  to 76%, Telegram/VK/WhatsApp as full circles), the grayscale↔full-color toggle and the calculator's
+  pricing logic both still work correctly with a channel clicked live.
 - **Depends on**: nothing (the icon assets themselves ship as part of 25-170's icon-replacement work
   in `ago-widget`, but this item can start once those five files exist regardless of that item's own
   status)
@@ -57,8 +63,12 @@ of a hand-drawn letter or a generic glyph.
 
 ## Done when
 
-- [ ] Every `.mk` channel mark in the landing page's pricing calculator renders the real brand icon,
+- [x] Every `.mk` channel mark in the landing page's pricing calculator renders the real brand icon,
       confirmed live in a browser against both the light calculator background and any hover/pressed
-      state the button has.
-- [ ] Any other `.mk`-style placeholder found in `home.js`/`pricing.html` during implementation is
-      either fixed the same way or explicitly noted here as out of scope with a reason.
+      state the button has. — verified live: unpressed marks render desaturated, pressed marks render
+      full color, confirmed by toggling ВКонтакте live.
+- [x] Any other `.mk`-style placeholder found in `home.js`/`pricing.html` during implementation is
+      either fixed the same way or explicitly noted here as out of scope with a reason. — checked:
+      `home.js` only reads/writes `aria-pressed`/`data-ch`, no icon markup; `pricing.html` has no
+      `.mk`/`.chbtn`/`.chgrid` at all. `index.html`'s calculator is the only place this pattern
+      appears.
