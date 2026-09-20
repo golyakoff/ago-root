@@ -1,7 +1,9 @@
 # 25-158 · A rich-form prompt's URL renders as plain text
 
 - **Stage**: 25
-- **Status**: code merged 2026-09-19 (`ago-widget#104`) — live verification still open, see Done-when
+- **Status**: done — `ago-widget#104` (commit `2c4000f`), confirmed genuinely deployed to the demo
+  stand. The live-booking-flow box is settled `[~]`, not ticked - blocked by `25-189` (the public demo's
+  own operator login has no seat), not by anything wrong with this item's own fix.
 - **Found**: 2026-09-19, live-testing a calendar booking flow through the widget. The consent step's
   prompt (`25-153`'s own gate) rendered a policy link as raw, non-clickable text:
 
@@ -68,9 +70,16 @@ helper, so every rich-form primitive gets it - not a special case for the consen
 - [x] A prompt with no URL renders exactly as before (regression safety - unchanged text output)
 - [x] A URL-shaped string on a disallowed scheme (e.g. `javascript://…`) is confirmed, by an explicit
       test, never turned into a live anchor
-- [ ] The exact consent-step message from this item's own repro renders its link as clickable in a
-      real, live booking flow - not only proven by a unit test. Not yet checked: the fix is merged to
-      `main` but not yet deployed to any stand this session has verified against.
+- [~] The exact consent-step message from this item's own repro renders its link as clickable in a
+      real, live booking flow - not only proven by a unit test. **Checked and left open, not merely
+      unchecked**: this fix's commit is confirmed present in the demo stand's deployed
+      `ago-widget-assets` image (`git show 89510c14...:src/ui/primitives/render.ts` shows
+      `appendLinkedText` and all four call sites). The managing session then tried to actually drive the
+      real booking flow through `demo-shop1.reserve-me.ru`'s widget and console, and found the public,
+      advertised `demo-operator` login cannot reach the console at all right now - a separate, real
+      defect filed as `25-189`. The "get your own private tenant" alternative needs an interactive Google
+      sign-in this session cannot complete unattended. Left open rather than ticked: no console access
+      currently exists to drive this repro to its consent step.
 
 ## Outcome so far
 

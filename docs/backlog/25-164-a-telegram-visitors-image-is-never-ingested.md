@@ -1,7 +1,9 @@
 # 25-164 · A Telegram visitor's image is never ingested
 
 - **Stage**: 25
-- **Status**: ready — found 2026-09-19, scope pre-cut by mirroring `25-161`'s own confirmed pattern
+- **Status**: done — `ago-chat#338` (commit `03dd234`), confirmed genuinely deployed to the demo stand.
+  The real-live-Telegram box is settled `[~]`, not ticked - this session has no Telegram account to send
+  a real photo from.
 - **Found**: 2026-09-19, answering the author's own question after `25-161` (MAX) landed: does that fix
   cover any other bot channel? Checked directly - `Ago.Chat.Infrastructure.Telegram\TelegramInboundMessageParser.cs`
   has **zero** occurrences of `attachment`/`image`/`photo` (grepped, case-insensitive, whole file) - the
@@ -51,10 +53,39 @@ Mirror `25-161`'s own shape exactly, substituting Telegram's own wire format and
 
 ## Done when
 
-- [ ] A Telegram visitor's photo is confirmed to arrive as a real attachment on the operator's side
-      when the conversation has an upload grant, proven by a test
-- [ ] A Telegram visitor with no grant is refused with the same clear, visitor-facing message `25-161`
-      already writes for MAX, proven by a test
-- [ ] Every existing Telegram inbound-message test still passes unchanged
-- [ ] The real repro (a Telegram visitor sending a photo, granted and ungranted) is confirmed live, not
-      only by tests
+- [x] A Telegram visitor's photo is confirmed to arrive as a real attachment on the operator's side
+      when the conversation has an upload grant, proven by a test - grant/refusal itself is proven
+      generically and channel-agnostically by the existing `ReceiveChannelAttachmentHandlerTests`
+      (`25-161`'s own fixture, unchanged); this item's own new `TelegramInboundMessageParserTests`
+      (caption-less photo, captioned photo, out-of-order sizes, empty photo array) and
+      `TelegramApiClientTests` (getFile success/no-file_path/400/500, download success/404/500) prove
+      Telegram's own wire parsing and two-step download feed that generic path correctly
+- [x] A Telegram visitor with no grant is refused with the same clear, visitor-facing message `25-161`
+      already writes for MAX, proven by a test - the same generic `ReceiveChannelAttachmentHandlerTests`
+      path this fix now feeds
+- [x] Every existing Telegram inbound-message test still passes unchanged
+- [~] The real repro (a Telegram visitor sending a photo, granted and ungranted) is confirmed live, not
+      only by tests. This session has no Telegram account to send a real photo from - needs the author.
+
+## Outcome
+
+Fixed and merged 2026-09-19 (`ago-chat#338`, commit `03dd234`): `TelegramInboundMessageParser` had zero
+attachment handling - a caption-less photo failed its own blank-body bail-out and vanished entirely, a
+captioned one kept only its caption, mirroring `25-161`'s own MAX finding exactly. `TelegramDtos.cs`
+grows `photo`/`caption` (`TelegramMessage`) plus new `TelegramPhotoSize`/`TelegramFile`; the parser
+extracts the highest-resolution photo explicitly by width (Telegram's own size ordering is documented
+prose, not an enforced schema guarantee) and folds `caption` into `Text` so a captioned photo still
+produces its own plain-text message independently. `TelegramApiClient.DownloadImageAsync` does
+Telegram's two-step download (`getFile` resolves a `file_id` to a `file_path`, a second request against
+a distinct URL shape fetches the bytes) - unlike MAX's single direct URL. New
+`TelegramInboundAttachmentDispatch` mirrors `MaxInboundAttachmentDispatch`'s download-prepare-upload-
+complete protocol exactly, wired into `TelegramLongPollingService` - Telegram's own one and only inbound
+mechanism (no webhook receiver exists for this channel). New coverage:
+`TelegramInboundMessageParserTests`, `TelegramApiClientTests`, and one
+`TelegramTokenRedactingLoggingHandlerTests` case proving the new `file/bot<token>/...` URL's token
+segment is redacted too. Confirmed by the managing session as genuinely present in the demo stand's
+currently deployed `ago-chat-api`/`worker`/`webhooks` image before this file was closed.
+
+This item's own `Status: ready` and unticked boxes had outlived the real merge by a day - a
+documentation gap, not a false closure: the GitHub issue was already correctly closed as completed the
+same day the PR merged, and this file is the only piece that had not caught up.
