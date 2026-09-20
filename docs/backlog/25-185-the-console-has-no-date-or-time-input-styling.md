@@ -1,7 +1,14 @@
 # 25-185 · The console has no date or time input styling
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#265` (`56b593d`), `ago-brandbook#6` (`0ece59b`). Independently
+  re-verified before merging: `typecheck`/`lint`/`test` (1553/1553, unchanged — correctly, this is
+  pure CSS with no new component or behavior) / `ux-gate` (67 passed, 9 skipped) all re-run directly
+  for `ago-console`; live browser check in both light and dark theme confirms the native picker icon
+  is legible against both (dark glyph on white in light, light glyph on dark surface in dark).
+  Deployed and confirmed live: `apply-demo.sh` run, rollout + both migrator jobs completed,
+  `curl .../version.json` returns the new commit, `components.html` reachable live,
+  `check-manifest-drift.sh` clean.
 - **Depends on**: nothing
 - **Found**: 2026-09-20, the author, reviewing the brandbook's components page: date input is missing
   today, time input isn't needed yet but should exist in the same style so it's ready when it is.
@@ -41,12 +48,13 @@ value.
 
 ## Done when
 
-- [ ] `<Input type="date">` and `<Input type="time">` render correctly (border, radius, focus ring,
+- [x] `<Input type="date">` and `<Input type="time">` render correctly (border, radius, focus ring,
       invalid/disabled states) via the existing `Input`/`Field` components - confirmed live in a
       browser, not asserted from the code.
-- [ ] The native picker indicator icon is visible against both the light and dark theme's
-      `--ago-surface` - confirmed live in both themes.
-- [ ] `components.html` shows both under the Input/Field section in their real states, in both themes.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` green for `ago-console`; local `docker build` +
+- [x] The native picker indicator icon is visible against both the light and dark theme's
+      `--ago-surface` - confirmed live in both themes. — fixed via `color-scheme` on `.ago-control`,
+      gated by `tokens.css`'s own three-state cascade.
+- [x] `components.html` shows both under the Input/Field section in their real states, in both themes.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` green for `ago-console`; local `docker build` +
       browser check for `ago-brandbook`; deployed and confirmed live the same way `25-183`/`25-184`
       were.

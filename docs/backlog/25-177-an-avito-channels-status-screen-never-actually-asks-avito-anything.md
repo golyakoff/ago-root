@@ -1,8 +1,20 @@
 # 25-177 · An Avito channel's status screen never actually asks Avito anything
 
 - **Stage**: 25
-- **Status**: ready — the open question below is decided by the author, 2026-09-20: refresh eagerly.
-  See "Decision" below the question for the reasoning and the one risk this adds to Scope.
+- **Status**: done — `ago-chat#347` (`2c5938d`). Independently re-verified by the managing session
+  before merging: full diff review including the concurrency-recovery loop's own reload semantics,
+  and the full command set re-run directly — `dotnet format`/`build` clean (0 warnings), `dotnet
+  test`: Domain.Tests 756/756, Application.Tests 1453/1453, FakeCrm.Tests 21/21, Architecture.Tests
+  52/52, Concurrency.Tests 90/90, Integration.Tests 1469/1469 (coverage math confirmed exactly:
+  1458 baseline + 12 new − 1 relocated = 1469). The concurrency race test itself
+  (`GetAvitoStatus_TwoConcurrentReadsAgainstTheSameExpiredToken_BothSucceed`) re-run independently
+  3x with no flakiness — two real concurrent HTTP requests against a real Postgres container and a
+  fake Avito host enforcing genuine one-shot refresh-token rotation under a lock. One real premise
+  correction found while building this: `GetSelfAsync` never throws
+  `AvitoAccessTokenExpiredException` (only `SendMessageAsync` does) — resolved by reacting to the
+  exception it actually throws rather than widening its contract, which would have broken
+  `HandleConnectAsync`'s own existing catch behavior. The open question below was decided by the
+  author, 2026-09-20: refresh eagerly — see "Decision" below for the reasoning and the risk it adds.
 - **Depends on**: nothing (independent of `25-174`/`25-175`/`25-176`)
 - **Found**: 2026-09-20, alongside the other three - `AvitoChannelEndpoints.cs`'s own doc comment names
   the identical `25-65` gap for Avito too, worded almost identically to VK's own note.
@@ -73,15 +85,16 @@ discovering it only when two tabs happen to collide in testing.
 
 ## Done when
 
-- [ ] An Avito status read with a good, unexpired token reports `Verified: true`.
-- [ ] An Avito status read with a genuinely revoked token (not merely expired) reports `Verified: false`
+- [x] An Avito status read with a good, unexpired token reports `Verified: true`.
+- [x] An Avito status read with a genuinely revoked token (not merely expired) reports `Verified: false`
       with a stated reason.
-- [ ] An Avito status read with an expired-but-refreshable token refreshes it and reports
+- [x] An Avito status read with an expired-but-refreshable token refreshes it and reports
       `Verified: true` for the newly-current token - the caller never sees the transient expiry.
-- [ ] Two concurrent status reads against the same expired token both succeed (one refreshes, the other
+- [x] Two concurrent status reads against the same expired token both succeed (one refreshes, the other
       detects its own refresh token was already rotated and re-reads rather than failing) - proven by a
-      test that actually races two calls, not asserted from reading the code.
-- [ ] An Avito status read when Avito (or this deployment's egress) is unreachable reports
+      test that actually races two calls, not asserted from reading the code. — real concurrent HTTP
+      requests, real Postgres, a lock-enforced fake Avito host; re-run 3x independently, no flakiness.
+- [x] An Avito status read when Avito (or this deployment's egress) is unreachable reports
       `Unreachable: true`, distinct from a refusal.
-- [ ] `dotnet build`/`format`/`test` green for `ago-chat`; `ago-console` only if `AvitoChannelPage`
-      needed a change.
+- [x] `dotnet build`/`format`/`test` green for `ago-chat`; `ago-console` only if `AvitoChannelPage`
+      needed a change. — no `AvitoChannelPage.tsx` exists yet, confirmed fresh; `ago-console` untouched.
