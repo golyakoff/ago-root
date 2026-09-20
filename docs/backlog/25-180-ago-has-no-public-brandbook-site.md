@@ -1,8 +1,11 @@
 # 25-180 · AGO has no public brandbook site
 
 - **Stage**: 25
-- **Status**: ready — **one naming/domain detail below needs the author's confirmation before the
-  deploy half starts; the build half has no open question**
+- **Status**: ready — the subdomain is decided: `brandbook.reserve-me.ru`, registered by the author at
+  reg.ru 2026-09-20 (DNS propagation pending at filing time - confirm it resolves before touching
+  `tls.yaml`/`gateway.yaml`, don't assume). Repository created: `github.com/golyakoff/ago-brandbook`,
+  `main` seeded with a placeholder README only - no real content, Dockerfile, or CI yet. Nothing left
+  open.
 - **Depends on**: `25-172` (the five real brand icon files this site would showcase - reuse them
   verbatim, do not re-derive)
 - **Found**: 2026-09-20, the author's own request: a public brand-identity reference site, built as its
@@ -62,11 +65,10 @@ static bundles publish the same way", `15-07`/`adr/0051`):
   explicit `https-<name>` listener block, not routed through the existing `*.reserve-me.ru` wildcard
   listener alone) and `tls.yaml`'s `dnsNames` list (a real Let's Encrypt validation, not instant) both
   need a new entry for whatever hostname is chosen.
-- **Open question, needs the author's decision, not assumed:** what the subdomain is actually called.
-  `brand.reserve-me.ru` is a reasonable default guess, not a decision - the author said "я могу завести
-  под него отдельный домен" (a real DNS action the author performs, not something this item can do for
-  itself) and should confirm the exact name before `tls.yaml`/`gateway.yaml` are touched, since a wrong
-  guess costs a real (if cheap) Let's Encrypt validation to undo.
+- **Decided**: `brandbook.reserve-me.ru` - registered by the author at reg.ru, 2026-09-20. Verify the
+  record has actually propagated (`dig brandbook.reserve-me.ru` or equivalent) before adding it to
+  `tls.yaml`'s `dnsNames` - a certificate request against a name that doesn't resolve yet just fails
+  the validation rather than silently waiting for it.
 - **Done only once actually verified live** - per the author's own explicit "финальная проверка - что
   вживую он доступен": `curl https://<the-chosen-hostname>/version.json` returns the deployed commit,
   the same real, bounded check `smoke.sh` already performs for every other public hostname - not merely
@@ -84,10 +86,10 @@ static bundles publish the same way", `15-07`/`adr/0051`):
 ## Done when
 
 - [ ] The site exists in its own repository, reviewable and buildable independently of every other repo.
-- [ ] The subdomain is confirmed with the author (see the open question above) before any DNS/TLS/Gateway
-      change is made.
-- [ ] The site is deployed on the demo overlay, reachable at the chosen `https://*.reserve-me.ru`
-      hostname with a valid TLS certificate.
+- [ ] `brandbook.reserve-me.ru`'s DNS record is confirmed resolving before it is added anywhere in
+      `ago-deploy`.
+- [ ] The site is deployed on the demo overlay, reachable at `https://brandbook.reserve-me.ru` with a
+      valid TLS certificate.
 - [ ] `curl https://<hostname>/version.json` returns the actually-deployed commit SHA, checked live
       against the real deployment - not asserted from the manifest.
 - [ ] `k8s/overlays/demo/kustomization.yaml`'s `newTag` for the new image is set to the deployed commit,
