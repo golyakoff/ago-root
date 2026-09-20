@@ -1,7 +1,8 @@
 # 25-177 · An Avito channel's status screen never actually asks Avito anything
 
 - **Stage**: 25
-- **Status**: ready — **one open question below needs the author's decision before implementation**
+- **Status**: ready — the open question below is decided by the author, 2026-09-20: refresh eagerly.
+  See "Decision" below the question for the reasoning and the one risk this adds to Scope.
 - **Depends on**: nothing (independent of `25-174`/`25-175`/`25-176`)
 - **Found**: 2026-09-20, alongside the other three - `AvitoChannelEndpoints.cs`'s own doc comment names
   the identical `25-65` gap for Avito too, worded almost identically to VK's own note.
@@ -28,30 +29,41 @@ Avito-specific state this item's own design has to name rather than force into t
 decision** (`AvitoUserInfoSelf.Id` is a numeric seller id with no public deep-link Avito itself
 documents) - so, like VK, this item is pure status-richness, never a backfill.
 
-## Open question - needs the author's decision, not assumed
+## Decision - the author, 2026-09-20: refresh eagerly
 
-**Should a status read that finds an expired access token silently refresh it (writing a new
-`AccessTokenCiphertext`/`RefreshTokenCiphertext` to the credential row) as a side effect of an operator
-merely opening this screen, or should it only *report* "needs reconnecting" and leave the refresh to the
-next real send attempt (`AvitoChannelAdapter`'s own existing path)?**
+**A status read that finds an expired-but-refreshable access token refreshes it immediately** (writes a
+new `AccessTokenCiphertext`/`RefreshTokenCiphertext` to the credential row), rather than only reporting
+"needs reconnecting" and leaving the refresh to the next real send attempt. Chosen explicitly over the
+"report only" alternative (the other three items in this bundle's own read-only character) because the
+operator-facing cost of the alternative - a screen that shows "expired" for a channel that is, in
+practice, perfectly healthy and about to silently fix itself on the next inbound message - was judged
+worse than the one real risk this choice adds:
 
-The other three items in this bundle (`25-174`/`25-175`/`25-176`) are pure reads with no write side
-effect risk beyond the existing `PublicHandle` backfill pattern this codebase already accepts. A status
-read that refreshes a token is a write triggered by a screen view - a real behavior change worth stating
-explicitly rather than building either way by default. Recommendation, not a decision: report the
-expired state without refreshing (matches the other three's "read-only" character, and the existing send-
-path refresh already covers the case that actually matters - the channel keeps working); but the
-opposite reading (refresh eagerly so the status screen itself never shows a stale "expired" a moment
-before the next real message would have silently fixed it) is a legitimate alternative the author may
-prefer.
+**The concurrency risk this decision accepts, and what Scope must do about it.** Avito's refresh tokens
+are one-shot and rotate on use (`AvitoApiClient.RefreshAccessTokenAsync`'s own contract) - using one
+invalidates it and issues a new one. Two concurrent status reads (two browser tabs, or an operator
+double-clicking reload) both finding the same expired token could both attempt
+`RefreshAccessTokenAsync` with the same, now-single-use, refresh token: the second call to actually reach
+Avito loses the race and fails with a now-invalidated refresh token, even though the *first* call
+succeeded and the channel is fine. **This must not surface as a hard failure or a "needs reconnecting"
+state** - the implementation has to treat "the refresh token I just tried was already used" as "someone
+else already refreshed this, re-read the row" (reload the credential and use whatever access token is
+there now) rather than as a real error. Name this explicitly in the implementation rather than
+discovering it only when two tabs happen to collide in testing.
 
 ## Scope
 
 - An `AvitoLiveTokenCheck` (or equivalent), reusing `AvitoApiClient.GetSelfAsync` and the existing
   `AvitoAccessTokenExpiredException`/`RefreshAccessTokenAsync` mechanism `AvitoChannelAdapter` already
   proves works - not a second, parallel refresh implementation.
-- `AvitoChannelEndpoints.HandleStatusAsync` calls it on every read, reporting whichever outcome shape is
-  decided above.
+- On `AvitoAccessTokenExpiredException`, refresh immediately (per the Decision above) and persist the new
+  access/refresh pair, then report `Verified: true` for the now-current token - never report the
+  transient "was expired a moment ago" fact to the caller.
+- **Handle a concurrent refresh-token-already-used failure as "someone else already refreshed this",
+  not as an error** - reload the credential row and use whatever access token is there now, per the
+  Decision's own concurrency note. A test forcing two concurrent status reads against the same expired
+  token is part of Done-when, not optional.
+- `AvitoChannelEndpoints.HandleStatusAsync` calls it on every read.
 - **No `PublicHandle` write anywhere in this item** - unchanged from today, per `25-147`.
 
 ## Out of scope
@@ -61,13 +73,14 @@ prefer.
 
 ## Done when
 
-- [ ] The open question above is answered before implementation starts.
 - [ ] An Avito status read with a good, unexpired token reports `Verified: true`.
 - [ ] An Avito status read with a genuinely revoked token (not merely expired) reports `Verified: false`
       with a stated reason.
-- [ ] An Avito status read with an expired-but-refreshable token reports the outcome the open question
-      above settled on - refreshed-and-verified, or a distinct "needs reconnecting" state - never
-      silently collapsed into a plain refusal.
+- [ ] An Avito status read with an expired-but-refreshable token refreshes it and reports
+      `Verified: true` for the newly-current token - the caller never sees the transient expiry.
+- [ ] Two concurrent status reads against the same expired token both succeed (one refreshes, the other
+      detects its own refresh token was already rotated and re-reads rather than failing) - proven by a
+      test that actually races two calls, not asserted from reading the code.
 - [ ] An Avito status read when Avito (or this deployment's egress) is unreachable reports
       `Unreachable: true`, distinct from a refusal.
 - [ ] `dotnet build`/`format`/`test` green for `ago-chat`; `ago-console` only if `AvitoChannelPage`
