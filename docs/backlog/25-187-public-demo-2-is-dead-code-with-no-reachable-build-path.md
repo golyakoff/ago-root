@@ -1,7 +1,13 @@
 # 25-187 · `public-demo-2` is dead code with no reachable build path
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#111` (`25bc399`). Independently re-verified before merging: full diff
+  review (the removed `resolveDemoPageLocale` resolver, the fixed-`"ru"` replacement, the updated
+  Dockerfile/CI/README comments), `typecheck`/`lint`/`test` re-run directly (479/479, 39 files), and
+  `grep -rn public-demo-2` confirming no caller remains anywhere. Also fixed two stray "shared demo
+  shops" (plural) references in `panel.ts`/`config.ts` the item's own named-file scope missed, plus a
+  stale "four static bundles... three repositories" claim in `docs/architecture/repositories.md`
+  found while reviewing this item.
 - **Depends on**: `25-182` (the teardown that made this true - filed the moment its own scope stopped
   short of this)
 - **Found**: 2026-09-20, the managing session, landing `25-182` (`demo-shop2.reserve-me.ru` teardown).
@@ -38,11 +44,12 @@ not left as a still-general check with one arm now unreachable).
 
 ## Done when
 
-- [ ] `public-demo-2/` is deleted from `ago-widget`.
-- [ ] `DEMO_PAGE_DIR`'s own `public-demo-2` value has no caller anywhere in the repository (the
+- [x] `public-demo-2/` is deleted from `ago-widget`.
+- [x] `DEMO_PAGE_DIR`'s own `public-demo-2` value has no caller anywhere in the repository (the
       build-arg mechanism itself may stay - `demo-shop1` still uses it - only the dead value goes).
-- [ ] Every `demo-shop2`-aware branch in `ui/widget.ts`/`boot.ts`/`i18n/en.ts` is removed or
+- [x] Every `demo-shop2`-aware branch in `ui/widget.ts`/`boot.ts`/`i18n/en.ts` is removed or
       simplified to state the now-single-page reality directly, checked against `demo-shop1`'s own
       real behavior afterward (a live check or the existing test suite, not asserted from the diff).
-- [ ] `npm run typecheck`/`lint`/`test` green for `ago-widget`, with the relevant `boot.ts` tests
-      updated to match rather than left asserting a page that no longer exists.
+- [x] `npm run typecheck`/`lint`/`test` green for `ago-widget`, with the relevant `boot.ts` tests
+      updated to match rather than left asserting a page that no longer exists. — 479/479, re-run
+      independently.
