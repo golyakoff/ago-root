@@ -1,7 +1,12 @@
 # 25-176 · A WhatsApp channel's status screen never actually asks WhatsApp anything
 
 - **Stage**: 25
-- **Status**: ready — the live-call tradeoff below is decided by the author, 2026-09-20: yes, build it.
+- **Status**: done — `ago-chat#345` (`d920b96`). Independently re-verified by the managing session before
+  merging: diff reviewed line-by-line, and the full `ago-chat` command set re-run directly — `dotnet
+  format`/`build` clean, all 6 non-empty test assemblies green, 3823/3823 tests (one interim run hit an
+  unrelated Testcontainers Docker port-bind race in `SchemaMigratorTests`; confirmed as a transient
+  environment flake, not a regression, by re-running that file alone clean and then the full suite clean
+  end to end).
 - **Depends on**: nothing (independent of `25-174`/`25-175`/`25-177`)
 - **Found**: 2026-09-20, alongside `25-174`/`25-175` - `WhatsAppChannelEndpoints.cs`'s own doc comment
   names the identical `25-65` gap for this channel too.
@@ -37,12 +42,15 @@ endpoint again - the field exists for exactly this reuse.
 
 ## Done when
 
-- [ ] A WhatsApp status read with a good token reports `Verified: true` and the current
-      `display_phone_number`.
-- [ ] A WhatsApp status read with a revoked/bad token reports `Verified: false` with a stated reason.
-- [ ] A WhatsApp status read when Meta's API (or this deployment's egress) is unreachable reports
-      `Unreachable: true`, distinct from a refusal.
-- [ ] `PublicHandle` updates on a status read when the number's own display format has changed since
-      connect time.
-- [ ] `dotnet build`/`format`/`test` green for `ago-chat`; `ago-console` only if `WhatsAppChannelPage`
-      needed a change (check the existing generic problem-details rendering first).
+- [x] A WhatsApp status read with a good token reports `Verified: true` and the current
+      `display_phone_number`. — `WhatsAppChannelStatusLiveCheckTests.GetWhatsAppStatus_WithAGoodToken_ReportsVerifiedAndBackfillsTheChangedDisplayNumber`.
+- [x] A WhatsApp status read with a revoked/bad token reports `Verified: false` with a stated reason. —
+      `...WithARevokedToken_ReportsVerifiedFalseWithAStatedReason`.
+- [x] A WhatsApp status read when Meta's API (or this deployment's egress) is unreachable reports
+      `Unreachable: true`, distinct from a refusal. — `...WhenWhatsAppIsUnreachable_ReportsUnreachable_DistinctFromARefusal`.
+- [x] `PublicHandle` updates on a status read when the number's own display format has changed since
+      connect time. — covered by the same good-token test above (asserts the backfill).
+- [x] `dotnet build`/`format`/`test` green for `ago-chat`. — re-run independently, 3823/3823 tests, 0
+      failed. `ago-console` needed no change — checked fresh, there is no `WhatsAppChannelPage.tsx` at
+      all yet (WhatsApp is still behind the "Другие каналы" placeholder), so there is no existing page
+      whose status shape could go stale.
