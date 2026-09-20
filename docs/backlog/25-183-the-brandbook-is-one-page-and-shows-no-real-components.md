@@ -1,13 +1,17 @@
 # 25-183 · The brandbook is one page and shows no real components
 
 - **Stage**: 25
-- **Status**: ready — code merged as `ago-brandbook#2` (`605c37d`), independently re-verified before
-  merging (`components.css`'s copied rules spot-checked byte-for-byte against the real
-  `ago-console/src/components/components.css`, the font-loading claims confirmed directly in both
-  `ago-console/index.html` and `ago-landing/index.html`, license claims checked, local `docker build`
-  + all 5 pages/assets served 200, and a live browser pass: buttons render all tones/sizes/hover/
-  disabled states, both dialog variants render open and correctly positioned, typography page renders
-  as intended). **Not yet deployed to the live site** — see Done when.
+- **Status**: done — `ago-brandbook#2` (`605c37d`) + `ago-deploy#237` (`2acd484`). Independently
+  re-verified before merging (`components.css`'s copied rules spot-checked byte-for-byte against the
+  real `ago-console/src/components/components.css`, the font-loading claims confirmed directly in
+  both `ago-console/index.html` and `ago-landing/index.html`, license claims checked, local
+  `docker build` + all 5 pages/assets served 200, and a live browser pass: buttons render all
+  tones/sizes/hover/disabled states, both dialog variants render open and correctly positioned,
+  typography page renders as intended). Deployed and confirmed live: `kubectl kustomize` local
+  render clean, `apply-demo.sh` run against the real cluster, `ago-brandbook` deployment rolled out
+  successfully, every other hostname on the shared cert re-checked and still serving,
+  `curl https://brandbook.reserve-me.ru/version.json` returns the new commit, all 5 pages reachable
+  live, `check-manifest-drift.sh` clean.
 - **Depends on**: `25-180` (the live site this item expands - `brandbook.reserve-me.ru`, `ago-brandbook`)
 - **Found**: 2026-09-20, the author, moments after `25-180` went live: wants more pages - controls,
   dialogs, and other real UI elements, plus a closer look at typography ("у нас кстати бесплатный
@@ -82,5 +86,7 @@ Turn the single page into a small, real multi-page reference site:
 - [x] `docker build` still succeeds with the new files (`Dockerfile`'s `COPY` list updated), and the
       built image serves every new page - checked by running it locally, not asserted from the file list.
       — local build + run, all 5 pages and new assets (`components.css`) return 200.
-- [ ] Deployed and confirmed live the same way `25-180` was - `curl https://brandbook.reserve-me.ru/
-      version.json` returns the new commit, every new page reachable over the real hostname.
+- [x] Deployed and confirmed live the same way `25-180` was - `curl https://brandbook.reserve-me.ru/
+      version.json` returns the new commit, every new page reachable over the real hostname. —
+      returns `605c37d6f5067278b9347b2475945fc933dc13c5` live; all 5 pages checked 200 over the real
+      hostname.
