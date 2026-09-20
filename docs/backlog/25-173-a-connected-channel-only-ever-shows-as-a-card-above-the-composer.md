@@ -1,9 +1,17 @@
 # 25-173 · A connected channel only ever shows as a card above the composer
 
 - **Stage**: 25
-- **Status**: ready — every open question below is decided by the author, 2026-09-20, against a live
-  HTML mockup (the same discipline `25-172`'s icons were approved under). Nothing left for a worker to
-  guess or ask about.
+- **Status**: done — `ago-chat#346` (`43a3a87`), `ago-console#263` (`7c44f1e`), `ago-widget#107`
+  (`ca5789b`). Independently re-verified by the managing session before merging: full diff review
+  across all three repos (migration/EF-config alignment, wire additivity, the "sibling of the toggle,
+  not a child of the panel" positioning rationale, the launcher row's px→rem table checked exact
+  against the mockup), and the full command set re-run directly in each repo — `ago-chat`
+  format/build/test (756/1453/21/52/90/1458, matching per-assembly), `ago-console`
+  typecheck/lint/test/ux-gate (1544 tests, 67 passed/9 skipped), `ago-widget`
+  typecheck/lint/test (482/482) plus an independent bundle-size re-measurement (45.1 KB gzipped,
+  matching the README entry exactly). Every open question was decided by the author, 2026-09-20,
+  against a live HTML mockup (the same discipline `25-172`'s icons were approved under) before this
+  was ever briefed for implementation.
 - **Depends on**: `25-172` (this item reuses whatever icon assets/rendering mechanism that item lands -
   do not re-source or re-derive the four brand icons here)
 - **Found**: 2026-09-19/20, while reviewing `25-172`'s icon replacement: the author's original ask was
@@ -115,14 +123,18 @@ on this same page, for consistency (checked against the real page, not assumed):
 
 ## Done when
 
-- [ ] `WidgetConfig` carries both new fields, migrated additively, defaulting to today's only behaviour
-      (`AboveComposer`/`Medium`) for every existing site.
-- [ ] `ago-console`'s new `"Каналы"` panel, placed immediately after `"Кнопка запуска"`, lets a tenant
+- [x] `WidgetConfig` carries both new fields, migrated additively, defaulting to today's only behaviour
+      (`AboveComposer`/`Medium`) for every existing site. — `Stage25AddSiteWidgetChannelSwitcherPlacement`,
+      two additive columns + CHECK constraints, matching EF config.
+- [x] `ago-console`'s new `"Каналы"` panel, placed immediately after `"Кнопка запуска"`, lets a tenant
       choose the placement and (when relevant) the size, worded exactly as decided above, persisting
       through the existing `UpdateWidgetConfig` write path. The size field shows/hides live as the
-      placement selection changes.
-- [ ] A site set to the new placement renders a horizontal row of circular branded icons at the launcher's
+      placement selection changes. — confirmed in diff and by test (`WidgetConfigPage.test.tsx`).
+- [x] A site set to the new placement renders a horizontal row of circular branded icons at the launcher's
       own height, growing away from it, at the exact diameter/gap the chosen size specifies - visually
-      confirmed against a live render, not asserted from the code.
-- [ ] A site left on the default placement/size is pixel-for-pixel unaffected - this item adds a second
-      renderer, it does not touch the first one's own output.
+      confirmed against a live render, not asserted from the code. — worker's own real-Chromium
+      confirmation (1/2/3/4 channels, all three sizes, both launcher sides) plus 20 new automated tests
+      (`channelSwitcherLauncher.test.ts`) independently reviewed by the managing session.
+- [x] A site left on the default placement/size is pixel-for-pixel unaffected - this item adds a second
+      renderer, it does not touch the first one's own output. — `loadChannelSwitcherCard`'s own body is
+      untouched; confirmed by diff and by the worker's own before/after screenshot comparison.
