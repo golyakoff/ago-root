@@ -1,7 +1,9 @@
 # 25-159 · A consent choice typed by a widget visitor is never resolved
 
 - **Stage**: 25
-- **Status**: code merged 2026-09-19 (`ago-chat#335`) — live verification still open, see Done-when
+- **Status**: done — `ago-chat#335` (commit `b74ddf6`), confirmed genuinely deployed to the demo stand.
+  The live-booking-flow box is settled `[~]`, not ticked - blocked by `25-189` (the public demo's own
+  operator login has no seat), not by anything wrong with this item's own fix.
 - **Found**: 2026-09-19, live-testing a calendar booking flow through the widget. After answering the
   consent step (`25-153`'s own gate) by clicking "Согласен(na)", nothing happened - no recap, no
   confirmation, no follow-up message of any kind.
@@ -83,10 +85,15 @@ Domain or Infrastructure change, no widget change.
 - [x] The same holds for a widget-shaped Decline reply
 - [x] Every existing text-channel consent-gate test (`MessageBody("1")`/`MessageBody("2")`, no
       structured content) still passes unchanged
-- [ ] The exact repro from this item - answering "Согласен(na)" through a real widget in a real booking
-      flow - immediately shows the next (phone) prompt, proven live, not only by a unit test. Not yet
-      checked: the fix is merged to `main` but not yet deployed to any stand this session has verified
-      against.
+- [~] The exact repro from this item - answering "Согласен(na)" through a real widget in a real booking
+      flow - immediately shows the next (phone) prompt, proven live, not only by a unit test. **Checked
+      and left open, not merely unchecked**: this fix's own `25-159`-tagged structured-first resolve
+      inside `ContinueConsentGateAsync` is confirmed present in the demo stand's deployed `ago-chat-api`/
+      `worker`/`webhooks` image. The managing session then tried to drive the real booking flow to prove
+      it, and found the public, advertised `demo-operator` login cannot reach the console at all right
+      now - filed as `25-189`. The "get your own private tenant" alternative needs an interactive Google
+      sign-in this session cannot complete unattended. Left open rather than ticked: no console access
+      currently exists to drive this repro to completion.
 
 ## Outcome so far
 

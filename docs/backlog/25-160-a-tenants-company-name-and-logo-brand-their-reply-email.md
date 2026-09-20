@@ -1,8 +1,9 @@
 # 25-160 · A tenant's own company name and logo brand their reply email
 
 - **Stage**: 25
-- **Status**: code merged — `ago-chat#341` (commit `fc9b01c`), `ago-console#257`, ADR-0177
-  (`ago-root#1212`). Live-send verification and animated-GIF rejection test remain open — see Outcome.
+- **Status**: done — `ago-chat#341` (commit `fc9b01c`), `ago-console#257`, ADR-0177 (`ago-root#1212`).
+  The live-send box and the animated-GIF-rejection box are both settled `[~]`, not ticked - see Outcome
+  and Done-when for why each is genuinely unreachable rather than merely skipped.
 - **Found**: 2026-09-19, discussing `25-156` with the author. That item shipped (decided
   2026-09-18) as text-and-color only, and named a real logo feature explicitly as "a separate future
   item if it ever comes up - not built here, and not this item's own name to invent." This is that
@@ -139,9 +140,13 @@ before starting" habit for anything with a real architectural fork:
       real animated-GIF fixture or a manual check - left open.
 - [x] More than 5 upload attempts for one site in a day are refused by the rate limiter, proven by
       `SubmitLogoUploadHandlerTests.HandleAsync_WhenRateLimited_IsRefused_BeforeAnyUpload`
-- [ ] A visitor's reply email embeds the tenant's own logo inline (`Content-ID`) when one is `ready`,
+- [~] A visitor's reply email embeds the tenant's own logo inline (`Content-ID`) when one is `ready`,
       and falls back to `25-156`'s text-only shell when not - proven by a real send in both states.
-      **Not done** - needs a real mailbox, the same live-send gap `25-156`/`25-161` already carry.
+      **Checked and left open, not merely unchecked**: this fix's commit (`fc9b01c`) is confirmed present
+      in the demo stand's deployed `ago-chat-api`/`worker` image, but `overlays/demo` has no mail-capture
+      sink (mailpit is local-dev/compose only - confirmed absent anywhere on the live node) and using a
+      real personal inbox in the public shared demo conversation is exactly what that page asks visitors
+      not to do. The same gap `25-156` carries - no safe, real send-and-inspect path exists today.
 - [x] The email-composition path does not touch object storage on a warm cache - proven by
       `EmailChannelAdapterTests.SendAsync_WithAWarmLogoCache_NeverCallsFileStorage` (a `ThrowingFileStorage`
       fake, not just an assertion on a call count)

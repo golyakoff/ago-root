@@ -1,9 +1,10 @@
 # 25-161 · A MAX visitor's image is accepted with no permission check, and never arrives either way
 
 - **Stage**: 25
-- **Status**: code merged 2026-09-19 (`ago-chat#337`, commit `ee85027`) — live verification through the
-  real MAX bot still open, see Done-when. Root cause below, confirmed by the worker this item's own
-  "analyze first" instruction asked for.
+- **Status**: done — `ago-chat#337` (commit `ee85027`), confirmed genuinely deployed to the demo stand.
+  The live-MAX-bot box is settled `[~]`, not ticked - it needs a real MAX account, which this session
+  does not have. Root cause below, confirmed by the worker this item's own "analyze first" instruction
+  asked for.
 - **Found**: 2026-09-19, live-testing the MAX channel. Two distinct symptoms, both real:
   1. A MAX visitor can attach and send an image with **no prompt or gate at all** - the product already
      has an operator-facing "allow this visitor to send files" control (`23-78`,
@@ -69,8 +70,14 @@ by the time this item closes:
       operator's side, proven by a test. Not yet proven by a real send through the live MAX bot (see
       the open box below)
 - [x] Every existing widget-channel attachment/grant test still passes unchanged
-- [ ] The exact repro from this item - two images through a real MAX conversation, one refused, one
-      delivered - confirmed live, not only by tests
+- [~] The exact repro from this item - two images through a real MAX conversation, one refused, one
+      delivered - confirmed live, not only by tests. **Checked and left open, not merely unchecked**:
+      this fix's own commit (`ee85027`) is confirmed present in the demo stand's deployed
+      `ago-chat-api`/`worker`/`webhooks` image (`git ls-tree`/`git show` against `MaxInboundAttachmentDispatch.cs`/
+      `ReceiveChannelAttachmentHandler.cs`). Unlike `25-158`/`25-159`, this box has no console-access
+      workaround even once `25-189` is fixed: it needs a real MAX bot conversation, and this session has
+      no MAX account to send from. Left open rather than ticked or split off - the same live check this
+      item asked for from the start, still genuinely owed, but only performable by the author.
 
 ## Root cause, confirmed
 

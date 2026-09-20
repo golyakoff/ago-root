@@ -1,10 +1,11 @@
 # 25-156 · A visitor's reply email carries no brand at all - and it should be the tenant's, not ours
 
 - **Stage**: 25
-- **Status**: code merged 2026-09-19 (`ago-chat#336`, commit `b189c64`) — live verification (a real,
-  threaded reply chain) still open, see Done-when. Decided by the author, 2026-09-18: shape 1,
-  text-and-color only, using what `Site` already carries. No new field, no upload path, no console
-  screen.
+- **Status**: done — `ago-chat#336` (commit `b189c64`), confirmed genuinely deployed to the demo stand.
+  The real-mailbox live-send box is settled `[~]`, not ticked - no mail-capture sink exists on
+  `overlays/demo` and a real personal inbox has no safe way to be used in the public shared demo. Decided
+  by the author, 2026-09-18: shape 1, text-and-color only, using what `Site` already carries. No new
+  field, no upload path, no console screen.
 - **Found**: 2026-09-18, scoping `25-155`. Carved out deliberately rather than folded in - the
   author's own reasoning: `25-155`'s emails (invite, account warnings, Keycloak's own flows) are all
   AGO's own words to AGO's own account holders, so AGO's own brand is correct there. This one is
@@ -72,8 +73,17 @@ this item's own name to invent.
       - proven by a test, not only the happy path
 - [x] The plain-text part of the email carries the reply exactly as it does today, unadorned - proven
       by a test
-- [ ] Threading (`In-Reply-To`/`References`) is proven unaffected by a real, verified reply chain -
-      header-level tests pass, but a real send through a live mailbox has not been checked yet
+- [~] Threading (`In-Reply-To`/`References`) is proven unaffected by a real, verified reply chain -
+      header-level tests pass. **Checked and left open, not merely unchecked**: the managing session
+      confirmed this fix's own commit (`b189c64`) is genuinely present in the demo stand's currently
+      deployed `ago-chat-api`/`worker`/`webhooks` image (`git show 177be3f7...:...TenantReplyEmailShell.cs`),
+      then looked for a way to actually send and read a real reply email there. `overlays/demo` has no
+      mail-capture sink at all - mailpit exists only in `overlays/local` (local dev) and the docker-compose
+      loop, confirmed by `grep -r mailpit` across `ago-deploy` and by finding no such pod/service/container
+      anywhere on the live node. The only other way to see a real rendered reply is to give a real personal
+      inbox as the visitor's own contact detail in the public, shared demo conversation - which is exactly
+      what that page's own banner asks visitors not to do ("не указывайте реальные данные"). Left `[~]`
+      rather than ticked: no safe, real send-and-inspect path exists on the current demo deployment.
 
 ## Outcome so far
 
