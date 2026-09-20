@@ -37,6 +37,12 @@ are worth stating, because both differ from the webhook dispatcher directly abov
   states for webhooks, and the reason "retrying non-idempotent operations blindly" stays on the
   do-not-use list below.
 
+The port's own wire vocabulary is deliberately as narrow as its resilience wiring: a channel's
+contact-sharing affordance (Telegram's/MAX's native "share your phone number" button) crosses
+`IInboundChannelAdapter` as one bool, never as structured content of its own — the same "largest
+common denominator that does not lie" instinct applied to a UI affordance instead of a transport
+guarantee (`25-152`, `adr/0176`).
+
 The mechanism is proven against a stub provider that hangs, throws and refuses
 (`ResilientInboundChannelAdapterTests`), including that the breaker opens for one channel and leaves
 another untouched. `14-02` is the first item to run it against a real HTTP boundary rather than a stub

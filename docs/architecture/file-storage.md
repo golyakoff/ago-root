@@ -184,6 +184,12 @@ it for real: `minio-ingress` (a `NetworkPolicy` predating anything routing exter
 refused the Gateway's own connection until fixed alongside it - see that item's own backlog file for
 the detail, including a first fix attempt that targeted the wrong pod.
 
+**Not every object wants the presigned-per-viewer model above.** A tenant's own logo (`25-160`) is
+public and long-lived by design - it must still resolve correctly when a visitor opens a reply email
+weeks later, unlike a private, short-lived chat attachment - so it is written to a non-expiring object
+key under this same public hostname instead, validated asynchronously by `Ago.Chat.Worker` (the sibling
+of the thumbnail generator below) rather than presigned at all (`adr/0177`).
+
 ## Validation and safety
 
 - Size ceiling per file, enforced at presign time and re-verified after upload. **Per *conversation*
