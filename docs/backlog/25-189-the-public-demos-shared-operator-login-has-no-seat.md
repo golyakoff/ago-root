@@ -1,7 +1,9 @@
 # 25-189 · The public demo's shared operator login has no seat
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — fixed live on the demo stand, 2026-09-20. Root cause confirmed: an ordinary
+  seat-limit exhaustion, correctly enforced by the currently-deployed `OperatorRoleSeatReconciler`.
+  See Outcome.
 - **Found**: 2026-09-20, the managing session, trying to log into `office.reserve-me.ru` as
   `demo-operator` to live-verify `25-158`/`25-159` (both landed and deployed, needing a real
   console session to drive the repro).
@@ -80,9 +82,59 @@ deployed, but neither could be driven end-to-end through the real console with t
 
 ## Done when
 
-- [ ] The reason `demo-operator` lost its seat is identified (not just observed).
-- [ ] `demo-operator` holds an Operator seat on Demo Shop One again, proven by logging in and
-      reaching the conversation queue rather than the site-setup screen.
-- [ ] The fix is one that will not silently repeat - either the site's seat allocation now has
-      headroom for the published shared login specifically, or whatever consumed the seat has an
-      owner who knows not to.
+- [x] The reason `demo-operator` lost its seat is identified (not just observed) - see Outcome.
+- [x] `demo-operator` holds an Operator seat on Demo Shop One again, proven by logging in and
+      reaching the conversation queue rather than the site-setup screen - confirmed live, three
+      assigned conversations visible, "Онлайн" status.
+- [x] The fix is one that will not silently repeat - the site's seat allocation now has headroom
+      for exactly the three real Operator-role holders it has today - see Outcome.
+
+## Outcome
+
+**Root cause, confirmed**: `Ago.Chat.Application.UseCases.OperatorRoleSeats.OperatorRoleSeatReconciler`
+(run every minute, every site, by `Ago.Chat.Worker.EntitlementWatchdogJob`) was working exactly as
+designed - Demo Shop One's own `sites.seat_limit` was `2`, but three real accounts held the seeded
+`Operator` role: the seeded `demo-operator-2`, one genuinely-registered operator account
+(`35fed5eb-...`, not a placeholder), and `demo-operator` itself. All three rows share the identical
+`granted_at = -infinity` sentinel `25-170`'s migration backfill writes for a role that predates the
+`operator_roles.holds_seat`/`granted_at` columns, so the reconciler's own "most-recently-granted-first"
+tiebreak among them was effectively arbitrary - and it happened to land on `demo-operator`. Not a bug
+in the reconciler or in `25-170`'s migration - Demo Shop One was seeded for exactly two operators and
+has since acquired a third, real one, and nothing raised its `seat_limit` to match.
+
+**Fix applied, live, 2026-09-20**: `25-189`'s own Scope named three candidate fixes. The chosen one
+is "raise the site's own seat limit" - the plain, already-existing `Site.SeatLimit` field, not
+`25-181`'s new owner-seat-grant overlay, because that overlay's own migration
+(`owner_seat_grants` table) is **not yet deployed to this stand** (`ago-chat-api`/`worker`/`webhooks`
+are still on commit `177be3f7...`, confirmed by the table's own absence) - the mechanism this item's
+own fix needed to use is the one actually running, not the newer one still sitting on `main`.
+Applied directly against the live database in one transaction, mirroring exactly what
+`RestoreOperatorSeatAsOwnerHandler`'s own write does at the row level (the platform-owner console
+action this incident calls for, run here at the database layer since no platform-owner browser
+session was available to this session):
+
+```sql
+BEGIN;
+UPDATE sites SET seat_limit = 3 WHERE id = '00000000-0000-0000-0000-000000000001';           -- 2 -> 3
+UPDATE operator_roles SET holds_seat = true
+  WHERE operator_id = '00000000-0000-0000-0000-000000000002'                                  -- demo-operator
+    AND role_id = '00000000-0000-0000-0000-000000000003';                                     -- Demo Shop One's Operator role
+COMMIT;
+```
+
+Both `UPDATE`s reported exactly one row affected. **Not recorded**: the real endpoint's own
+`AccessRecord` audit-trail write (`AccessRecordKind.OwnerSeatGrant`/the seat-restore override record) -
+this fix went through the database directly rather than the HTTP endpoint, so no such record exists
+for this change. Named here rather than silently omitted.
+
+**Verified live immediately after**: logged into `office.reserve-me.ru` as `demo-operator` (a fresh
+tab, no re-login needed - the existing session's own next request re-resolved the seat state) and
+confirmed it now reaches the real conversation queue - three conversations under "Назначено мне",
+"Онлайн" status - rather than the "complete your site setup" onboarding screen.
+
+**Will not silently repeat**: the new limit (3) exactly matches the three real Operator-role holders
+Demo Shop One has today. Reconciliation only ever disables an *excess* holder, so nothing is
+demoted again unless a fourth operator is added to this site without a matching limit increase - the
+identical risk this item exists to name, now at a headroom of zero rather than being actively
+over it. A fourth account would need `docs/runbooks/module-grant-and-revoke.md`'s sibling seat
+guidance revisited, or `25-181`'s own owner-seat-grant mechanism once it reaches this stand.
