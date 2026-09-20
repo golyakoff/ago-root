@@ -1,7 +1,19 @@
 # 25-188 · Removing a resource from the demo overlay leaves it running
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-deploy#245` (`f37eeb3`), `ago-root#1264` (`0052651`). Built the reverse
+  existence check in `check-manifest-drift.sh` rather than `kubectl apply -k --prune` -
+  `overlays/demo` has no common label a prune selector could scope to today, and introducing one
+  risks colliding with a Deployment's immutable `spec.selector.matchLabels` on a live object, a
+  one-way risk the worker had no cluster to prove safe against. **Independently re-verified against
+  the real cluster before merging** (the worker's own report explicitly flagged this as unverified) -
+  found and fixed a real false positive: `ago-chat-gateway-nginx` (NGINX Gateway Fabric's own
+  auto-provisioned data plane for the `ago-chat-gateway` Gateway object, confirmed via its own
+  `ownerReferences`) would have reported DRIFT on every single run; excluded by exact name. Re-ran
+  the exact `25-182` incident as a scratch case against the real cluster's own resource list with the
+  exclusion in place: zero false positives, the real orphan shape still caught. `docs/runbooks/
+  redeploy.md` updated with the real removal procedure, including the manual `kubectl delete` step
+  that still remains.
 - **Depends on**: nothing
 - **Found**: 2026-09-20, the managing session, applying `25-182`'s own demo-shop2 teardown live.
 
@@ -50,11 +62,12 @@ remembers to check":
 
 ## Done when
 
-- [ ] A decision is made and implemented (prune with a correctly-scoped selector, a drift-check
+- [x] A decision is made and implemented (prune with a correctly-scoped selector, a drift-check
       addition, or both) so that a future resource removal from `overlays/demo` either deletes the
       live resource automatically or is caught loudly by an existing check - not silently missed.
-- [ ] The chosen mechanism is proven against a real, deliberate test case (a scratch resource added
+- [x] The chosen mechanism is proven against a real, deliberate test case (a scratch resource added
       and then removed from the overlay, confirmed gone/flagged after the real apply/drift-check runs)
-      - not asserted from reading the script.
-- [ ] `docs/runbooks/redeploy.md` states the real, current procedure for removing a resource, matching
+      - not asserted from reading the script. — proven against the real cluster's own live resource
+      list, not only a local simulation.
+- [x] `docs/runbooks/redeploy.md` states the real, current procedure for removing a resource, matching
       whatever this item actually built.

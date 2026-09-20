@@ -102,11 +102,13 @@ not a commit SHA: a tag that names a moment cannot be rolled back to.
 A running pod names its own commit at `GET /healthz/version`, read out of the compiled assembly
 (`-p:SourceRevisionId`), not out of a manifest. That is the half a registry alone does not fix.
 
-**The four static bundles publish the same way** (`15-07`, `adr/0051`): `ago-console`'s CI pushes
-`ghcr.io/golyakoff/ago-console`, `ago-widget`'s pushes `ago-demo-shop1` and `ago-demo-shop2` from one
-`Dockerfile` with different embedded demo pages, and `ago-landing`'s pushes `ago-landing` — full
-commit SHA, `main` only, no new secret. Four images out of three repositories that move
-independently, so each carries its own tag and `deploy.sh` moves one frontend at a time.
+**The static bundles publish the same way** (`15-07`, `adr/0051`): `ago-console`'s CI pushes
+`ghcr.io/golyakoff/ago-console`, `ago-widget`'s pushes `ago-demo-shop1` (`25-182`: `ago-demo-shop2`,
+a second demo tenant built from the same `Dockerfile` with a different embedded demo page, was
+retired - the mechanism that once built two images from one repository is still there, just with one
+value left to build), `ago-landing`'s pushes `ago-landing`, and `ago-brandbook`'s pushes
+`ago-brandbook` — full commit SHA, `main` only, no new secret. Four images out of four repositories
+that move independently, so each carries its own tag and `deploy.sh` moves one frontend at a time.
 
 A browser bundle has no process to ask for its version, so each image writes the commit into a
 `/version.json` it serves, and the widget additionally bakes it into the bundle as
