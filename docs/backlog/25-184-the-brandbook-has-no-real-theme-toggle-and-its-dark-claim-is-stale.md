@@ -1,7 +1,16 @@
 # 25-184 · The brandbook has no real theme toggle, and one page's "light-only" claim is stale
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-brandbook#3` (`5053b35`) + `ago-deploy#238` (`c09f290`). Independently
+  re-verified before merging: `styles.css`'s cascade matches `ago-landing`'s exact dark-first
+  three-state shape, `theme.js` correctly mirrors `ago-landing/i18n.js`'s mechanism, all 26 dark
+  `--ago-*` values in `components.css` diffed byte-for-byte against `tokens.css`'s real
+  `:root[data-theme="dark"]` block (exact match), and a live browser pass: the toggle flips the whole
+  page instantly, persists across reload, and `components.html` in dark mode shows the console's real
+  dark palette (buttons/badges/dialog all confirmed) genuinely distinct from the brandbook's own dark
+  chrome. Deployed and confirmed live: `apply-demo.sh` run against the real cluster, rollout and both
+  migrator jobs completed, `curl https://brandbook.reserve-me.ru/version.json` returns the new
+  commit, all 5 pages + `theme.js` reachable live, `check-manifest-drift.sh` clean.
 - **Depends on**: `25-183` (the components/typography pages this item's own fix touches)
 - **Found**: 2026-09-20, the author, asking directly whether the brandbook's dark/light handling is
   "just a dark background slapped on" rather than a real, properly split theme - checked against the
@@ -75,17 +84,20 @@ Two parts, one promise ("the brandbook's own theme handling is real, not decorat
 
 ## Done when
 
-- [ ] `ago-brandbook` has a working toggle button, present via the shared page nav on every page,
+- [x] `ago-brandbook` has a working toggle button, present via the shared page nav on every page,
       switching `data-theme` on `<html>`, persisted in `localStorage`, defaulting to
       `prefers-color-scheme` when nothing is stored - functionally identical to `ago-landing`'s own
       mechanism, confirmed live in a browser (toggle, reload, confirm the choice survives).
-- [ ] Every token in `styles.css` resolves correctly in all three states (system-light, system-dark,
+- [x] Every token in `styles.css` resolves correctly in all three states (system-light, system-dark,
       explicit override in each direction) - checked by toggling live, not by reading the CSS and
       assuming it composes.
-- [ ] `components.html`'s header comment no longer cites the reversed `adr/0030` point 4 as the reason
+- [x] `components.html`'s header comment no longer cites the reversed `adr/0030` point 4 as the reason
       the demo is light-only, and the page's actual behaviour (light-only-on-purpose-with-a-real-reason,
       or a real dark variant sourced from `tokens.css`'s own dark block) matches whatever the comment
-      now says.
-- [ ] `docker build` still succeeds and the built image serves every page correctly in both themes -
+      now says. — built the real dark variant (chosen over the light-only-with-a-reason option), all
+      26 dark values confirmed matching `tokens.css`'s real dark block.
+- [x] `docker build` still succeeds and the built image serves every page correctly in both themes -
       checked by running it locally.
-- [ ] Deployed and confirmed live the same way `25-180`/`25-183` were.
+- [x] Deployed and confirmed live the same way `25-180`/`25-183` were. — returns
+      `5053b3560f33558195d8e0c8f10df1807b1be56d` live; all 5 pages + `theme.js` checked 200 over the
+      real hostname.
