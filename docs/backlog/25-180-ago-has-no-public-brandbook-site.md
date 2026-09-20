@@ -1,11 +1,14 @@
 # 25-180 · AGO has no public brandbook site
 
 - **Stage**: 25
-- **Status**: ready — the subdomain is decided: `brandbook.reserve-me.ru`, registered by the author at
-  reg.ru 2026-09-20 (DNS propagation pending at filing time - confirm it resolves before touching
-  `tls.yaml`/`gateway.yaml`, don't assume). Repository created: `github.com/golyakoff/ago-brandbook`,
-  `main` seeded with a placeholder README only - no real content, Dockerfile, or CI yet. Nothing left
-  open.
+- **Status**: done — `ago-brandbook#1` (`f137ab0`→`981c9b6` on `main`) + `ago-deploy#235`/`#236`
+  (`1ca4a06`, `0adef68`). Independently re-verified by the managing session before merging (icon files
+  byte-identical to the `25-172` sources, `Dockerfile`/CI diffed against `ago-landing`'s own templates,
+  local `docker build` + rendered page viewed in a browser, `kubectl kustomize` local render clean) —
+  and then actually deployed and checked live: DNS confirmed resolving to the real node, applied via
+  `apply-demo.sh`, the shared `ago-public-tls` certificate reissued with `brandbook.reserve-me.ru`
+  added and every pre-existing hostname still serving correctly, `curl https://brandbook.reserve-me.ru/
+  version.json` returns the deployed commit, `check-manifest-drift.sh` clean.
 - **Depends on**: `25-172` (the five real brand icon files this site would showcase - reuse them
   verbatim, do not re-derive)
 - **Found**: 2026-09-20, the author's own request: a public brand-identity reference site, built as its
@@ -85,13 +88,18 @@ static bundles publish the same way", `15-07`/`adr/0051`):
 
 ## Done when
 
-- [ ] The site exists in its own repository, reviewable and buildable independently of every other repo.
-- [ ] `brandbook.reserve-me.ru`'s DNS record is confirmed resolving before it is added anywhere in
-      `ago-deploy`.
-- [ ] The site is deployed on the demo overlay, reachable at `https://brandbook.reserve-me.ru` with a
-      valid TLS certificate.
-- [ ] `curl https://<hostname>/version.json` returns the actually-deployed commit SHA, checked live
-      against the real deployment - not asserted from the manifest.
-- [ ] `k8s/overlays/demo/kustomization.yaml`'s `newTag` for the new image is set to the deployed commit,
-      per the project's own "the committed record must match what's running" convention
-      (`docs/runbooks/redeploy.md`), so the next `apply -k` does not silently revert it.
+- [x] The site exists in its own repository, reviewable and buildable independently of every other repo.
+      — `github.com/golyakoff/ago-brandbook`.
+- [x] `brandbook.reserve-me.ru`'s DNS record is confirmed resolving before it is added anywhere in
+      `ago-deploy`. — confirmed resolving to the same IP as the known-live `reserve-me.ru` apex before
+      `tls.yaml`/`gateway.yaml` were applied.
+- [x] The site is deployed on the demo overlay, reachable at `https://brandbook.reserve-me.ru` with a
+      valid TLS certificate. — `apply-demo.sh` run against the real cluster; `ago-public-tls` reissued
+      with `brandbook.reserve-me.ru` in its SAN list, every pre-existing hostname on that same
+      certificate re-checked live and still serving correctly.
+- [x] `curl https://<hostname>/version.json` returns the actually-deployed commit SHA, checked live
+      against the real deployment - not asserted from the manifest. — returns
+      `{"app":"ago-brandbook","commit":"981c9b6fcf34cce99d4ce5464c6469759b9532fe"}` live.
+- [x] `k8s/overlays/demo/kustomization.yaml`'s `newTag` for the new image is set to the deployed commit.
+      — `ago-deploy#236`, set to `981c9b6...` once `ago-brandbook`'s own CI published it;
+      `check-manifest-drift.sh` confirmed clean afterward.
