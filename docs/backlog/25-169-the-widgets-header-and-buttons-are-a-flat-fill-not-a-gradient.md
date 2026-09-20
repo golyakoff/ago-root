@@ -1,7 +1,7 @@
 # 25-169 · The widget's header and buttons are a flat accent fill, not a gradient
 
 - **Stage**: 25
-- **Status**: ready - one real open question named below, not decided here
+- **Status**: code merged — `ago-widget#105`
 - **Found**: 2026-09-19, the author asked for the widget's header and buttons to use a gradient
   dominated by the tenant's own primary color, "as on the landing page", instead of a solid fill.
 
@@ -118,10 +118,36 @@ second option later if a tenant ever wants to pick both independently.
 
 ## Done when
 
-- [ ] The open question above is answered (which derivation, or a second configurable color) before
-      implementation starts
-- [ ] The widget's header, primary buttons, and operator message bubbles render a gradient dominated by
-      the tenant's own primary color, confirmed live against at least two different configured colors
-      (not just the default blue)
-- [ ] Every existing widget appearance/rendering test that asserts on `--ago-accent`'s own flat value
-      still passes or is updated deliberately, not accidentally broken
+- [x] The open question above is answered (which derivation, or a second configurable color) before
+      implementation starts — derived from the single `--ago-accent`, per the managing session's own
+      stated recommendation, no second color added
+- [x] The widget's header, primary buttons, and the visitor's own message bubble render a gradient
+      dominated by the tenant's own primary color, confirmed live against several configured colors —
+      note: `.ago-message--operator` (the incoming bubble) was never accent-filled and stays flat-grey;
+      `.ago-message--visitor` is the one that changed
+- [x] Every existing widget appearance/rendering test that asserts on `--ago-accent`'s own flat value
+      still passes or is updated deliberately — none did; all 458 unit tests plus the full 16-test
+      `ux-gate` suite are green
+
+## Outcome
+
+Merged 2026-09-20: `ago-widget#105` — seven `background: var(--ago-accent)` fills
+(`.ago-header`/`.ago-toggle`/`.ago-send`/`.ago-message--visitor`/`.ago-module-chip`/
+`.ago-primitive-form-submit`/`.ago-contact-capture-submit`) replaced with a radial highlight
+(`color-mix`) over a darkened flat base, both expressions reading `--ago-accent` directly. Outlines and
+text-color uses of the same variable stay flat, per the item's own test. Landed on the recommended
+derivation (no new color, no wire/console change).
+
+**A real bug found only by actually running `ux-gate`, not by reasoning about the CSS**: the drafting
+worker's own environment had a stale, three-day-old process squatting the gate's fixed port, so it
+could not run the suite before hand-off. The managing session cleared it and ran the real thing —
+`ux-gate/lib/contrast.ts`'s own `parseColor()` only recognised legacy `rgb()`/`rgba()` strings, and
+`getComputedStyle()` resolves a `color-mix()`-derived `background-color` to the newer CSS Color 4
+`color(srgb r g b)` function instead (this item is the first use of `color-mix()` anywhere in this
+codebase, so the gap was never exercised before). The parser returned `null`, so the contrast check's
+walk-up-ancestors logic skipped the header's own correctly-opaque gradient background and measured its
+white text against the demo page's white background two levels up — a false positive in the check
+itself, confirmed via a direct `getComputedStyle` read before touching anything, not a real rendering
+defect. Fixed by extending `parseColor()` to also parse the `color(srgb ...)` form. Reproduced red,
+then confirmed green (16/16, including the check's own fails-before self-test) after the fix — not
+merely inferred.
