@@ -1,9 +1,10 @@
 # 25-138 · A text-channel visitor has no guaranteed phone to gate booking on
 
 - **Stage**: 25
-- **Status**: ready — decided by the author, 2026-09-18: build a `form`-primitive name+phone step,
-  inserted by `RouteConversationToModuleHandler` before routing a conversation's first booking reply.
-  Channel-neutral, reuses the existing primitive vocabulary - no new wire shape.
+- **Status**: done — `ago-chat#333` (`ba6baea`). Built exactly as decided below: a `form`-primitive
+  name+phone step, inserted by `RouteConversationToModuleHandler` before routing a conversation's first
+  booking reply, gated on `ChannelKind` explicitly. All five Done-when boxes have dedicated tests in
+  `RouteConversationToModuleHandlerTests.cs`, each labelled with the Done-when number it proves.
 - **Found**: 2026-09-17, while scoping `25-136` (booking's contact-details gate). Filed at the
   author's own explicit request: do the contact gate client-side, in the widget, for now - but file
   the harder question of a server-side equivalent so it isn't lost.
@@ -75,12 +76,25 @@ using `25-153`'s own consent-gate as the direct implementation precedent:
 
 ## Done when
 
-- [ ] A Telegram/MAX visitor with no name/phone on file is asked for one, as a `form`-primitive step,
-      before their first reply ever reaches a module
-- [ ] A visitor who already has a name+phone on file (e.g. from a prior conversation, or `25-151`'s own
-      contact-share recording) skips the step entirely - forwarded straight through
-- [ ] `RequireContactConsent`-on sites still gate correctly - the same consent step `25-153` built
-      applies here too, reused rather than duplicated
-- [ ] A widget visitor is completely unaffected - this item is Telegram/MAX only
-- [ ] The recorded contact is the identical `VisitorContactDetail` shape/write-path every other source
-      already produces, findable by `ResolveKnownPhoneAsync` and visible in the operator queue
+- [x] A Telegram/MAX visitor with no name/phone on file is asked for one, as a `form`-primitive step,
+      before their first reply ever reaches a module. —
+      `HandleAsync_AGatedChannelVisitorWithNoContactOnFile_IsAskedForAPhoneFirst_AndNeverReachesTheModule`,
+      `HandleAsync_AnsweringTheGatesPhoneStep_AsksForANameNext_StillWithoutReachingTheModule`,
+      `HandleAsync_CompletingTheNamePhoneGate_ForwardsTheOriginalTriggerToTheModule_Unmodified`.
+- [x] A visitor who already has a name+phone on file (e.g. from a prior conversation, or `25-151`'s own
+      contact-share recording) skips the step entirely - forwarded straight through. —
+      `HandleAsync_AGatedChannelVisitorWithNameAndPhoneAlreadyOnFile_SkipsTheGateEntirely`.
+- [x] `RequireContactConsent`-on sites still gate correctly - the same consent step `25-153` built
+      applies here too, reused rather than duplicated. —
+      `HandleAsync_TheContactGatesPhoneStep_OnASiteRequiringConsent_ShowsTheConsentChoiceFirst_ReusingThatGateUnmodified`.
+- [x] A widget visitor is completely unaffected - this item is Telegram/MAX only. —
+      `HandleAsync_AWidgetVisitorWithNoContactOnFile_IsCompletelyUnaffectedByTheContactGate`; gated
+      explicitly on `identity is not { Kind: ChannelKind.Telegram or ChannelKind.Max }`
+      (`RouteConversationToModuleHandler.cs`'s `ResolveContactGateAsync`), never on "not the widget" -
+      also proven by `HandleAsync_AChannelWithNoNameForThisGate_IsNeverGated_EvenWithNoContactOnFile`
+      (Sms stays ungated).
+- [x] The recorded contact is the identical `VisitorContactDetail` shape/write-path every other source
+      already produces, findable by `ResolveKnownPhoneAsync` and visible in the operator queue. —
+      writes through the existing `RecordVisitorContactDetailHandler.HandleAsVisitorAsync`, never a
+      second path; `HandleAsync_TheRecordedContact_IsTheOrdinaryVisitorContactDetailShape_TheSameEveryOtherSourceProduces`
+      asserts `Source.Visitor`, unverified, no operator id - the ordinary shape.
