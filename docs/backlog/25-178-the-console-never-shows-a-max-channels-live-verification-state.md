@@ -1,7 +1,10 @@
 # 25-178 · The console never shows a MAX channel's live verification state
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#261` (`ade7d09`). Independently re-verified by the managing session
+  before merging: diff reviewed (direct structural port of `TelegramChannelPage`'s badge logic, new
+  MAX-specific i18n strings, no shared strings), all four commands re-run directly — `typecheck`/`lint`
+  clean, 1533/1533 unit tests, 67 passed/9 skipped `ux-gate`.
 - **Depends on**: `25-174` (the API now returns `Verified`/`Unreachable`/`RefusalReason`/`CheckedAt` -
   this item only surfaces what already exists on the wire)
 - **Found**: 2026-09-20, by the worker landing `25-174` - flagged in its own report rather than built as
@@ -37,9 +40,12 @@ badge, a verified/unverified badge, and a refusal reason shown as an alert when 
 
 ## Done when
 
-- [ ] `MaxChannelStatusDto` carries `verified`/`unreachable`/`refusalReason`/`checkedAt`.
-- [ ] `MaxChannelPage` shows an unreachable badge when the API reports one, a verified badge when
-      verified, and an unverified badge with the stated reason otherwise - proven by a component test
-      exercising all three states, the same level `TelegramChannelPage.test.tsx` already proves its own
-      three states at.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green for `ago-console`.
+- [x] `MaxChannelStatusDto` carries `verified`/`unreachable`/`refusalReason`/`checkedAt`. — widened in
+      `src/api/maxChannelApi.ts`, matching `TelegramChannelStatusDto`'s field names/types verbatim.
+- [x] `MaxChannelPage` shows an unreachable badge when the API reports one, a verified badge when
+      verified, and an unverified badge with the stated reason otherwise. — `MaxChannelPage.test.tsx`'s
+      `connectedAndVerified`/`connectedButRefused`/`connectedButUnreachable` cases, each with negative
+      assertions confirming the other two states' text never leaks in.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green for `ago-console`. — re-run independently:
+      typecheck/lint clean, 1533/1533 tests (141 files), `ux-gate` 67 passed/9 skipped (expected,
+      viewport-gated specs), 0 failed.
