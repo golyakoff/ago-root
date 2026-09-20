@@ -1,7 +1,12 @@
 # 25-179 · The console never shows a VK channel's live verification state
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#262` (`f67882f`). Independently re-verified by the managing session
+  before merging: diff reviewed line-by-line (the new badge/Alert/checkedAt block correctly placed
+  before the `justConnected` one-time-secrets conditional so it renders regardless of which
+  "connected" source fired), and the full `ago-console` command set re-run directly — `typecheck`/
+  `lint` clean, 1535/1535 tests (141 files), `ux-gate` 67 passed / 9 skipped — exact match to the
+  worker's own report.
 - **Depends on**: `25-175` (the API now returns `Verified`/`Unreachable`/`RefusalReason`/`CheckedAt` -
   this item only surfaces what already exists on the wire)
 - **Found**: 2026-09-20, by the worker landing `25-175` - checked fresh against the real
@@ -35,9 +40,12 @@ anything is wrong. `TelegramChannelPage.tsx` is the direct precedent for the thr
 
 ## Done when
 
-- [ ] `VkChannelStatusDto` (or its real name) carries `verified`/`unreachable`/`refusalReason`/`checkedAt`.
-- [ ] `VkChannelPage` shows an unreachable badge, a verified badge, or an unverified badge with the
+- [x] `VkChannelStatusDto` (or its real name) carries `verified`/`unreachable`/`refusalReason`/`checkedAt`.
+      — `vkChannelApi.ts`, widened to the same 7-field shape as MAX/Telegram.
+- [x] `VkChannelPage` shows an unreachable badge, a verified badge, or an unverified badge with the
       stated reason, matching whichever of the three the API reports - proven by a component test
       exercising all three states, the level `TelegramChannelPage.test.tsx` already proves its own three
-      states at.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green for `ago-console`.
+      states at. — `VkChannelPage.test.tsx`'s `connectedAndVerified`/`connectedButRefused`/
+      `connectedButUnreachable` fixtures, with negative assertions.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green for `ago-console`. — re-run independently,
+      see Status line above.
