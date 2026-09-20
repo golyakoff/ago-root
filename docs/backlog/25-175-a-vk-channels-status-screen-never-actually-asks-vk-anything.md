@@ -1,7 +1,10 @@
 # 25-175 · A VK channel's status screen never actually asks VK anything
 
 - **Stage**: 25
-- **Status**: ready — the live-call tradeoff below is decided by the author, 2026-09-20: yes, build it.
+- **Status**: done — `ago-chat#344` (`5b2e0a3`). Independently re-verified by the managing session before
+  merging: diff reviewed line-by-line (including the exception-based refusal shape and the confirmed
+  absence of any `PublicHandle` write), and the full `ago-chat` command set re-run directly — `dotnet
+  format`/`build` clean, 6 non-empty test assemblies green, 3815/3815 tests.
 - **Depends on**: nothing (independent of `25-174`/`25-176`/`25-177` - different provider, different
   files, no shared code path beyond the two both mirror, `TelegramLiveTokenCheck`)
 - **Found**: 2026-09-20, alongside `25-174` - `VkChannelEndpoints.cs`'s own doc comment names this exact
@@ -48,11 +51,18 @@ redundant handle would only invite drift. So this item is pure status-richness (
 
 ## Done when
 
-- [ ] A VK status read with a good token reports `Verified: true`.
-- [ ] A VK status read with a revoked/bad token reports `Verified: false` with `groups.getById`'s own
-      stated error reason.
-- [ ] A VK status read when VK (or this deployment's egress) is unreachable reports `Unreachable: true`,
-      distinct from a refusal.
-- [ ] No `PublicHandle` write is introduced anywhere in this change.
-- [ ] `dotnet build`/`format`/`test` green for `ago-chat`; `ago-console` only if `VkChannelPage` needed a
-      change (check the existing generic problem-details rendering first, per `25-174`'s own note).
+- [x] A VK status read with a good token reports `Verified: true`. —
+      `VkChannelStatusLiveCheckTests.GetVkStatus_WithAGoodToken_ReportsVerified`.
+- [x] A VK status read with a revoked/bad token reports `Verified: false` with `groups.getById`'s own
+      stated error reason. — `...WithARevokedToken_ReportsVerifiedFalseWithVksOwnStatedReason`.
+- [x] A VK status read when VK (or this deployment's egress) is unreachable reports `Unreachable: true`,
+      distinct from a refusal. — `...WhenVkIsUnreachable_ReportsUnreachable_DistinctFromARefusal`.
+- [x] No `PublicHandle` write is introduced anywhere in this change. — confirmed in the diff (no
+      `SetPublicHandle` call anywhere) and by a dedicated test reloading the row from Postgres:
+      `GetVkStatus_WithAGoodToken_NeverWritesAPublicHandle`.
+- [x] `dotnet build`/`format`/`test` green for `ago-chat`. — re-run independently: format clean, build
+      0 warnings/0 errors, 6 non-empty test assemblies green (754+1448+21+52+90+1450 = 3815 tests, 0
+      failed). `ago-console`'s `VkChannelPage` does **not** generically render the new fields (checked
+      fresh, not assumed from `25-174`'s MAX finding) - it shows only a plain `Connected` badge with no
+      live-check richness; a real, **currently unfiled** follow-up is needed to surface it, out of this
+      item's own scope.
