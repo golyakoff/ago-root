@@ -1,7 +1,10 @@
 # 25-174 · A MAX channel's status screen never actually asks MAX anything
 
 - **Stage**: 25
-- **Status**: ready — the live-call tradeoff below is decided by the author, 2026-09-20: yes, build it.
+- **Status**: done — `ago-chat#343` (`3b69605`). Independently re-verified by the managing session before
+  merging: diff reviewed line-by-line against `TelegramLiveTokenCheck`/`TelegramChannelEndpoints`, and
+  the full `ago-chat` command set re-run directly (not trusted from the worker's own report) —
+  `dotnet format`/`build` clean, all 7 test assemblies green, 3806/3806 tests.
 - **Depends on**: nothing
 - **Found**: 2026-09-20, while scoping the earlier "make all channels symmetric" ask - confirmed directly
   against the code rather than assumed from the item's own title (`ago-chat`'s `MaxChannelEndpoints.cs`
@@ -55,15 +58,18 @@ here so it is not silently rediscovered."* This item is that one.
 
 ## Done when
 
-- [ ] A MAX status read with a good token reports `Verified: true` and the bot's current `@username`,
-      proven against a fault-injectable fake the way `TelegramLiveTokenCheck`'s own tests do (or, if this
-      codebase's MAX tests use a different double, whichever real mechanism already exists for it).
-- [ ] A MAX status read with a revoked/bad token reports `Verified: false` with a stated reason, not a
-      generic forbidden/500.
-- [ ] A MAX status read when MAX (or this deployment's own egress to it) is unreachable reports
-      `Unreachable: true`, distinctly from a refusal - the same three-way split Telegram already makes,
-      never collapsed to two.
-- [ ] `PublicHandle` updates on a status read the same way it already does at connect time, when the
-      bot's own username has changed since the credential was created.
-- [ ] `npm`/`dotnet` full command sets both green (`dotnet build`/`format`/`test` for `ago-chat`;
-      `ago-console`'s own set only if that repo needed a change).
+- [x] A MAX status read with a good token reports `Verified: true` and the bot's current `@username`. —
+      `MaxLiveTokenCheckTests`/`MaxChannelStatusLiveCheckTests` (`Ago.Chat.Integration.Tests`), the
+      latter HTTP-level via a fake MAX host.
+- [x] A MAX status read with a revoked/bad token reports `Verified: false` with a stated reason, not a
+      generic forbidden/500. — `MaxChannelStatusLiveCheckTests.GetMaxStatus_WithARevokedToken_ReportsVerifiedFalseWithAStatedReason`.
+- [x] A MAX status read when MAX (or this deployment's own egress to it) is unreachable reports
+      `Unreachable: true`, distinctly from a refusal. — `...WhenMaxIsUnreachable_ReportsUnreachable_DistinctFromARefusal`.
+- [x] `PublicHandle` updates on a status read the same way it already does at connect time, when the
+      bot's own username has changed since the credential was created. —
+      `GetMaxStatus_WithAGoodToken_ReportsVerifiedAndBackfillsTheChangedUsername`.
+- [x] `npm`/`dotnet` full command sets both green. — `ago-chat`: `dotnet format`/`build` clean, all 7
+      test assemblies green (754+1448+21+52+90+1441 = 3806 tests, 0 failed), re-run independently by the
+      managing session. `ago-console` needed no change - `MaxChannelStatusDto` is a strict TS interface
+      that silently ignores the new fields; surfacing them in `MaxChannelPage`'s UI is a real,
+      **currently unfiled** follow-up, out of this item's own scope.
