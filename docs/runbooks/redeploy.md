@@ -23,14 +23,14 @@ commit each pod reports about itself, and runs the smoke test.
 It refuses any tag that is not a full commit SHA — `main` and `latest` name a moment rather than a
 build, and cannot be rolled back to.
 
-Since `15-07`/`adr/0051` the four frontends publish the same way, from their own repositories'
+Since `15-07`/`adr/0051` the three frontends publish the same way, from their own repositories'
 CI — but one at a time, because they come out of **three** repositories that move independently and a
-single tag cannot honestly name images built from more than one of them:
+single tag cannot honestly name images built from more than one of them (`25-187`: `demo-shop2` no
+longer exists to be a second image from `ago-widget` alongside `demo-shop1`'s own):
 
 ```bash
 ./deploy.sh console          <sha>   # from ago-console
 ./deploy.sh demo-shop1       <sha>   # from ago-widget
-./deploy.sh demo-shop2       <sha>   # from ago-widget, same commit as demo-shop1
 ./deploy.sh landing          <sha>   # from ago-landing
 ./deploy.sh calendar-console <sha>   # from ago-calendar-console
 ```
@@ -76,8 +76,9 @@ incident the no-argument path must stay the one thing with no decision in it.
 no file. `k8s/overlays/demo/kustomization.yaml`'s `images:` block is the committed record of what
 this environment is *meant* to run, and a `kubectl apply -k overlays/demo` resets the cluster to the
 tag written there. After a deploy that is meant to stick, update the `newTag` values that moved — of
-seven now, three hosts and four frontends — and commit. `deploy.sh` prints the exact value;
-`smoke.sh` fails if the running image tag and the commit inside the artifact disagree, for all seven.
+six now, three hosts and three frontends (`25-187`: `demo-shop2` no longer one of them) — and commit.
+`deploy.sh` prints the exact value; `smoke.sh` fails if the running image tag and the commit inside
+the artifact disagree, for all six.
 
 **`apply-demo.sh` tells a roll-forward from a rollback by asking the cluster what it has already
 run** ([`adr/0157`](../adr/0157-forward-is-told-from-rollback-by-asking-the-cluster-what-it-has-run.md)).
@@ -280,8 +281,21 @@ until the commit happens. `UNKNOWN` means the comparison itself could not be mad
 
 **It is advisory, and it is not everything.** The check's own exit code never fails `redeploy.sh` - a
 deploy that already moved images, ran migrations and passed smoke does not become undone by a warning
-printed after it. And it covers Deployments and NetworkPolicies only; a ConfigMap, Secret, Service or
-Certificate can still drift unnoticed, the same as before this item.
+printed after it. Its field-by-field diff covers Deployments and NetworkPolicies only; a ConfigMap,
+Secret, or a Service's/HTTPRoute's own spec can still drift unnoticed, the same as before this item.
+
+**Since `25-188`, it also asks a second, narrower question: does anything still exist that the
+manifest no longer lists at all?** Neither `apply-demo.sh` nor a bare `kubectl apply -k` carries
+`--prune` (see "Removing a resource" below for why), so deleting a Deployment/Service/HTTPRoute block
+from the overlay does not delete the live object - it keeps running and, for a `Service`/`HTTPRoute`,
+keeps being routed to. `25-182` removed `ago-demo-shop2` from the overlay and its own three objects
+all outlived that edit, found only because that item's own Done-when asked for a live check by hand.
+`check-manifest-drift.sh` now renders the overlay a second way, lists every Deployment/Service/
+HTTPRoute the namespace actually runs, and reports `DRIFT` under "Live resources with no match in the
+rendered overlay" for any name that has no match - the same `PASS`/`DRIFT`/`UNKNOWN` convention as the
+field diff above, folded into the same exit code. `ConfigMap`/`Secret` names are left out of this
+check: kustomize's own content-hash suffix already changes an old one's name on every edit, so an "old
+one still exists" reading would be the expected, harmless case rather than an orphan.
 
 **Since `15-23`, `deploy.sh` - the more commonly used path since `15-06` - calls the identical check,
 the same way and at the same point (last step, exit code discarded).** It is not narrowed to the one
@@ -295,6 +309,29 @@ first install fails earlier, for a clearer reason, before either script's drift 
 check, which was true when it was accepted and is no longer true** - an accepted ADR keeps its text
 (`adr-writer`'s own rule, and the shape `adr/0143` used when it found a plainly wrong sentence in
 `adr/0069` and still did not edit it). A decision belongs to the ADR; what is running belongs here.
+
+### Removing a resource (`25-188`)
+
+Deleting a static-site file, dropping an `HTTPRoute` block, folding two Deployments into one -
+whatever the shape, removing something from `overlays/demo/kustomization.yaml`'s own `resources` list
+is not, by itself, enough to take it out of the cluster.
+
+1. **Commit the manifest change** the same way any other overlay edit is committed.
+2. **Run `./apply-demo.sh`** (or `deploy.sh`/`redeploy.sh`, which call the same drift check as their
+   last step). Neither it nor a bare `kubectl apply -k` carries `--prune` - `overlays/demo`'s own
+   resources carry no common label a prune's selector could scope to today (no `commonLabels`/
+   `labels:` transformer in `kustomization.yaml`; every static Deployment/Service pair sets only its
+   own per-resource `app:` label), and introducing one now risks colliding with a Deployment's
+   immutable `spec.selector.matchLabels` on a live object - a real, one-way risk `25-188` chose not to
+   take without a cluster to prove it safe against. So the apply itself still leaves the removed
+   object running, exactly as it did before `25-182` found this the hard way.
+3. **Read `check-manifest-drift.sh`'s own "Live resources with no match in the rendered overlay"
+   line.** It now lists the Deployment/Service/HTTPRoute that just came out of the manifest, under
+   `DRIFT`, instead of the check staying silent about it.
+4. **Delete it by hand**: `kubectl delete deployment/<name> service/<name> httproute/<name> -n
+   ago-chat`, one command per kind that still exists for that name. This step is still manual - the
+   check reports the gap, it does not close it - and re-running `check-manifest-drift.sh` afterward is
+   how to confirm the deletion actually landed.
 
 **The same is true one level further out, for anything under `k8s/backup/`** (`15-02`). Those are
 systemd units on the node, not Kubernetes objects at all, so neither `redeploy.sh` nor
