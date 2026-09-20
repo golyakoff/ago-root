@@ -1,7 +1,21 @@
 # 25-186 · The phone field never shows it is locked to Russia
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#264` (`42effb3`), `ago-widget#109` (`09eb127`), `ago-brandbook#5`
+  (`30d06b3`). Independently re-verified by the managing session before merging: `Field.tsx` and its
+  existing `adornment` caller confirmed untouched by diff, `PhoneInput.tsx`'s CSS diffed against the
+  copy landed in `ago-brandbook`, a live browser check in both light and dark theme (empty/filled/
+  invalid states all render correctly; the 🇷🇺 flag emoji renders as literal "RU" text in this
+  environment - a known cross-platform flag-emoji limitation, not a defect, and the accepted trade-off
+  of choosing emoji over an SVG asset). Full command sets re-run directly: `ago-console`
+  typecheck/lint/test/ux-gate (1553 tests, 67 passed/9 skipped), `ago-widget` typecheck/lint/test
+  (484 tests) plus an independent bundle-size re-measurement (45.4 KB gzipped, matching exactly).
+  **Test coverage gap caught and fixed before merging**: the first pass added zero new tests (same
+  1544/482 counts as before) - sent back to add `PhoneInput.test.tsx`, `ContactDetailsPanel.test.tsx`
+  additions, and a `contactCapture.test.ts` regression check proving the mask still fires with the
+  input nested inside the new wrapper. Deployed and confirmed live on the brandbook side:
+  `apply-demo.sh` run, rollout + both migrator jobs completed, `curl .../version.json` returns the new
+  commit, `components.html` reachable live, `check-manifest-drift.sh` clean.
 - **Depends on**: nothing (independent of `25-185`)
 - **Found**: 2026-09-20, the author, reviewing the brandbook's components page and asking for a
   phone-number-input-with-flag control in the style of `react-phone-number-input` - scoped down to a
@@ -68,17 +82,20 @@ today.
 
 ## Done when
 
-- [ ] A new phone-input-with-flag piece exists in `ago-console` (wrapping `Input`, flag+`+7` to the
+- [x] A new phone-input-with-flag piece exists in `ago-console` (wrapping `Input`, flag+`+7` to the
       left, non-interactive), used by every real console form that collects a phone number - confirmed
-      against the actual current forms, not assumed.
-- [ ] `ago-widget/src/ui/contactCapture.ts`'s phone field shows the identical flag+prefix treatment,
+      against the actual current forms, not assumed. — every candidate page checked; the one real
+      editable, un-flagged phone field found was `ContactDetailsPanel.tsx`'s Phone-row edit control
+      (every other phone-shaped field on this platform is display-only, masked + Reveal button).
+- [x] `ago-widget/src/ui/contactCapture.ts`'s phone field shows the identical flag+prefix treatment,
       `phoneFormat.ts`'s masking behaviour otherwise unchanged - confirmed with a real browser check,
-      existing phone-format tests still green.
-- [ ] `components.html` shows the new control in its real states (empty/filled/invalid), in both
-      themes (`25-184`).
-- [ ] `ago-widget`'s bundle-size budget check still passes - a bare emoji costs effectively nothing, but
+      existing phone-format tests still green. — plus a new regression test proving the mask still
+      fires with the input nested one level deeper inside the new wrapper.
+- [x] `components.html` shows the new control in its real states (empty/filled/invalid), in both
+      themes (`25-184`). — verified live in both themes by the managing session.
+- [x] `ago-widget`'s bundle-size budget check still passes - a bare emoji costs effectively nothing, but
       confirm rather than assume given how little headroom `25-173`'s own finding left (~0.5 KB before
-      this item, budget already raised to 46 KB).
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` green for `ago-console`; `npm run typecheck`/`lint`/
+      this item, budget already raised to 46 KB). — 45.4 KB gzipped, 0.6 KB headroom left under 46 KB.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` green for `ago-console`; `npm run typecheck`/`lint`/
       `test` green for `ago-widget`; local `docker build` + browser check for `ago-brandbook`; deployed
-      and confirmed live the same way `25-183`/`25-184` were.
+      and confirmed live the same way `25-183`/`25-184` were. — all re-run independently, see Status.
