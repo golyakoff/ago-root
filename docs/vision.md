@@ -107,14 +107,16 @@ not because a support chat "should" have it.
 
 ## Explicitly out of scope
 
-Voice/video calls, malware scanning of uploads, CRM integrations, mobile apps, i18n of the widget.
-Each would add breadth where the project needs depth.
+Voice/video calls, malware scanning of uploads, CRM integrations, i18n of the widget. Each would add
+breadth where the project needs depth.
 
-Two items originally listed here no longer belong: **billing** is now Stage 13 (a self-service
-product needs a way to get paid), and **bots/LLM auto-replies** are now AGO Inbox's own
-tenant-toggleable, off-by-default offline auto-reply (Stage 14) - both became real roadmap work
-rather than staying deliberately out of scope, and this list is corrected rather than left to
-contradict the roadmap it sits next to.
+Three items originally listed here no longer belong: **billing** is now Stage 13 (a self-service
+product needs a way to get paid), **bots/LLM auto-replies** are now AGO Inbox's own
+tenant-toggleable, off-by-default offline auto-reply (Stage 14), and **mobile apps** are now planned
+as a native Android client (`roadmap.md` Stage 26, `ago-android`), with a native iOS client and
+however much shared code between the two an open question the stage's own planning phase answers -
+all three became real roadmap work rather than staying deliberately out of scope, and this list is
+corrected rather than left to contradict the roadmap it sits next to.
 
 **The auto-reply half of that correction shipped in `14-04`**, and shipped narrower than the sentence
 above might suggest, so the boundary is worth stating exactly. What exists is the **scripted** variant:

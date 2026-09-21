@@ -1399,6 +1399,34 @@ the author is taking knowingly.
 
 ---
 
+## Stage 26 — Android application
+
+**Goal:** the operator console's own functionality, reachable from a real native Android app rather
+than a mobile browser tab - AGO Chat's second client surface, additive the same way `20-00` made AGO
+Calendar an additive second *product*: a new repository, no `ProjectReference`/build dependency from
+anything already shipped, nothing about `ago-chat`/`ago-console`/`ago-widget` changed to accommodate
+it (`vision.md`'s own former "explicitly out of scope" line for mobile apps, corrected the day this
+stage was opened, 2026-09-21).
+
+Deliverables:
+- A new repository, `ago-android`, initialised and empty (`chore: initialise the repository`, the
+  identical empty-root-commit bootstrap `ago-calendar` used) - real content arrives through a PR like
+  every other change, once there is something to put in one (`26-00`).
+- **A plan before a line of Kotlin**: the author's own explicit sequencing - first a written scope
+  (what of `office.reserve-me.ru`'s current functionality ports, what is excluded as platform-owner-
+  only unless porting it as-is turns out cheaper than excluding it, and the native-vs-shared-code
+  question a *second* future client - a native iOS app - forces now rather than later, including
+  whether a third repository, `ago-mobile-common`, earns its own existence), then a screen and
+  navigation-flow inventory, then visual mockups reviewed and approved by the author, and only after
+  that approval does real Android development begin (`26-00`).
+- Everything after the plan is approved gets its own numbers, starting at `26-01`, filed once the plan
+  says what they are rather than guessed at now.
+
+**Done when:** `26-00`'s own plan, screen inventory, and approved mockups exist and are approved, and
+every deliverable after it has a real number in this stage rather than living only in this paragraph.
+
+---
+
 ## Guardrails for all stages
 
 - No stage is "done" with a red arch test, a skipped concurrency test, or a doc the code contradicts.
