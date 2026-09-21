@@ -85,7 +85,7 @@
 
 ## Done when
 
-- [ ] A visitor's avatar renders as the badge composition (centered creature emoji at `28px`, food
+- [x] A visitor's avatar renders as the badge composition (centered creature emoji at `28px`, food
       badge at `16px`, no background circle behind it) everywhere the console builds one today.
 - [x] A nameless visitor's label reads as `{Localized creature} · {Localized food}` followed by a
       small, faint short code - proven in both the Russian and English console locales.
