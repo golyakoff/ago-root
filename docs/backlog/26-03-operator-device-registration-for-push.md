@@ -1,7 +1,7 @@
 # 26-03 · Operator device registration for push
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-chat#350`
 - **Found**: 2026-09-21, the first of four implementation items `26-01`'s own design
   (`docs/architecture/push-notifications.md`, `adr/0179`) named at its foot, split on promises per
   rule 15 rather than on code. The author's own instruction, 2026-09-21: start the backend rework
