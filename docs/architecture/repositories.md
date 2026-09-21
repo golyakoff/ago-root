@@ -31,7 +31,22 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | `ago-landing` | the public marketing page at the apex domain | a static page, served from the demo overlay | nothing |
 | `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and its own hosts** (Api, Worker, Migrator) | Docker images, published to GHCR by CI under the commit SHA (`adr/0047`) | `Ago.Platform.*` packages |
 | `ago-calendar-console` | AGO Calendar's operator console SPA | static bundle, published as an image the same way | AGO Calendar's public API contract |
+| `ago-android` | AGO Chat's native Android operator client — Kotlin/Compose, three Gradle modules (`:core:domain`, `:core:network`, `:app`) | a Play Store artifact | the public API contract |
 | `ago-root` | docs, ADRs, conventions, skills, backlog, `load/` scenarios and reports | the rules everything else obeys | nothing |
+
+`ago-android` joined the table with Stage 26 (`26-00`) and is a **client**, not a product: it is on
+the same footing as `ago-widget` and `ago-console` — it depends on the public API contract, holds no
+domain logic the server does not own, and requires no change to `Ago.Chat.*`. Its own plan, screen
+inventory and navigation flows live in `ago-android/docs/`, not here, the same way each product
+repository keeps its own.
+
+**There is deliberately no `ago-mobile-common`**, and there will not be one until something forces
+it: [`adr/0178`](../adr/0178-the-android-client-is-standalone-native-kotlin-and-ago-mobile-common-is-not-created-yet.md)
+decides that the planned iOS client shares nothing with Android today, states what would reopen that
+(the first real iOS screen), and states what the answer would be when it does — a shared Kotlin
+Multiplatform module inside `ago-android`, not a third repository, because the version boundary
+`adr/0012` buys the platform buys nothing between two apps of one product while charging the same
+two-merge-request tax on every feature.
 
 ## Why the platform is a package, not a folder
 
