@@ -12,10 +12,14 @@
 
 1. The visual complaint was never about the *mechanic* (two emoji, one memory aid) - it was that two
    same-size glyphs side by side reads as cluttered. **Resolution: a badge composition, not a pair
-   side by side** - the creature emoji large and centered in the existing avatar circle (its own
-   font-size **+15%**, the circle itself unchanged), the food emoji as a small badge overlapping the
-   bottom-right edge with **no background circle of its own** - confirmed live, with three visual
-   variants compared in an Artifact, before settling on this one.
+   side by side** - the creature emoji large and centered in the existing avatar circle, the food
+   emoji as a small badge overlapping the bottom-right edge with **no background circle of its own** -
+   confirmed live, with several visual variants compared in an Artifact, before settling on this one.
+   **Final sizes, set explicitly rather than derived from a percentage of anything** (the author's own
+   words, after two earlier percentage-based passes both got walked back): creature **28px**, food
+   badge **16px**, both centered with a real flex box (`display:flex; align-items:center;
+   justify-content:center`) rather than left to a bare grid, which read slightly off-centre for an
+   emoji glyph's own font metrics.
 2. **The emoji pool and category roles do not change.** `VisitorEmojiDictionary`'s existing two lists
    stay exactly as they are - `Creatures` for the large centered icon, `Foods` for the badge, fixed
    roles, not a cross-category pair from a widened five-category pool. The author's own words settling
@@ -81,14 +85,19 @@
 
 ## Done when
 
-- [ ] A visitor's avatar renders as the badge composition (centered creature emoji, `+15%`, foodless
-      badge with no background circle) everywhere the console builds one today.
+- [ ] A visitor's avatar renders as the badge composition (centered creature emoji at `28px`, food
+      badge at `16px`, no background circle behind it) everywhere the console builds one today.
 - [ ] A nameless visitor's label reads as `{Localized creature} · {Localized food}` followed by a
       small, faint short code - proven in both the Russian and English console locales.
 - [ ] A named visitor's own behavior is provably unchanged.
 - [ ] The new i18n table's every entry is confirmed to use the exact glyph literal from
       `VisitorEmojiDictionary.cs` (a test or a build-time check catching a mismatch is stronger than a
       one-time manual copy - name which was chosen and why).
-- [ ] The Android mockup Artifact and `ago-android/docs/plan.md` both show the badge composition and
-      localized names, replacing the round-2 pair-and-hex-code treatment.
+- [x] The Android mockup Artifact and `ago-android/docs/plan.md` both show the badge composition and
+      localized names, replacing the round-2 pair-and-hex-code treatment. **Done** - the mockup
+      Artifact republished 2026-09-21 with the badge composition (28px/16px, flex-centered), every
+      invalid round-2 pair corrected to a real `Creatures`/`Foods` member, and every nameless-visitor
+      placeholder showing `{Localized creature} · {Localized food}` instead of a bare pair and hash.
+      `plan.md`'s own text updated to match. **Author approved this mockup state explicitly**
+      ("теперь супер, финалим это как утверждённый мокап").
 - [ ] `ago-console` typecheck/lint/test all green; no `ago-chat`/`ago-widget` change of any kind.
