@@ -13,6 +13,24 @@
   Deployment's own image (confirmed directly via `kubectl get deployment ... -o jsonpath`) was
   correctly `72af3a7...` throughout. `ago-widget-assets`'s own key was correct.
 
+- **Recurred, same day, same shape**: landing `25-207`/`25-209` (`ago-console`, `ago-widget`), the
+  deploy sequence was `./deploy.sh demo-shop1 fae3969...` then `./deploy.sh widget-assets
+  fae3969...` (same pattern: two sequential single-frontend deploys), followed separately by
+  `./deploy.sh console 5f79a7a...`. A standalone `check-manifest-drift.sh` run after `ago-deploy`
+  PR #255 (the manifest pin) merged and was pulled reported: `ago-demo-shop1 recorded
+  72af3a7dcaad22893f654c5a37712549de0bcc17, manifest still pins fae396944b8f0a43e1e50ebb330a82a925d621f2`
+  - `72af3a7` being exactly the value this same key held *before this round's* deploy (i.e. the
+  value this item's own first occurrence had fixed it to). The live Deployment's own image was
+  confirmed correct (`fae3969...`) throughout via `kubectl get deployment ... -o jsonpath`, exactly
+  as the first occurrence found. **This is the same key, in the same position** (the first of a
+  sequential `demo-shop1` → `widget-assets` pair) reverting to its own pre-deploy value once the
+  second deploy in the pair runs - not a new symptom, a second confirmation of the same one, which
+  now makes "the first of two sequential single-frontend deploys loses its record to whatever the
+  key held immediately before that pair ran" a reproduced pattern rather than a one-off. Fixed the
+  same way: `kubectl patch configmap ago-deploy-record --type=merge -p
+  '{"data":{"ago-demo-shop1":"fae396944b8f0a43e1e50ebb330a82a925d621f2"}}'`, re-verified clean with
+  a standalone `check-manifest-drift.sh` re-run.
+
 ## What is actually true today, confirmed rather than assumed
 
 `lib-deploy-record.sh`'s `record_write` uses `kubectl patch configmap ago-deploy-record --type=merge`
