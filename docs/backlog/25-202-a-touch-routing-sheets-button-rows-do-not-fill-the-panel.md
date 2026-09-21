@@ -1,7 +1,7 @@
 # 25-202 · A touch routing sheet's button rows don't fill the panel - the divider looks cut off
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#123`
 - **Found**: 2026-09-21, the author, live on `golyakov.net` (mobile) - a screenshot with the two
   short divider lines circled in red, described as "почему-то отрезанных линий" (dividers cut off
   for some reason). Confirmed directly against the real live DOM before filing (see below), not
@@ -52,10 +52,28 @@ Only the sheet's own two non-channel rows are `<button>` (`buildTouchRoutingShee
 
 ## Done when
 
-- [ ] Both `<button>` rows in the touch routing sheet measure full panel width, matching the `<a>`
+- [x] Both `<button>` rows in the touch routing sheet measure full panel width, matching the `<a>`
       rows - proven against a real rendered DOM, not only a CSS rule read by eye.
-- [ ] The divider (`border-top`) visibly spans the full row width for every row in a real screenshot.
-- [ ] The `AboveComposer` card's own `<button>` row is checked for the identical gap and either fixed
+- [x] The divider (`border-top`) visibly spans the full row width for every row in a real screenshot.
+- [x] The `AboveComposer` card's own `<button>` row is checked for the identical gap and either fixed
       alongside this item (if the same defect) or explicitly confirmed unaffected, with a reason.
-- [ ] Every `<a>` row - unaffected before this item - is confirmed still full-width after it.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] Every `<a>` row - unaffected before this item - is confirmed still full-width after it.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Shipped as `ago-widget#123`. `.ago-touch-routing-row` (every row, `<a>` and `<button>` alike) now
+carries `width: 100%`, fixing the confirmed cause: a `<button>`'s own UA-stylesheet sizing keeps it
+shrink-to-fit under `display: flex` even after blockification, unlike an `<a>`, which is why only the
+sheet's two non-channel rows ("Онлайн чат"/"Отмена") showed the truncated divider.
+
+`AboveComposer`'s own `<button>` row was checked live and confirmed unaffected by a different
+mechanism, not fixed alongside this item: its parent `.ago-channel-switcher` is itself
+`display: flex; flex-direction: column`, so that row is a flex *item* stretched by the container's
+default `align-items: stretch`, never subject to the shrink-to-fit quirk in the first place.
+`BelowLauncher` has no `<button>` row at all.
+
+Verified independently by the managing session: fails-before/passes-after reproven (reverting just
+the `width: 100%` declaration reproduces the new test's failure), `npm run typecheck`/`lint` clean,
+`npm test` 505/505, `npm run ux-gate` 16/16. Live evidence (local build): button rows measured
+156.95px/89.09px before, all four rows measured the full 375px panel width after.
