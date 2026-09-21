@@ -1,7 +1,7 @@
 # 25-209 · The phone field's own flag prefix duplicates `+7` inside the value
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#128`, `ago-console#268`
 - **Found**: 2026-09-21, the author, live on the widget's contact-capture card: the "🇷🇺 +7"
   prefix chip and the actual typed value both show `+7` side by side - `🇷🇺 +7 | +7 (916) 291-11-29`
   - reading as a confusing, doubled country code rather than one clean field.
@@ -65,13 +65,22 @@ plain Russian subscriber number.
 
 ## Done when
 
-- [ ] Typing a Russian mobile number into either the widget's contact-capture phone field or the
+- [x] Typing a Russian mobile number into either the widget's contact-capture phone field or the
       console's `PhoneInput` shows the country code exactly once, in the prefix chip, never inside
       the value too.
-- [ ] Typing an explicit `+<non-7 code>` in the widget's own escape hatch stops showing the `🇷🇺 +7`
+- [x] Typing an explicit `+<non-7 code>` in the widget's own escape hatch stops showing the `🇷🇺 +7`
       prefix (or otherwise stops asserting Russia) - proven live, not only reasoned about.
-- [ ] `ago-console`'s `PhoneInput.tsx` gets the equivalent capability, with its own real caller
+- [x] `ago-console`'s `PhoneInput.tsx` gets the equivalent capability, with its own real caller
       updated if it needs to pass the new signal.
-- [ ] Existing tests for `phoneFormat.ts`/`PhoneInput.tsx` updated to the new expected value shape,
+- [x] Existing tests for `phoneFormat.ts`/`PhoneInput.tsx` updated to the new expected value shape,
       not deleted to dodge them.
-- [ ] Both repos: typecheck/lint/test (and `ago-widget`'s own `build`/`ux-gate`) all green.
+- [x] Both repos: typecheck/lint/test (and `ago-widget`'s own `build`/`ux-gate`) all green.
+
+## Outcome
+
+Landed as `ago-widget#128` and `ago-console#268`. `formatRussianDigits` no longer prepends `+7`;
+`isExplicitNonRussianPhoneValue` (widget) and an inferred `value`-shape check (console's
+`PhoneInput.tsx`, deliberately not a second caller-supplied prop that could drift out of sync) hide
+each prefix chip the moment its own escape hatch engages. Verified independently: both repos'
+typecheck/lint/test green (widget 542/542, console 1566/1566), widget build 38.7 KB gzipped (budget
+46 KB), widget ux-gate 16/16, console ux-gate 67 passed/9 skipped/0 failed.

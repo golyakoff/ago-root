@@ -1,7 +1,7 @@
 # 25-207 · Visitor avatar becomes a badge, with a localized name instead of a bare pair
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-console#267`
 - **Found**: 2026-09-21, flagged during the Android mockup round 2 (`26-00`) while designing the
   visitor-avatar mockups, then revised twice the same day through a live design conversation with the
   author. **This is the third and final version of this item's scope** - the two versions before it
@@ -87,10 +87,10 @@
 
 - [ ] A visitor's avatar renders as the badge composition (centered creature emoji at `28px`, food
       badge at `16px`, no background circle behind it) everywhere the console builds one today.
-- [ ] A nameless visitor's label reads as `{Localized creature} · {Localized food}` followed by a
+- [x] A nameless visitor's label reads as `{Localized creature} · {Localized food}` followed by a
       small, faint short code - proven in both the Russian and English console locales.
-- [ ] A named visitor's own behavior is provably unchanged.
-- [ ] The new i18n table's every entry is confirmed to use the exact glyph literal from
+- [x] A named visitor's own behavior is provably unchanged.
+- [x] The new i18n table's every entry is confirmed to use the exact glyph literal from
       `VisitorEmojiDictionary.cs` (a test or a build-time check catching a mismatch is stronger than a
       one-time manual copy - name which was chosen and why).
 - [x] The Android mockup Artifact and `ago-android/docs/plan.md` both show the badge composition and
@@ -100,4 +100,22 @@
       placeholder showing `{Localized creature} · {Localized food}` instead of a bare pair and hash.
       `plan.md`'s own text updated to match. **Author approved this mockup state explicitly**
       ("теперь супер, финалим это как утверждённый мокап").
-- [ ] `ago-console` typecheck/lint/test all green; no `ago-chat`/`ago-widget` change of any kind.
+- [x] `ago-console` typecheck/lint/test all green; no `ago-chat`/`ago-widget` change of any kind.
+
+## Outcome
+
+Landed as `ago-console#267`. `VisitorAvatar.tsx` (new, shared by all three render sites) composes the
+creature at `28px` and the food badge at `16px`, no background circle, sized via `em` multiples of
+this context's own inherited `--ago-text-xs` (12px) base. `visitorEmojiNames.ts` (new) holds the
+English/Russian name for all 40 `Creatures`/`Foods` members, copied byte-for-byte from
+`VisitorEmojiDictionary.cs`, with a build-time completeness test guarding against a Unicode
+variation-selector mismatch. `visitorEmoji.ts` gained `visitorFallbackLabel`/`visitorLabel`, reusing
+the existing named-visitor path unchanged. No `ago-chat`/`ago-widget` change - confirmed.
+
+**One correction made before merge**: the implementing worker's own sizes used a `+15%` formula
+(`1.75em * 1.15 = 2.0125em`) from an earlier percentage-based pass that had already been walked back
+in favour of the explicit `28px`/`16px` the author settled on live against the mockup - corrected in
+the same worktree before landing, along with a dead `vertical-align` rule (no effect inside the
+component's own flex container) removed. Re-verified independently after the fix: full suite green
+(1658/1658, 144 files), position/composition re-confirmed live in a real browser against the exact
+shipped CSS.
