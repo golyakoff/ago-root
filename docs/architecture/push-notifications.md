@@ -234,6 +234,7 @@ design that pretended otherwise would leave a stranger's phone buzzing about a t
 | Malformed push token | `400` | `INVALID_ARGUMENT` | **Terminal** — revoke the row |
 | Valid token that has expired | `404` | `NOT_FOUND` | **Terminal** — revoke the row |
 | Bad service key | `403` | `PERMISSION_DENIED` | **Never** a device fault. This is *our* credential, and treating it as one would revoke every device in the table the first time the token was rotated wrong |
+| Malformed/invalid bearer token (observed, not in RuStore's own enumeration) | `401` | `UNAUTHORIZED` | **Also never** a device fault, for the identical reason — measured live 2026-09-21 against a garbage bearer token; see [measurement 1](#four-measurements-this-design-refuses-to-assume) for why this and the row above are not yet provably distinct outcomes |
 | Rate limited | `429` | `TOO_MANY_REQUESTS` | Transient — back off, record `last_failure_at` |
 | Service error | `500` | `INTERNAL` | Transient |
 
@@ -724,15 +725,24 @@ This project does not invent numbers. All four are gates on the implementation i
 `adr/0179` named two; the provider change removed one, split another, and added the one this page
 cares about most.
 
-**1. Is `vkpns.rustore.ru` reachable from the live node?** `adr/0070` measured `api.telegram.org`
-from this same VPS and found 8 of 15 attempts never established TCP at all — it is the reason a VLESS
-relay is load-bearing for one channel today. The implementation item runs that same method — N
-requests, spaced, fixed timeout, **a deliberately invalid service token so an HTTP 403
-`PERMISSION_DENIED` proves a complete round trip** (RuStore's own documented code for a bad service
-key; `adr/0179` used FCM's 401 for the same purpose). **One host, not two** — there is no OAuth2 mint
-to reach a second. If a relay turns out to be needed, the adapter takes a proxy-aware `HttpClient`
-wired in the composition root exactly as `TelegramProxyOptions` documents — a known shape, not new
-work.
+**1. Is `vkpns.rustore.ru` reachable from the live node? Measured 2026-09-21 — yes, and fast.**
+`adr/0070` measured `api.telegram.org` from this same VPS and found 8 of 15 attempts never
+established TCP at all — it is the reason a VLESS relay is load-bearing for one channel today.
+`vkpns.rustore.ru` is nothing like that here: 10 requests, spaced, fixed timeout, a deliberately
+invalid bearer token — 10/10 succeeded, TCP+TLS connect 3-6ms, full round trip 50-68ms every time.
+**One host, not two** — there is no OAuth2 mint to reach a second. No relay is needed.
+
+**One correction to what was assumed above before this measurement ran.** The plan was that an
+invalid service token would draw the documented `403 PERMISSION_DENIED` for a bad service key,
+proving a complete application round trip. It did not: the response was a real, RuStore-issued JSON
+body (`x-vkpns-request-id` present, ruling out an edge/CDN rejection) — `{"code":401,"message":
+"unauthorized: Invalid S2S token","status":"UNAUTHORIZED"}`. That still proves the same thing (a
+complete round trip to RuStore's own API, not a network failure), so the measurement stands; what is
+genuinely unresolved is whether a **malformed** token (this probe's shape) and a **well-formed but
+wrong or revoked** service token (what `26-04` will hold in production) draw the same code. Until a
+real, once-valid token is deliberately revoked and observed, `26-04`'s adapter treats **both `401
+UNAUTHORIZED` and `403 PERMISSION_DENIED` as our own credential's fault, never a device fault** — see
+the table above, and `26-04`'s own Done-when for the full record of this probe.
 
 `adr/0070`'s control run is **less relevant here than it was for FCM, not more**, and saying so is
 the same discipline that ADR applied to itself: it measured `https://www.google.com` from this VPS on
