@@ -1,7 +1,7 @@
 # 26-11 · A Keycloak realm client for the Android app
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-deploy#256`
 - **Found**: 2026-09-21. `plan.md` §"Keycloak has exactly one public client, and the API validates a
   single audience" and `architecture.md` §Identity both name this as the one infrastructure chore
   standing between the approved plan and a native sign-in — and both name it as an **`ago-deploy`
@@ -54,14 +54,38 @@ A native client can obtain a Keycloak token that `Ago.Chat.Api` already accepts 
 
 ## Done when
 
-- [ ] An Authorization Code + PKCE exchange against the new client completes **by hand**, with no app:
+- [x] An Authorization Code + PKCE exchange against the new client completes **by hand**, with no app:
       the authorize URL opened in a browser, the code captured from the redirect, the token exchanged
       with `curl`.
-- [ ] The decoded access token's `aud` contains exactly the value `CompositionRoot.cs` validates —
+- [x] The decoded access token's `aud` contains exactly the value `CompositionRoot.cs` validates —
       checked against the decoded claim, not inferred from the mapper's configuration.
-- [ ] That token is accepted by `Ago.Chat.Api`: `GET /api/v1/operators/me` answers `200` or `403` and
+- [x] That token is accepted by `Ago.Chat.Api`: `GET /api/v1/operators/me` answers `200` or `403` and
       **never `401`** — the two acceptable answers both mean the token was validated.
-- [ ] Applying the client to a realm that **already exists** is proven on the demo realm, not assumed
+- [x] Applying the client to a realm that **already exists** is proven on the demo realm, not assumed
       from the import file. Running the apply twice changes nothing the second time.
-- [ ] No secret, token, credential or node address appears in any committed file. The client is public
+- [x] No secret, token, credential or node address appears in any committed file. The client is public
       and has no secret, which is part of why this shape was chosen.
+
+## Outcome
+
+Landed as `ago-deploy#256`. New public client `ago-android` in `keycloak-realm-import.json`:
+`standardFlowEnabled`, PKCE required (S256), redirect URI `ago-android://callback` — a custom scheme
+chosen over an HTTPS App Link because App Link verification needs a hosted `assetlinks.json` and the
+app's own release-signing fingerprint, neither of which exist yet; PKCE is the standard mitigation for
+a custom scheme's known weakness, and adding an App Link redirect URI later is additive. No secret, no
+direct access grants. `ago-android-audience` mapper copied from `ago-console-audience`'s exact shape,
+pointed at the same `"ago-console"` value `CompositionRoot.cs` already validates — no `ago-chat`
+change of any kind. `k8s/apply-android-client.sh` (new) applies both idempotently to a realm that
+already exists, following `apply-demo-provisioner.sh`'s established shape.
+
+**Verified independently, live, against the real demo realm, before merging**: ran the apply script
+twice (create, then a no-op confirming idempotency); completed a real Authorization Code + PKCE
+exchange by hand (curl-driven — a disposable probe user created and deleted via `kcadm` for this one
+test, never a real credential); decoded the resulting access token's `aud`: `["ago-console",
+"account"]`; called `GET https://chat-api.reserve-me.ru/api/v1/operators/me` with it — `403
+Forbidden`, never `401`, confirming the token was validated (403 rather than 200 because the probe
+user holds no real `Operator` seat, exactly as expected). `docs/runbooks/realm-operations.md` gained
+the procedure and a note on two real gotchas hit doing this the first time: the API's own hostname
+(`chat-api.reserve-me.ru`) differs from the pattern a sibling service's hostname would suggest, and a
+local sandbox's outbound HTTPS proxy can silently return a misleading `200 Connection established`
+for a real domain — running the same commands over SSH on the node itself avoided the ambiguity.
