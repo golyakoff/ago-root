@@ -51,9 +51,6 @@ an id looks the same here as it does in the console.**
 
 ## Done when
 
-- [ ] Palette, type and shape are defined in one place, and the convention against hardcoding a colour
-      at a call site is enforced by a lint rule if one is cheap, or written down explicitly if it is
-      not — say which was done.
 - [x] Palette, type and shape are defined in one place (`app/ui/theme/{Color,Type,Shape,Theme}.kt`).
       No lint rule was added - checked first and found neither Android Lint nor the Compose compiler
       has a built-in check for a hardcoded `Color` literal in Kotlin, and a third-party rule set would
