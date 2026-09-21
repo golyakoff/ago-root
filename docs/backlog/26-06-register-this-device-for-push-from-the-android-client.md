@@ -12,6 +12,10 @@
   the "a token is a routing address, not a credential" ruling are read from
   `docs/architecture/push-notifications.md` §"Device registration" and `adr/0179`. `26-03`'s own
   Scope names the same two routes, so the contract this item calls is the contract that item builds.
+  The RuStore SDK names below are read from RuStore's own Kotlin/Java Push SDK documentation, same
+  date.
+- **Provider changed**: 2026-09-21. `adr/0180` replaced FCM with **RuStore Push**. This item's
+  promise, its two endpoints and its three call sites are unchanged; the SDK behind them is not.
 - **Depends on**: `26-03` (the two `Api` routes), `26-12` (a signed-in session and the authenticated
   Ktor client), `26-07`. The client code can be written and tested against a Ktor `MockEngine`
   standing in for the endpoints before `26-03` merges — only the end-to-end proof needs the real
@@ -24,41 +28,82 @@ rotation, and goes silent on sign-out. **Nothing receives or renders anything ye
 
 ## Scope
 
-- **The Firebase SDK, and `google-services.json` kept out of the repository.** It is not a credential
-  in Google's own model, but everything in these repositories is public and this project's rule admits
-  no "it is probably fine" — so it is supplied from a CI secret for the build job and from an
-  untracked local file for a developer, with a `google-services.json.example` carrying **the shape and
-  no values**, which is the same treatment `secrets.md` gives an `.env.example`. `26-07` already
-  gitignores the real file. *If the author would rather commit it, that is a one-line change here and
-  a sentence in `ago-android/docs/architecture.md` — but it should be a decision, not a default.*
-- **A stable `installationId`**, generated once per install and stored. It is **not** the FCM token:
+- **The RuStore Push SDK, wired up.** Concretely, and these are real names rather than a plausible
+  shape:
+  - repository `https://nexus-external.rustore.ru/repository/maven-rustore-exposed/` — **only this
+    address.** RuStore's docs say the older `artifactory-external.vkpartner.ru` *"may stop working at
+    some point"*. Its reachability from CI is unestablished and a green local build proves nothing
+    about a GitHub Actions runner: **prove it on CI in this item.**
+  - dependency `ru.rustore.sdk:pushclient` — 7.4.0 is the newest in the published release history as
+    of 2026-09-21; pin whatever is current and say which.
+  - `RuStorePushClient.init(application, projectId, logger)` in `Application`, **main process only**
+    (the SDK does not support multi-process), or the automatic path via the
+    `ru.rustore.sdk.pushclient.project_id` manifest meta-data.
+  - a service extending `RuStoreMessagingService`, declared `android:exported="true"` with an intent
+    filter on `ru.rustore.sdk.pushclient.MESSAGING_EVENT`.
+- **There is no `google-services.json` equivalent, and that removes a whole decision this item used
+  to carry.** RuStore initialisation takes a **project-ID string**, nothing more — no credentials
+  file to keep out of the repository, no `.example` shape, no CI secret for the build job. The
+  project ID is not a secret either: it ships inside the APK's own manifest, readable by anyone with
+  a copy. It is still supplied as configuration rather than hard-coded across build types, because of
+  the next point.
+- **A RuStore Console push project per build type.** RuStore requires the installed build's
+  **signature fingerprint** to match the one registered under Push notifications → Projects, and
+  notes that debug and release signatures and package names differ — so debug and release each need
+  their own console project and therefore their own project ID. This is a real setup chore with no
+  FCM equivalent in this item's old scope; budget for it and write it down in
+  `ago-android/docs/architecture.md`.
+- **A stable `installationId`**, generated once per install and stored. It is **not** the push token:
   the row's identity is `(operator_id, installation_id)`, and that single decision is what makes token
   rotation work at all rather than accumulating one dead row per rotation for ever.
 - **`PUT /api/v1/me/devices/{installationId}` called in all three places the design names**, because
   each covers a case the others do not:
-  - on **every sign-in**;
-  - from **`FirebaseMessagingService.onNewToken`** — Google's own rotation callback, and the only
-    event that can tell the app its token changed;
-  - from **a periodic `WorkManager` job**, because `onNewToken` is not guaranteed to fire if the app
-    was not running when the rotation happened. This third one is what turns the server's
+  - on **every sign-in**, with the token from `RuStorePushClient.getToken()` (which mints one if the
+    device has none);
+  - from **`RuStoreMessagingService.onNewToken(token)`** — the provider's own rotation callback, and
+    the only event that can tell the app its token changed. RuStore's documentation says in so many
+    words that after it fires the app is responsible for delivering the new token to its own server.
+    Tokens do rotate: the SDK's release history records two versions (6.8.0, 6.9.1) that changed the
+    reissue logic so they rotate *less* often, which is a statement that they rotate;
+  - from **a periodic `WorkManager` job**, because `onNewToken` cannot fire for an app that was not
+    running when the rotation happened. This third one is what turns the server's
     `last_seen_at` into a liveness signal rather than a record of the last sign-in. State the
     interval chosen and why.
+- **Report what `RuStorePushClient.checkPushAvailability()` actually returns, and do not hide an
+  `Unavailable`.** RuStore Push needs a *distributor* app (RuStore, or an undisclosed VK fallback) on
+  the device, RuStore un-restricted in the background, and **the operator signed in to a RuStore
+  account** — a longer prerequisite list than FCM's Play Services, and `26-01`'s own
+  §"What the operator's phone has to satisfy" has it in full. This item does not have to solve it;
+  it has to make it **visible** rather than letting registration look successful on a phone that can
+  never receive anything. `onError` also surfaces `HostAppNotInstalledException`,
+  `HostAppBackgroundWorkPermissionNotGranted` and `UnauthorizedException` — handle all three, noting
+  that RuStore says the last may not be raised even when it applies.
+- **Answer, from the real console: does push work for an app registered under Push notifications →
+  Projects but never published through RuStore?** The condition list asks for uploaded app data and a
+  matching fingerprint, not for a published listing, but does not say the two are independent, and
+  RuStore's documentation does not settle it. It decides whether the operator app can be distributed
+  as a direct APK, so it is a real finding and not a detail. Record it in
+  `docs/architecture/push-notifications.md`.
 - **`DELETE /api/v1/me/devices/{installationId}` on sign-out, *before* the access token is
   discarded** — after that the call cannot authenticate. The console has no equivalent step (its
   sign-out makes no backend call at all), so this ordering is new here and easy to get backwards.
+  Call `RuStorePushClient.deleteToken()` alongside it — an affordance the FCM design never named, and
+  the device's own half of the same act. It is the device discarding its token, not a claim about
+  what RuStore's server retains, which `26-01` records as unestablished.
 - **One row per tenancy, not per identity.** A Keycloak identity may hold several `Operator` rows, so
   signing into a second site registers again and one physical phone legitimately holds two rows. The
   alternative would mean a notification about tenant A reaching a device registered while working for
   tenant B, and `tenant-isolation.md`'s whole claim is that every piece of data is scoped by
   `site_id` — a notification is a piece of data.
 - **The token is a routing address, not a credential**: not encrypted on the device beyond ordinary
-  app-private storage, and never written to a log at any level.
+  app-private storage, and never written to a log at any level. Note the SDK takes an optional
+  `logger` and defaults to logcat — make sure whatever is wired there does not print a token.
 
 ## Out of scope
 
-- Receiving, rendering or suppressing a push (`26-18`).
+- Receiving, rendering or suppressing a push (`26-18`), including any latency measurement.
 - The notification settings screen (`26-19`).
-- Everything server-side — `26-03` (the rows and routes), `26-04` (the FCM adapter), `26-05` (the
+- Everything server-side — `26-03` (the rows and routes), `26-04` (the RuStore adapter), `26-05` (the
   fan-out).
 
 ## Done when
@@ -72,6 +117,12 @@ rotation, and goes silent on sign-out. **Nothing receives or renders anything ye
 - [ ] Sign-out calls `DELETE` **before** the token is discarded — proven by asserting the call order,
       not by the absence of a symptom.
 - [ ] Signing into a second tenancy produces a second row rather than overwriting the first.
-- [ ] No FCM token, and no `google-services.json` value, appears in logcat at any level or in any
-      committed file.
+- [ ] No push token appears in logcat at any level or in any committed file — checked with the SDK's
+      own default logger active, since that is what a developer will actually be running.
+- [ ] CI resolves `ru.rustore.sdk:pushclient` from `nexus-external.rustore.ru`, proven on a real
+      runner and not only locally. The pinned version is stated.
+- [ ] `checkPushAvailability()`'s result on the test device is recorded, including which of RuStore's
+      four conditions were satisfied and how (was RuStore installed? signed in? un-restricted?).
+- [ ] Whether push works without publishing the app through RuStore is answered from the real
+      console, and written into `docs/architecture/push-notifications.md`.
 - [ ] `./gradlew ktlintCheck lint test` green; counts reported.

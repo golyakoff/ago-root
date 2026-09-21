@@ -2,6 +2,12 @@
 
 - **Stage**: 26
 - **Status**: done — design complete, adr/0179; implementation split into four unnumbered follow-up items
+- **Provider changed after delivery**: 2026-09-21. `adr/0180` partially supersedes `adr/0179` and the
+  provider is **RuStore Push**, not FCM, for `personal-data.md`'s data-residency default. Every
+  mention of FCM below is the design as it was delivered and is left as the record of it; for what
+  holds now, read `docs/architecture/push-notifications.md`, which is authoritative for current state
+  (`adr/0156`). What changed is the provider and its mechanics; the schema, the consumers, the
+  client-owns-loudness answer and the no-new-host ruling all stand.
 - **Found**: 2026-09-21, the author, reviewing `26-00`'s own mockups: "это самое ужасное, что
   может быть... я делаю телефонное приложение именно потому что надеялся на нём использовать
   возможности уведомлений... САМАЯ ВАЖНАЯ ФУНКЦИЯ приложения - телефон может быть убранным в

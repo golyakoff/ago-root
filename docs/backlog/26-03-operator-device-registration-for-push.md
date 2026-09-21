@@ -17,13 +17,15 @@ be revoked. **Nothing sends anything yet** - that is `26-04`/`26-05`.
 ## Scope
 
 - **`OperatorDevice`**, a one-entity Domain aggregate root in `WebhookEndpoint`'s own shape. Identity
-  is `unique (operator_id, installation_id)` - never the FCM token itself, which is a *value on* the
+  is `unique (operator_id, installation_id)` - never the push token itself, which is a *value on* the
   row, replaced in place on rotation. A second, partial index - `unique (provider, token) where
   revoked_at is null` - stops one token being live on two rows (a restored device backup can cause
   this).
 - **`operator_devices` table + EF migration.** `provider` is a real column from day one (`adr/0179`
-  §5 - by-product of doing Android cleanly, not iOS preparation), even though only `"Fcm"` is ever
-  written today.
+  §5 - by-product of doing Android cleanly, not iOS preparation), and **the value written today is
+  `"RuStore"`**, not `"Fcm"`: `adr/0180` changed the provider on 2026-09-21, before any adapter
+  existed. That change is the column's own first piece of evidence for itself - it absorbed a
+  provider swap with no migration and no Application-layer change.
 - **`IOperatorDeviceRepository`** in `Ago.Chat.Application/Abstractions`, EF adapter in
   `Ago.Chat.Infrastructure.Postgres` - the dependency rule (CLAUDE.md rule 1): no `DbContext` in
   Domain or Application.
