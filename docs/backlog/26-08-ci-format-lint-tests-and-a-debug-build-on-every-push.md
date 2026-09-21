@@ -72,12 +72,15 @@ promise: **a branch is checked automatically**.
 - [x] The workflow's total runtime is measured and stated. If it exceeds a few minutes, the slow part
       moves to its own job — `0-04`'s own gate, applied here rather than restated.
 - [x] Test reports are downloadable from a failed run.
-- [~] `.github/dependabot.yml` is accepted by GitHub (visible in the repository's Insights →
-      Dependency graph → Dependabot), and the first bump PR it opens runs this workflow. The file is
-      live on `main` and well-formed; whether GitHub has actually scheduled its weekly run and what its
-      first bump PR looks like against this workflow is not yet observable — dependabot runs on its own
-      schedule (Monday 06:00 UTC) and nothing forces that check earlier without guessing at an API this
-      project doesn't otherwise use. Confirm on the first real Monday run rather than assume.
+- [x] `.github/dependabot.yml` is accepted by GitHub, and the first bump PR it opens runs this
+      workflow. **Confirmed 2026-09-21, sooner than expected**: GitHub ran an immediate initial scan
+      on adding the config (not only its weekly Monday schedule) and opened seven real bump PRs across
+      both ecosystems (`gradle`: AGP, Kotlin, Compose BOM, `androidx.core:core-ktx`,
+      `androidx.test.ext:junit`; `github-actions`: `gradle/actions`, `actions/setup-java`). `ago-android#8`
+      (`core-ktx` bump) ran `build-test` for real and it correctly went red - `androidx.core:core-ktx
+      1.19.0` requires AGP 9.1.0+, which this project deliberately pinned below (`26-07`'s own reasoning:
+      matching the SDK build-tools actually installed) - proving both halves at once: the loop fires,
+      and the gate catches a real incompatibility rather than rubber-stamping it.
 
 ## Outcome
 
