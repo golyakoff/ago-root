@@ -1,7 +1,7 @@
 # 25-204 · `AboveComposer` becomes a hover-revealed banner above the toggle, not a card inside the panel
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#125`
 - **Found**: 2026-09-21, the author, live on `golyakov.net` (desktop) - tested the console's own
   "Баннеры над окном диалога" placement a second time and found it unchanged: the channel card still
   renders **inside** the open panel, above the composer, exactly as before. The author's own words:
@@ -70,22 +70,49 @@ renders.
 
 ## Done when
 
-- [ ] On a hover-capable device with `AboveComposer` configured, hovering the toggle reveals a
+- [x] On a hover-capable device with `AboveComposer` configured, hovering the toggle reveals a
       floating panel **above the toggle, outside the chat panel** - never inside it, never a sibling
       of the composer.
-- [ ] The panel's own rows are built via the shared `buildChannelSwitcherRow`, one per connected
+- [x] The panel's own rows are built via the shared `buildChannelSwitcherRow`, one per connected
       channel, plus a row that opens the chat panel for real.
-- [ ] The hover region spans both the toggle and the new banner with the identical `25-203` grace-
+- [x] The hover region spans both the toggle and the new banner with the identical `25-203` grace-
       period mechanism, reused rather than re-implemented - a pointer crossing the gap between them
       never hides the banner mid-crossing (verified the same way `25-203` verified it: real
       `PointerEvent` dispatch with controlled timing against a real browser, not only jsdom).
-- [ ] The banner sits with a real bottom margin (anchored the same way `.ago-panel` is), never flush
+- [x] The banner sits with a real bottom margin (anchored the same way `.ago-panel` is), never flush
       to the viewport's bottom edge.
-- [ ] The dismiss-persistence question is answered explicitly, with a stated reason, not left
+- [x] The dismiss-persistence question is answered explicitly, with a stated reason, not left
       implicit.
-- [ ] `BelowLauncher` is provably unaffected - every existing `channelSwitcherLauncher.test.ts` test
+- [x] `BelowLauncher` is provably unaffected - every existing `channelSwitcherLauncher.test.ts` test
       still passes unchanged.
-- [ ] The old inside-panel `loadChannelSwitcherCard` rendering no longer runs for `AboveComposer` on
+- [x] The old inside-panel `loadChannelSwitcherCard` rendering no longer runs for `AboveComposer` on
       a hover-capable device - confirmed by a test that finds no `.ago-channel-switcher` card inside
       the panel when the banner is what's showing.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Landed as `ago-widget#125`. `loadChannelSwitcherCard` and `dismissChannelSwitcher` (and their
+`storage.getChannelSwitcherDismissed()` per-visitor memory) are retired outright; `AboveComposer` now
+builds `buildChannelSwitcherBanner`, a sibling of `this.toggle` inside `this.container`, `position:
+absolute; bottom: 4.25rem` - the identical offset `.ago-panel` itself uses when open. Wired into the
+same `isHoverRegionActive`/`enterHoverRegion`/`scheduleHoverRegionLeave` mechanism `25-203` built for
+`BelowLauncher`, by name, not a second copy; `updateChannelSwitcherLauncherVisibility` now hides
+whichever of the two hover-revealed elements is built. No dismiss-persistence - purely a function of
+live hover state, matching `BelowLauncher` and the mobile touch sheet, stated explicitly in the
+method's own doc comment. The final row calls `open()` for real (the panel is closed while the banner
+shows, unlike the retired card's "stay here" row which only focused the composer).
+
+Verified independently, beyond the worker's own report:
+- `npm run typecheck`/`lint` - clean.
+- `npm test` - 43 test files, 524 tests passed.
+- `npm run build` - 38.7 KB gzipped (budget 46 KB).
+- `npm run ux-gate` - 16/16 Playwright tests passed.
+- **Live, in a real browser, against the actual built bundle** (not jsdom): a harness page serving
+  `dist/widget.js` against a stubbed handshake confirmed the banner renders as a sibling of the
+  toggle outside `.ago-panel`, with a real 88px on-screen bottom margin (12px real gap to the toggle,
+  matching `25-203`'s own finding of a real, non-zero gap). Dispatched real `PointerEvent`s with
+  controlled real-clock gaps between leaving the toggle and entering the banner: 0ms/40ms stayed
+  visible through the crossing (no flicker), 160ms/200ms correctly hid before the second element was
+  entered - proving `HOVER_REGION_LEAVE_GRACE_MS` (150ms) is a real, working timer here, not a no-op.
+  Clicking the "Online chat" row opened the real chat panel via `open()`.
