@@ -136,15 +136,63 @@ cd ~/ago/ago-deploy/k8s
 set -a; . ./overlays/demo/.env; set +a
 ./apply-realm-settings.sh        # login security, token lifetimes, SMTP, loginTheme (11-07, 17-06)
 KEYCLOAK_DEMO_PROVISIONER_SECRET=... ./apply-demo-provisioner.sh   # 8-07's client, its secret, its one role
+./apply-android-client.sh        # 26-11's ago-android client and its audience mapper - no secret needed
 ```
 
 `apply-demo-provisioner.sh` reads the secret from the environment; on the node it is already in
-`.env`, so sourcing that file is enough.
+`.env`, so sourcing that file is enough. `apply-android-client.sh` needs nothing from the environment
+beyond the admin credential every script here already reads - the client it creates is public and
+holds no secret of its own.
 
 A note from fixing it: **kcadm's `-s key=value` could not carry the client's `description`** from the
 import file. It answers a bare `unknown_error` on the whole create, and the identical create without
 that one flag succeeds. If a `create` fails with nothing but `unknown_error`, drop the longest text
 field first.
+
+## Proving the `ago-android` client works - Authorization Code + PKCE, no app (`26-11`)
+
+The whole point of `26-11`'s client is that a native app can get a token `Ago.Chat.Api` already
+accepts, with zero changes to `ago-chat`. That is provable by hand, with nothing but a browser and
+`curl`, before any Kotlin exists.
+
+```bash
+# 1. A PKCE verifier and its S256 challenge.
+CODE_VERIFIER=$(openssl rand -base64 96 | tr -d '=+/\n' | cut -c1-64)
+CODE_CHALLENGE=$(printf '%s' "$CODE_VERIFIER" | openssl dgst -sha256 -binary | openssl base64 | tr -d '=' | tr '/+' '_-')
+
+# 2. Open in a browser, log in as any real user:
+https://<node-ip>/realms/ago-chat/protocol/openid-connect/auth?client_id=ago-android&response_type=code&scope=openid&redirect_uri=ago-android%3A%2F%2Fcallback&code_challenge=$CODE_CHALLENGE&code_challenge_method=S256
+
+# 3. The browser cannot open `ago-android://callback` and will fail to navigate there - that failure
+#    is expected, not a bug. Capture the `code=` query parameter from the address it tried to load
+#    (or drive the whole exchange from curl instead - fetch the login page's own form `action` URL,
+#    POST `username`/`password`/`credentialId=` to it with a cookie jar, and read the `code=` value
+#    straight off the `Location:` header of the 302 response, which never needs a browser at all).
+
+# 4. Exchange the code for a token:
+curl -s https://<node-ip>/realms/ago-chat/protocol/openid-connect/token \
+  -d grant_type=authorization_code -d client_id=ago-android \
+  -d code="$AUTH_CODE" -d redirect_uri=ago-android://callback \
+  -d code_verifier="$CODE_VERIFIER"
+
+# 5. Decode the access token's `aud` claim (any JWT-aware tool; `node -e` works with no dependency) -
+#    it must contain exactly "ago-console", the value CompositionRoot.cs validates.
+
+# 6. Confirm Ago.Chat.Api accepts it - 200 or 403 both mean the token was validated, 401 means
+#    something is wrong:
+curl -si https://<the chat-api hostname>/api/v1/operators/me -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**A note from doing this the first time.** The obvious hostname for the API is not always the real
+one - this deployment's own Gateway names it distinctly from the tenant-facing domains (`chat-api.`
+rather than `api.` or the console's own host); read the live `HTTPRoute` objects
+(`kubectl get httproute -n ago-chat -o json`, grep for `hostnames`) rather than guess from a pattern
+that happens to work for a sibling service.
+
+**If testing from a machine other than the node itself, and it also runs a Claude Code sandbox with
+its own outbound proxy**: a proxy can silently intercept an HTTPS `CONNECT` to a real domain and
+return a misleading `200 Connection established` response body instead of the actual TLS handshake -
+running the same `curl` commands over SSH, on the node itself, avoids the ambiguity entirely.
 
 ## What this file does not cover
 
