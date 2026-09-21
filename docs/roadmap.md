@@ -1420,7 +1420,10 @@ Deliverables:
   navigation-flow inventory, then visual mockups reviewed and approved by the author, and only after
   that approval does real Android development begin (`26-00`).
 - Everything after the plan is approved gets its own numbers, starting at `26-01`, filed once the plan
-  says what they are rather than guessed at now.
+  says what they are rather than guessed at now. Filed 2026-09-21 as `26-01`..`26-05` (the push
+  design and its three `ago-chat` backend items) and `26-06`..`26-20` (the Android implementation
+  wave: scaffolding, CI, APK publishing, Phase 0 end to end, and the client half of push). Phase 1-3
+  screens get their own numbers once Phase 0 has measured what shapes them.
 
 **Done when:** `26-00`'s own plan, screen inventory, and approved mockups exist and are approved, and
 every deliverable after it has a real number in this stage rather than living only in this paragraph.
