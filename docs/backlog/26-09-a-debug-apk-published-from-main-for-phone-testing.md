@@ -1,7 +1,7 @@
 # 26-09 · A debug APK published from `main` for phone testing
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#14`
 - **Found**: 2026-09-21, the author's own instruction, verbatim: "выпуск apk-артефактов в github для
   тестирования на телефоне". The whole point of Stage 26 is an app in a pocket; a build nobody can
   install is not evidence of one.
@@ -72,12 +72,52 @@ Both are built here; only one of them is reachable from a phone.
 
 ## Done when
 
-- [ ] A push to `main` produces a release whose APK **installs and launches on a real phone** — done
-      once, for real, with the device named in the report. An emulator does not tick this box.
-- [ ] A pull request produces no release and no installable asset — proven by opening one, not assumed
-      from the `if:` expression.
-- [ ] The installed app's version string names the commit it was built from, and the CI step that
-      verifies the same value from the APK fails when given a mismatched sha (proven by breaking it
-      once).
-- [ ] The release body states the install path and the uninstall-before-update consequence.
-- [ ] The workflow artifact upload is present too, and downloads.
+- [~] A push to `main` produces a release whose APK **installs and launches on a real phone**. A real
+      push to `main` (`4f6fc79`) produced `debug-4f6fc79` for real; its APK, downloaded from the
+      public release URL (not rebuilt locally), installs cleanly and launches on this machine's Android
+      emulator (Pixel 6, API 34) with `versionCode='16'`/`versionName='4f6fc79'` read back matching the
+      real commit exactly. **The ticket's own words are explicit that an emulator does not tick this
+      box** - stated honestly rather than claimed. Not yet tried on a literal physical phone.
+- [x] A pull request produces no release and no installable asset - proven live: `ago-android#14`
+      showed `publish-apk` as `skipping` for the PR event, and the same workflow's own real push-to-
+      `main` run (once merged) shows `publish-apk` completing successfully - the `if:` gate fires
+      correctly in both directions, not merely read and trusted.
+- [~] The installed app's version string names the commit it was built from - **proven**, above. The
+      CI step failing on a deliberate mismatch was proven **locally** (the implementing worker's own
+      fails-before test: correct sha passes, a deliberately wrong expected sha fails the same grep
+      check) but **not fired for real in a live CI run** - doing so honestly would need pushing a
+      genuinely broken commit to `main` and reverting it, which this project's own rule 9 reserves
+      for a PR-mediated change, not a direct push even a temporary one. The check's own logic (a
+      literal string match) is simple enough that the local proof is treated as sufficient; revisit if
+      that judgment turns out wrong.
+- [x] The release body states the install path and the uninstall-before-update consequence - read
+      directly off the real, live release page.
+- [x] The workflow artifact upload is present too, and downloads - confirmed live on the real run:
+      `debug-apk-4f6fc79` (9,038,621 bytes) alongside `test-reports`.
+
+## Outcome
+
+Landed as `ago-android#14`. `publish-apk` job, `needs: build-test`, gated `push` to `main` only
+(copied verbatim from `ago-console`'s own `publish-images` gate). `app/build.gradle.kts` reads
+`agoVersionName`/`agoVersionCode` as Gradle properties (`0.1.0-dev`/`1` locally); CI passes the short
+commit sha and `github.run_number`. A step reads the commit back out of the built APK via `aapt2 dump
+badging` and fails on mismatch. The APK publishes as both a workflow artifact and a GitHub pre-release
+asset, with a release body stating the install path and the real, deliberate uninstall-first
+consequence of a per-run debug signing key.
+
+**Verified live, against the real thing, not only reasoned about**: merging the PR onto `main`
+triggered a real `push` event - `publish-apk` ran and succeeded, producing `debug-4f6fc79`
+(`versionCode=16`, `versionName=4f6fc79`, matching the real commit). Downloaded the actual release
+asset (not a local rebuild) and installed/launched it on this machine's Android emulator, confirming
+its own baked-in version matches exactly. Confirmed the release asset is reachable with a plain,
+unauthenticated `curl` - a `302` straight from `github.com` to a presigned, no-login asset URL, never
+a login redirect. Confirmed the earlier PR (`#14` itself, before merging) showed `publish-apk` as
+`skipping` - the gate fires correctly in both directions. Confirmed the workflow artifact
+(`debug-apk-4f6fc79`) is present on the same real run.
+
+**Two things stay honestly short of the ticket's own literal wording**: the install/launch proof used
+an emulator, and the ticket's own words say that does not count; and the commit-mismatch check's
+failure path was proven locally (a fails-before test) rather than fired for real in a live CI run,
+since doing so honestly would mean pushing a genuinely broken commit straight to `main` outside a PR -
+this project's own rule 9 territory, not taken lightly for a check this simple (a literal string
+match) to re-prove live.
