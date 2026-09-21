@@ -1,7 +1,7 @@
 # 25-198 · The `AboveComposer` card still shows inside the panel a touch visitor already routed past
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#117`
 - **Found**: 2026-09-21, the author, live on `golyakov.net` (mobile), immediately after `25-197`
   shipped - a screenshot of the real open panel on `demo-shop1` (`AboveComposer` placement) showing
   the MAX/Telegram channel-switcher card still rendered above the composer, with the composer's own
@@ -46,11 +46,26 @@ class the item's whole point was to treat differently. That gap is this item's w
 
 ## Done when
 
-- [ ] On a `(hover: none)` device with at least one connected channel, opening the panel (by any
+- [x] On a `(hover: none)` device with at least one connected channel, opening the panel (by any
       path - the sheet's own "Онлайн чат" row, or a future path that opens it directly) never
       builds an `AboveComposer` card or a `BelowLauncher` icon row - proven by a real test.
-- [ ] The panel's own layout on such a device is provably identical to a site with zero connected
+- [x] The panel's own layout on such a device is provably identical to a site with zero connected
       channels (no extra child between the header and the composer).
-- [ ] A hover-capable device's `channelSwitcher.test.ts`/`channelSwitcherLauncher.test.ts` suites
+- [x] A hover-capable device's `channelSwitcher.test.ts`/`channelSwitcherLauncher.test.ts` suites
       still pass unchanged.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Shipped as `ago-widget#117`. `loadChannelSwitcher()` shares `toggleOpen()`'s own touch-routing gate
+(factored into a new `isTouchRoutingDevice()`) and returns early - before either placement-specific
+renderer runs - on a touch device with at least one connected channel. The 25-197 routing sheet is
+now such a visitor's only channel-choice surface; the panel renders exactly as it did before either
+`AboveComposer`/`BelowLauncher` existed.
+
+Implemented by a background worker per the author's explicit instruction, with its own worktree and
+verification. New coverage in `touchRoutingSheet.test.ts`: no card, no launcher row, and the panel's
+own child layout proven identical to a zero-channels site - all three fail against the pre-fix code,
+pass after. Independently re-verified by the managing session before landing: `npm run
+typecheck`/`lint` clean, `npm test` 496/496, `npm run ux-gate` 16/16, and the fails-before/passes-after
+claim re-proven directly (mutate a copy, never `git checkout --`, per `land-a-slice`).
