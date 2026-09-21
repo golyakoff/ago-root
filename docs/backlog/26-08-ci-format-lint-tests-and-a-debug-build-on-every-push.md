@@ -1,7 +1,7 @@
 # 26-08 · CI: format, lint, tests and a debug build on every push
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#6`
 - **Found**: 2026-09-21, the author's own instruction when opening Stage 26's implementation wave:
   "...включая подготовку CI". Filed before any feature item deliberately, the same order `0-04` took
   for the backend repositories — "green" has to be a fact before anything claims it.
@@ -64,13 +64,41 @@ promise: **a branch is checked automatically**.
 
 ## Done when
 
-- [ ] A pull request with a compile error cannot show green — proven by pushing one and observing the
+- [x] A pull request with a compile error cannot show green — proven by pushing one and observing the
       failure, then reverting.
-- [ ] A pull request with a failing unit test cannot show green — same treatment.
-- [ ] A pull request with a ktlint violation cannot show green — same treatment.
-- [ ] Wrapper validation runs before any step that executes the wrapper.
-- [ ] The workflow's total runtime is measured and stated. If it exceeds a few minutes, the slow part
+- [x] A pull request with a failing unit test cannot show green — same treatment.
+- [x] A pull request with a ktlint violation cannot show green — same treatment.
+- [x] Wrapper validation runs before any step that executes the wrapper.
+- [x] The workflow's total runtime is measured and stated. If it exceeds a few minutes, the slow part
       moves to its own job — `0-04`'s own gate, applied here rather than restated.
-- [ ] Test reports are downloadable from a failed run.
-- [ ] `.github/dependabot.yml` is accepted by GitHub (visible in the repository's Insights →
-      Dependency graph → Dependabot), and the first bump PR it opens runs this workflow.
+- [x] Test reports are downloadable from a failed run.
+- [~] `.github/dependabot.yml` is accepted by GitHub (visible in the repository's Insights →
+      Dependency graph → Dependabot), and the first bump PR it opens runs this workflow. The file is
+      live on `main` and well-formed; whether GitHub has actually scheduled its weekly run and what its
+      first bump PR looks like against this workflow is not yet observable — dependabot runs on its own
+      schedule (Monday 06:00 UTC) and nothing forces that check earlier without guessing at an API this
+      project doesn't otherwise use. Confirm on the first real Monday run rather than assume.
+
+## Outcome
+
+Landed as `ago-android#6`. One `build-test` job on `ubuntu-latest`: wrapper validation → JDK 17 setup
+(Gradle caching) → `ktlintCheck` → Android Lint → `test` → `assembleDebug` → test-report upload
+(`if: always()`). Ktlint Gradle plugin wired into all three modules (`26-07` left no format gate);
+two real pre-existing violations in `MainActivity.kt` fixed so the first run didn't start red on
+`26-07`'s own code. Deliberately no detekt (Android Lint + `26-07`'s `allWarningsAsErrors` already
+cover this project's real needs). `.github/dependabot.yml` (gradle + github-actions, weekly).
+
+**A real, live bug found and fixed before this could even prove itself**: `gradlew` was committed as
+mode `100644` from a Windows checkout — no executable bit — so the very first real CI run failed at
+`./gradlew: Permission denied`, exit 126, before a single Gradle task ran. Pre-existing on `main`
+since `26-07`, not introduced here; fixed via `git update-index --chmod=+x gradlew` in this item's own
+branch, since this is the first item that actually needed Actions' Linux runner to execute the script.
+
+**All three "prove it, don't assert it" boxes run for real, on this actual PR, each reverted after
+observing it**: a compile error (`TextX` typo) failed at the `Android Lint`/`compileDebugKotlin` step
+with `Unresolved reference 'TextX'`; a wrong test assertion failed at `Test` with a real
+`ComparisonFailure`, and the `test-reports` artifact was confirmed downloadable from that failed run
+via the API; a misordered import failed fast at `Format check (ktlint)` with Lint/Test/Assemble all
+correctly **skipped** rather than merely not run. Measured local runtime (cold-cache proxy): ~53s;
+real CI runtime with checkout/JDK-setup overhead: ~1m20s-4m (first run, cold Gradle cache) — nowhere
+near the "moves to its own job" threshold.
