@@ -1,7 +1,7 @@
 # 26-01 · Design push notification delivery for the Android app
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — design complete, adr/0179; implementation split into four unnumbered follow-up items
 - **Found**: 2026-09-21, the author, reviewing `26-00`'s own mockups: "это самое ужасное, что
   может быть... я делаю телефонное приложение именно потому что надеялся на нём использовать
   возможности уведомлений... САМАЯ ВАЖНАЯ ФУНКЦИЯ приложения - телефон может быть убранным в
@@ -74,17 +74,40 @@ week's memory) before designing around it.
   named this screen; it depends on this item's own device-registration design, not the reverse).
 - The iOS/APNs implementation itself.
 
+## Outcome
+
+The design is [`docs/architecture/push-notifications.md`](../architecture/push-notifications.md),
+carrying a status banner that says plainly that nothing on it is built; the decision is
+[`adr/0179`](../adr/0179-operator-push-is-a-worker-fan-out-to-a-device-row-and-the-loudness-decision-stays-on-the-client.md).
+`docs/architecture/realtime.md` gains the sentence that its own fan-out path is today the only way
+anybody is told anything, and points at both.
+
+**Two of this item's own assumptions did not survive the code.** There is no server-side signal for
+"a conversation entered the waiting queue" at all - no `ConversationStarted` contract, no mapper, and
+`realtime.md` already says nothing broadcasts it; the console does not alert on it either. And the
+pending-booking deadline belongs to AGO Calendar - a different product, database and console, with
+no chat-side consumer - so pushing it from chat would cross the boundary `adr/0027` exists to hold.
+Both are recorded as out of scope with the reason, not quietly designed around.
+
+**The question this item existed to settle**, answered in §3 of the ADR: a push fires whether or not
+the operator has a live desktop console, because the presence registry is advice rather than truth by
+its own written contract. Suppression moves to the client, where `decideAlert` already lives - which
+forces data-only FCM messages rather than `notification` payloads.
+
+Implementation is four items, listed at the foot of the design document and not yet numbered.
+
 ## Done when
 
-- [ ] The real, current notification-worthy events and their existing server-side signal (or the
+- [x] The real, current notification-worthy events and their existing server-side signal (or the
       absence of one) are confirmed against the actual code, not assumed.
-- [ ] Device registration is designed - the data shape, the token-refresh story, revocation on
+- [x] Device registration is designed - the data shape, the token-refresh story, revocation on
       sign-out - and placed correctly in the layering (port/adapter, which host).
-- [ ] The fan-out mechanism is designed, including the "operator already has a live desktop
+- [x] The fan-out mechanism is designed, including the "operator already has a live desktop
       console open" question, answered explicitly rather than left implicit.
-- [ ] Real structural costs are named for each major choice - which hosts change, what new secret
+- [x] Real structural costs are named for each major choice - which hosts change, what new secret
       material is needed and where it lives, what a delivery failure looks like and how it is
       noticed.
-- [ ] The iOS/APNs boundary is named explicitly - what generalizes for free, what is deliberately
+- [x] The iOS/APNs boundary is named explicitly - what generalizes for free, what is deliberately
       not built yet, and why.
-- [ ] An ADR exists if the analysis reached a real decision, using a freshly-confirmed free number.
+- [x] An ADR exists if the analysis reached a real decision, using a freshly-confirmed free number
+      (`0179` - `0178` is claimed by `26-00`, still in flight at the time of writing).

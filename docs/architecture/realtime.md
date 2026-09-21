@@ -164,6 +164,15 @@ component we have already declared lossy. Routing by registry means each message
 once per *involved* node. The cost is complexity and one extra hop, which is exactly the trade-off
 recorded in `adr/0007` and measured in Stage 7.
 
+**This path is the only way anybody is told anything today, and that is the gap Stage 26 opens.** An
+operator with no live connection is simply not reached - `ago.chat.delivery.recipients` records the
+fact (`presence="absent"`) and nothing follows from it. A second, durable delivery path to an
+operator's phone is designed in [`push-notifications.md`](push-notifications.md) and decided in
+[`adr/0179`](../adr/0179-operator-push-is-a-worker-fan-out-to-a-device-row-and-the-loudness-decision-stays-on-the-client.md);
+**none of it is built.** One property of this file is load-bearing for that design and is worth
+naming here: the registry's "advice, not truth" contract is exactly why push does *not* suppress
+itself when an operator appears connected.
+
 ## Client protocol
 
 **A hub method's parameter count is a contract, and it may never change.** SignalR binds an
