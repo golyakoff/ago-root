@@ -23,7 +23,7 @@
 - **No `inbox` idempotency row** (`adr/0020` permits direct publication for a derived, best-effort
   notification). Idempotency is a collapse key per conversation - `ago-conversation-{id}`, the
   identical value `useAlerts.ts` already uses as its own `Notification` tag - plus client-side
-  dedupe by `MessageId` (the Android half, `26-06`).
+  dedupe by `MessageId` (the Android half, `26-18`).
 - **The server never suppresses on presence** (`adr/0179` §3, the question this whole design existed
   to settle) - a push fires whether or not the operator has a live desktop console. Write the test
   that proves this directly: a push fan-out fires even when `INodeFanoutPublisher`'s own registry
@@ -34,7 +34,7 @@
 ## Out of scope
 
 - The FCM adapter itself (`26-04`) - this item calls `IPushSender`, it does not implement it.
-- The Android client's own dedupe/rendering (`26-06`).
+- The Android client's own dedupe/rendering (`26-18`).
 - Any push for a waiting-queue entry or a calendar booking deadline - `adr/0179`'s own "What this
   design deliberately leaves out" names both as real future work this item does not do.
 

@@ -1,0 +1,74 @@
+# 26-07 · The Gradle project and its three modules
+
+- **Stage**: 26
+- **Status**: ready
+- **Found**: 2026-09-21, the first item of Stage 26's implementation wave. `26-00`'s plan, screen
+  inventory, navigation graph and `adr/0178` are approved and merged into `ago-android/docs/`, which
+  is the gate that sentence in `ago-android/docs/README.md` names: "Nothing here authorises a
+  `settings.gradle.kts`." It does now.
+- **Verified**: 2026-09-21 — `C:/git/ago/ago-android` contains `docs/` and `.git/` and **nothing
+  else**: no `settings.gradle.kts`, no Gradle wrapper, no `.github/`, no `LICENSE`, no root
+  `README.md`. The module layout and the no-Android-plugin rule below are read from
+  `ago-android/docs/architecture.md` §"Module layout" and `adr/0178` §1.
+- **Depends on**: nothing.
+
+## What this item is
+
+The repository becomes a buildable Android project with the three modules `architecture.md` already
+names, and one placeholder screen — enough that `./gradlew assembleDebug` yields an APK that installs
+and launches. **No feature, no network call, no screen from the inventory.** Every later item in this
+stage drops into a slot that already exists, which is the shape `0-01` gave the backend repositories.
+
+## Scope
+
+- **Gradle wrapper** (committed, with its properties and checksum), `settings.gradle.kts`, and
+  `gradle/libs.versions.toml` — the version catalog is this repository's `Directory.Packages.props`:
+  one place a version is declared and none declared at a call site.
+- **`:app`** — the Android application module. Jetpack Compose + Material 3, one `MainActivity`, a
+  single placeholder composable. It is the only module allowed to know about Android *framework* UI
+  and, later, the only place DI is wired (`architecture.md`: the same "hosts reference everything and
+  are the only place DI wiring lives" rule `CLAUDE.md` states for the backend).
+- **`:core:network`** — an Android library module, empty but for its build file. Ktor/SignalR/token
+  storage arrive with their first consumer (`26-12`, `26-13`), not now: "an abstraction with one
+  caller is a guess about the second" and an empty interface now is the wrong shape later (`0-01`'s
+  own Out of scope, for the identical reason).
+- **`:core:domain`** — **a plain Kotlin JVM module applying `kotlin("jvm")` and no Android Gradle
+  plugin at all.** This is the load-bearing property of `adr/0178` and the reason the KMP door stays
+  open at no ongoing cost: a `Context` import does not compile, so the boundary is impossible rather
+  than merely forbidden — the same "make it impossible" shape `adr/0012` gives the platform's package
+  boundary.
+- **Dependency direction** — `:app` → `:core:network` → `:core:domain`; `:core:domain` depends on
+  neither of the other two.
+- **Compiler strictness in one place**: `allWarningsAsErrors`, explicit API mode where it is free, and
+  a JDK toolchain pinned once rather than inherited from whatever the machine has. This is the
+  `Directory.Build.props` warnings-as-errors posture, ported.
+- **`.gitignore`** covering `build/`, `.gradle/`, `local.properties` and `google-services.json` (the
+  last belongs to `26-06` and must never be committed here by accident).
+- **`LICENSE` (MIT)** and a root **`README.md`** pointing at `docs/`. Both are missing today, and
+  `0-01`'s own Done-when — "every repository has a `LICENSE` file" — was written because every one of
+  them is public from its first commit.
+
+## Out of scope
+
+- **A dependency-injection framework is not chosen here.** A placeholder screen needs none, and the
+  choice (Hilt, Koin, or hand-rolled constructor wiring) is forced by `26-12`, which is the first item
+  with something to inject. Choosing it now would be choosing it with no caller — and this project's
+  own rule for adding a dependency is to say what it replaces and why hand-rolling is worse, which
+  cannot be answered before there is anything to wire.
+- Any screen from `scope-inventory.md`, any HTTP call, any SignalR connection, any Room entity.
+- CI (`26-08`) and APK publishing (`26-09`).
+- The tablet breakpoint — `plan.md`: phone first, tablet last, and no phase is gated on it.
+
+## Done when
+
+- [ ] `./gradlew assembleDebug` produces an APK that installs on a real phone and launches to the
+      placeholder screen.
+- [ ] `./gradlew test` runs and passes, with at least one real unit test in `:core:domain` (a JVM
+      test, no Android test runner, no Robolectric — `architecture.md`'s own testing rule).
+- [ ] **A deliberate `import android.content.Context` in a `:core:domain` source file fails the
+      build** — proven by adding it, observing the failure, and reverting. Not asserted.
+- [ ] A deliberate dependency added from `:core:domain` onto `:core:network` fails — same treatment.
+- [ ] `LICENSE` and a root `README.md` exist.
+- [ ] No module is named `common`, `shared`, `utils`, or a bare `core` (`0-01`'s own rule; `:core:domain`
+      and `:core:network` are qualified names, `:core` on its own is not — and there is no `:core`
+      module, only the container path).
