@@ -85,6 +85,7 @@ data says nothing about it - do not cite it as reassurance.
   | Malformed push token | 400 | `INVALID_ARGUMENT` | **Terminal** - revoke |
   | Valid token, expired | 404 | `NOT_FOUND` | **Terminal** - revoke |
   | Bad service key | 403 | `PERMISSION_DENIED` | **Never** a device fault - this is our credential, and treating it as one would revoke the whole table the first time the token was rotated wrong |
+  | Malformed/invalid bearer token (observed live, not in RuStore's own enumeration) | 401 | `UNAUTHORIZED` | **Also never** a device fault, same reason - this item's own reachability probe drew this, not the documented 403, and the two are not yet proven distinct (see the Done-when box above) |
   | Rate limited | 429 | `TOO_MANY_REQUESTS` | Transient |
   | Service error | 500 | `INTERNAL` | Transient |
 
@@ -110,8 +111,21 @@ data says nothing about it - do not cite it as reassurance.
 
 ## Done when
 
-- [ ] Reachability of `vkpns.rustore.ru` from the live node is measured and recorded, by `adr/0070`'s
-      own method - not assumed, and not inferred from that ADR's Google control run.
+- [x] Reachability of `vkpns.rustore.ru` from the live node is measured and recorded, by `adr/0070`'s
+      own method - not assumed, and not inferred from that ADR's Google control run. **Measured
+      2026-09-21, 10/10 requests, no relay needed**: TCP+TLS connect 3-6ms, full round trip 50-68ms
+      each time - fast and fully reachable from this VPS, unlike `adr/0070`'s own `api.telegram.org`
+      control run (8/15 never established TCP). **One honest correction to this ADR's own §9 table**:
+      a garbage bearer token (`Authorization: Bearer invalid-probe-token`) did not produce the
+      documented `403 PERMISSION_DENIED` for "bad service key" - it produced a real, RuStore-issued
+      JSON body (`x-vkpns-request-id` present, confirming full application-level reachability, not an
+      edge/CDN rejection): `{"code":401,"message":"unauthorized: Invalid S2S token","status":
+      "UNAUTHORIZED"}`. Plausible and not yet settled: a malformed/garbage token may hit a different
+      auth-layer check than a well-formed-but-wrong-or-revoked service token, which is what the
+      documented `403` describes - this probe cannot tell the two apart. **The adapter must treat
+      both `401 UNAUTHORIZED` and `403 PERMISSION_DENIED` as "our credential, never a device fault"**
+      until a real, once-valid token is deliberately revoked and observed. Recorded here rather than
+      quietly reconciled with the ADR's table, per rule 7.
 - [ ] `IPushSender`/`PushMessage` exist in Application, with no RuStore vocabulary leaking across the
       port.
 - [ ] A real send is proven against the actual RuStore service - not only a unit test against a
