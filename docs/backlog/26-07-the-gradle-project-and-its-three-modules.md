@@ -1,7 +1,7 @@
 # 26-07 · The Gradle project and its three modules
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#5`
 - **Found**: 2026-09-21, the first item of Stage 26's implementation wave. `26-00`'s plan, screen
   inventory, navigation graph and `adr/0178` are approved and merged into `ago-android/docs/`, which
   is the gate that sentence in `ago-android/docs/README.md` names: "Nothing here authorises a
@@ -64,14 +64,40 @@ stage drops into a slot that already exists, which is the shape `0-01` gave the 
 
 ## Done when
 
-- [ ] `./gradlew assembleDebug` produces an APK that installs on a real phone and launches to the
-      placeholder screen.
-- [ ] `./gradlew test` runs and passes, with at least one real unit test in `:core:domain` (a JVM
+- [~] `./gradlew assembleDebug` produces an APK that installs on a real phone and launches to the
+      placeholder screen. **The build half is proven** — a real 9.4MB debug APK, `aapt dump badging`
+      confirms a well-formed manifest (`minSdk 26`, `targetSdk 34`, a launchable `MainActivity`). The
+      install-and-launch half is **not verified** — no Android device or emulator exists in this
+      environment (no AVD, no connected device). Stated plainly rather than assumed; the next item
+      that touches a real device should close this gap rather than re-open it as new.
+- [x] `./gradlew test` runs and passes, with at least one real unit test in `:core:domain` (a JVM
       test, no Android test runner, no Robolectric — `architecture.md`'s own testing rule).
-- [ ] **A deliberate `import android.content.Context` in a `:core:domain` source file fails the
+- [x] **A deliberate `import android.content.Context` in a `:core:domain` source file fails the
       build** — proven by adding it, observing the failure, and reverting. Not asserted.
-- [ ] A deliberate dependency added from `:core:domain` onto `:core:network` fails — same treatment.
-- [ ] `LICENSE` and a root `README.md` exist.
-- [ ] No module is named `common`, `shared`, `utils`, or a bare `core` (`0-01`'s own rule; `:core:domain`
+- [x] A deliberate dependency added from `:core:domain` onto `:core:network` fails — same treatment.
+- [x] `LICENSE` and a root `README.md` exist.
+- [x] No module is named `common`, `shared`, `utils`, or a bare `core` (`0-01`'s own rule; `:core:domain`
       and `:core:network` are qualified names, `:core` on its own is not — and there is no `:core`
       module, only the container path).
+
+## Outcome
+
+Landed as `ago-android#5`. Three modules exactly as scoped: `:app` (Compose + Material 3, one
+placeholder screen), `:core:network` (empty Android library), `:core:domain` (plain `kotlin("jvm")`,
+no Android Gradle plugin at all). Gradle wrapper pinned to 8.9; AGP 8.7.3, Kotlin 2.0.21, Compose BOM
+2024.10.01 — matched to the SDK actually installed on the build machine (`build-tools;34.0.0`, AGP
+8.7's own minimum/default) rather than today's newest AGP, whose default build-tools (36.0.0) isn't
+provisioned here. `minSdk 26` — notification channels are the shape the app's whole eventual
+Notification-settings screen is built around.
+
+**Both deliberate-failure proofs ran live**: `import android.content.Context` in `:core:domain`
+produced `Unresolved reference 'android'`; a `:core:domain` → `:core:network` dependency failed
+Gradle's own variant resolution (`androidJvm` vs `jvm` platform mismatch — a structural
+incompatibility, stronger evidence than a simple dependency cycle). Both reverted after observing the
+failure.
+
+**Verified independently, beyond the worker's own report**: re-ran `assembleDebug`/`test` myself
+after landing; `:core:domain`'s `ShortIdTest` — 2/2 passing, confirmed from the real JUnit XML report,
+not console output. The one real gap: no Android device or emulator exists in this environment, so
+the APK's install-and-launch claim is proven only up to a well-formed manifest, not an actual launch —
+recorded above as `[~]` rather than silently ticked or silently dropped.
