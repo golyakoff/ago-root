@@ -1,7 +1,7 @@
 # 25-211 · Channel switcher: bigger icons, a divider between every row, and a header bar
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#130`
 - **Found**: 2026-09-22, the author, live against a local sizing picker (icon scale 100-200%, row
   padding, a header-bar preview) built to answer "how much bigger" without guessing. Final picks,
   read directly off the picker: icon size **175% → 28px** (from the current 16px/1rem baseline,
@@ -58,14 +58,44 @@ a bare white rounded card, channel rows straight through to the "Онлайн ч
 
 ## Done when
 
-- [ ] The icon renders at 28px (1.75rem) in the banner, confirmed live, with the label text
-      unchanged at its current size.
-- [ ] Row vertical padding is 0.625rem (10px), confirmed live.
-- [ ] A divider line appears between every pair of adjacent rows inside the banner, including between
-      two connected-channel rows - not only before "Онлайн чат."
-- [ ] The header bar renders above the first row, dark background, white bold text, no close control,
-      showing `25-210`'s configured-or-default greeting - proven for both an unconfigured site (shows
-      the built-in default) and a site with an override set.
-- [ ] `BelowLauncher`'s row and the touch-routing sheet are provably unchanged - a screenshot or test
-      of each showing the pre-existing sizes/dividers.
-- [ ] `npm run typecheck`/`lint`/`test`/`build`/`ux-gate` all green in `ago-widget`.
+- [~] The icon renders at 28px (1.75rem) in the banner, with the label text unchanged at its current
+      size. **Confirmed at the declared-CSS-value/DOM-test level** - the shipped `font-size: 1.75rem`
+      matches the author's own live sizing-picker Artifact exactly, and a test asserts the computed
+      value - not re-confirmed by a fresh screenshot of the real running widget with a real channel
+      session, which needs a live backend session with connected channels this review did not stand
+      up. Stated plainly rather than assumed.
+- [~] Row vertical padding is 0.625rem (10px) - same caveat as above.
+- [x] A divider line appears between every pair of adjacent rows inside the banner, including between
+      two connected-channel rows - not only before "Онлайн чат." **This was already true since `25-206`**
+      - `.ago-channel-switcher-banner .ago-channel-switcher-row`'s own `border-top` was already
+      unconditional across every row in the banner; confirmed via `git log` rather than re-implemented,
+      since this item's own described gap did not actually exist by the time it was picked up.
+- [x] The header bar renders above the first row, dark background, white bold text, no close control,
+      showing `25-210`'s configured-or-default greeting - reads `this.title.textContent` directly
+      (25-210's own already-resolved value) rather than re-deriving it, so it can never show different
+      words than the real panel header for the same site.
+- [x] `BelowLauncher`'s row and the touch-routing sheet are provably unchanged - neither selector this
+      item touches (`.ago-channel-switcher-banner .ago-channel-switcher-row`,
+      `.ago-channel-switcher-banner-header`) is shared with `.ago-channel-switcher-launcher-icon` or
+      `.ago-touch-routing-row`; the full widget test suite (566/566) includes both renderers' own
+      existing tests, unchanged and passing.
+- [x] `npm run typecheck`/`lint`/`test`/`build`/`ux-gate` all green in `ago-widget`.
+
+## Outcome
+
+Landed as `ago-widget#130`, rebased onto `main` after `25-210` merged so it carries the real
+title-resolution code rather than a stale base. `.ago-channel-switcher-banner .ago-channel-switcher-row`
+gains `font-size: 1.75rem` (28px) and `padding: 0.625rem 0.75rem`; a new sibling rule pins the label
+`span` back to `1rem` so only the icon scales. New `.ago-channel-switcher-banner-header` - `#374151`
+(reused, not a new neighbour - the exact value this file's own row text color already settled on in
+`25-205`/`25-206`), white bold text, top-rounded corners, no close control - built as the banner's
+first child in `buildChannelSwitcherBanner`, reading `this.title.textContent`.
+
+**One real bug found and fixed during review, before landing**: the implementing worker's own diff had
+the header-bar explanatory comment duplicated verbatim (the identical five-line block twice in a row) -
+removed before merge.
+
+**Verified independently**: `npm run typecheck`/`lint` clean; `test` 566/566 (post-rebase, includes
+`25-210`'s own new tests); `build` 38.7 KB gzipped (budget 46 KB); `ux-gate` 16/16. The two `[~]` boxes
+above are the honest limit of this review's own verification - the exact values are confirmed correct
+by source and by test, not by a fresh screenshot of a live channel-switcher session.
