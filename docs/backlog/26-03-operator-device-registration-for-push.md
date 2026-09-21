@@ -41,20 +41,42 @@ be revoked. **Nothing sends anything yet** - that is `26-04`/`26-05`.
 
 ## Out of scope
 
-- Anything that talks to FCM (`26-04`).
+- Anything that talks to the push provider (`26-04`).
 - The fan-out consumers (`26-05`).
 - The Android client's own registration call (`26-06`) - this item is the server side only.
 
 ## Done when
 
-- [ ] `operator_devices` exists via a real EF migration, with both indexes proven by a test that
+- [x] `operator_devices` exists via a real EF migration, with both indexes proven by a test that
       constructs the conflicting-row case for each.
-- [ ] The upsert route is idempotent - calling it twice with the same `installationId` and a new
+- [x] The upsert route is idempotent - calling it twice with the same `installationId` and a new
       token updates the existing row, never inserts a second one.
-- [ ] The revoke route removes/marks-revoked the row, and a revoked device is provably invisible to
+- [x] The revoke route removes/marks-revoked the row, and a revoked device is provably invisible to
       whatever `26-05` will later query (state the shape of that query now, even unused).
-- [ ] `OperatorRemovedConsumer` revokes every device row for that operator - a real test, not a
+- [x] `OperatorRemovedConsumer` revokes every device row for that operator - a real test, not a
       manual claim.
-- [ ] `SiteErasureQuery` is confirmed live to reach `operator_devices` via the cascade, or a
+- [x] `SiteErasureQuery` is confirmed live to reach `operator_devices` via the cascade, or a
       compensating deletion is added if it does not.
-- [ ] `dotnet format`/`build`/`test` all green, full suite counts reported.
+- [x] `dotnet format`/`build`/`test` all green, full suite counts reported.
+
+## Outcome
+
+Landed as `ago-chat#350`. `OperatorDevice` (Domain), `operator_devices` (one EF migration) keyed on
+`(operator_id, installation_id)` with a partial-unique `(provider, token)` index for the
+restored-backup case; `IOperatorDeviceRepository` in Application/Abstractions, EF adapter in
+Infrastructure.Postgres. `PUT`/`DELETE /api/v1/me/devices/{installationId}`, self-scoped,
+`RequireOperatorIdentity`-gated; the `PUT` upsert also revokes any other row still holding the same
+live token (the restored-backup edge case). `OperatorRemovedConsumer` gained a second call revoking
+every device row for a removed operator, proven through the real outbox/RabbitMQ chain.
+
+**Live cascade-deletion finding**: `SiteErasureQuery`'s declared `ON DELETE CASCADE` from
+`sites`/`operators` reaches `operator_devices` with no compensating deletion needed - confirmed by a
+real integration test, not assumed from `adr/0168`'s own different-table precedent.
+
+**One correction caught before merge**: `adr/0180` (2026-09-21) replaced FCM with RuStore Push while
+this item was mid-flight - `PushProvider`'s only member and every test fixture referencing it were
+renamed from `Fcm` to `RuStore` before merging, so this item never shipped naming the wrong provider.
+
+Verified independently, beyond the worker's own report: full suite green twice (once before, once
+after the RuStore rename) - Domain 779, Application 1477, Architecture 52, Concurrency 90, Integration
+1496, 0 warnings both times. CI green on the PR before merge.
