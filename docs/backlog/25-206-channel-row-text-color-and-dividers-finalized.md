@@ -1,7 +1,7 @@
 # 25-206 · Channel-switcher row text gets a fixed dark grey, and the banner gets row dividers
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#127`
 - **Found**: 2026-09-21, the author, reviewing `25-204`'s hover banner live: the label text still
   read as "unstylish" even after `25-205` removed the brand-colour tint (falling back to
   `color: inherit`, the panel's own near-black). A dedicated Artifact (a real replica of both
@@ -48,13 +48,26 @@
 
 ## Done when
 
-- [ ] A connected channel's row label (Telegram, WhatsApp, Vk, Max) reads `#374151` in both the
+- [x] A connected channel's row label (Telegram, WhatsApp, Vk, Max) reads `#374151` in both the
       `AboveComposer` banner and the mobile touch routing sheet.
-- [ ] The "Онлайн чат" row's accent colour and the touch sheet's "Отмена" row's own grey are provably
+- [x] The "Онлайн чат" row's accent colour and the touch sheet's "Отмена" row's own grey are provably
       unaffected (still their own deliberate colours, not `#374151`).
-- [ ] The `AboveComposer` banner shows a divider line above every row, including the first, matching
+- [x] The `AboveComposer` banner shows a divider line above every row, including the first, matching
       the touch routing sheet's own unconditional-border pattern - confirmed live, not only in a unit
       test (screenshot or a real-browser `getComputedStyle` check).
-- [ ] No icon (size, colour, or markup) changed anywhere, in either surface.
-- [ ] Existing tests updated to the new colour/divider expectations, not deleted to dodge them.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] No icon (size, colour, or markup) changed anywhere, in either surface.
+- [x] Existing tests updated to the new colour/divider expectations, not deleted to dodge them.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Landed as `ago-widget#127`. `.ago-channel-switcher-row`'s `color: inherit` became a fixed `#374151`;
+the new `.ago-channel-switcher-banner .ago-channel-switcher-row { border-top: 0.0625rem solid
+#e5e7eb; }` rule adds the missing dividers to the banner (two-class specificity correctly beats the
+"Онлайн чат" row's own single-class override, so its pre-existing identical border is now redundant
+rather than conflicting). No icon touched anywhere.
+
+Verified independently: `npm run typecheck`/`lint` clean; `npm test` 532/532 (43 files); `npm run
+build` 38.6 KB gzipped (budget 46 KB); `npm run ux-gate` 16/16. Reviewed the diff directly - the CSS
+change is exactly the two lines the scope called for, plus a well-reasoned doc comment. CI green on
+the PR before merge.
