@@ -1,7 +1,7 @@
 # 26-04 · RuStore Push sender adapter
 
 - **Stage**: 26
-- **Status**: ready - **the data-residency gate is resolved, not merely relaxed** (see below)
+- **Status**: done — `ago-chat#352`; remainder carried out to `26-21`
 - **Found**: 2026-09-21, the second of four implementation items `26-01`'s own design
   (`docs/architecture/push-notifications.md`, `adr/0179`) named at its foot.
 - **Retitled**: 2026-09-21. This item was `26-04 · FCM push-sender adapter` until `adr/0180` changed
@@ -126,17 +126,60 @@ data says nothing about it - do not cite it as reassurance.
       both `401 UNAUTHORIZED` and `403 PERMISSION_DENIED` as "our credential, never a device fault"**
       until a real, once-valid token is deliberately revoked and observed. Recorded here rather than
       quietly reconciled with the ADR's table, per rule 7.
-- [ ] `IPushSender`/`PushMessage` exist in Application, with no RuStore vocabulary leaking across the
-      port.
-- [ ] A real send is proven against the actual RuStore service - not only a unit test against a
-      mocked `HttpClient`. Note that the SDK's own `testModeEnabled` path **does not touch the
-      backend at all**, so a test-mode push proves nothing about this item.
-- [ ] The `message.data.payload` ambiguity is settled by that send, and the answer is written into
-      `docs/architecture/push-notifications.md`.
-- [ ] A revoked/stale token is proven to update the `26-03` row end to end, and a `403` is proven
-      **not** to - the second matters more, because getting it wrong empties the table silently.
-- [ ] `android.ttl` is set, and the chosen value and its reasoning are recorded here.
-- [ ] Whether a push project can hold two live service tokens is answered from the console, and the
-      rotation class in `push-notifications.md` and `secrets.md` reflects the real answer.
-- [ ] `secrets.md`/`tools/secrets-audit.sh` updated in the same change.
-- [ ] `dotnet format`/`build`/`test` all green, full suite counts reported.
+- [x] `IPushSender`/`PushMessage` exist in Application, with no RuStore vocabulary leaking across the
+      port - enforced by `PushPortTests`, an architecture test.
+- [~] A real send is proven against the actual RuStore service - **carried out to `26-21`**. No
+      RuStore Console project or service token exists in this deployment yet; this is an
+      account-provisioning precondition, not something this item's own code could satisfy. Everything
+      provable without one - the port, the classification logic for all nine documented/observed
+      outcomes with a test per outcome, the resilience wrapping - is done and verified.
+- [~] The `message.data.payload` ambiguity is settled by that send - **carried out to `26-21`**, same
+      reason. `RuStorePushSender.BuildData`'s own best-guess reading (a flat map, no nested `payload`
+      key) is pinned down by a test so the day a real send is possible, correcting it (if needed) is a
+      one-method change with a test already in place to update.
+- [~] A revoked/stale token is proven to update the `26-03` row end to end, and a `403` is proven
+      **not** to - **carried out to `26-21`**, same reason. The classification itself (401/403 both
+      `TransientFailure`, never `TokenGone`) is unit-tested; only the real end-to-end proof against
+      `26-03`'s live table needs the real service.
+- [x] `android.ttl` is set, and the chosen value and its reasoning are recorded here. **300 seconds**
+      (`PushMessage.RecommendedTimeToLive`) - long enough to survive the distributor app's own
+      unpublished polling delay without racing a healthy delivery into expiry, short enough that a
+      notification which does land still describes something plausibly current. A judgment call, not
+      a measurement, per this codebase's own resilience-default convention; `26-18`'s real latency
+      measurement is the trigger to revisit it.
+- [~] Whether a push project can hold two live service tokens is answered from the console, and the
+      rotation class in `push-notifications.md` and `secrets.md` reflects the real answer - **carried
+      out to `26-21`**, same reason. Recorded as the weaker `Restart` class in both places until
+      answered, per rule 7 (no invented number).
+- [x] `secrets.md`/`tools/secrets-audit.sh` updated in the same change. `RUSTORE_PUSH_SERVICE_TOKEN`
+      row added to `secrets.md`; the audit script itself needed no change (it only flags
+      deployed-but-undocumented drift, and confirmed clean - no manifest wires this secret yet, a
+      separate later `ago-deploy` chore).
+- [x] `dotnet format`/`build`/`test` all green, full suite counts reported.
+
+## Outcome
+
+Landed as `ago-chat#352`. `IPushSender`/`PushMessage`/`PushSendOutcome` in `Application/Abstractions`,
+no RuStore vocabulary crossing the port (arch-tested). One implementation,
+`Ago.Chat.Infrastructure.RuStore.RuStorePushSender`, registered directly - no provider registry, no
+factory. All nine documented/observed outcomes (400/401/403/404/429/500, plus the undocumented
+`UNREGISTERED` and the live-observed 401) classify as `PushSendOutcome` values, never thrown - only an
+unparseable response throws, for the wrapping `Ago.Chat.Module.Push.ResilientPushSender` to retry.
+`android.ttl` set to 300s. `RUSTORE_PUSH_SERVICE_TOKEN`'s registration lives in `Ago.Chat.Worker`'s
+own `Program.cs` only, never the shared `ChatModule.ConfigureServices` that `Ago.Chat.Api`/
+`Ago.Chat.Webhooks` also call.
+
+**One real bug caught by the implementing worker's own test before it shipped**: `.NET`'s `Uri`
+combiner treats a bare `"messages:send"` as an absolute URI with scheme `"messages"`, silently
+discarding `HttpClient.BaseAddress` - fixed by requesting `"./messages:send"` instead. Confirmed with
+a throwaway console app before trusting it.
+
+**Four Done-when boxes carried out to `26-21`** rather than force-ticked or silently dropped: they all
+share the identical, honest blocker of no RuStore Console project existing yet in this deployment -
+an account-provisioning precondition this item's own code cannot satisfy, not abandoned work.
+
+Verified independently, beyond the implementing worker's own report: `dotnet format`/`build -c
+Release` clean (0 warnings), full suite run **twice**, both green - Domain 779, Application 1478,
+FakeCrm 21, Architecture 53, Concurrency 90, Integration 1507/1507. The worker's own first run had one
+Integration failure (a Testcontainers Docker-readiness timeout in `SchemaMigratorTests`, unrelated to
+anything this item touches); it did not reproduce in either of my independent runs.
