@@ -1,0 +1,60 @@
+# 26-03 · Operator device registration for push
+
+- **Stage**: 26
+- **Status**: ready
+- **Found**: 2026-09-21, the first of four implementation items `26-01`'s own design
+  (`docs/architecture/push-notifications.md`, `adr/0179`) named at its foot, split on promises per
+  rule 15 rather than on code. The author's own instruction, 2026-09-21: start the backend rework
+  that unblocks push for the Android app.
+- **Depends on**: none. **This is the migration lane item** (CLAUDE.md rule 13) - only one migration
+  in flight at a time across the three background lanes.
+
+## What this item is
+
+Everything `adr/0179` §1 decided, and nothing past it: a device can register, refresh its token, and
+be revoked. **Nothing sends anything yet** - that is `26-04`/`26-05`.
+
+## Scope
+
+- **`OperatorDevice`**, a one-entity Domain aggregate root in `WebhookEndpoint`'s own shape. Identity
+  is `unique (operator_id, installation_id)` - never the FCM token itself, which is a *value on* the
+  row, replaced in place on rotation. A second, partial index - `unique (provider, token) where
+  revoked_at is null` - stops one token being live on two rows (a restored device backup can cause
+  this).
+- **`operator_devices` table + EF migration.** `provider` is a real column from day one (`adr/0179`
+  §5 - by-product of doing Android cleanly, not iOS preparation), even though only `"Fcm"` is ever
+  written today.
+- **`IOperatorDeviceRepository`** in `Ago.Chat.Application/Abstractions`, EF adapter in
+  `Ago.Chat.Infrastructure.Postgres` - the dependency rule (CLAUDE.md rule 1): no `DbContext` in
+  Domain or Application.
+- **Two `Ago.Chat.Api` routes**: `PUT /api/v1/me/devices/{installationId}` (idempotent upsert - the
+  whole rotation story, called on every sign-in, from `onNewToken`, and from a periodic client job)
+  and `DELETE /api/v1/me/devices/{installationId}` (explicit revocation on sign-out - a step Android
+  has and the console does not, since the console's own sign-out makes no backend call at all).
+  `RequireOperatorIdentity` on both.
+- **`13-03`'s existing `OperatorRemovedConsumer`** gains one call: revoke every device row for a
+  removed operator.
+- **`ON DELETE CASCADE` from `operator_devices.site_id`**, and confirm live (not assumed) that
+  `SiteErasureQuery` actually reaches it - `adr/0168`'s own Consequences record this exact assumption
+  failing once already (`25-78`), which is precisely why this item checks it up front rather than
+  finding out later.
+
+## Out of scope
+
+- Anything that talks to FCM (`26-04`).
+- The fan-out consumers (`26-05`).
+- The Android client's own registration call (`26-06`) - this item is the server side only.
+
+## Done when
+
+- [ ] `operator_devices` exists via a real EF migration, with both indexes proven by a test that
+      constructs the conflicting-row case for each.
+- [ ] The upsert route is idempotent - calling it twice with the same `installationId` and a new
+      token updates the existing row, never inserts a second one.
+- [ ] The revoke route removes/marks-revoked the row, and a revoked device is provably invisible to
+      whatever `26-05` will later query (state the shape of that query now, even unused).
+- [ ] `OperatorRemovedConsumer` revokes every device row for that operator - a real test, not a
+      manual claim.
+- [ ] `SiteErasureQuery` is confirmed live to reach `operator_devices` via the cascade, or a
+      compensating deletion is added if it does not.
+- [ ] `dotnet format`/`build`/`test` all green, full suite counts reported.
