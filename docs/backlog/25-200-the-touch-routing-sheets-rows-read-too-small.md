@@ -88,3 +88,7 @@ input in a mobile-emulated browser (not jsdom) - `getComputedStyle` on the live 
 row at `23px` text and every icon (including MAX's) at `30px × 30px`, "Отмена" correctly with no
 icon, and a screenshot shows the enlarged rows with no clipping or overlap. `npm run
 typecheck`/`lint` clean, `npm test` 503/503, `npm run ux-gate` 16/16.
+
+**Correction (`25-201`):** the `23px` text size this item shipped, above, was seen live next to the
+icons at their new size and judged still too big; `25-201` changed it to `16px`. `.ago-touch-routing-
+row`'s `font-size` is `16px` as of that item, not the `23px` this Outcome measured and shipped.
