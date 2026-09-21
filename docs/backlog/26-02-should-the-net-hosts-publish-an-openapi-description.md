@@ -1,7 +1,7 @@
 # 26-02 · Should the .NET hosts publish an OpenAPI description?
 
 - **Stage**: 26
-- **Status**: needs a decision
+- **Status**: not planned - no profit, decided 2026-09-21
 - **Found**: 2026-09-21, the author, reading `26-00`'s own `plan.md` ("No OpenAPI description of
   the API... a *generated* shared client is not an option that exists"): "Я не понимаю цены и
   последствий этого утверждения... Может быть нам его и сделать? Скажи цену и последствия если
@@ -375,5 +375,20 @@ client or an integrator, that is the cheaper instrument and it should be a separ
       no REST route serves a message or a history page; the widget touches six REST endpoints.)
 - [x] `adr/0178`'s own reasoning is either confirmed unaffected or flagged for revision, explicitly.
       (§5: conclusion unaffected; two factual corrections named, best folded in before it merges.)
-- [ ] The author has an answer to the question they actually asked, and can decide from it -
+- [x] The author has an answer to the question they actually asked, and can decide from it -
       status moves to `ready`/`done`/`not planned` once they do, with the decision recorded here.
+
+## Decision
+
+**Not planned, 2026-09-21.** The author's own words: "не делаем OpenAPI так как похоже нет профита"
+(not doing OpenAPI - there doesn't seem to be a profit in it). The Findings above name why plainly:
+the decisive fact is that OpenAPI would cover 236 of 236 REST operations and 0 of 19 hub methods and
+0 of 8 push events, while the conversation itself - join, history, send, receive, presence, team chat
+- is 100% hub; `ago-widget` calls exactly six REST endpoints total. Of six real contract-drift
+incidents in this project's own history, only one would have been caught by a generated client, and
+the two most expensive outages were hub-argument bugs OpenAPI cannot see at all. `adr/0178`'s own
+conclusion - that a generated shared client is not a real option for this product - stands confirmed,
+not merely unrefuted.
+
+Not revisited unless a real third consumer of the REST surface appears, or `20-19`'s
+third-party-integrator premise (itself already closed as not planned) is reopened.
