@@ -21,6 +21,11 @@ proves it works, or a header plugin with no token to attach, are halves that can
 
 ## Scope
 
+- **Hilt is wired here** (the author's own choice, 2026-09-21, deferred from `26-07` for lack of
+  anything to inject) — the Gradle plugin, KSP, `@HiltAndroidApp` on the `Application` class, and the
+  first real `@AndroidEntryPoint`/`@Inject` usage, for the pieces this item itself introduces (the
+  AppAuth session holder, the Ktor client). Later items extend this module graph; none of them choose
+  a different framework.
 - **AppAuth for Android, Authorization Code + PKCE, in a Custom Tab** against the `ago-android` client
   `26-11` created. Never an embedded WebView — that is the practice OAuth's own current best-practice
   document exists to stop, and it is why the dependency is here at all.
