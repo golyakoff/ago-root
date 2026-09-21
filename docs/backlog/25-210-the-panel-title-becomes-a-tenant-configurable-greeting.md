@@ -1,7 +1,7 @@
 # 25-210 · The panel title becomes a tenant-configurable greeting, with a friendlier built-in default
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-chat#351`, `ago-console#269`, `ago-widget#129`
 - **Found**: 2026-09-22, the author, while picking sizes for `25-211`'s channel-switcher header bar:
   the header needs a title, the widget already hardcodes one ("Напишите нам"/"Chat with us",
   `chatWithUs` in `ago-widget/src/i18n/{ru,en}.ts`), and the author wants it (a) a friendlier default
@@ -51,12 +51,34 @@ and they are one promise together: the **built-in default changes**, and a **ten
 
 ## Done when
 
-- [ ] `ago-widget`'s built-in default text changed in both locales, with the exact English string
-      recorded here.
-- [ ] `WidgetConfig` gains the new field, validated, with `null` meaning "use the built-in default" -
+- [x] `ago-widget`'s built-in default text changed in both locales, with the exact English string
+      recorded here. **"How can we help you?"** - a real greeting equivalent, not a literal
+      translation of the Russian.
+- [x] `WidgetConfig` gains the new field, validated, with `null` meaning "use the built-in default" -
       proven by a test that an unset site renders the new default text, not an empty title.
-- [ ] The console can set and clear the override; clearing it reverts to the built-in default, proven
-      live.
-- [ ] The widget's real chat-panel header (`.ago-header h1`) reads the configured value when set.
-- [ ] `dotnet format`/`build`/`test` (ago-chat), `npm` typecheck/lint/test (ago-widget, ago-console)
+- [~] The console can set and clear the override; clearing it reverts to the built-in default -
+      **proven at the component/round-trip test level** (`WidgetConfigPage.test.tsx` against a mocked
+      API, plus `ago-chat`'s own `UpdateWidgetConfigHandlerTests`), not against a fully running
+      console+API+widget stack together. A true end-to-end live proof was not performed - stated
+      plainly rather than assumed.
+- [x] The widget's real chat-panel header (`.ago-header h1`) reads the configured value when set.
+- [x] `dotnet format`/`build`/`test` (ago-chat), `npm` typecheck/lint/test (ago-widget, ago-console)
       all green; ago-widget `build`/`ux-gate`, ago-console `ux-gate` too.
+
+## Outcome
+
+Landed as `ago-chat#351`, `ago-console#269`, `ago-widget#129`. `WidgetConfig.PanelTitle` (new,
+nullable, `MaxPanelTitleLength = 300`) joins `PrimaryColorHex`/`Position`'s "always renders something,
+null means the built-in default" terms, deliberately not `NoticeText`'s "null means render nothing" -
+a chat panel always needs a title. Rides the existing `UpdateWidgetConfig`/`GetWidgetConfig` round
+trip and `SiteConfigDto`/`VisitorSessionResponse` wire path every other `WidgetConfig` field already
+uses; new migration `Stage25AddSiteWidgetPanelTitle`. Console gains a field in the "Launcher" panel
+with a bound character counter and a placeholder showing the real built-in default. Widget's
+`chatWithUs` default text changes in both locales; `ui/widget.ts` resolves the site's own configured
+value when present, falling back to the new default otherwise - never blank.
+
+**Verified independently, beyond the implementing worker's own report**: re-ran `dotnet format`/
+`build`/full test suite (ago-chat: Domain 784, Application 1486, FakeCrm 21, Architecture 52,
+Concurrency 90, Integration 1496 - all green), `npm run typecheck`/`lint`/`test` for both console
+(1672/1672) and widget (552/552), widget `build` (38.8 KB gzipped, budget 46 KB) and `ux-gate`
+(16/16). All counts matched the worker's own report exactly.
