@@ -1,7 +1,7 @@
 # 25-199 · The touch routing sheet's MAX row has no icon
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#118`
 - **Found**: 2026-09-21, the author, live on `golyakov.net` (mobile), same report as `25-198`: "на
   тапе в меню нет иконки Max" - every other channel row in the routing sheet (`25-197`) shows its
   brand mark; the MAX row does not.
@@ -50,9 +50,33 @@ assuming this is the whole story.
 
 ## Done when
 
-- [ ] The real cause is confirmed against a live or test DOM before any fix is written.
-- [ ] A test proves the MAX icon renders correctly when it is the only instance in the document.
-- [ ] A test proves the MAX icon renders correctly when a second instance already exists in the same
+- [x] The real cause is confirmed against a live or test DOM before any fix is written.
+- [x] A test proves the MAX icon renders correctly when it is the only instance in the document.
+- [x] A test proves the MAX icon renders correctly when a second instance already exists in the same
       document - the actual shape of this bug - fails against today's code, passes after the fix.
-- [ ] Every other brand icon (`Telegram`/`WhatsApp`/`Vk`) is provably unaffected by the fix.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] Every other brand icon (`Telegram`/`WhatsApp`/`Vk`) is provably unaffected by the fix.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Shipped as `ago-widget#118`. The hypothesis was confirmed exactly: `buildIconTree`/`buildBrandIcon`
+now suffix every `id` a tree declares (and every internal `#id` reference) with a per-call instance
+counter, so two `buildBrandIcon("Max")` calls landing in the same shadow root never collide.
+Telegram/WhatsApp/Vk declare no `id` anywhere in their own trees, so their output is unaffected.
+
+New coverage in `channelSwitcherMaxIcon.test.ts` confirms the collision directly against the built
+DOM before the fix (8 id-bearing elements, only 4 distinct values), then proves it resolved.
+
+**A real merge-order defect was caught during landing, not before.** The test's own "two instances"
+scenario originally relied on `25-198`'s soon-to-be-removed `AboveComposer`-card-plus-touch-sheet
+coexistence - landing both items in either order would have left `npm test` red on whichever file
+the other did not touch (confirmed with a real `git merge-tree` + a throwaway worktree before
+either PR was pushed, not a guess). Sent back to the same background worker rather than patched
+inline, per the author's own instruction that this class of fix goes through a worker with its own
+verification; the corrected test reconstructs "card already built, then sheet also built" via a
+device whose `matchMedia("(hover: none)")` answer changes between mount and the visitor's tap - a
+real, still-live case (`25-199`'s own "Out of scope" line already named it as surviving `25-198`) -
+and scopes every row lookup to its own container so the two can never again collapse onto one
+element by accident. Re-verified independently by the managing session on the real, already-rebased
+`origin/main` tip (which now includes `25-198`): `npm run typecheck`/`lint` clean, `npm test`
+500/500, `npm run ux-gate` 16/16.
