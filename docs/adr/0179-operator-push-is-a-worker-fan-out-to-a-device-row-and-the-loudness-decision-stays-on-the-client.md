@@ -1,6 +1,15 @@
 # ADR-0179: Operator push is a Worker fan-out to a device row, and the loudness decision stays on the client
 
-- **Status**: Accepted
+- **Status**: Accepted; **partially superseded by ADR-0180** (2026-09-21) - the provider is RuStore
+  Push, not FCM, and everything downstream of that choice is replaced: the credential (§4), the
+  collapse key (§2), the `priority = "high"` mechanic (§3), the adapter project (§5) and both of §6's
+  measurements. **What stands is most of it** - the `operator_devices` schema and its revocation
+  rules (§1), the two-consumer fan-out and the reuse of `alerts.ts`'s rules (§2), the decision that
+  the server never suppresses on presence and the client decides loudness (§3), the no-new-host
+  ruling (§4), and the `provider`-column/`PushMessage`-port judgement (§5), which `adr/0180` is the
+  first evidence for. The body below is unchanged - not one line - because this directory's own rule
+  is that a `Status` pointer is the only edit an accepted ADR may receive, and an amendment in the
+  body is what makes a file look current while carrying its own reversal several screens down.
 - **Date**: 2026-09-21
 - **Stage**: 26
 

@@ -42,8 +42,10 @@ stage drops into a slot that already exists, which is the shape `0-01` gave the 
 - **Compiler strictness in one place**: `allWarningsAsErrors`, explicit API mode where it is free, and
   a JDK toolchain pinned once rather than inherited from whatever the machine has. This is the
   `Directory.Build.props` warnings-as-errors posture, ported.
-- **`.gitignore`** covering `build/`, `.gradle/`, `local.properties` and `google-services.json` (the
-  last belongs to `26-06` and must never be committed here by accident).
+- **`.gitignore`** covering `build/`, `.gradle/` and `local.properties`. It used to name
+  `google-services.json` too; `adr/0180` moved push from FCM to RuStore Push, and **the RuStore SDK
+  has no credentials file at all** — it takes a project-ID string — so there is nothing of that shape
+  left for `26-06` to leak here.
 - **`LICENSE` (MIT)** and a root **`README.md`** pointing at `docs/`. Both are missing today, and
   `0-01`'s own Done-when — "every repository has a `LICENSE` file" — was written because every one of
   them is public from its first commit.

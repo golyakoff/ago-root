@@ -21,9 +21,13 @@
   - `OperatorMessagePushConsumer` on `MessageAccepted` (a fifth competing subscriber - confirm the
     per-subscriber queue name pattern from the existing four still holds).
 - **No `inbox` idempotency row** (`adr/0020` permits direct publication for a derived, best-effort
-  notification). Idempotency is a collapse key per conversation - `ago-conversation-{id}`, the
-  identical value `useAlerts.ts` already uses as its own `Notification` tag - plus client-side
-  dedupe by `MessageId` (the Android half, `26-18`).
+  notification). **That refusal is unchanged; the mechanism under it moved** when `adr/0180` swapped
+  the provider. RuStore has **no `collapse_key` on the wire** - its send schema has no such field,
+  and its client-side `RemoteMessage.collapseKey` is documented as not currently taken into account -
+  so this item no longer sends one. Idempotency is entirely client-side and entirely `26-18`'s:
+  the notification tag `ago-conversation-{id}`, the identical value `useAlerts.ts` already uses,
+  plus dedupe by message id. **What this item owes is the payload that makes both possible**: the
+  conversation id and the message id in the data map, every time.
 - **The server never suppresses on presence** (`adr/0179` §3, the question this whole design existed
   to settle) - a push fires whether or not the operator has a live desktop console. Write the test
   that proves this directly: a push fan-out fires even when `INodeFanoutPublisher`'s own registry
@@ -33,7 +37,7 @@
 
 ## Out of scope
 
-- The FCM adapter itself (`26-04`) - this item calls `IPushSender`, it does not implement it.
+- The RuStore Push adapter itself (`26-04`) - this item calls `IPushSender`, it does not implement it.
 - The Android client's own dedupe/rendering (`26-18`).
 - Any push for a waiting-queue entry or a calendar booking deadline - `adr/0179`'s own "What this
   design deliberately leaves out" names both as real future work this item does not do.
@@ -47,7 +51,9 @@
       inferred from the mapper existing.
 - [ ] A push fires when the operator's own presence registry entry says connected - the explicit,
       deliberate non-suppression, proven rather than merely stated.
-- [ ] The collapse key matches `useAlerts.ts`'s own `ago-conversation-{id}` tag exactly.
+- [ ] The payload carries the conversation id and the message id, so `26-18` can build
+      `useAlerts.ts`'s own `ago-conversation-{id}` tag and dedupe from it. **No collapse key is
+      sent** - RuStore has no such field (`adr/0180`), and asserting one would be inventing an API.
 - [ ] `dotnet format`/`build`/`test` all green, full suite counts reported; a real send is proven
       end-to-end once `26-04` is unblocked (record the date this box was actually ticked if it lags
       the rest of the item).
