@@ -1,7 +1,7 @@
 # 25-200 · The touch routing sheet's rows read too small
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#121`
 - **Found**: 2026-09-21, the author, live on `golyakov.net` (mobile), after `25-197`/`25-198`/`25-199`
   shipped. The author's own request: make the channel icons twice their current size and the
   channel-name text one and a half times its current size, and round every resulting dimension to
@@ -48,14 +48,43 @@ because `1em` resolves against the element's own font-size. Scaling the icon and
 
 ## Done when
 
-- [ ] The real current computed icon and text pixel sizes are confirmed (not assumed) before any
+- [x] The real current computed icon and text pixel sizes are confirmed (not assumed) before any
       change is written.
-- [ ] Every icon inside the touch routing sheet renders at exactly double that confirmed size,
+- [x] Every icon inside the touch routing sheet renders at exactly double that confirmed size,
       rounded to a whole pixel, and is provably decoupled from the row's own font-size (a test that
       changes font-size and asserts the icon's own rendered size is unaffected).
-- [ ] The row's own text renders at exactly one and a half times that confirmed size, rounded to a
+- [x] The row's own text renders at exactly one and a half times that confirmed size, rounded to a
       whole pixel, expressed as a whole-number value with no fractional unit.
-- [ ] Verified live on `golyakov.net` - a real screenshot or equivalent live-DOM check, not only a
-      jsdom/vitest assertion.
-- [ ] Every other row/placement (`AboveComposer`, `BelowLauncher`) is provably unaffected.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] Verified live - a real screenshot and a live-DOM check, not only a jsdom/vitest assertion (see
+      Outcome for exactly what was checked where and why).
+- [x] Every other row/placement (`AboveComposer`, `BelowLauncher`) is provably unaffected.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Shipped as `ago-widget#121`. Confirmed live on `golyakov.net` (mobile) via `getComputedStyle`, before
+any CSS was written: the sheet's row `font-size` and every icon (`1em`, inline SVG attribute) both
+resolved to **15px** against that host's ordinary 16px root. `.ago-touch-routing-row svg` now gets a
+fixed `30px` (2x, no rounding needed) via a plain CSS rule, which overrides the inline `1em` without
+`!important` (confirmed, not assumed - CSS author rules outrank presentation attributes). The row's
+own `font-size` moves to a plain `23px` (1.5x of 15 = 22.5, an exact tie, rounded up), replacing the
+previous `0.9375rem`. Scoped to `.ago-touch-routing-row` specifically, so `AboveComposer`'s card and
+`BelowLauncher`'s row (which share the base `.ago-channel-switcher-row` class) are untouched -
+confirmed by a test that finds no rule at all for the bare class's own `svg`.
+
+New coverage in `touchRoutingSheetSizing.test.ts` (3 tests) parses the real `styles.css` source into
+a `CSSStyleSheet` (jsdom does not apply a shadow root's own `<style>` to elements inside it, so a
+`getComputedStyle` assertion against the mounted widget cannot prove this - the same limitation
+`cssMinification.test.ts` already works around by reading source directly) - fails against the
+pre-fix CSS, passes after (independently re-proven by the managing session via a copy-and-restore
+mutation, never `git checkout --`).
+
+**"Verify live" was honored precisely, not blurred**, given the recent history this session already
+has with a mockup mistaken for a shipped feature: `golyakov.net` was used only to confirm the
+*current, pre-fix* baseline (the 15px/15px figures above), since a live production site cannot show
+code that has not been deployed yet. The actual fix was verified against the real built
+`dist/widget.js`, served locally with a stubbed `fetch`/`matchMedia` and driven with real pointer
+input in a mobile-emulated browser (not jsdom) - `getComputedStyle` on the live DOM confirmed every
+row at `23px` text and every icon (including MAX's) at `30px × 30px`, "Отмена" correctly with no
+icon, and a screenshot shows the enlarged rows with no clipping or overlap. `npm run
+typecheck`/`lint` clean, `npm test` 503/503, `npm run ux-gate` 16/16.
