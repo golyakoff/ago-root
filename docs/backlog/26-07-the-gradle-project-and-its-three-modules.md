@@ -50,11 +50,12 @@ stage drops into a slot that already exists, which is the shape `0-01` gave the 
 
 ## Out of scope
 
-- **A dependency-injection framework is not chosen here.** A placeholder screen needs none, and the
-  choice (Hilt, Koin, or hand-rolled constructor wiring) is forced by `26-12`, which is the first item
-  with something to inject. Choosing it now would be choosing it with no caller — and this project's
-  own rule for adding a dependency is to say what it replaces and why hand-rolling is worse, which
-  cannot be answered before there is anything to wire.
+- **A dependency-injection framework is not wired here**, even though the choice is now decided:
+  **Hilt** (the author's own call, 2026-09-21). A placeholder screen has nothing to inject, so adding
+  the Gradle plugin/KSP setup and the first `@HiltAndroidApp`/`@AndroidEntryPoint` annotations belongs
+  to `26-12`, the first item with something to actually wire — choosing the library here and wiring it
+  there keeps this project's own "say what a dependency replaces and why hand-rolling is worse" rule
+  answerable at the point it is actually asked.
 - Any screen from `scope-inventory.md`, any HTTP call, any SignalR connection, any Room entity.
 - CI (`26-08`) and APK publishing (`26-09`).
 - The tablet breakpoint — `plan.md`: phone first, tablet last, and no phase is gated on it.
