@@ -1,7 +1,7 @@
 # 25-205 · Channel-switcher row text reads too light in the channel's brand colour
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-widget#126`
 - **Found**: 2026-09-21, the author, live in the browser while reviewing `25-204`'s own
   `AboveComposer` hover banner: "тексты выглядят слишком светло рядом со значками... не нужно их
   красить в цвет иконки канала" (the texts look too light next to the icons - no need to colour them
@@ -50,11 +50,33 @@ inherit the same washed-out text the moment either renders a real channel link.
 
 ## Done when
 
-- [ ] A connected channel's row (Telegram, WhatsApp, Vk, Max) shows its label in the row's ordinary
+- [x] A connected channel's row (Telegram, WhatsApp, Vk, Max) shows its label in the row's ordinary
       text colour, not the channel's brand colour.
-- [ ] Every brand icon's own colour is provably unchanged (a live check, not assumed from reading the
+- [x] Every brand icon's own colour is provably unchanged (a live check, not assumed from reading the
       code).
-- [ ] The unrecognised-kind fallback icon's new colour is stated explicitly, not left to be noticed.
-- [ ] Existing tests asserting the old inline colour are updated to the new expectation, not deleted
+- [x] The unrecognised-kind fallback icon's new colour is stated explicitly, not left to be noticed.
+- [x] Existing tests asserting the old inline colour are updated to the new expectation, not deleted
       to make them pass.
-- [ ] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+- [x] `npm run typecheck`/`lint`/`test`/`ux-gate` all green.
+
+## Outcome
+
+Landed as `ago-widget#126`. `row.style.color` (the per-kind brand tint) is removed from
+`buildChannelSwitcherRow` entirely; the label now falls back to `.ago-channel-switcher-row`'s own
+`color: inherit`. `CHANNEL_BRAND_COLORS`/`CHANNEL_FALLBACK_COLOR` deleted outright - that line was
+their only reader. The unrecognised-kind fallback icon (`createSvgIcon`, `fill: currentColor`, unlike
+the four real brand icons which carry explicit fills) now inherits the row's neutral text colour
+instead of the removed fallback grey, named explicitly in the new doc comment rather than left
+implicit. Fixes both renderers that share this row builder: the `AboveComposer` banner (`25-204`) and
+the mobile touch routing sheet (`25-197`).
+
+Verified independently, beyond the worker's own report:
+- `npm run typecheck`/`lint` - clean.
+- `npm test` - 43 test files, 525 tests passed.
+- `npm run build` - 38.6 KB gzipped (budget 46 KB).
+- `npm run ux-gate` - 16/16 Playwright tests passed.
+- Reviewed the diff directly: the doc-comment updates on `buildChannelSwitcherRow` and
+  `buildChannelSwitcherLauncherIcon`, and the CSS comment, all correctly describe the new behaviour
+  rather than the removed one. `buildChannelSwitcherLauncherIcon`'s own fallback-circle background
+  (`.ago-channel-switcher-launcher-icon--fallback`) is a separate, pre-existing CSS literal, confirmed
+  untouched by this change.
