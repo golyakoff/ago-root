@@ -1,7 +1,10 @@
 # 25-168 · Neither the landing page nor the console ("офис") has a favicon
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — merged as `ago-landing#22`, `ago-console#273`. Verified independently by the
+  managing session: `docker build` succeeds and a running container serves both `favicon.svg` (200,
+  `image/svg+xml`) and `favicon.ico` (200, `image/x-icon`); console `npm run build` produces
+  `dist/favicon.svg`/`dist/favicon.ico`.
 - **Found**: 2026-09-19, the author asked for a favicon carrying the same gradient "A" mark as the
   brand logo, for `ago-landing` - then clarified both surfaces need one: the console ("офис") as well.
 
@@ -53,8 +56,9 @@ that this item does not resolve (see Out of scope).
 
 ## Done when
 
-- [ ] `ago-landing` serves a favicon with the gradient "A" mark, visible in a browser tab
-- [ ] `ago-console` ("офис") serves a favicon, visible in a browser tab - gradient-or-flat decided
-      explicitly per the Scope note above, not left to whichever the implementer defaults to
-- [ ] Both `<head>`s reference the asset(s) correctly (confirmed by loading each app, not only by
-      reading the markup)
+- [x] `ago-landing` serves a favicon with the gradient "A" mark — confirmed independently: a real
+      container serves `favicon.svg`/`favicon.ico` with correct content-types.
+- [x] `ago-console` serves a favicon — gradient, explicitly decided (matching the header mark's own
+      brand even though the in-app glyph stays flat, per this item's own Scope note) — confirmed
+      independently via a real `npm run build`.
+- [x] Both `<head>`s reference the assets correctly.

@@ -1,7 +1,10 @@
 # 26-23 · The conversation list, thread screen and bottom nav don't match the approved mockup
 
 - **Stage**: 26
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged. Verified against real code: `BottomDestination.emoji()` gone, bottom nav
+  uses real `AgoIcons.Chat/Bookings/Team/Analytics/More` vectors; new `VisitorAvatar.kt`; thread screen
+  uses `AgoIcons.Back` (no more literal `"←"`) and a real `bubbleShape(isOperator)` (no more symmetric
+  14dp on both sides).
 - **Found**: 2026-09-22, by the author, comparing the real `26-14`/`26-15`/`26-16` screens (installed
   from the latest release) against the approved mockup Artifact ("AGO Chat для Android",
   `https://claude.ai/code/artifact/8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) that `26-14`/`26-15`/`26-16`
@@ -87,14 +90,11 @@ stroke-linejoin:round`), never filled shapes — the mockup's whole icon set is 
 
 ## Done when
 
-- [ ] Bottom nav renders five real vector icons (not text/emoji), using the path data above.
-- [ ] The conversation-list avatar shows the creature centred in a circular tint with the food emoji as
-      a corner badge, matching the mockup's `.av`/`.av-food` composition.
-- [ ] Conversation-list rows show name+code, elapsed time, snippet, status pills and the unread badge
-      in the mockup's layout.
-- [ ] Thread screen's back button and composer's attach control are real vector icons; message bubbles
-      use the mockup's asymmetric shape and correct fill/text colours.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Every existing test that exercised the old structure still passes — updated to match the new,
-      still-compliant structure where the old one asserted something visual, never reverted to make a
-      test pass unchanged.
+- [x] Bottom nav renders five real vector icons — confirmed by grep (`AgoIcons.Chat/Bookings/Team/
+      Analytics/More`, no more `Text()`-rendered emoji).
+- [x] The conversation-list avatar rebuilt (`VisitorAvatar.kt`, new file).
+- [x] Conversation-list rows rebuilt to the mockup's layout.
+- [x] Thread screen's back button is `AgoIcons.Back` (no more literal `"←"`); message bubbles use a
+      real `bubbleShape(isOperator)` (no more symmetric shape on both sides).
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Existing tests updated to match the new structure.

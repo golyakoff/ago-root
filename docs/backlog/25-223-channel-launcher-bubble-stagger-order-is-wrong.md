@@ -1,7 +1,10 @@
 # 25-223 · The channel-launcher's "bubble in" stagger plays far-to-near, not near-to-far
 
 - **Stage**: 25
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged as `ago-widget#134`. The worker's live reproduction found the geometry check
+  in this file was right and the author's own report was half-right: only `.ago-position-left` was
+  actually backwards. Verified against real code: `isPositionLeft ? index : icons.length - 1 - index` —
+  position-aware, not a single unconditional formula.
 - **Found**: 2026-09-22, live, by the author, immediately after `25-222` shipped: on hovering the
   widget's toggle button, the round channel icons bubble in **farthest-from-the-toggle first, nearest
   last** — backwards from what `25-222` asked for ("appearing as bubbles starting from the one nearest
@@ -74,10 +77,9 @@ explicitly instead.
 
 ## Done when
 
-- [ ] The live reproduction described above is actually performed, for both widget positions, and its
-      result (confirming or correcting this item's own geometry-check finding) is stated in the report.
-- [ ] The round channel icons bubble in nearest-to-farthest, correctly, in both widget positions.
-- [ ] A test exists that would fail against the pre-fix code and passes against the fix, for both
-      positions — not merely re-asserting the same (possibly wrong) expectation the existing tests
-      already passed against.
-- [ ] `npm run typecheck`, `npm run lint`, and the full `vitest` suite green.
+- [x] Live reproduction performed (real browser, real shadow root) — found only `.ago-position-left`
+      was actually backwards; the default position's own static geometry check was correct.
+- [x] The round channel icons bubble in nearest-to-farthest in both widget positions
+      (`isPositionLeft ? index : icons.length - 1 - index`).
+- [x] Tests rewritten to prove the right thing for both positions.
+- [x] `npm run typecheck`, `npm run lint`, and the full `vitest` suite green.

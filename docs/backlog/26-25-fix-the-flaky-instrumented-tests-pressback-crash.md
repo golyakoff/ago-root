@@ -1,7 +1,11 @@
 # 26-25 · `instrumented-tests` fails roughly every other CI run
 
 - **Stage**: 26
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged as `ago-android#32`. Genuinely fixed the real `RootViewWithoutFocusException`
+  flake this item targeted — confirmed independently, that failure mode never recurred. Its specific
+  mechanism (`UiDevice`/`uiautomator`) was later superseded by `26-36` (`onBackPressedDispatcher`,
+  after the `UiDevice` approach itself turned out to have its own, different CI-reliability problem) —
+  not a failure of this item, historical evolution of the same test suite.
 - **Found**: 2026-09-22, by the author, pointing at a real failed run:
   `https://github.com/golyakoff/ago-android/actions/runs/35718774093/job/106716457886`. This same job
   has failed intermittently and been re-run to green at least three times already this session, each
@@ -92,12 +96,13 @@ invented workaround.
 
 ## Done when
 
-- [ ] `uiautomator` is a real dependency, used by a single new shared helper, not five separate direct
-      calls.
-- [ ] All five `BackContract*Test.kt` files use the new helper wherever they currently call
-      `Espresso.pressBack()` directly.
-- [ ] `clause3_backOnDialogiExitsTheApp` still genuinely proves "nothing consumed the back press and
-      the app exited" - by a real mechanism, not merely by no longer throwing.
-- [ ] `instrumented-tests` uploads its own test report as a workflow artifact on every run (pass or
-      fail), so a future failure carries real evidence.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] `uiautomator` was a real dependency behind one shared helper at the time — later removed by
+      `26-36` once the helper moved to `onBackPressedDispatcher` instead.
+- [x] All five `BackContract*Test.kt` files used the new helper wherever `Espresso.pressBack()` used
+      to be called directly.
+- [x] `clause3_backOnDialogiExitsTheApp` was given a real mechanism (`ActivityScenario` lifecycle
+      state) — still true today, carried forward by `26-36`.
+- [x] `instrumented-tests` uploads its own test report on every run — confirmed still present in
+      `ci.yml` (`instrumented-test-reports-${{ github.run_id }}-${{ github.run_attempt }}`), and is
+      exactly what made every later diagnosis in this saga (`26-27`..`26-36`) possible.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
