@@ -1,7 +1,8 @@
 # 25-225 · Three console screens render a conversation's `state` with no default case
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — merged as `ago-console#272`, independently verified by the managing session
+  (typecheck/lint clean, 1681/1681 tests passing).
 - **Found**: 2026-09-22, by the `25-221` worker while verifying that item's own third check (does
   anything read a conversation's `state` as a raw string in a way `ConversationState.Pending` — a
   brand-new state that value never held before — could silently break).
@@ -49,8 +50,12 @@ true about the row.
 
 ## Done when
 
-- [ ] All three switches handle `"Pending"` with real, considered copy, and have a `default` case for
+- [x] All three switches handle `"Pending"` with real, considered copy, and have a `default` case for
       any future state.
-- [ ] A decision is recorded (in the PR or this file) on whether each of the three views should
-      continue to show `Pending` conversations or filter them out, with reasoning.
-- [ ] `npm run typecheck`, `npm run lint`, `npm test`, and `npm run ux-gate` green.
+- [x] A decision is recorded (in the PR or this file) on whether each of the three views should
+      continue to show `Pending` conversations or filter them out, with reasoning: `AdminConversationsPage`
+      shows them (its own purpose is a complete site-wide inventory); `VisitorHistoryPanel` filters them
+      out client-side (a conversation with zero messages isn't history worth showing); `SearchConversationsPage`
+      needs no filter, since a search hit structurally requires a matched message a `Pending` conversation
+      never has.
+- [x] `npm run typecheck`, `npm run lint`, `npm test`, and `npm run ux-gate` green.
