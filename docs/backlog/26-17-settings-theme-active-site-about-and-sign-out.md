@@ -1,7 +1,7 @@
 # 26-17 · Settings: theme, active site, О приложении, and sign-out
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#25`
 - **Found**: 2026-09-21. Three other items in this wave lean on this screen and none of them owns it:
   `26-09` stamps a commit into the APK that nothing displays, `26-12` implements a sign-out with no
   control, and `26-06` needs that control to exist before it can hang device revocation off it.
@@ -47,14 +47,57 @@ change what the app itself does.**
 
 ## Done when
 
-- [ ] All three theme states apply immediately and survive a process restart.
-- [ ] An operator with seats at **two** sites switches between them and the conversation list changes
+- [x] All three theme states apply immediately and survive a process restart. Immediate apply is
+      architectural, not tested-and-hoped: `MainActivity` and `SettingsScreen` collect the identical
+      `DataStore<Preferences>` singleton, so a write from one is visible to the other with no event
+      bus. Restart survival is proven for real — two independently-constructed `DataStore`s over the
+      same on-disk file, modelling process death, not an in-memory cache surviving by accident.
+- [~] An operator with seats at **two** sites switches between them and the conversation list changes
       accordingly — proven against two real tenancies, since a switcher tested with one tenancy tests
-      nothing.
-- [ ] Switching the active site re-points **both** the REST header and the hub connection, not just
-      the header.
-- [ ] О приложении names the exact commit the installed APK was built from — checked against the
+      nothing. **Carried to `26-22`** — no real multi-tenancy identity exists in this environment; the
+      mechanism itself (REST header + hub reconnect, both awaited) is unit-tested against fakes.
+- [x] Switching the active site re-points **both** the REST header and the hub connection, not just
+      the header. Proven by a test asserting both a fake's REST call and its hub-reconnect call fire
+      (an implementation stopping at the REST-only easy case fails it) — confirmed correct by reading
+      `OperatorHubConnection`'s new `reconnectToActiveSite`/`discardConnection` directly against the
+      existing `disconnect()`/`connect()`/`stopRequested` mechanics, not merely trusting the test.
+- [x] О приложении names the exact commit the installed APK was built from — checked against the
       release `26-09` published, not against a local build where the value is easy to fake.
-- [ ] Sign-out returns to the launch screen and leaves no token behind — proven by inspecting the
-      encrypted store afterwards, not by the UI having navigated away.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+      **Verified 2026-09-22**: downloaded the real `ago-android` GitHub Release published from this
+      item's own merge commit (`debug-62aef98`), confirmed via `aapt2 dump badging` that
+      `versionName='62aef98'` — the exact commit — and confirmed by reading `SettingsScreen.kt`
+      directly that it reads this same `BuildConfig.VERSION_NAME` value, not a separate one.
+- [x] Sign-out returns to the launch screen and leaves no token behind — proven by inspecting the
+      encrypted store afterwards, not by the UI having navigated away. A real, on-device
+      `EncryptedSharedPreferences` file, seeded then cleared — with a real nuance found running it:
+      `clear()` deliberately leaves its own two Tink keyset entries behind, so the test asserts the
+      raw file's key set equals exactly those two reserved keys, not zero.
+- [x] `./gradlew ktlintCheck lint test` green; counts reported. 163 tests (65 `:core:network`, 44
+      `:core:domain`, 54 `:app`), 0 failures; ktlint clean. Plus 28 instrumented tests, 0 failures, run
+      on a real emulator.
+
+## Outcome
+
+Landed as `ago-android#25`. A persisted three-state theme choice over `androidx.datastore-preferences`
+(chosen over Room or plain `SharedPreferences` specifically because it is provably testable on a plain
+JVM with a real temp file and no Android `Context`, unlike either alternative); an active-site switcher
+that re-points the REST header and forces the hub connection to drop and rebuild against the freshly
+selected site before returning to Диалоги, hidden entirely for a single-tenancy (or not-yet-known)
+identity; О приложении reading `BuildConfig` directly as its first in-app consumer; Выход wired to the
+existing sign-out flow unchanged.
+
+**A real finding along the way**: `EncryptedSharedPreferences.clear()` deliberately leaves its own two
+Tink keyset entries behind rather than truly emptying the file — confirmed by decompiling the library
+class directly rather than guessing, after the first real on-device run of the sign-out test failed
+against a naive "zero keys" assumption. The test now asserts the exact reserved-key set instead.
+
+**Verified independently, beyond the implementing worker's own report**: read every load-bearing file
+directly (`DataStoreThemePreferences`, `SettingsViewModel`, `OperatorHubConnection`'s new methods),
+confirmed the hub-reconnect sequencing is correct and non-redundant against the pre-existing
+disconnect/connect/`stopRequested` mechanics; re-ran the full suite myself (163 unit + 28 instrumented
+tests, matching the worker's own counts exactly); and, beyond what the worker's own worktree could
+do, downloaded the actual published release built from this item's own merge commit and confirmed its
+real `versionName` live, rather than trusting a local build where the value is easy to fake.
+
+**One box carried to `26-22`**: the two-real-tenancies site-switch proof, the identical real-identity
+precondition every other Phase-0-adjacent item's remainder already carries there.

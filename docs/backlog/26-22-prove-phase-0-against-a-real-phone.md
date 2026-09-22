@@ -25,6 +25,9 @@
   remainder boxes**: the four-vs-five bottom-destination proof against an identity confirmed to lack
   the calendar grant, and an on-device rotation/backgrounding confirmation of the shell itself
   (distinct from `26-14`'s conversation-list rotation proof, which this session *did* observe live).
+  **Widened again for `26-17`'s own remainder**: the two-real-tenancies active-site switch proof —
+  the identical missing precondition (a second real operator tenancy) every other Phase-0 remainder
+  here already waits on.
 - **Depends on**: a physical Android phone, and two disposable test identities in the live `ago-chat`
   Keycloak realm — one a real operator (a seat at a real site), one holding the `platform-owner` realm
   role and no `operators` row. Neither exists yet. `26-11`'s own outcome is the precedent for creating
@@ -98,6 +101,9 @@ what happened.
     which is `26-14`'s conversation-list-specific rotation proof and was already observed live this
     session; this one is about `AppShellScreen`'s own `NavController` state surviving a real
     `Activity` recreation, not yet exercised on-device.
+15. **An operator holding seats at two real sites switches between them in Settings, and the
+    conversation list changes accordingly** (`26-17`) - a switcher exercised only against fakes so
+    far; needs a second real operator tenancy on the same identity to mean anything.
 
 ## Out of scope
 
@@ -146,4 +152,6 @@ what happened.
       four bottom destinations; the same identity granted `calendar:configure` sees five (`26-16`).
 - [ ] Rotating the device and returning from the background preserves the shell's own selected
       destination and each destination's own back stack (`26-16`).
+- [ ] An operator with two real tenancies switches sites in Settings and the conversation list
+      changes accordingly (`26-17`).
 - [ ] Every disposable test identity created for this item is deleted afterward, confirmed.
