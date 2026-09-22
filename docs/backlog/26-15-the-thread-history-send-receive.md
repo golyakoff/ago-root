@@ -1,7 +1,7 @@
 # 26-15 · The thread: history, send, receive
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#20`; remainder carried out to `26-22`
 - **Found**: 2026-09-21. This item is where `plan.md`'s Phase 0 becomes true or does not: "sign-in →
   conversation list → open a thread → send a message → watch it arrive on the console. One vertical
   slice, end to end, over the real transport. **Nothing else ships until this does.**"
@@ -47,15 +47,57 @@ against the real backend. One promise, and it is Phase 0's whole proof.
 
 ## Done when
 
-- [ ] **Phase 0's end-to-end proof, recorded with the date it was actually observed**: an operator
+- [~] **Phase 0's end-to-end proof, recorded with the date it was actually observed**: an operator
       signs in on a real phone, opens a thread, sends a message, and it appears in `ago-console` on a
-      desktop; a visitor's reply appears on the phone without a refresh.
-- [ ] A send retried after a dropped connection produces **exactly one** message — the
-      `clientMessageId` path, proven rather than assumed.
-- [ ] A redelivered inbound message renders once.
-- [ ] Leaving the thread with a non-empty composer and returning restores the draft, including after
-      the process is killed and restored.
-- [ ] History pages upward without duplicating or dropping a message at a page boundary — the
-      keyset boundary is where this goes wrong, so test it there specifically.
-- [ ] Back returns to the list with its scroll position intact.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+      desktop; a visitor's reply appears on the phone without a refresh. **Carried to `26-22`** - no
+      real authenticated session exists in this environment. This is the single most important box
+      this item leaves open, named plainly rather than buried among the others.
+- [~] A send retried after a dropped connection produces **exactly one** message — the
+      `clientMessageId` path, proven rather than assumed. **Both halves independently confirmed, the
+      live race carried to `26-22`**: the client always retries with the same `clientMessageId`
+      (`SendMessageResult.OutcomeUnknown` keeps it rather than minting a fresh one), and the server's
+      own dedup is real (`Conversation.AddMessage`: a repeated `clientMessageId` returns the original
+      message, no new sequence assigned) - confirmed by reading that method directly. The actual
+      two-write race has not been observed live.
+- [x] A redelivered inbound message renders once - `MessageSubscription`'s own dedup (`26-13`),
+      exercised again by this item's own tests.
+- [x] Leaving the thread with a non-empty composer and returning restores the draft, including after
+      the process is killed and restored - `RoomComposerDraftStore`, proven with a real SQLite
+      instrumented test that closes and reopens the same database file, simulating process death.
+- [x] History pages upward without duplicating or dropping a message at a page boundary — the keyset
+      boundary is where this goes wrong, so test it there specifically. `ThreadViewModelTest` builds a
+      fake hub reproducing `ConversationReadStore`'s own real SQL exactly (confirmed by reading that
+      file directly: `sequence < @BeforeSequence`, descending, cursor = last item's sequence only on a
+      full page) and proves a 151-message walk lands on exactly `1..151` with no boundary value
+      duplicated or missing.
+- [x] Back returns to the list with its scroll position intact - `rememberSaveableStateHolder`, the
+      same primitive `NavHost` uses internally.
+- [x] `./gradlew ktlintCheck lint test` green; counts reported. 124 tests (31 `:core:domain`, 57
+      `:core:network`, 36 `:app`), 0 failures; ktlint clean.
+
+## Outcome
+
+Landed as `ago-android#20`. Ports the real hub contract - `OperatorHub.JoinConversationAsync`/
+`GetHistoryAsync`/`SendMessageAsync`, confirmed against the real backend source, not assumed - into a
+thread screen with keyset history paging, live receive over `26-13`'s hub connection, send with a
+ported `newClientMessageId`, and a Room-backed composer draft that survives process death. The
+visitor chip is absent (not inert) until the visitor context sheet exists; the attach control is
+hidden unless `hasAttachmentUploadGrant` is true, carried from the already-fetched queue row rather
+than a second network call.
+
+**A real bug found and fixed during the implementing worker's own self-review**: an earlier draft
+tied releasing the hub subscription to `DisposableEffect.onDispose`, which also fires on a plain
+device rotation - wrongly wiping history on every rotation. Fixed: the release now fires only from
+the real "leave" callback (the back button/gesture); `ON_STOP` only flushes the draft, which is
+harmless on rotation. Confirmed in place by reading `ThreadScreen.kt`/`ThreadViewModel.kt` directly.
+
+**Verified independently, beyond the implementing worker's own report, against the real backend
+source** - every citation checked, all six confirmed exact: `OperatorHub.cs`'s three method
+signatures and the real 4-argument `SendMessageAsync` call order; `ConversationReadStore.cs`'s real
+keyset SQL; `Conversation.AddMessage`'s dedup mechanism; `ConversationSummaryDto.cs`'s
+`HasAttachmentUploadGrant` field. Re-ran the full build myself, green; confirmed all 124 tests from
+the real JUnit XML.
+
+**Two boxes carried to `26-22`**: the end-to-end phone-to-console proof (this item's own single most
+important remaining gap), and the live send-retry race (both halves independently confirmed, the
+actual race unobserved).

@@ -16,8 +16,11 @@
   sixth near-duplicate item as each later Phase 0 piece hits the same wall, this one item collects
   them all and is run once, in one real session, when a phone and test identities exist. Carries, so
   far: `26-13`'s hub-connection reliability proofs (token expiry, network kill/restore, backgrounding/
-  rotation) and `26-14`'s conversation-list proofs (rendering against the live API, on-device rotation
-  with scroll position) - both added the same reasoning as `26-13`'s own widening: one real sign-in
+  rotation), `26-14`'s conversation-list proofs (rendering against the live API, on-device rotation
+  with scroll position), and `26-15`'s own two - **Phase 0's actual end-to-end proof itself** (the
+  reason this whole stage exists: sign-in → list → thread → send → seen on the console, and a
+  visitor's reply seen back on the phone) and the live send-retry-produces-exactly-one-message race -
+  all added the same reasoning as `26-13`'s own widening: one real sign-in
   session proves all of it, not one session per item.
 - **Depends on**: a physical Android phone, and two disposable test identities in the live `ago-chat`
   Keycloak realm — one a real operator (a seat at a real site), one holding the `platform-owner` realm
@@ -74,6 +77,16 @@ what happened.
     rotate the device, confirm the scroll position is unchanged - the on-device confirmation
     `rememberSaveable`'s own architectural guarantee was never exercised against a real Activity
     recreation.
+11. **Phase 0's actual end-to-end proof** (`26-15`) - the reason this whole stage exists, `plan.md`'s
+    own words: sign in on the phone, open a thread from step 9's own data, send a message, confirm it
+    appears in `ago-console` on a desktop for the same conversation; then send a reply from the
+    console (or the widget, as the visitor) and confirm it appears on the phone with no refresh.
+    **Record the date this was actually observed** - `26-15`'s own Done-when insists on it.
+12. **The live send-retry race** (`26-15`): with a real send in flight, drop the connection at the
+    moment of sending (airplane mode toggled mid-send, or a similar real interruption) and confirm
+    exactly one message lands - not two, not zero - proving the client's retry-with-the-same-id
+    behaviour and the server's own dedup together, not each in isolation as `26-15`'s own unit tests
+    already did.
 
 ## Out of scope
 
@@ -99,4 +112,9 @@ what happened.
 - [ ] Both conversation-list segments render real data against the live API, and a real assignment
       arriving while the list is open badges the row without navigating (`26-14`).
 - [ ] The conversation list's scroll position survives a real device rotation (`26-14`).
+- [ ] **Phase 0's actual end-to-end proof**, recorded with the date it was observed: a message sent
+      from the phone appears in `ago-console`; a visitor's reply appears on the phone with no refresh
+      (`26-15`).
+- [ ] A real send interrupted mid-flight (connection dropped at the moment of sending) produces
+      exactly one message, not two, not zero (`26-15`).
 - [ ] Every disposable test identity created for this item is deleted afterward, confirmed.
