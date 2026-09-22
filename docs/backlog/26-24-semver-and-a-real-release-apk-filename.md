@@ -1,7 +1,8 @@
 # 26-24 · Semver versioning and a real filename for the release APK
 
 - **Stage**: 26
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged (`ago-android`). Verified against real code: `agoReleaseVersion = "0.1.0"`,
+  `versionName = agoReleaseVersion + "+" + <shortsha>`, `outputFileName.set("AGO_Chat_release_v$agoReleaseVersion.apk")`.
 - **Found**: 2026-09-22, by the author: the published release APK is literally named `app-release.apk`
   (AGP's own default output name, untouched), and `versionName` is the short commit sha (`26-09`/
   `adr/0051`'s own deliberate choice — see below). The author asked for real semantic versioning and a
