@@ -1,7 +1,9 @@
 # 26-36 · Drive back-press tests through `onBackPressedDispatcher`, not the system input pipeline
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as `ago-android#40`. Real CI run (`35754803964`) confirmed independently by
+  the managing session via the run's own downloaded JUnit XML: all five `BackContract*Test` files
+  executed (10 tests total), 0 failures.
 - **Found**: 2026-09-22, by the author, pushing back on the shape of `26-25`→`26-27`→`26-33`→`26-35`
   after two consecutive real CI runs of `26-33`'s identical fix disagreed (one clean, one failing 7
   tests): "мы что, изобрели какой-то тест, который не может выполниться на гитхаб раннере? как люди
@@ -106,11 +108,17 @@ racing it for longer or refusing to look at the result.
 
 ## Done when
 
-- [ ] `pressSystemBack()` (or its renamed replacement) drives back-press through
-      `onBackPressedDispatcher`, not `UiDevice`/system input.
-- [ ] The five `BackContract*Test` files no longer poll for up to 12 seconds after a back press.
-- [ ] `26-35`'s CI exclusion and `@FlakyOnCi` annotations are removed - these tests run in the normal
-      CI gate again.
-- [ ] `androidx.uiautomator` is removed from `app/build.gradle.kts` if nothing else needs it.
-- [ ] A real CI run of `instrumented-tests` on this exact change is green, confirmed by the managing
-      session, not merely reported by whoever implemented it.
+- [x] `pressSystemBack()` (renamed `triggerBackPress()`) drives back-press through
+      `onBackPressedDispatcher`, not `UiDevice`/system input, for four of the five files. The fifth
+      (`BackContractSheetDismissTest`) uses `Instrumentation.sendKeyDownUpSync` instead — a real,
+      genuinely-different finding: Material3's `ModalBottomSheet` owns its own separate dispatcher via
+      an internal `ComponentDialog`, so the Activity's dispatcher cannot answer that test's actual
+      question (which window a back signal reaches first). Still never touches UiAutomator/accessibility.
+- [x] The five `BackContract*Test` files no longer poll for up to 12 seconds after a back press
+      (26-33's polling was never merged to begin with).
+- [x] `26-35`'s CI exclusion is removed — all five files run in the normal CI gate again (`@FlakyOnCi`
+      was never merged either).
+- [x] `androidx.uiautomator` removed from `app/build.gradle.kts` and `gradle/libs.versions.toml`.
+- [x] A real CI run of `instrumented-tests` on this exact change is green — confirmed independently by
+      the managing session via the run's own downloaded JUnit XML (10/10 tests, 0 failures), not merely
+      the worker's report.
