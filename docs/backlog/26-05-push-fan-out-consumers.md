@@ -1,8 +1,7 @@
 # 26-05 · Push fan-out consumers
 
 - **Stage**: 26
-- **Status**: ready - the code can be written and tested against a fake `IPushSender` before `26-04`
-  is unblocked; only the real end-to-end proof needs `26-04` to have landed for real.
+- **Status**: done — `ago-chat#353`; remainder carried out to `26-21`
 - **Found**: 2026-09-21, the third of four implementation items `26-01`'s own design
   (`docs/architecture/push-notifications.md`, `adr/0179`) named at its foot.
 - **Depends on**: `26-03` (device rows to read) and `26-04` (a real `IPushSender` to call for the
@@ -44,16 +43,39 @@
 
 ## Done when
 
-- [ ] Both consumers exist, each with its own queue/DLQ, and a message-accepted event from the
+- [x] Both consumers exist, each with its own queue/DLQ, and a message-accepted event from the
       **visitor** side fires push while one from the **operator** side does not (matching
       `alerts.ts`'s own rule).
-- [ ] A conversation transfer produces a push to the new assignee, proven by a real test - not
+- [x] A conversation transfer produces a push to the new assignee, proven by a real test - not
       inferred from the mapper existing.
-- [ ] A push fires when the operator's own presence registry entry says connected - the explicit,
+- [x] A push fires when the operator's own presence registry entry says connected - the explicit,
       deliberate non-suppression, proven rather than merely stated.
-- [ ] The payload carries the conversation id and the message id, so `26-18` can build
+- [x] The payload carries the conversation id and the message id, so `26-18` can build
       `useAlerts.ts`'s own `ago-conversation-{id}` tag and dedupe from it. **No collapse key is
       sent** - RuStore has no such field (`adr/0180`), and asserting one would be inventing an API.
-- [ ] `dotnet format`/`build`/`test` all green, full suite counts reported; a real send is proven
-      end-to-end once `26-04` is unblocked (record the date this box was actually ticked if it lags
-      the rest of the item).
+- [x] `dotnet format`/`build`/`test` all green, full suite counts reported.
+- [~] A real send is proven end-to-end - **carried out to `26-21`**, the identical reason `26-04`'s
+      own remaining boxes were: no RuStore Console project exists in this deployment yet.
+
+## Outcome
+
+Landed as `ago-chat#353`. `NotifyOperatorDevicesHandler` (Application) ports `alerts.ts`'s exact rules
+server-side; two `Competing` consumers (`OperatorAssignmentPushConsumer`,
+`OperatorMessagePushConsumer`), each its own queue/DLQ. The server-never-suppresses decision is
+architectural, not a runtime check: the handler's constructor has no `IConnectionRegistry`/
+`INodeFanoutPublisher` parameter to consult at all - proven live against a connection registry seeded
+as connected. `OperatorMessagePushConsumer` is a real fifth subscriber on `MessageAccepted`, proven
+alongside the existing four (real Postgres+RabbitMQ) to not change ordering or duplicate delivery.
+
+**Two real bugs found and fixed by the implementing worker's own tests before this landed**: the new
+handler's registration in the shared `ChatModule.ConfigureServices` broke `Ago.Chat.Api`'s DI graph
+(`IPushSender` is `Ago.Chat.Worker`-only by design) - moved to `Program.cs`; and the handler's two
+entry points needed `TenantScopeExemptions` entries, caught by `TenantScopeTests`.
+
+Verified independently, beyond the implementing worker's own report: `dotnet format`/`build -c
+Release` clean (0 warnings); full suite - Domain 787, Application 1506, FakeCrm 21, Architecture 53,
+Concurrency 90, Integration 1508/1509 (one failure, the same pre-existing `SchemaMigratorTests`
+Testcontainers-readiness flake seen once already this session, under this machine's own unusually
+heavy concurrent load from running several parallel builds and an Android emulator at once - re-ran
+that one test alone afterward, 9/9 clean; not filed as its own item since it appears to be an artifact
+of this session's own unusual concurrency, not a product defect).
