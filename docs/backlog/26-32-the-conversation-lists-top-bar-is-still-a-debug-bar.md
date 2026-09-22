@@ -70,6 +70,14 @@ state costing no vertical space at all.**
    screens, leave it there and stop rendering it here; if nothing uses it, delete it rather than leave
    a dead composable named "Debug" in the tree.
 
+5. **The thread screen's identical copy of that row.** Added to this item's scope after the check in
+   point 4 found it: `ThreadScreen.kt` draws the very same `HubConnectionDebugRow` on its own line
+   under its own app bar. It is the same defect, the same composable and the same one-bit-per-line
+   complaint — and on the thread screen a line taken from the top is a line taken from the
+   conversation, so it costs more there, not less. Fixing one and leaving the other would be half a
+   fix of one thing, which `finish-an-item`'s own reading of rule 15 does not make into two tickets.
+   Only the connection indicator moves there; the thread has no «Выйти» and gets no overflow menu.
+
 ### What this item deliberately does not add
 
 The mockup's header also has a **search** icon, and below it a segmented control with counts and a
@@ -89,11 +97,12 @@ session can edit it; that is not in this item's Done-when.
 
 ## Done when
 
-- [ ] The conversation list has exactly one row of chrome above the tab control.
+- [ ] The conversation list has exactly one row of chrome above the tab control, and the thread
+      screen has exactly one above its transcript.
 - [ ] The active site id no longer appears on this screen (it is still visible and switchable in
       Настройки).
-- [ ] Connection state is shown without a line of its own, distinguishing all four states, with a
-      spoken `contentDescription` for a screen reader.
+- [ ] Connection state is shown on both screens without a line of its own, distinguishing all four
+      states, with a spoken `contentDescription` for a screen reader.
 - [ ] «Выйти» is reachable only through a `⋮` overflow menu drawn from `AgoIcons`.
 - [ ] `HubConnectionDebugRow` is either still genuinely used elsewhere or deleted — not orphaned.
 - [ ] `./gradlew ktlintCheck lint test assembleDebug` green, and any test that found sign-out by its
