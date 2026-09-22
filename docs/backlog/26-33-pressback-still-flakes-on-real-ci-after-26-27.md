@@ -95,7 +95,9 @@ did not have:
 
 ## Done when
 
-- [ ] Every `pressSystemBack()` call site's own follow-up assertion uses a real polling wait for its
-      specific expected condition, not a blocking "idle" signal alone.
-- [ ] A real, actual green CI run of `instrumented-tests` on a PR carrying this fix — confirmed by the
-      managing session, watching the real run, not inferred from local testing.
+- [~] Every call site was converted to a `composeTestRule.waitUntil` poll, as designed — this part
+      genuinely landed conceptually and is not what failed.
+- [~] Got one real green CI run (`ago-android#37`, 5m41s), then failed the very next run on the
+      identical commit (7 tests, full 12s timeouts) — not the reliable green this box asked for.
+      Superseded by `26-36`, which removed the actual race (the system input pipeline) rather than
+      continuing to poll around it.

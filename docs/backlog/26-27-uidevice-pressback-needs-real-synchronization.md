@@ -86,10 +86,9 @@ something else you find by actually reproducing this).
 
 ## Done when
 
-- [ ] `pressSystemBack()` includes a real synchronization wait proven (not merely reasoned) to close the
-      race the failed run above demonstrates.
-- [ ] The five `BackContract*Test` files pass repeatedly, not just once — either verified directly
-      against a real device in this task, or explicitly handed to the managing session's own repeated
-      CI verification with that hand-off stated plainly.
-- [ ] `ago-android#33` (or whichever PR is current by the time this lands) goes green on
-      `instrumented-tests` without a lucky rerun.
+- [~] `UiDevice.waitForIdle()` was added and reasoned to close the gap, but the reasoning was wrong —
+      the real CI run this item's own successor (`26-33`) traced showed it insufficient.
+- [~] Nine local device runs were clean, handed to the managing session's own repeated CI verification
+      as this item's own text required — that verification is what found the fix insufficient.
+- [~] Did not go green without a lucky rerun — `ago-android#34` failed on real CI with this exact fix.
+      Superseded by `26-33`, ultimately resolved by `26-36`.
