@@ -1,7 +1,8 @@
 # 25-167 · Console's brand glyph ("A" in the square) is smaller than the wordmark it sits beside
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — merged `ago-console#cfa4313`. `.ago-shell__glyph` matched to `--ago-text-display`
+  (was `--ago-text-sm`), confirmed live the two "A"s read as the same size.
 - **Found**: 2026-09-19, reported live by the author: the "A" inside the square brand mark next to
   "AGO Chat" in the console header reads much smaller than the "A" that opens "AGO Chat" itself, and
   should be comparable in height.
@@ -46,7 +47,6 @@ adds a second, wordmark-only fix and misses the mobile header.
 
 ## Done when
 
-- [ ] The glyph's own "A" and the wordmark's own "A" read as comparable in height, confirmed live in the
-      console header (both the desktop and mobile render sites)
-- [ ] No other element sized from `--ago-text-sm` is affected (confirm the token itself is not
-      reused elsewhere in a way a value bump here would disturb, or scope the fix to the class only)
+- [x] The glyph's own "A" and the wordmark's own "A" read as comparable in height, confirmed live.
+- [x] Scoped to the `.ago-shell__glyph` class only — `--ago-text-sm` itself untouched, so nothing else
+      sized from it is affected.
