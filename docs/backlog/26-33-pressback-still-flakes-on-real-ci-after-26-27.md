@@ -1,7 +1,17 @@
 # 26-33 · `pressSystemBack()` still flakes on real CI — `waitForIdle()` wasn't enough
 
 - **Stage**: 26
-- **Status**: ready — dispatched to a background worker
+- **Status**: superseded by `26-36` — this item's own fix (polling `waitUntil` at a 12s budget) passed
+  one real CI run (`ago-android#37`, 5m41s) and failed the very next one on the identical commit (only
+  its base moved), every failure a full 12000ms timeout with zero partial progress. That shape means
+  the system back-key event was occasionally never delivered through the UiAutomator/accessibility
+  pipeline at all in that run — no length of polling on the receiving end fixes a press the pipeline
+  itself sometimes drops. `26-36` removes the system input pipeline from these tests entirely (drives
+  `OnBackPressedDispatcher` in-process instead) rather than continuing to race it. PR #37 closed
+  without merging. Not a wrong step — `26-25`'s `RootViewWithoutFocusException` fix and `26-27`'s
+  synchronization-gap diagnosis were both real and correct; `26-33`'s own polling fix is a real
+  improvement over a hard assertion and is worth keeping conceptually, it just isn't sufficient on its
+  own once the deeper cause (the input pipeline itself, not the wait duration) is understood.
 - **Found**: 2026-09-22, immediately after `26-27` merged: its own PR (`ago-android#34`) hit the
   **identical** six-failure pattern on real CI (`run 35734381435`) that `26-27` itself was written to
   fix. Confirmed this is genuinely the fix commit under test (`git show
