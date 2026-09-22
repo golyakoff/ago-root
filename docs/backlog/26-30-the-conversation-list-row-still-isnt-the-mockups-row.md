@@ -1,8 +1,12 @@
 # 26-30 · The conversation-list row still isn't the mockup's row
 
 - **Stage**: 26
-- **Status**: ready — `26-29` merged 2026-09-22 (`ago-chat#355`), unblocking this item. Should have been
-  dispatched the same day and was not; the author found the gap live on his own phone the next day.
+- **Status**: done — merged as `ago-android#42`. Real device verification found a live gap this item's
+  own code introduced (the snippet line never updated after an operator's own reply, because
+  `ConversationListViewModel.onMessage` bailed before rendering for any non-`Visitor` `authorKind`) —
+  fixed in the same change (`refresh()` now runs for any message on an assigned conversation, unread
+  bump stays visitor-only) and confirmed live: sent a real message, returned to the list, the row
+  updated without a restart.
 - **Found**: 2026-09-22, by the author, on his own phone, against the approved mockup Artifact
   ("AGO Chat для Android"). Four of his notes are about this one row:
   - "Не хватает имён Лиса (точка) Апельсин для тех, кто ещё не представился (смотри логику
@@ -141,21 +145,17 @@ are **not** in this item's Done-when and are tracked outside it.
 
 ## Done when
 
-- [ ] A nameless visitor with an emoji pair renders as «Лиса · Апельсин» wherever the row (and the
-      thread app bar) previously rendered a bare code; a named visitor is provably unchanged.
-- [ ] The glyph table is byte-identical to `VisitorEmojiDictionary.cs` and a test proves all 40
-      glyphs resolve.
-- [ ] The row draws a single-line ellipsised snippet under the name when `26-29`'s field is present,
-      and no snippet line at all when it is absent.
-- [ ] «Новое» sits on its own line below the snippet.
-- [ ] Elapsed time renders as «4 ч» / «20 мин» / «2 д» with no «Открыт»/«Ждёт» prefix, on both the
-      name line's own age-since-creation and the snippet line's own last-message time.
-- [ ] Both timestamps render on both tabs, unconditionally, each in its own line's font weight (name
-      line: bold; snippet line: regular) — no per-tab branching of which instant to show, and sort
-      order is unchanged on both tabs.
-- [ ] The unread-count badge sits immediately beside the name (not the row's trailing edge), and both
-      timestamps end up right-aligned, one above the other, at the trailing edge instead.
-- [ ] No eight-character code appears on the conversation-list row.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green; tests that asserted the old row structure
-      are updated to the new one, never deleted to go green.
-- [ ] Checked against the mockup on a real device or emulator, not only in a preview.
+- [x] A nameless visitor with an emoji pair renders as «Лиса · Апельсин» — confirmed live.
+- [x] The glyph table is byte-identical to `VisitorEmojiDictionary.cs`; `VisitorEmojiNamesTest` proves
+      all 40 glyphs resolve.
+- [x] The row draws a single-line snippet under the name when present, none when absent.
+- [x] «Новое» sits on its own line below the snippet.
+- [x] Elapsed time renders as «4 ч» / «20 мин» / «2 д» with no prefix, confirmed live («14 ч» / «0 мин»
+      on a real row after a real send).
+- [x] Both timestamps render, each in its own line's weight — confirmed live, and **live-updates on a
+      new message** (the gap this item's own verification found and fixed in the same change).
+- [x] The unread-count badge sits beside the name; both timestamps right-aligned, stacked.
+- [x] No eight-character code appears on the row.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Checked against the mockup on a real device — not a preview, and not only a cold-load check: a
+      real message was sent from the thread and the row was watched update live.
