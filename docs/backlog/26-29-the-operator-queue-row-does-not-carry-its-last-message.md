@@ -1,7 +1,10 @@
 # 26-29 · The operator-queue row does not carry its last message, so no client can show one
 
 - **Stage**: 26
-- **Status**: ready — the open question below is now resolved
+- **Status**: done — merged as `ago-chat#355`, independently verified by the managing session
+  (`dotnet build -c Release` 0 warnings/errors, `dotnet format --verify-no-changes` clean, full suite
+  3982/3982 passed per-project: Domain 791, Application 1512, Architecture 53, FakeCrm 21, Concurrency
+  90, Integration 1515, FakeMax empty).
 - **Found**: 2026-09-22, by the author, comparing the real `ago-android` conversation list against the
   approved mockup. Two of his notes land on the same missing data: "Не хватает обрезанной последней
   строчки диалога второй строкой (под именем)", and "Время - это время создания чата? но мне кажется,
@@ -109,14 +112,14 @@ data is present.
 
 ## Done when
 
-- [ ] `ConversationSummaryDto` carries a last-message preview and a last-message timestamp, both
+- [x] `ConversationSummaryDto` carries a last-message preview and a last-message timestamp, both
       additive and nullable, documented in the record's own XML comment the way every field above them
       already is.
-- [ ] `GetOperatorQueueHandler` populates them from **one** batched `IConversationReadStore` read, not
+- [x] `GetOperatorQueueHandler` populates them from **one** batched `IConversationReadStore` read, not
       from the `Conversation.Messages` navigation, and not one query per row.
-- [ ] A conversation with no messages at all sends both as null, and no client is required to guess.
-- [ ] Non-text content kinds have a documented, decided representation.
-- [ ] The preview is truncated server-side to a stated maximum.
-- [ ] Integration test over the real query: a conversation with several messages reports the latest
+- [x] A conversation with no messages at all sends both as null, and no client is required to guess.
+- [x] Non-text content kinds have a documented, decided representation.
+- [x] The preview is truncated server-side to a stated maximum.
+- [x] Integration test over the real query: a conversation with several messages reports the latest
       one, including when the latest is a system or operator message.
-- [ ] `dotnet format --verify-no-changes`, `dotnet build -c Release`, `dotnet test -c Release` green.
+- [x] `dotnet format --verify-no-changes`, `dotnet build -c Release`, `dotnet test -c Release` green.
