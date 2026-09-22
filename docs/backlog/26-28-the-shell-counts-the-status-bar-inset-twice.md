@@ -1,0 +1,71 @@
+# 26-28 · The shell counts the status-bar inset twice, leaving a blank band above every screen
+
+- **Stage**: 26
+- **Status**: ready
+- **Found**: 2026-09-22, by the author, on his own phone, comparing the real `ago-android` build
+  (`26-23` installed) against the approved mockup Artifact ("AGO Chat для Android"). In his own words:
+  "Над диалогом гигантское пустое место до статусбара телефона - почему оно не используется?"
+
+## What is actually true today, confirmed against real code
+
+The gap is not empty padding somebody chose. It is the system status-bar inset applied **twice**, by
+two nested `Scaffold`s neither of which knows about the other:
+
+- `MainActivity.onCreate` calls `enableEdgeToEdge()`, so the app draws behind the status bar and every
+  inset has to be consumed exactly once by somebody.
+- `AppShellScreen.kt`'s `AppShellContent` draws a `Scaffold` with a `bottomBar` and **no `topBar`**.
+  Material 3's `Scaffold` defaults `contentWindowInsets` to `ScaffoldDefaults.contentWindowInsets`
+  (system bars), so the `PaddingValues` it hands its content already carries the full status-bar
+  height as `top`. That value is applied: `NavHost(..., modifier = Modifier.padding(padding))`.
+- Every destination inside that `NavHost` then draws **its own** `Scaffold` with **its own**
+  `TopAppBar`, and a Material 3 `TopAppBar` applies `TopAppBarDefaults.windowInsets` (system bars,
+  top) of its own. `Scaffold` does not *consume* the insets it reports, so that inner bar adds the
+  same status-bar height a second time.
+
+Net effect: one full status-bar height of blank surface between the real status bar and the
+`TopAppBar`'s own title. This is **not specific to Диалоги** — every destination in the shell draws
+the same shape and therefore has the same band:
+
+| File | Line | Screen |
+|---|---|---|
+| `conversations/ConversationListScreen.kt` | 159–162 | Диалоги |
+| `shell/PlaceholderScreens.kt` | 36 | Записи, Команда, Аналитика |
+| `shell/MoreScreen.kt` | 82 | Ещё |
+| `shell/SettingsScreen.kt` | 104–106 | Настройки |
+| `thread/ThreadScreen.kt` | 170–173 | the thread |
+
+The bottom is not symmetrical with this: the outer `Scaffold` genuinely owns the navigation bar and
+its inset, and the inner screens have no bottom bar of their own, so only the top double-counts.
+
+## Scope
+
+One promise: **no screen in the shell shows a blank band under the system status bar.**
+
+The fix belongs in the one place that knows both `Scaffold`s exist — `AppShellContent` — not spread
+across six screens as six `WindowInsets(0)` overrides that each depend on being nested. Either the
+outer `Scaffold` stops reporting a top inset to the `NavHost` (letting each screen's own `TopAppBar`
+draw into the status bar, which is what an edge-to-edge app is supposed to do and what the mockup
+draws), or the shared inset is consumed explicitly so it cannot be applied twice. Whichever shape is
+chosen, say in the code comment which `Scaffold` owns which edge, because the next screen added to
+this `NavHost` will inherit the answer silently.
+
+Verify on a real device or emulator with a visible status bar — a Compose preview has no insets at
+all and will look correct either way. Both orientations, and both a gesture-navigation and a
+three-button-navigation device, since those change the bottom inset and would catch an over-correction
+that removes the bottom padding too.
+
+## Out of scope
+
+- Anything about what the top bar *contains* — that is `26-32`.
+- Anything about the row's own contents — that is `26-30`.
+
+## Done when
+
+- [ ] The status-bar inset is applied exactly once, decided in one place, with a comment saying which
+      `Scaffold` owns which edge.
+- [ ] Диалоги, the thread, Ещё, Настройки and the three placeholder screens each start their content
+      directly under the system status bar, with no blank band — checked on a real device or emulator,
+      not in a preview.
+- [ ] The bottom navigation bar still clears the gesture/navigation bar on a device that has one.
+- [ ] `./gradlew ktlintCheck lint test assembleDebug` green, and the instrumented navigation-contract
+      tests still pass.
