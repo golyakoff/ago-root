@@ -1,7 +1,7 @@
 # 25-217 · `ago-calendar-console` no longer exists, and four documents still say it does
 
 - **Stage**: 25
-- **Status**: done — `ago-root#<this PR>`
+- **Status**: done — `ago-root#1384`
 - **Found**: 2026-09-22, `tools/queue-audit.sh` failed outright: `Could not resolve to a Repository
   with the name 'golyakoff/ago-calendar-console'`. Checked directly — `gh api
   repos/golyakoff/ago-calendar-console` returns a genuine `404 Not Found`, and `gh repo list golyakoff`
