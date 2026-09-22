@@ -1,7 +1,8 @@
 # 26-30 · The conversation-list row still isn't the mockup's row
 
 - **Stage**: 26
-- **Status**: blocked on `26-29` for two of its five parts, and on `26-29`'s own open question
+- **Status**: blocked on `26-29` for two of its five parts (the open question is now resolved — see
+  below)
 - **Found**: 2026-09-22, by the author, on his own phone, against the approved mockup Artifact
   ("AGO Chat для Android"). Four of his notes are about this one row:
   - "Не хватает имён Лиса (точка) Апельсин для тех, кто ещё не представился (смотри логику
@@ -68,27 +69,45 @@ separately would leave the row half-rebuilt.
    the app has one locale, and the table should be shaped so a second locale is additive rather than
    a rewrite. `visitorDisplayPrefixParts` is the right home for the composition rule, so the thread
    screen's app-bar title gets it too.
-2. **The snippet line.** The mockup's `.rsnip`: one line, ellipsised, under the name. From `26-29`'s
-   new field. A row with no messages simply has no snippet line — not an empty line, not a placeholder.
+2. **The snippet line.** The mockup's `.rsnip`: one line, ellipsised, under the name, now also
+   carrying the last-message timestamp beside the snippet text (see "The time question" below) — both
+   from `26-29`'s new fields. A row with no messages simply has no snippet line at all — not an empty
+   line, not a placeholder, and therefore no orphaned timestamp either.
 3. **The badge line.** With a snippet line present, the pill row becomes the third line, which is what
    the author asked for and what the mockup already draws. Only the pills that have a real field behind
    them: «Новое» today. Channel/tag pills stay out — Stage 14, no data.
-4. **The short elapsed format, with no prefix.** «4 ч», «20 мин», «2 д» — the word «Открыт»/«Ждёт»
-   goes. Keep the existing rounding-towards-the-past rule; only the rendering changes. The two tabs no
-   longer differ in their prefix, so check whether the two prefix strings and the `elapsedPrefixRes`
-   parameter can go entirely.
+4. **The short elapsed format, with no prefix, for both timestamps.** «4 ч», «20 мин», «2 д» — the
+   word «Открыт»/«Ждёт» goes, on the name line's own age-since-creation *and* on the new snippet
+   line's last-message time — one shared formatting function, not two. Keep the existing
+   rounding-towards-the-past rule; only the rendering changes. The two tabs no longer differ in their
+   name-line prefix, so check whether the two prefix strings and the `elapsedPrefixRes` parameter can
+   go entirely.
 5. **The raw short code goes.** Drop `IdentifierText` from this row. With part 1 landed, every visitor
    has *some* human label, so the code is no longer carrying any load here. Note that the code is
    still the right thing elsewhere (the thread screen, anywhere an operator has to dictate or match an
    id) — this removes one call site, not `IdentifierText`.
 
-### The time question, unresolved
+### The time question, resolved by the author — both instants render, on different lines
 
-Part 4 is about *format*. **Which instant** the row shows — creation, or the last message — is
-`26-29`'s own open question, and it is genuinely open: the recommendation there is that «Мои» shows
-last-message time while «Ожидают» keeps waiting-since, because a waiting visitor who writes again must
-not appear newer and sort themselves down the queue. Do not settle it inside this item without the
-author's answer.
+Part 4 used to be blocked on **which** instant the row shows. The author's own resolution (recorded in
+full in `26-29`) dissolves the choice instead of picking a side: **show both**, each beside the text it
+describes, rather than one timestamp doing double duty.
+
+- **Name line** (line 1): the conversation's own age-since-creation — exactly the `elapsedText`
+  rendering that exists today, format corrected per part 4 below (`«4 ч»`/`«20 мин»`/`«2 д»`, no
+  prefix). Rendered in the **name line's own font weight** (bold/prominent) — the author's own framing:
+  this instant is "more active" because it describes the whole dialog. Sort order is **unchanged** for
+  both tabs — this is the same value `elapsedText(row.createdAt, ...)` already reads, so «Ожидают»'s
+  own oldest-first sort needs no change and has no collision to worry about.
+- **Snippet line** (line 2, new): the last-message instant from `26-29`'s new field, in the same short
+  format, set beside the snippet text in the **snippet line's own (lighter) weight** — so the
+  timestamp reads as describing those specific words, not the dialog as a whole. Absent whenever the
+  snippet itself is absent (a conversation with no messages) — never a lone timestamp with nothing to
+  attach to.
+
+No per-tab branching of any kind is needed: both instants render unconditionally, on both tabs,
+wherever their backing data is present. This replaces the item's own earlier "pick one instant per
+tab" framing entirely.
 
 ### The mockup's own corrections are tracked separately
 
@@ -113,10 +132,12 @@ are **not** in this item's Done-when and are tracked outside it.
 - [ ] The row draws a single-line ellipsised snippet under the name when `26-29`'s field is present,
       and no snippet line at all when it is absent.
 - [ ] «Новое» sits on its own line below the snippet.
-- [ ] Elapsed time renders as «4 ч» / «20 мин» / «2 д» with no «Открыт»/«Ждёт» prefix.
+- [ ] Elapsed time renders as «4 ч» / «20 мин» / «2 д» with no «Открыт»/«Ждёт» prefix, on both the
+      name line's own age-since-creation and the snippet line's own last-message time.
+- [ ] Both timestamps render on both tabs, unconditionally, each in its own line's font weight (name
+      line: bold; snippet line: regular) — no per-tab branching of which instant to show, and sort
+      order is unchanged on both tabs.
 - [ ] No eight-character code appears on the conversation-list row.
-- [ ] The instant shown per tab matches the author's answer to `26-29`'s open question, and the code
-      comment says which instant each tab shows and why.
 - [ ] `./gradlew ktlintCheck lint test assembleDebug` green; tests that asserted the old row structure
       are updated to the new one, never deleted to go green.
 - [ ] Checked against the mockup on a real device or emulator, not only in a preview.
