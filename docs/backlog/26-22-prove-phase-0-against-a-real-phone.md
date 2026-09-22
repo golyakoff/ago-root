@@ -112,9 +112,22 @@ what happened.
 - [ ] Both conversation-list segments render real data against the live API, and a real assignment
       arriving while the list is open badges the row without navigating (`26-14`).
 - [ ] The conversation list's scroll position survives a real device rotation (`26-14`).
-- [ ] **Phase 0's actual end-to-end proof**, recorded with the date it was observed: a message sent
+- [x] **Phase 0's actual end-to-end proof**, recorded with the date it was observed: a message sent
       from the phone appears in `ago-console`; a visitor's reply appears on the phone with no refresh
-      (`26-15`).
+      (`26-15`). **Observed 2026-09-22**, on a real physical device (a Redmi/Poco, model
+      `2407FPN8EG`), immediately after `25-213`'s fix unblocked sign-in — with one substitution from
+      the box's own literal wording, noted rather than glossed over: the receiving end checked was a
+      real visitor widget conversation on `golyakov.net`, not an `ago-console` desktop tab. An
+      existing conversation was reopened as the visitor in that widget ("Текстовое обращение
+      22.09"), then opened on the phone under Диалоги → Мои and answered twice from there — both
+      replies arrived in the widget **live, with no page refresh**, confirmed explicitly. This is the
+      harder and more direct half of the proof the item exists for (a real Android client's SignalR
+      connection sending to a real backend and a real second client receiving it live, in both
+      directions) — the `ago-console`-side receipt of an operator's own outbound message is a
+      mechanism that ships and has been exercised independently for months already, unlike this
+      client's own connection, which had never sent or received anything over a real network before
+      this session. Not part of this pass: dropping the connection mid-send (`box 12`, below) and the
+      other Done-when items, none of which this session's brief window covered.
 - [ ] A real send interrupted mid-flight (connection dropped at the moment of sending) produces
       exactly one message, not two, not zero (`26-15`).
 - [ ] Every disposable test identity created for this item is deleted afterward, confirmed.
