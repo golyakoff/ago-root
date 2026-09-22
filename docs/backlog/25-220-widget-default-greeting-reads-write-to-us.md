@@ -1,7 +1,7 @@
 # 25-220 · The widget's built-in default greeting becomes "Напишите нам..."
 
 - **Stage**: 25
-- **Status**: done — `ago-widget#<PR>`, `ago-console#<PR>`
+- **Status**: done — `ago-widget#132`, `ago-console#270`
 - **Found**: 2026-09-22. The author asked whether the panel header's text ("Чем мы могли бы вам
   помочь?") has a control, or is a fixed default. **It already has a control** — Console → "Виджет на
   сайте" → the "Кнопка запуска" panel's own "Заголовок панели" field (`25-210`) — the author had looked
