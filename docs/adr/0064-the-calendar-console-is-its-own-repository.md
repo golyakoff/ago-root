@@ -1,6 +1,6 @@
 # ADR-0064: AGO Calendar's console is its own repository; its booking UI is not
 
-- **Status**: Accepted
+- **Status**: Superseded by 22-06
 - **Date**: 2026-08-26
 - **Stage**: 20 (`backlog/20-06-console-and-booking-widget.md`)
 - **Related**: `adr/0012` (the platform is a package, not a folder), `adr/0023` (React for

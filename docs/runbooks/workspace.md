@@ -5,11 +5,13 @@ All repositories are siblings under one parent folder:
 ```
 C:\git\ago\
   ago-root\  ago-platform\  ago-chat\  ago-calendar\  ago-widget\  ago-console\  ago-deploy\
-  ago-landing\  ago-calendar-console\  .nuget-feed\
+  ago-landing\  .nuget-feed\
 ```
 
 `ago-calendar-console` arrived with `20-06` (`adr/0064`) — AGO Calendar's own operator SPA, separate
 from `ago-console` because the two track different products' API contracts and deploy independently.
+It was retired by `22-06` (folded into `ago-console`, one operator app per tenant rather than per
+product) and the repository itself no longer exists (`25-217`) — not listed above for that reason.
 There is deliberately **no** `ago-calendar-widget`: AGO Calendar's booking UI is a module inside
 `ago-widget`, because a shop pastes one script tag.
 
