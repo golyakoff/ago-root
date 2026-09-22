@@ -1,7 +1,9 @@
 # 26-34 · The app has no launcher icon
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as `ago-android#38`, independently verified by the managing session
+  (`ktlintCheck`/`assembleDebug` green; the worker's own real-device install was checked, not
+  re-derived).
 - **Found**: 2026-09-22, by the author, asking to add a real launcher icon drawn from the brand mark.
 
 ## What is actually true today, confirmed against real code
@@ -97,9 +99,11 @@ layers. That means:
 
 ## Done when
 
-- [ ] `AndroidManifest.xml` names a real icon, and it is not the OS's fallback icon anymore.
-- [ ] The background is a full-bleed, unrounded 140°-gradient fill; the foreground is the real
+- [x] `AndroidManifest.xml` names a real icon, and it is not the OS's fallback icon anymore.
+- [x] The background is a full-bleed, unrounded 140°-gradient fill; the foreground is the real
       Unbounded-Bold "A" outline (not a hand-approximated shape), white, inside the safe zone; a
       monochrome variant exists for themed icons.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device or emulator — not just "should render", actually looked at.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Checked on a real device or emulator — the built APK was installed on a real running AVD; the
+      icon showed the real Unbounded "A" (flat apex, flat-bottomed counter), blue-to-violet per the
+      140° direction, not clipped by the launcher's mask.
