@@ -60,7 +60,7 @@ button that behaves the way `navigation.md` specifies. One promise: **the app na
 
 ## Done when
 
-- [ ] An operator without a calendar grant sees four destinations; one with it sees five — both
+- [~] An operator without a calendar grant sees four destinations; one with it sees five — both
       against real identities on a real phone, not fixtures. **Carried to `26-22`** - the one real
       device available this session was never signed in against an identity confirmed to lack the
       calendar grant, so only one side of this pair has any chance of being observed by construction.
@@ -73,7 +73,7 @@ button that behaves the way `navigation.md` specifies. One promise: **the app na
       `26-20`. Ten new instrumented tests, one or more per clause, confirmed independently by running
       them myself - not merely trusting the implementing worker's own report - on a real physical
       device (`2407FPN8EG`), 0 failures. Wiring them into CI is `26-20`'s own job, unchanged.
-- [ ] Rotating the device and returning from the background preserves the selected destination and
+- [~] Rotating the device and returning from the background preserves the selected destination and
       each destination's own back stack. **Carried to `26-22`** - no automated test exercises a real
       `Activity` recreation of the shell itself (as opposed to `26-14`'s own conversation-list
       rotation proof, which *was* observed live this session, separately); architecturally covered by
