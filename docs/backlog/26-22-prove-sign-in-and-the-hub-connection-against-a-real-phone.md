@@ -1,4 +1,4 @@
-# 26-22 · Prove sign-in against a real phone and real identities
+# 26-22 · Prove sign-in and the hub connection against a real phone
 
 - **Stage**: 26
 - **Status**: ready — blocked on a real physical device and two real test identities, not on design
@@ -9,11 +9,19 @@
   genuinely unsettled for the reason its own report states plainly: no physical Android device and no
   real operator/platform-owner test identity were available in that worktree. This is that remainder,
   given its own number per this project's own rule rather than left as an open box under a closed
-  item.
+  item. **Widened the same day to also carry `26-13`'s own remainder** (the hub connection's real
+  token-expiry/network-kill/backgrounding proofs) once it turned out to need the identical real-session
+  precondition - one real sign-in session proves both items' remaining boxes, not two.
 - **Depends on**: a physical Android phone, and two disposable test identities in the live `ago-chat`
   Keycloak realm — one a real operator (a seat at a real site), one holding the `platform-owner` realm
   role and no `operators` row. Neither exists yet. `26-11`'s own outcome is the precedent for creating
   and deleting a disposable Keycloak user via `kcadm` for a proof like this one.
+- **Also carries `26-13`'s own remainder**: that item's SignalR hub connection is fully built and
+  unit-tested against a fake port, and its only unsettled Done-when boxes need the identical real
+  operator session this item already exists to obtain - once signed in for real (step 1 below), the
+  same session is the natural moment to also exercise the hub's real token-expiry survival, network
+  kill/restore reconnect, and exactly-one-connection-after-backgrounding/rotation proofs (steps 6-8
+  below), rather than a second real-phone session solely for that.
 
 ## What this item is
 
@@ -41,6 +49,17 @@ what happened.
 5. **The multi-tenancy arm**, if convenient to set up alongside step 1: give one identity operator rows
    at two real sites, confirm the site picker appears before anything else, confirmed against a real
    phone rather than only `PostSignInRouterTest`'s own fake port.
+6. **The hub connection survives real token expiry** (`26-13`): wait past the realm's real
+   access-token lifetime (or shorten it deliberately if the realm's admin console allows), confirm the
+   connection's own debug row stays healthy with no sign-in prompt.
+7. **Killing and restoring real network reconnects the hub** (`26-13`): toggle the phone's own
+   connectivity off and on, watch the debug row show `Reconnecting` then `Connected`, and send a
+   message from the console while the phone is offline - confirm it appears exactly once on
+   reconnect, neither missing nor doubled.
+8. **Backgrounding/rotation leaves exactly one hub connection** (`26-13`): background the app, bring
+   it back, rotate the device, and confirm server-side (the Redis `presence:operator:{id}` set, or
+   whatever this deployment's own live inspection method is) that exactly one connection id exists for
+   that operator throughout.
 
 ## Out of scope
 
@@ -58,4 +77,9 @@ what happened.
 - [ ] An expired access token is refreshed and the retried call succeeds with no sign-in prompt,
       against the real API.
 - [ ] A live `adb logcat` sweep with a real token present shows no `Bearer`/token/JWT-shaped string.
+- [ ] The hub connection survives a real token expiry with no sign-in prompt (`26-13`).
+- [ ] A real network kill/restore reconnects the hub, jittered, and a message sent while genuinely
+      disconnected arrives exactly once on reconnect (`26-13`).
+- [ ] Backgrounding and rotating the device leaves exactly one hub connection, proven server-side
+      (`26-13`).
 - [ ] Every disposable test identity created for this item is deleted afterward, confirmed.
