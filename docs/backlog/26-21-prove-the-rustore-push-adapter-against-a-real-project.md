@@ -11,6 +11,11 @@
 - **Depends on**: a human creating a RuStore Console project (push notifications section) and issuing
   a service token — an account-provisioning step, not an engineering one. Nothing here can start
   before that exists.
+- **Also carries `26-05`'s own remaining box**: that item's fan-out consumers are fully built and
+  tested against a fake `IPushSender`, and its only unsettled Done-when is the identical "a real send
+  is proven end-to-end" this item already exists for — one real send through the real fan-out path
+  (an assignment or a visitor message triggering a consumer, which calls the real adapter) settles
+  both items' own remaining box in the same act, not two separate sends.
 
 ## What this item is
 

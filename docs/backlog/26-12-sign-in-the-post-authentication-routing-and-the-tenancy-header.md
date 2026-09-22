@@ -1,7 +1,7 @@
 # 26-12 · Sign-in, the post-authentication routing, and the tenancy header
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#16`; remainder carried out to `26-22`
 - **Found**: 2026-09-21, the first third of `plan.md`'s Phase 0 — "the shell that proves the hard
   parts". Its own words: the three things most likely to be wrong are not screens, and OIDC against
   Keycloak from a native client is the first of them.
@@ -70,16 +70,56 @@ proves it works, or a header plugin with no token to attach, are halves that can
 
 ## Done when
 
-- [ ] A real operator signs in on a **real phone** against the live API and reaches a placeholder
-      "signed in" surface.
-- [ ] An identity with no operator seat that **is** a platform owner reaches the terminal screen, and
+- [~] A real operator signs in on a **real phone** against the live API and reaches a placeholder
+      "signed in" surface. **Carried out to `26-22`** — no physical device or real operator identity
+      existed to prove this with. Proven up to: the app installs and launches on an emulator, real OIDC
+      discovery against the live realm completes, and the authorization URL opens in a real Chrome
+      Custom Tab — the mechanism is proven against the live realm, the literal phone is not.
+- [~] An identity with no operator seat that **is** a platform owner reaches the terminal screen, and
       one that is neither reaches the registration arm — both proven against real identities, not
-      mocked.
-- [ ] A `5xx` or a dropped network during the `operators/me` probe renders a retry and **never** the
+      mocked. **Carried out to `26-22`** — no such identities exist yet; the routing logic for both
+      arms is unit-tested against a fake port (`PostSignInRouterTest`), not proven against the real API.
+- [x] A `5xx` or a dropped network during the `operators/me` probe renders a retry and **never** the
       registration form — proven with a fault-injected client, because this is the one arm that is
-      wrong in a way that looks correct.
-- [ ] An expired access token is refreshed and the retried call succeeds with no sign-in prompt.
-- [ ] Every authenticated request carries `X-Ago-Active-Site` — asserted by a `MockEngine` test over
-      the client itself, not by reading call sites.
-- [ ] No token of any kind appears in logcat at any level, including verbose.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+      wrong in a way that looks correct. `PostSignInRouterTest`, confirmed red when the fourth arm is
+      folded into the owner probe.
+- [x] An expired access token is refreshed and the retried call succeeds with no sign-in prompt -
+      proven at the `MockEngine` level (`BearerTokenPluginTest`: a captured token fails the freshness
+      test). Not proven against a real expiring Keycloak token - carried into `26-22`'s own scope
+      alongside the real-phone proofs, since it needs the same real session to observe.
+- [x] Every authenticated request carries `X-Ago-Active-Site` — asserted by a `MockEngine` test over
+      the client itself (`ActiveSiteHeaderPluginTest`), not by reading call sites. Confirmed red with
+      the plugin uninstalled.
+- [~] No token of any kind appears in logcat at any level, including verbose. **Partially carried to
+      `26-22`**: confirmed no `Log.*` statement exists in any Kotlin source and Ktor's `Logging` plugin
+      is never installed, and a full 33,619-line logcat sweep of a real OIDC-discovery run (no token
+      yet obtained) shows nothing token-shaped - but no real token existed during that run, so the
+      literal claim needs a real session to observe, which `26-22` covers.
+- [x] `./gradlew ktlintCheck lint test` green; counts reported. 53 tests, 0 failures, across 7 classes
+      (23 `:core:domain`, 22 `:core:network`, 8 `:app`); ktlint clean.
+
+## Outcome
+
+Landed as `ago-android#16`. Hilt wired for real; AppAuth (Authorization Code + PKCE, Chrome Custom
+Tab, never a WebView) against the real `ago-android` Keycloak client `26-11` created. Tokens in
+`EncryptedSharedPreferences`, with `dataExtractionRules`/`fullBackupContent` closing the Android
+12+ device-transfer channel `allowBackup="false"` alone does not reach. The bearer token is read
+fresh on every request rather than cached until a `401` - the exact `5-16` staleness shape both
+existing web clients independently reached, avoided here from the start.
+
+**A real bug found and fixed, matching `12-04`'s own defect from a different direction.**
+`navigation.md`'s diagram asked `operators/me` before `/me/tenancies`; read against the real
+`ResolveOperatorIdentityHandler`, an identity with several eligible tenancies and no
+`X-Ago-Active-Site` header resolves to nothing, so that order gives a working two-shop operator a
+`403` that routes to site-registration. Reordered; `navigation.md`/`architecture.md` corrected.
+**Independently re-verified against the real backend source before trusting it** - confirmed
+directly in `ResolveOperatorIdentityHandler.cs` and `MeEndpoints.cs`, not merely re-stated.
+
+**The identical bug found live in `ago-console` itself**, filed separately as `25-212` rather than
+fixed here - a different repository's own review cycle, and its own design choice (site-picker-first
+vs. a per-probe signal) that this item does not get to make unilaterally for the console.
+
+Verified independently, beyond the implementing worker's own report: re-ran the full build myself,
+confirmed all 53 tests from the real JUnit XML, reviewed every new dependency version's own stated
+justification, reviewed `SessionStore`/`AppModule`/`PostSignInRouter`/the manifest and backup-rules
+XML line by line, scanned the full diff for secrets (only fake test-fixture token strings found).
