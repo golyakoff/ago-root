@@ -1,7 +1,11 @@
 # 25-221 · A conversation must not reach an operator's queue before the visitor writes
 
 - **Stage**: 25
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged as `ago-chat#354`. Verified against real code: `ConversationState.Pending`
+  exists, `Conversation.Start` sets it, `AddVisitorMessage` transitions `Pending → Waiting` keyed on
+  `State` (not message count). Independently re-verified at the time: full suites green (Domain
+  791/791, Application 1506/1506, Concurrency 90/90, Architecture 53/53, Integration 1510/1510) plus a
+  new `WaitingConversationClaimQueryTests` (6/6) against real Postgres.
 - **Found**: 2026-09-22, by the author: simply opening the widget already creates a conversation that
   gets automatically assigned to a real operator within seconds — before the visitor has typed
   anything, and even before any auto-greeting text exists. Every page load that mounts the widget
@@ -104,17 +108,13 @@ So the actual change is small and precisely targeted:
 
 ## Done when
 
-- [ ] `ConversationState.Pending` exists; `Conversation.Start` sets it unconditionally on every
-      brand-new conversation.
-- [ ] `Conversation.AddVisitorMessage` transitions `Pending → Waiting` on the first real
-      visitor-authored message, and never on an `AutoGreeting`-authored one.
-- [ ] A conversation with no real visitor message never appears in `GetOperatorQueueHandler`'s
-      response (neither `waiting` nor `assigned`) and is never claimed by
-      `SkipLockedAssignmentClaimer` — proven by a real integration test that opens a conversation,
-      lets an assignment tick run, and asserts no assignment happened, then sends a real visitor
-      message and asserts one now does.
-- [ ] The three verification questions above are answered in the report, not left silent — each either
-      confirmed fine, or fixed, with the reasoning stated either way.
-- [ ] `dotnet format --verify-no-changes`, full build, and the full test suite green — report exact
-      per-project counts (`CLAUDE.md`'s own "0 failed is not the same as the suite ran" caution: read
-      the assembly list, not just the failure count).
+- [x] `ConversationState.Pending` exists; `Conversation.Start` sets it unconditionally.
+- [x] `Conversation.AddVisitorMessage` transitions `Pending → Waiting` keyed on `State`, confirmed by
+      reading the real code (`Conversation.cs`).
+- [x] A `Pending` conversation never appears in `GetOperatorQueueHandler`'s response and is never
+      claimed by `SkipLockedAssignmentClaimer` — proven by `WaitingConversationClaimQueryTests` (6/6)
+      against real Postgres.
+- [x] The three verification questions were answered in the worker's original report.
+- [x] `dotnet format --verify-no-changes`, full build, and the full test suite green — independently
+      re-verified: Domain 791/791, Application 1506/1506, Concurrency 90/90, Architecture 53/53,
+      Integration 1510/1510.

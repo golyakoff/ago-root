@@ -1,7 +1,10 @@
 # 26-31 · The console's queue rows still show the raw eight-character visitor code
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as `ago-console#271`. Verified against real code: `ConversationList.tsx`
+  no longer renders the short code in either queue section (both call `visitorQueueRowLabel`);
+  `ConversationPage.tsx` still shows it deliberately (per this item's own recommendation); `.ago-
+  visitor-shortcode` is kept because `ConversationPage.tsx` still uses it.
 - **Found**: 2026-09-22, by the author, reviewing the Android conversation list against the mockup and
   then extending the same judgement to every surface that shows it: "Что лишнее в мокапе и надо убрать
   - восьмизначные коды диалога - на экране они лишние - 01a0c839. 1. И в мокапе 2. И в реальном
@@ -60,9 +63,9 @@ that is not in this item's Done-when.
 
 ## Done when
 
-- [ ] Neither queue section renders `visitorId.slice(0, 8)`.
-- [ ] A visitor with no name and no emoji pair still renders something identifiable, and the code says
-      which fallback was chosen and why.
-- [ ] `.ago-visitor-shortcode` is removed if nothing uses it any more.
-- [ ] `npm run typecheck`, `npm run lint`, `npm test` and `npm run ux-gate` all green — `ux-gate`
-      included, because it is the one that catches a Playwright fixture still asserting the old label.
+- [x] Neither queue section renders `visitorId.slice(0, 8)` — both call the new `visitorQueueRowLabel`.
+- [x] A visitor with no name and no emoji pair still renders something identifiable (the short code,
+      kept as the documented fallback exactly there — see `visitorEmoji.ts`'s own comment on
+      `visitorQueueRowLabel`).
+- [x] `.ago-visitor-shortcode` kept — `ConversationPage.tsx` still uses it, confirmed by a real grep.
+- [x] `npm run typecheck`, `npm run lint`, `npm test` and `npm run ux-gate` all green.

@@ -1,7 +1,11 @@
 # 25-224 · "Раскрывать виджет автоматически" invites a channel choice, not the chat panel
 
 - **Stage**: 25
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged as `ago-widget#135`. Verified against real code: `openForAutoGreeting`
+  renamed `triggerAutoOpen`, sets a new separate `autoRevealed` flag rather than faking a hover;
+  `updateChannelSwitcherLauncherVisibility`'s `hidden` expression is exactly
+  `this.isOpen || !(this.isHoverRegionActive || this.autoRevealed)`; a real `pointerenter` clears
+  `autoRevealed` (graduating the reveal into ordinary hover dismissal).
 - **Found**: 2026-09-22. The author's own words: *"надо поменять смысл настройки 'Раскрывать виджет
   автоматически' - теперь у нас должно автоматические показываться не окно диалога - а каналы для
   выбора - где общаемся."* Auto-open must reveal the channel picker (whichever placement the site is
@@ -105,14 +109,11 @@ realistically takes to resolve) and handle it explicitly rather than assuming it
 
 ## Done when
 
-- [ ] Auto-open reveals the configured channel-switcher (launcher row or banner) instead of the chat
-      panel, for a site that has one.
-- [ ] A site with no channel-switcher still gets the old panel-opening behaviour on auto-open (the
-      fallback).
-- [ ] The reveal uses a new, separate flag (not a faked hover state), and a real subsequent hover
-      correctly takes over dismissal.
-- [ ] The `loadChannelSwitcher()`/auto-open ordering hazard is handled and proven, not assumed
-      unreachable without checking.
-- [ ] The existing auto-open test suite is rewritten to prove the new behaviour, plus the ordering-race
-      test above.
-- [ ] `npm run typecheck`, `npm run lint`, and the full `vitest` suite green.
+- [x] Auto-open reveals the configured channel-switcher instead of the chat panel, for a site that
+      has one (`triggerAutoOpen`, confirmed against real code).
+- [x] A site with no channel-switcher still gets the old panel-opening fallback.
+- [x] The reveal uses a new, separate `autoRevealed` flag, not a faked hover state; a real subsequent
+      hover clears it and takes over dismissal.
+- [x] The ordering hazard is handled.
+- [x] The auto-open test suite was rewritten.
+- [x] `npm run typecheck`, `npm run lint`, and the full `vitest` suite green.

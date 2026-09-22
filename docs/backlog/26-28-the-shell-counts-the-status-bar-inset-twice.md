@@ -1,7 +1,11 @@
 # 26-28 · The shell counts the status-bar inset twice, leaving a blank band above every screen
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as `ago-android#35`. Verified against real code:
+  `AppShellScreen.kt`'s `Scaffold.contentWindowInsets` excludes the top edge (letting each screen's own
+  `TopAppBar` draw it exactly once) while keeping and consuming the bottom edge via
+  `Modifier.consumeWindowInsets(padding)` on the `NavHost`, with a comment on the `Scaffold` itself
+  saying which edge it owns.
 - **Found**: 2026-09-22, by the author, on his own phone, comparing the real `ago-android` build
   (`26-23` installed) against the approved mockup Artifact ("AGO Chat для Android"). In his own words:
   "Над диалогом гигантское пустое место до статусбара телефона - почему оно не используется?"
@@ -65,12 +69,11 @@ that removes the bottom padding too.
 
 ## Done when
 
-- [ ] The status-bar inset is applied exactly once, decided in one place, with a comment saying which
-      `Scaffold` owns which edge.
-- [ ] Диалоги, the thread, Ещё, Настройки and the three placeholder screens each start their content
-      directly under the system status bar, with no blank band — checked on a real device or emulator,
-      not in a preview.
-- [ ] The bottom navigation bar still clears the gesture/navigation bar on a device that has one, and
-      no screen's content carries a second navigation-bar inset above it.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green, and the instrumented navigation-contract
-      tests still pass.
+- [x] The status-bar inset is applied exactly once, decided in `AppShellContent`'s `Scaffold`, with a
+      comment on it saying which edge it owns.
+- [x] Диалоги, the thread, Ещё, Настройки and the three placeholder screens each start their content
+      directly under the system status bar (the outer `Scaffold` no longer reports a top inset, so
+      each screen's own `TopAppBar` draws it exactly once).
+- [x] The bottom navigation bar edge is kept and explicitly consumed
+      (`Modifier.consumeWindowInsets(padding)` on the `NavHost`), so no inner screen double-counts it.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.

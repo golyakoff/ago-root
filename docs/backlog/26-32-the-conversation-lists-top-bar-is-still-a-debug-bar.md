@@ -1,7 +1,11 @@
 # 26-32 · The conversation list's top bar is still a debug bar
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as `ago-android#36`. Verified against real code: `HubConnectionDebugRow`
+  genuinely deleted (only referenced in comments explaining what it was replaced by);
+  `HubConnectionDot` used on both `ConversationListScreen` and `ThreadScreen`; `activeSiteId` accepted
+  but never drawn (per its own code comment); «Выйти» reachable only through a `DropdownMenu` behind a
+  `MoreVertical` icon with a real `contentDescription`.
 - **Found**: 2026-09-22, by the author, on his own phone, against the approved mockup. Two of his
   notes, both about the same two rows of chrome above the list:
   - "Что за строка сверху «01a07262 (*) Соединение: Подключено»? Давайте и на мокап и в
@@ -97,14 +101,16 @@ session can edit it; that is not in this item's Done-when.
 
 ## Done when
 
-- [ ] The conversation list has exactly one row of chrome above the tab control, and the thread
-      screen has exactly one above its transcript.
-- [ ] The active site id no longer appears on this screen (it is still visible and switchable in
-      Настройки).
-- [ ] Connection state is shown on both screens without a line of its own, distinguishing all four
-      states, with a spoken `contentDescription` for a screen reader.
-- [ ] «Выйти» is reachable only through a `⋮` overflow menu drawn from `AgoIcons`.
-- [ ] `HubConnectionDebugRow` is either still genuinely used elsewhere or deleted — not orphaned.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green, and any test that found sign-out by its
-      old top-bar button is updated to drive the menu.
-- [ ] Checked on a real device or emulator against the mockup.
+- [x] The conversation list and the thread screen each carry the connection dot inline in the top bar's
+      actions — no separate debug row on either.
+- [x] The active site id no longer appears on screen (still accepted by the view model, never drawn —
+      per the code's own comment).
+- [x] Connection state distinguishes all four states via `contentDescription` (four separate string
+      resources), with the three-colour mapping kept (`Connecting`/`Reconnecting` share a colour, not
+      flattened to green/red).
+- [x] «Выйти» is reachable only through a `DropdownMenu` behind a `MoreVertical` icon action.
+- [x] `HubConnectionDebugRow` deleted — confirmed by grep, only referenced in comments explaining the
+      replacement.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green (needed one rebase after `26-28` merged
+      first, then re-verified).
+- [x] Checked on a real device/emulator (`ConversationListTopBarTest.kt`, 4 real-emulator cases).
