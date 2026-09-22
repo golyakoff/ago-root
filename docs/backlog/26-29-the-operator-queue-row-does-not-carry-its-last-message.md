@@ -1,7 +1,7 @@
 # 26-29 · The operator-queue row does not carry its last message, so no client can show one
 
 - **Stage**: 26
-- **Status**: ready — **carries one open question for the author, below**
+- **Status**: ready — the open question below is now resolved
 - **Found**: 2026-09-22, by the author, comparing the real `ago-android` conversation list against the
   approved mockup. Two of his notes land on the same missing data: "Не хватает обрезанной последней
   строчки диалога второй строкой (под именем)", and "Время - это время создания чата? но мне кажется,
@@ -86,12 +86,21 @@ nobody answering. Switching it to last-message-time would make a waiting visitor
 message *jump to looking newer* — "20 мин" becomes "2 мин" — and sort themselves down the queue for
 the crime of asking again. That is backwards for a queue.
 
-**Recommendation**: send both fields on the DTO (this item), and let each list choose — «Мои» shows
-last-message time, «Ожидают» keeps waiting-since. That is a client decision and belongs to `26-30`
-(Android) and, if the author wants it there too, to the console.
+**Resolved by the author, 2026-09-22** — a third option neither this item nor `26-30` had proposed,
+which dissolves the collision outright rather than picking a side: **show both instants, each beside
+the text it actually describes, instead of choosing one per tab.**
 
-**Question for the author**: is that split right, or does he want last-message time on both tabs?
-`26-30` should not be finished until this is answered.
+- The name line keeps the conversation's own age-since-creation (unchanged, so both tabs' existing
+  sort order — «Ожидают» sorted oldest-first — needs no change at all), in the name line's own
+  font weight — "more active" (the author's own words), because it describes the whole dialog.
+- The new snippet line (`26-30`) carries the last-message instant beside the snippet text itself, in
+  the snippet line's own (lighter) weight — so the timestamp closest to the words is the timestamp
+  those words were said.
+
+Both fields this item asks for are still needed exactly as scoped below — nothing about the DTO
+changes from this resolution, only which line a client puts each timestamp on (`26-30`'s own concern).
+No client-side branching on tab is needed either: both instants render, unconditionally, wherever the
+data is present.
 
 ## Out of scope
 
