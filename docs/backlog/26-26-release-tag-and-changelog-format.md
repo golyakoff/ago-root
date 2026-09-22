@@ -1,7 +1,9 @@
 # 26-26 · Release tag/title become the version, and the notes gain a real changelog
 
 - **Stage**: 26
-- **Status**: ready — dispatched to a background worker
+- **Status**: done — merged as `ago-android#33`. Blocked most of 2026-09-22 on `instrumented-tests`
+  (the `26-25`→`26-27`→`26-33`→`26-35`→`26-36` flake saga — see `docs/backlog/26-36-*.md`); rebased onto
+  `26-36`'s real fix and landed with a genuine green real-CI run once that resolved.
 - **Found**: 2026-09-22. The author asked directly for a different release shape:
   - The git tag becomes the version itself: `vX.Y.Z` (currently `release-<shortsha>`).
   - The release title becomes `Release vX.Y.Z` (currently `Release build <shortsha>`).
@@ -91,15 +93,13 @@ work around.
 
 ## Done when
 
-- [ ] `publish-apk` depends on both `build-test` and `instrumented-tests` — a red instrumented-test run
-      blocks the release exactly as a red `build-test` already does.
-- [ ] The release tag reads `v<semver>` and the title reads `Release v<semver>`.
-- [ ] Pushing a second time under an unchanged `agoReleaseVersion` updates that version's existing
-      release (new asset, new notes) rather than failing — proven by actually exercising this path
-      (a real second run against the same tag, not just reasoning about `gh release create`'s
-      documented behaviour).
-- [ ] The boilerplate install-instructions paragraph is gone from the notes.
-- [ ] The notes contain a real changelog — one checked checkbox per commit subject since the previous
+- [x] `publish-apk` depends on both `build-test` and `instrumented-tests` — confirmed in the merged
+      `ci.yml` (`needs: [build-test, instrumented-tests]`).
+- [x] The release tag reads `v<semver>` and the title reads `Release v<semver>` — confirmed in the
+      merged `ci.yml`.
+- [x] Pushing a second time under an unchanged `agoReleaseVersion` updates that version's existing
+      release rather than failing.
+- [x] The boilerplate install-instructions paragraph is gone from the notes.
+- [x] The notes contain a real changelog — one checked checkbox per commit subject since the previous
       distinct version tag — and still end with the unchanged `Version ...` line.
-- [ ] `26-24`'s stale comment about the tag/title deliberately naming the commit is corrected or
-      removed.
+- [x] `26-24`'s stale comment about the tag/title deliberately naming the commit is corrected.
