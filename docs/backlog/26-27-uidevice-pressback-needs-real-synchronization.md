@@ -1,7 +1,10 @@
 # 26-27 · `pressSystemBack()` needs a real synchronization wait, not `waitForIdle()` alone
 
 - **Stage**: 26
-- **Status**: ready — dispatched to a background worker
+- **Status**: superseded by `26-33` — this item's own fix (`UiDevice.waitForIdle()`) still failed on
+  real CI (`ago-android#34`, run `35734381435`) despite 9 clean local emulator runs; `26-33` keeps this
+  commit and adds what was actually missing. Not reverted — recorded as a real, necessary but
+  insufficient step, not a wrong one.
 - **Found**: 2026-09-22, live, on `ago-android#33`'s own `instrumented-tests` run (a PR that touches
   only `.github/workflows/ci.yml` — no app code at all), immediately after `26-25` merged and its own
   PR had reported this exact job green. Six tests across four files failed, every one of them an
