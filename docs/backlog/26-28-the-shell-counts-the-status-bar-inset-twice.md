@@ -34,8 +34,12 @@ the same shape and therefore has the same band:
 | `shell/SettingsScreen.kt` | 104–106 | Настройки |
 | `thread/ThreadScreen.kt` | 170–173 | the thread |
 
-The bottom is not symmetrical with this: the outer `Scaffold` genuinely owns the navigation bar and
-its inset, and the inner screens have no bottom bar of their own, so only the top double-counts.
+**Correction, found while fixing this and recorded rather than quietly dropped**: this item first said
+"only the top double-counts". That is wrong. The bottom double-counts too, just less visibly. An inner
+screen has no `bottomBar` of its own, so Material 3 gives its content a bottom padding of
+`contentWindowInsets.getBottom()` — the navigation-bar inset — even though the outer `Scaffold` has
+*already* lifted the whole `NavHost` above the `NavigationBar`. Compose insets are window-relative
+until somebody consumes them, and nobody did. So the fix has to answer both edges, not one.
 
 ## Scope
 
@@ -66,6 +70,7 @@ that removes the bottom padding too.
 - [ ] Диалоги, the thread, Ещё, Настройки and the three placeholder screens each start their content
       directly under the system status bar, with no blank band — checked on a real device or emulator,
       not in a preview.
-- [ ] The bottom navigation bar still clears the gesture/navigation bar on a device that has one.
+- [ ] The bottom navigation bar still clears the gesture/navigation bar on a device that has one, and
+      no screen's content carries a second navigation-bar inset above it.
 - [ ] `./gradlew ktlintCheck lint test assembleDebug` green, and the instrumented navigation-contract
       tests still pass.
