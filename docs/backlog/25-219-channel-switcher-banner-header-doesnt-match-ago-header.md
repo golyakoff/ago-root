@@ -1,7 +1,7 @@
 # 25-219 · The channel-switcher banner header doesn't match `.ago-header`'s own look
 
 - **Stage**: 25
-- **Status**: done — `ago-widget#<PR>`
+- **Status**: done — `ago-widget#131`
 - **Found**: 2026-09-22, live, by the author reviewing the widget: `.ago-channel-switcher-banner-header`
   (`25-211`'s header bar atop the hover-revealed channel banner) is a flat `#374151` at
   `font-weight: 700`, while `.ago-header` (the real chat panel's own header, directly above it in the
