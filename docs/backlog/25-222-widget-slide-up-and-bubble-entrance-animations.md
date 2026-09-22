@@ -1,7 +1,7 @@
 # 25-222 · Panel, banner and channel icons animate in instead of merely appearing
 
 - **Stage**: 25
-- **Status**: done — `ago-widget#<PR>`
+- **Status**: done — `ago-widget#133`
 - **Found**: 2026-09-22. The author asked for real entrance animations instead of plain
   appear/disappear: the chat panel and the channel-switcher banner should slide up from the bottom,
   and the channel-launcher's round icons should "bubble" in, starting from the one nearest the round
