@@ -1,7 +1,7 @@
 # 26-14 · The conversation list
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — `ago-android#19`; remainder carried out to `26-22`
 - **Found**: 2026-09-21, the third of `plan.md`'s Phase 0 screens and the first thing an operator
   actually sees after signing in.
 - **Verified**: 2026-09-21 — the waiting queue's own refresh is a poll, not a broadcast:
@@ -48,12 +48,52 @@ claimable from it. One promise: **an operator sees their work.**
 
 ## Done when
 
-- [ ] Both segments render against the live API on a real phone.
-- [ ] A conversation assigned while the list is open appears **without the screen navigating**, proven
-      by a test as well as observed.
-- [ ] Killing the network still renders the cached list, visibly marked stale, with no spinner
-      blocking it.
-- [ ] Claiming a waiting conversation moves it to «Мои»; a claim of one another operator already took
-      renders the server's refusal and does not retry.
-- [ ] The list survives rotation and returning from the background with its scroll position intact.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [~] Both segments render against the live API on a real phone. **Carried to `26-22`** - no real
+      authenticated session exists in this environment.
+- [x] A conversation assigned while the list is open appears **without the screen navigating**, proven
+      by a test as well as observed. `ConversationListViewModelTest`'s own "never navigates" case -
+      confirmed by reading `ConversationListViewModel` directly: it has no navigation channel of any
+      kind, only a badge (`newlyAssignedIds`) and a re-fetch.
+- [x] Killing the network still renders the cached list, visibly marked stale, with no spinner
+      blocking it. Proven with a `FakeConversationsApi` whose fetch call hangs forever
+      (`awaitCancellation()`), confirming the cache render happens with the network call still
+      genuinely pending - not merely fast.
+- [x] Claiming a waiting conversation moves it to «Мои»; a claim of one another operator already took
+      renders the server's refusal and does not retry. Proven with `advanceTimeBy(60_000)` after a
+      refusal showing zero further calls.
+- [~] The list survives rotation and returning from the background with its scroll position intact.
+      Architecturally covered (`rememberLazyListState`'s own `rememberSaveable` mechanism) - **carried
+      to `26-22`** for an actual on-device confirmation, since no automated test exercises a real
+      Activity recreation here.
+- [x] `./gradlew ktlintCheck lint test` green; counts reported. 108 tests (31 `:core:domain`, 56
+      `:core:network`, 21 `:app`), 0 failures; ktlint clean.
+
+## Outcome
+
+Landed as `ago-android#19`. One screen, one segmented control - the first real destination after
+sign-in. Room's first consumer: the queue is cached and rendered stale-until-proven-fresh, a `null`
+cache read kept distinct from a genuinely empty queue (`RoomConversationListCacheTest`, 4 tests, run
+live on the `ago-test` emulator by the implementing worker). `OperatorHubConnection` (`26-13`) gains
+two new, purely additive flows (`allMessages`, `assignments`) behind a new `OperatorHubEvents`
+interface - `MessageSubscription`'s own join-scoped dedup contract is untouched. `assignments` wires
+the real, pre-existing `"ConversationAssigned"` hub push nothing in this client had subscribed to
+before this item. Claiming a waiting conversation is a real `POST
+/api/v1/conversations/{id}/claim` every time; a refusal is shown once, never retried. The «Ожидают»
+poll matches the console's real 15-second interval (correcting the approved docs' stale "10-second"
+claim) but runs only while that tab is selected and the screen is foregrounded - narrower than the
+console's own always-on timer, since a phone pays real metered-data cost a browser tab does not.
+
+**Verified independently, beyond the implementing worker's own report, against the real backend
+source**: confirmed `OperatorHubConnection`'s extension is purely additive (read the diff line by
+line); confirmed `"ConversationAssigned"` is a real, pre-existing hub method
+(`ResolveConversationAssignmentTargetsHandler.cs`'s own `const string Method`), not invented, and its
+DTO field names match `Ago.Chat.Contracts.ConversationAssignedDto` exactly; confirmed both REST
+endpoints (`GET /api/v1/conversations/queue`, `POST /api/v1/conversations/{conversationId:guid}/claim`)
+are real, existing routes in `ConversationsEndpoints.cs`; confirmed `"Visitor"` matches the real
+`MessageAuthorKind` enum exactly. Re-ran the full build myself, green; confirmed all 108 tests from
+the real JUnit XML. The 4 Room instrumented tests were not re-run myself (the emulator had stopped by
+review time) - not judged worth relaunching solely for that, given everything else checked out
+precisely.
+
+**Two boxes carried to `26-22`** (a real phone/session, and an on-device rotation confirmation) -
+the identical real-session precondition that item already exists for.

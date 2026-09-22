@@ -1,17 +1,24 @@
-# 26-22 · Prove sign-in and the hub connection against a real phone
+# 26-22 · Prove Phase 0 against a real phone
 
 - **Stage**: 26
 - **Status**: ready — blocked on a real physical device and two real test identities, not on design
   or code
-- **Found**: 2026-09-22, carrying out `26-12`'s own remainder. `26-12` shipped and unit-tested the
-  entire sign-in/routing/tenancy mechanism (the OIDC handshake against the live realm, the four-arm
-  routing tree, token refresh, the `X-Ago-Active-Site` plugin) and left three Done-when boxes
-  genuinely unsettled for the reason its own report states plainly: no physical Android device and no
-  real operator/platform-owner test identity were available in that worktree. This is that remainder,
-  given its own number per this project's own rule rather than left as an open box under a closed
-  item. **Widened the same day to also carry `26-13`'s own remainder** (the hub connection's real
-  token-expiry/network-kill/backgrounding proofs) once it turned out to need the identical real-session
-  precondition - one real sign-in session proves both items' remaining boxes, not two.
+- **Found**: 2026-09-22, carrying out `26-12`'s own remainder, then widened twice the same day.
+  `26-12` shipped and unit-tested the entire sign-in/routing/tenancy mechanism (the OIDC handshake
+  against the live realm, the four-arm routing tree, token refresh, the `X-Ago-Active-Site` plugin)
+  and left three Done-when boxes genuinely unsettled for the reason its own report states plainly: no
+  physical Android device and no real operator/platform-owner test identity were available in that
+  worktree. This is that remainder, given its own number per this project's own rule rather than left
+  as an open box under a closed item. **Renamed from a sign-in-and-hub-specific title once it became
+  clear every Phase 0 item lands the identical shape of remainder** - built and unit-tested against a
+  fake backend, genuinely unable to prove itself against a real phone and a real signed-in session in
+  an environment with no test identity and no physical device. Rather than open a fourth, fifth,
+  sixth near-duplicate item as each later Phase 0 piece hits the same wall, this one item collects
+  them all and is run once, in one real session, when a phone and test identities exist. Carries, so
+  far: `26-13`'s hub-connection reliability proofs (token expiry, network kill/restore, backgrounding/
+  rotation) and `26-14`'s conversation-list proofs (rendering against the live API, on-device rotation
+  with scroll position) - both added the same reasoning as `26-13`'s own widening: one real sign-in
+  session proves all of it, not one session per item.
 - **Depends on**: a physical Android phone, and two disposable test identities in the live `ago-chat`
   Keycloak realm — one a real operator (a seat at a real site), one holding the `platform-owner` realm
   role and no `operators` row. Neither exists yet. `26-11`'s own outcome is the precedent for creating
@@ -60,6 +67,13 @@ what happened.
    it back, rotate the device, and confirm server-side (the Redis `presence:operator:{id}` set, or
    whatever this deployment's own live inspection method is) that exactly one connection id exists for
    that operator throughout.
+9. **Both conversation-list segments render against the live API** (`26-14`), reusing step 1's own
+   operator identity - confirm «Мои» and «Ожидают» both populate with real data, and that a real
+   assignment arriving while the list is open badges the row and never navigates.
+10. **The conversation list survives rotation with scroll position intact** (`26-14`): scroll the list,
+    rotate the device, confirm the scroll position is unchanged - the on-device confirmation
+    `rememberSaveable`'s own architectural guarantee was never exercised against a real Activity
+    recreation.
 
 ## Out of scope
 
@@ -82,4 +96,7 @@ what happened.
       disconnected arrives exactly once on reconnect (`26-13`).
 - [ ] Backgrounding and rotating the device leaves exactly one hub connection, proven server-side
       (`26-13`).
+- [ ] Both conversation-list segments render real data against the live API, and a real assignment
+      arriving while the list is open badges the row without navigating (`26-14`).
+- [ ] The conversation list's scroll position survives a real device rotation (`26-14`).
 - [ ] Every disposable test identity created for this item is deleted afterward, confirmed.
