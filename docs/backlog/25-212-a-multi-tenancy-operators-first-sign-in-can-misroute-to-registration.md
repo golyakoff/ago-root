@@ -1,7 +1,10 @@
 # 25-212 · A multi-tenancy operator's first sign-in can misroute to registration
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — merged as `ago-console#274`. Design decision for >1 tenancy: reuse
+  `resolveActiveSite`'s existing stored-or-first-alphabetically resolution for the one probe call,
+  not a blocking site-picker screen (unlike `26-12`'s Android router) — the console already answers
+  "which tenancy" silently one layout level up and deleted its own dedicated `TenancySwitcher` screen.
 - **Found**: 2026-09-22, while implementing `26-12` (`ago-android`)'s own post-authentication
   routing. That item found the identical defect shape server-side (`ResolveOperatorIdentityHandler`)
   and fixed it for the Android client; reading `ago-console`'s own `CallbackPage`/`PermissionsProvider`
@@ -76,12 +79,9 @@ zero or exactly one tenancy).
 
 ## Done when
 
-- [ ] A fake multi-tenancy identity reaches the correct destination (the operator path, or a site
-      picker - per whichever design this item settles on) rather than `/onboarding`, proven by a real
-      test constructing exactly this scenario.
-- [ ] A platform owner who also holds two or more operator tenancies still reaches their queue,
-      proven by a real test - not merely unaffected in theory.
-- [ ] The single-tenancy and zero-tenancy paths are provably unchanged (existing `CallbackPage.test.tsx`
-      cases stay green).
-- [ ] `npm run typecheck`/`lint`/`test` all green, counts reported; `ux-gate` too if this touches a
-      screen it covers.
+- [x] A fake multi-tenancy identity reaches the operator path rather than `/onboarding`, proven by a
+      new `CallbackPage.test.tsx` case asserting call order.
+- [x] A platform owner who also holds two or more operator tenancies still reaches their queue,
+      proven by a real test.
+- [x] The single-tenancy and zero-tenancy paths are provably unchanged (existing cases stay green).
+- [x] `npm run typecheck`/`lint`/`test` — 1685/1685 passing; `ux-gate` — 67 passed, 9 skipped, 0 failed.
