@@ -67,8 +67,11 @@ set in advance for this fallback.
 
 ## Done when
 
-- [ ] `instrumented-tests` no longer runs the five named files; every other instrumented test still
-      does.
-- [ ] The exclusion and its reasoning are recorded in `ci.yml` itself, not only here.
-- [ ] A real CI run of a PR touching unrelated code confirms `instrumented-tests` no longer executes
-      the five files (check the job's own log/report, don't assume the flag worked).
+- [~] The first attempt (`-Pandroid.testInstrumentationRunnerArguments.notClass=` with a comma-list)
+      only excluded 1 of 5 classes — a real Gradle/AGP limitation, not a typo.
+- [~] Recorded in `ci.yml`, then reverted entirely — the author questioned the whole approach before a
+      second (annotation-based) attempt was ever pushed.
+- [~] The real CI run that was obtained is exactly what caught the notClass bug (4 of 5 excluded
+      classes still ran) — its own verification purpose was fulfilled even though the implementation
+      it was verifying was wrong. Superseded by `26-36`, which puts these five tests back in the
+      normal CI gate instead of excluding them.
