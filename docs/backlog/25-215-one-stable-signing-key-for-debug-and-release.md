@@ -1,7 +1,7 @@
 # 25-215 · One stable signing key, shared by debug and release
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-android#26` + follow-up fix `f6a2433`
 - **Found**: 2026-09-22, while scoping `26-06` (RuStore Push device registration). RuStore keys a
   push project to the installed build's exact signature fingerprint, and `26-09`'s own per-run debug
   keystore means that fingerprint is different on every CI run — a RuStore Console project registered
@@ -78,21 +78,61 @@ release now share one fingerprint.
 
 ## Done when
 
-- [ ] A local build (`./gradlew assembleDebug assembleRelease` with `local.properties` populated)
+- [x] A local build (`./gradlew assembleDebug assembleRelease` with `local.properties` populated)
       produces two APKs, both signed with the same real certificate — confirmed by comparing each
       APK's own signing certificate fingerprint (`apksigner verify --print-certs` or equivalent), not
-      merely that the build succeeded.
-- [ ] A fresh checkout with no `local.properties` entry still builds `assembleDebug` successfully
+      merely that the build succeeded. Proven twice independently — once by the implementing worker
+      with its own throwaway keystore, once by the managing session with a second, separately
+      generated throwaway keystore — both times both build types carried that keystore's own real
+      fingerprint, not a coincidence of the build merely succeeding.
+- [x] A fresh checkout with no `local.properties` entry still builds `assembleDebug` successfully
       (AGP's own default debug signing, unchanged from today) and `assembleRelease` completes without
-      crashing, producing an honestly-unsigned artifact rather than failing the whole build.
-- [ ] CI's `publish-apk` job publishes a `release`-signed APK, and its own signing certificate
+      crashing, producing an honestly-unsigned artifact rather than failing the whole build. Confirmed
+      independently: `app-release-unsigned.apk` — the exact filename AGP itself appends when nothing
+      signs it.
+- [x] CI's `publish-apk` job publishes a `release`-signed APK, and its own signing certificate
       fingerprint matches the keystore's real fingerprint (`SHA256:
       60:96:05:98:D6:9B:5D:16:AB:A3:70:19:A5:C4:B7:3A:3E:F8:7C:AA:2B:68:97:AD:26:CB:6E:CC:46:34:CC:09`)
-      — proven by actually downloading a published release and checking it, not by assuming the
-      workflow step ran.
-- [ ] Installing a newly-published release APK **over a previous one from an earlier CI run succeeds**
-      without an uninstall step — the actual proof the moving-fingerprint problem is fixed.
-- [ ] The release notes' own "uninstall any previous build" paragraph is removed or corrected.
-- [ ] `docs/architecture/secrets.md` names both new CI secrets under §C, with the **Breaking** class
+      — **verified 2026-09-22**: downloaded the real published release (`release-f0d9eca`) and ran
+      `apksigner verify --print-certs` — `60960598d69b5d16aba37019a5c4b73a3ef87caa2b6897ad26cb6ecc4634cc09`,
+      an exact match. This did not work on the first two real runs — see Outcome for the real bug
+      that caused it and how it was found and fixed.
+- [~] Installing a newly-published release APK **over a previous one from an earlier CI run succeeds**
+      without an uninstall step — the actual proof the moving-fingerprint problem is fixed. **Not yet
+      provable**: `release-f0d9eca` is the first release-signed build that has ever existed for this
+      app — there is no earlier one to install over. Will be confirmed the next time any change
+      reaches `main` and produces a second release; carried forward informally rather than to `26-22`,
+      since it needs no real device or real identity, only a second ordinary CI run.
+- [x] The release notes' own "uninstall any previous build" paragraph is removed or corrected.
+- [x] `docs/architecture/secrets.md` names both new CI secrets under §C, with the **Breaking** class
       and the reason stated, and the local keystore file's own location under §E.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [x] `./gradlew ktlintCheck lint test` green; counts reported.
+
+## Outcome
+
+Landed as `ago-android#26`, with a real, load-bearing bug found and fixed the same session in a
+follow-up commit on `main` directly (`f6a2433`/`f0d9eca`). The first two real `publish-apk` runs
+against the real secrets both failed at `:app:validateSigningRelease` with **"Keystore file not set
+for signing config ago"** — a misleading message. The actual cause: the CI workflow passed three of
+the four `agoSigning*` properties (path, store password, alias) and simply never passed
+`agoSigningKeystorePath`'s sibling `agoSigningKeyPassword` at all, so it evaluated to `null` even
+though the keystore file itself was present and correct on the runner the whole time.
+
+**Found by**: a temporary diagnostic `println` (path and existence only, never a password) proved the
+keystore file genuinely existed at the expected path when AGP still refused it — ruling out a bad
+secret or a bad path — and the real cause was then found by reading the CI workflow's own four-property
+contract against what it actually passed. **Confirmed by direct local reproduction**: building with a
+throwaway keystore and the identical three properties CI was passing reproduced the exact same error;
+adding the fourth (`-PagoSigningKeyPassword`, reusing the same password secret value, since the real
+keystore was generated with one password serving both roles) fixed it locally before touching CI again.
+
+**Verified independently, beyond the implementing worker's own report**: re-ran the fresh-checkout and
+throwaway-keystore proofs myself with a second, separately generated keystore; watched the real CI
+runs fail twice, diagnosed the real cause via a live diagnostic rather than guessing, reproduced and
+fixed it locally first; and, once fixed, downloaded the actual first-ever release-signed publish and
+confirmed its certificate fingerprint against the real keystore's own recorded value — not assumed
+from the workflow succeeding.
+
+**One box left open, informally**: proving an upgrade install over a previous release-signed build
+needs a second release to exist, which nothing about this item can force — it will be true the next
+time any ordinary change reaches `main`.

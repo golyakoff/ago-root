@@ -1,7 +1,7 @@
 # 25-216 · Wire the RuStore service token into the demo deployment
 
 - **Stage**: 25
-- **Status**: ready
+- **Status**: done — `ago-deploy#257`
 - **Found**: 2026-09-22. The author created a real RuStore Console push project and its service
   token while scoping `26-06`. `docs/architecture/secrets.md` §C already documents
   `RUSTORE_PUSH_SERVICE_TOKEN` as a real row (added when `26-04`/`adr/0180` landed), but the actual
@@ -67,11 +67,31 @@ repository, the same way every other row in `secrets.md`'s table does.
 
 ## Done when
 
-- [ ] `.env.example` documents both new keys, in this file's own established comment style.
-- [ ] `worker.yaml` maps both raw `.env` keys into the two `Push__RuStore__*` names
+- [x] `.env.example` documents both new keys, in this file's own established comment style.
+- [x] `worker.yaml` maps both raw `.env` keys into the two `Push__RuStore__*` names
       `RuStoreOptions`/`Program.cs` actually bind, on the Worker container only.
-- [ ] The demo overlay renders with a local, throwaway `.env` supplying both keys — proven by
+- [x] The demo overlay renders with a local, throwaway `.env` supplying both keys — proven by
       actually rendering it and inspecting the `infra-credentials` Secret's own keys, not by reading
-      the YAML and assuming it is correct.
-- [ ] `api.yaml` and `webhooks.yaml` are confirmed unchanged — the isolation `secrets.md`'s own row
-      states is real, not accidentally widened.
+      the YAML and assuming it is correct. Confirmed independently by the managing session too, not
+      only the implementing worker: rendered a second time from a fresh throwaway `.env`, grepped the
+      full ~5000-line output, found the two keys in the Secret and the two `env:` lines exactly once.
+- [x] `api.yaml` and `webhooks.yaml` are confirmed unchanged — the isolation `secrets.md`'s own row
+      states is real, not accidentally widened. Confirmed by grep on the rendered output: zero
+      occurrences outside `ago-chat-worker`.
+
+## Outcome
+
+Landed as `ago-deploy#257`. `RUSTORE_PUSH_SERVICE_TOKEN` and `RUSTORE_PUSH_PROJECT_ID` now render into
+the demo overlay's `infra-credentials` Secret and map to `Push__RuStore__ServiceToken`/
+`Push__RuStore__ProjectId` on `ago-chat-worker` only, mirroring `CHANNELS_CREDENTIAL_ENCRYPTION_KEY`'s
+own established shape. Both real values already live on the real demo node's own `.env` — placed there
+directly by the managing session the same session this item was filed, never through this repository.
+`RUSTORE_PUSH_PROJECT_ID`'s real value (`1Q8iLXwwBZViuznG6eCTHgkzrTE9Bto6`, the author's own real
+RuStore Console "AGO Chat Production" push project) arrived and was added the same way shortly after.
+
+**Verified independently, beyond the implementing worker's own report**: read both diffs directly;
+re-rendered the overlay myself from a fresh throwaway `.env` and confirmed the same result the worker
+reported, rather than trusting the report alone.
+
+**Still out of scope, deliberately**: actually redeploying the demo cluster with these real values —
+a separate, deliberate action for the managing session to take with the author present.
