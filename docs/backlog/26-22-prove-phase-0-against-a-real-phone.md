@@ -21,7 +21,10 @@
   reason this whole stage exists: sign-in → list → thread → send → seen on the console, and a
   visitor's reply seen back on the phone) and the live send-retry-produces-exactly-one-message race -
   all added the same reasoning as `26-13`'s own widening: one real sign-in
-  session proves all of it, not one session per item.
+  session proves all of it, not one session per item. **Widened again for `26-16`'s own two
+  remainder boxes**: the four-vs-five bottom-destination proof against an identity confirmed to lack
+  the calendar grant, and an on-device rotation/backgrounding confirmation of the shell itself
+  (distinct from `26-14`'s conversation-list rotation proof, which this session *did* observe live).
 - **Depends on**: a physical Android phone, and two disposable test identities in the live `ago-chat`
   Keycloak realm — one a real operator (a seat at a real site), one holding the `platform-owner` realm
   role and no `operators` row. Neither exists yet. `26-11`'s own outcome is the precedent for creating
@@ -87,6 +90,14 @@ what happened.
     exactly one message lands - not two, not zero - proving the client's retry-with-the-same-id
     behaviour and the server's own dedup together, not each in isolation as `26-15`'s own unit tests
     already did.
+13. **The bottom bar draws four destinations without the calendar grant, five with it** (`26-16`),
+    against a real identity confirmed to lack `calendar:configure` and every booking-action permission
+    - not merely against whichever identity happens to be signed in.
+14. **Rotating the device and returning from the background preserves the shell's own selected
+    destination and each destination's own back stack** (`26-16`) - distinct from item 10 above,
+    which is `26-14`'s conversation-list-specific rotation proof and was already observed live this
+    session; this one is about `AppShellScreen`'s own `NavController` state surviving a real
+    `Activity` recreation, not yet exercised on-device.
 
 ## Out of scope
 
@@ -111,7 +122,8 @@ what happened.
       (`26-13`).
 - [ ] Both conversation-list segments render real data against the live API, and a real assignment
       arriving while the list is open badges the row without navigating (`26-14`).
-- [ ] The conversation list's scroll position survives a real device rotation (`26-14`).
+- [x] The conversation list's scroll position survives a real device rotation (`26-14`). **Observed
+      2026-09-22**, same real-device session as item 11's own proof.
 - [x] **Phase 0's actual end-to-end proof**, recorded with the date it was observed: a message sent
       from the phone appears in `ago-console`; a visitor's reply appears on the phone with no refresh
       (`26-15`). **Observed 2026-09-22**, on a real physical device (a Redmi/Poco, model
@@ -130,4 +142,8 @@ what happened.
       other Done-when items, none of which this session's brief window covered.
 - [ ] A real send interrupted mid-flight (connection dropped at the moment of sending) produces
       exactly one message, not two, not zero (`26-15`).
+- [ ] An identity confirmed to lack `calendar:configure` and every booking-action permission sees
+      four bottom destinations; the same identity granted `calendar:configure` sees five (`26-16`).
+- [ ] Rotating the device and returning from the background preserves the shell's own selected
+      destination and each destination's own back stack (`26-16`).
 - [ ] Every disposable test identity created for this item is deleted afterward, confirmed.
