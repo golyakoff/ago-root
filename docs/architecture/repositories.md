@@ -30,7 +30,6 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | `ago-deploy` | compose, Kustomize, seed | manifests | image tags, chart values |
 | `ago-landing` | the public marketing page at the apex domain | a static page, served from the demo overlay | nothing |
 | `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and its own hosts** (Api, Worker, Migrator) | Docker images, published to GHCR by CI under the commit SHA (`adr/0047`) | `Ago.Platform.*` packages |
-| `ago-calendar-console` | AGO Calendar's operator console SPA | static bundle, published as an image the same way | AGO Calendar's public API contract |
 | `ago-android` | AGO Chat's native Android operator client — Kotlin/Compose, three Gradle modules (`:core:domain`, `:core:network`, `:app`) | a Play Store artifact | the public API contract |
 | `ago-root` | docs, ADRs, conventions, skills, backlog, `load/` scenarios and reports | the rules everything else obeys | nothing |
 
@@ -203,9 +202,13 @@ to justify it.
 **Worked twice in one item, in opposite directions** (`20-06`, `adr/0064`), which is the clearest
 illustration this rule has:
 
-- **AGO Calendar's console qualified** and became `ago-calendar-console`. It tracks
-  `Ago.Calendar.Api`'s contract; `ago-console` tracks `Ago.Chat.Api`'s. One shared bundle would mean
-  a calendar change rebuilding and redeploying AGO Chat's console.
+- **AGO Calendar's console qualified** and became `ago-calendar-console`. It tracked
+  `Ago.Calendar.Api`'s contract; `ago-console` tracked `Ago.Chat.Api`'s. One shared bundle would have
+  meant a calendar change rebuilding and redeploying AGO Chat's console. **This repository was later
+  retired** (`22-06`, `25-217`) — the calendar's own screens folded into `ago-console` for a different,
+  product-level reason (one operator app per tenant, not per product), superseding the topology
+  argument that created it. Kept here as the worked example the topology test's own reasoning still
+  is, not as a claim about the current repository list.
 - **AGO Calendar's booking UI did not**, and became a module inside `ago-widget`. Not because the
   topology test said so — it would have said the same thing there — but because a *product* rule
   overrode it: a shop pastes one script tag, and booking must work on channels where there is no

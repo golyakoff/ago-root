@@ -56,7 +56,13 @@ esac
 # `docs/runbooks/workspace.md` lists them, but as a prose directory tree - parsing that would be
 # brittle in a way that fails silently, which is worse than a list somebody has to remember to
 # extend. A new repository missing from here shows up as an audit that never mentions it.
-MIRROR_REPOS="ago-chat ago-console ago-widget ago-calendar ago-calendar-console ago-deploy ago-landing ago-platform"
+#
+# `25-217`: `ago-calendar-console` was on this list until it genuinely stopped existing.
+# `22-06` retired it (folded into `ago-console`) and its own record says "archived, not deleted,
+# reversible" - but the repository now returns a real `404`, not an archived-and-visible one, and
+# this script failed outright on it rather than skipping it. Removed here; `repositories.md`,
+# `workspace.md` and `secrets.md` corrected in the same change.
+MIRROR_REPOS="ago-chat ago-console ago-widget ago-calendar ago-deploy ago-landing ago-platform"
 
 OWNER=golyakoff
 

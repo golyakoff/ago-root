@@ -192,7 +192,9 @@ Sweep 5 in full, re-run 2026-09-06 over all ten repositories: `ago-chat`, `ago-c
 `ago-faq`** reference `secrets.AGO_PLATFORM_PACKAGES_TOKEN`; `ago-chat`, `ago-console`,
 `ago-widget`, `ago-calendar-console` **and `ago-landing`** reference `secrets.GITHUB_TOKEN` for a
 GHCR login; `ago-platform` uses `GITHUB_TOKEN` to push packages; `ago-deploy` and `ago-root`
-reference no secret at all, and have no workflow.
+reference no secret at all, and have no workflow. **`ago-calendar-console` no longer exists**
+(`22-06`'s retirement, confirmed gone rather than merely archived - `25-217`) — left in this
+historical sweep record as of the date it was run, not as a claim about today's repository list.
 
 Three facts worth keeping beside the PAT:
 
