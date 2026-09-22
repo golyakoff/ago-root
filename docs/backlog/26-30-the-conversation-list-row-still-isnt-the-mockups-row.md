@@ -1,8 +1,8 @@
 # 26-30 · The conversation-list row still isn't the mockup's row
 
 - **Stage**: 26
-- **Status**: blocked on `26-29` for two of its five parts (the open question is now resolved — see
-  below)
+- **Status**: ready — `26-29` merged 2026-09-22 (`ago-chat#355`), unblocking this item. Should have been
+  dispatched the same day and was not; the author found the gap live on his own phone the next day.
 - **Found**: 2026-09-22, by the author, on his own phone, against the approved mockup Artifact
   ("AGO Chat для Android"). Four of his notes are about this one row:
   - "Не хватает имён Лиса (точка) Апельсин для тех, кто ещё не представился (смотри логику
