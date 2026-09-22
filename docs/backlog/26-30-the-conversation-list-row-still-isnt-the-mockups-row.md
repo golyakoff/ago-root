@@ -109,6 +109,22 @@ No per-tab branching of any kind is needed: both instants render unconditionally
 wherever their backing data is present. This replaces the item's own earlier "pick one instant per
 tab" framing entirely.
 
+**Second refinement, 2026-09-22, with a real before/after image** — the author additionally asked to
+move the unread-count badge:
+
+- The unread-count badge (the small filled circle, e.g. "1"/"2") moves from the row's far trailing
+  edge to sit **immediately beside the name**, on line 1 — `Name [badge]`, not `Name ... [badge]` at
+  the opposite end of the row from the creation-time.
+- The two timestamps end up forming a visual right-hand column once the badge moves off that edge:
+  line 1's creation-time sits at the row's trailing edge (bold, as already described above), and line
+  2's last-message-time sits at the trailing edge directly beneath it (regular weight, as already
+  described above) — the author's own words, "справа время друг над другом" (the two times, one above
+  the other, on the right). This falls out of the layout already specified above once the badge moves;
+  it is not a third, separate placement rule to implement.
+- Confirmed against the reference image (`ru:` "БЫЛО"/"СТАЛО" — the mockup's own before/after for this
+  exact change) rather than only this file's prose — read it from the regenerated mockup Artifact
+  (`26-23`'s own reference link) before implementing, not only from this description.
+
 ### The mockup's own corrections are tracked separately
 
 The author also asked for the eight-character codes to come out of the mockup Artifact itself, and for
@@ -137,6 +153,8 @@ are **not** in this item's Done-when and are tracked outside it.
 - [ ] Both timestamps render on both tabs, unconditionally, each in its own line's font weight (name
       line: bold; snippet line: regular) — no per-tab branching of which instant to show, and sort
       order is unchanged on both tabs.
+- [ ] The unread-count badge sits immediately beside the name (not the row's trailing edge), and both
+      timestamps end up right-aligned, one above the other, at the trailing edge instead.
 - [ ] No eight-character code appears on the conversation-list row.
 - [ ] `./gradlew ktlintCheck lint test assembleDebug` green; tests that asserted the old row structure
       are updated to the new one, never deleted to go green.
