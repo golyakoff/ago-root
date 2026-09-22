@@ -179,6 +179,14 @@ changed through `runbooks/realm-operations.md` rather than by editing that file.
 |---|---|---|---|---|
 | `AGO_PLATFORM_PACKAGES_TOKEN` | Repository secret in **three** repositories: `ago-chat`, `ago-calendar` and `ago-faq` | Classic PAT, `read:packages` only | **2027-08-25** | Coordinated |
 | `GITHUB_TOKEN` | Not held anywhere — GitHub mints it per job | Per-workflow `permissions:` block | Per job | n/a |
+| `ANDROID_SIGNING_KEYSTORE_BASE64` | Repository secret in `ago-android` | The base64-encoded persistent Android signing keystore (`25-215`) — signs both the `debug` and `release` build types, published by `publish-apk`'s own `assembleRelease` step | Does not expire (the keystore's own certificate is 10 000-day validity) | **Breaking** |
+| `ANDROID_SIGNING_KEYSTORE_PASSWORD` | Repository secret in `ago-android` | The one password used as both the keystore's store password and its key password | Same as above | **Breaking** |
+
+**`25-215`'s two rows above are Breaking for the identical reason `CHANNELS_CREDENTIAL_ENCRYPTION_KEY`
+is** — RuStore Console (`26-06`) binds its push project to this exact certificate's own signature
+fingerprint, and any device holding an app signed with the old key cannot update over one signed with
+a new one. Rotating either secret means every already-installed copy of the app becomes a dead end for
+future updates, not merely a re-deploy.
 
 Sweep 5 in full, re-run 2026-09-06 over all ten repositories: `ago-chat`, `ago-calendar` **and
 `ago-faq`** reference `secrets.AGO_PLATFORM_PACKAGES_TOKEN`; `ago-chat`, `ago-console`,
@@ -229,6 +237,7 @@ The ones a checked-in inventory most easily misses, because nothing in a reposit
 | The backup recipient *public* key | On the node | Nothing. Not a secret; listed so its counterpart is not mistaken for one | Restart |
 | The OpenDKIM signing key | The node, selector `mail` | The authenticity of outbound mail from the sending domain | Coordinated (key and DNS record must change together) |
 | The `ago` node account and its sudo rights | The node | Everything on it | Breaking-if-lost |
+| The Android release-signing keystore (`25-215`) | The author's machine, `~/.android/ago-android-release.keystore`; its password beside it, `~/.android/ago-android-release.keystore.password.txt` | The ability to publish an update-compatible build of `ago-android` — alias `ago-android`, RSA 2048, fingerprint `SHA256:60:96:05:98:D6:9B:5D:16:AB:A3:70:19:A5:C4:B7:3A:3E:F8:7C:AA:2B:68:97:AD:26:CB:6E:CC:46:34:CC:09`, also bound to RuStore Console's own push project (`26-06`) | Breaking-if-lost |
 
 **The backup key's cost is stated in `adr/0050` and repeated here because it is the sharpest one in
 this file: lose that private key and every artifact ever taken is permanently unreadable.** There is no
