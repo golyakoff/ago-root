@@ -95,3 +95,10 @@ reported, rather than trusting the report alone.
 
 **Still out of scope, deliberately**: actually redeploying the demo cluster with these real values —
 a separate, deliberate action for the managing session to take with the author present.
+
+**Update, same day**: that redeploy has now happened. The author asked for the latest of everything
+to go to the demo stand; the managing session applied `ago-deploy`'s `kustomization.yaml` image-pin
+change (`ago-deploy#258`) via `apply-demo.sh` against the real node, and `smoke.sh` (run over SSH,
+against the real cluster) passed 43/43. `RUSTORE_PUSH_SERVICE_TOKEN`/`RUSTORE_PUSH_PROJECT_ID` are
+therefore live in the cluster now, not merely rendered into a throwaway overlay — the "not yet
+performed" framing above describes a state that no longer holds.
