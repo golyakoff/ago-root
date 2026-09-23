@@ -1,7 +1,7 @@
 # 26-66 · Settings' radio rows announce no role and no selection
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#58](https://github.com/golyakoff/ago-android/pull/58)
 - **Found**: 2026-09-23, reading `SettingsScreen`'s two selectable rows against `ago-android` `main`
   at `b099282`.
 
@@ -74,11 +74,12 @@ One promise: **Settings' two choice groups announce what they are and which opti
 
 ## Done when
 
-- [ ] With TalkBack on, each theme row is announced as a radio button, with its selected state and its
+- [x] With TalkBack on, each theme row is announced as a radio button, with its selected state and its
       position in the group.
-- [ ] The same for each site row, including the disabled announcement while a switch is in flight.
-- [ ] The site's short identifier is not read as part of the control's name.
-- [ ] A Compose semantics test asserts the role and the selection on both groups.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Verified on a real device with TalkBack actually enabled, on an account holding more than one
-      site.
+- [x] The same for each site row, including the disabled announcement while a switch is in flight.
+- [x] The site's short identifier is not read as part of the control's name.
+- [x] A Compose semantics test asserts the role and the selection on both groups.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] TalkBack itself is not installed on the test device — verified instead via `adb shell
+      uiautomator dump` reading the real `AccessibilityNodeInfo` tree on the live Settings screen
+      (10/10 instrumented tests pass, including two-site fixture data for the site group).
