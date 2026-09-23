@@ -1,7 +1,7 @@
 # 26-45 · The sign-in screen is not the mockup's sign-in screen
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#52](https://github.com/golyakoff/ago-android/pull/52)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -111,11 +111,14 @@ One promise: **the launch screen is laid out and worded the way the mockup lays 
 
 ## Done when
 
-- [ ] The launch screen shows «AGO» in brand colour at display size, left-aligned.
-- [ ] The tagline reads «Чат и записи для вашего сайта».
-- [ ] «Войти» is full-width.
-- [ ] `app_name` is unchanged and the launcher still reads «AGO Chat».
-- [ ] No hostname, environment name or API origin appears anywhere on the screen.
-- [ ] The other six `SignInHost` arms render exactly as before.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked against the mockup on a real device, in both light and dark.
+- [x] The launch screen shows «AGO» in brand colour at display size, left-aligned.
+- [x] The tagline reads «Чат и записи для вашего сайта».
+- [x] «Войти» is full-width.
+- [x] `app_name` is unchanged and the launcher still reads «AGO Chat».
+- [x] No hostname, environment name or API origin appears anywhere on the screen.
+- [x] The other six `SignInHost` arms render exactly as before.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Checked against the mockup on a real device, in both light and dark.
+
+Confirmed live on the real device (`F6VCHEZDAMRCPNJZ`) in both themes. `AgoPillShape` was deliberately
+not reused for the button — that token's own doc comment scopes it to badges only.
