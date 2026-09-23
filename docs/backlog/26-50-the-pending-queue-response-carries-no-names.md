@@ -1,7 +1,8 @@
 # 26-50 · The pending-queue response carries no names at all
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-calendar#71](https://github.com/golyakoff/ago-calendar/pull/71),
+  [ago-console#275](https://github.com/golyakoff/ago-console/pull/275)
 - **Found**: 2026-09-23, reading `ago-calendar/src/Ago.Calendar.Contracts/ConsoleContracts.cs` against
   `ago-console/src/api/calendarApi.ts` — the gap the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) §04 named while it was being drawn, and which
@@ -76,13 +77,17 @@ One promise: **a pending booking says what it is and who it is with.**
 
 ## Done when
 
-- [ ] A caller holding only `booking:reject` reads the pending queue and gets the service and worker
+- [x] A caller holding only `booking:reject` reads the pending queue and gets the service and worker
       names, and `customerDisplayName: null`.
-- [ ] A caller holding `customer:read` additionally gets the customer's name when one is recorded.
-- [ ] An integration test covers both callers against the same booking and asserts the difference is
+- [x] A caller holding `customer:read` additionally gets the customer's name when one is recorded.
+- [x] An integration test covers both callers against the same booking and asserts the difference is
       exactly the customer field.
-- [ ] `ago-console`'s `/calendar/waiting` shows the names, with the short id surviving only as the
+- [x] `ago-console`'s `/calendar/waiting` shows the names, with the short id surviving only as the
       no-name fallback.
-- [ ] `dotnet format Ago.Calendar.slnx --verify-no-changes`, `dotnet build`, `dotnet test` green in
+- [x] `dotnet format Ago.Calendar.slnx --verify-no-changes`, `dotnet build`, `dotnet test` green in
       `ago-calendar`; `npm run typecheck && npm run lint && npm run test && npm run ux-gate` green in
       `ago-console`.
+
+Independently re-verified by the managing session: `ago-calendar` 850/850 (Application 214, Domain 235,
+Architecture 28, Concurrency 26, Integration 347); `ago-console` 1689/1689 across 144 files plus
+`ux-gate` 67 passed/9 pre-existing skips/0 failed, including `calendar-queue` on both viewports.
