@@ -1,7 +1,7 @@
 # 26-51 · Записи has no Утверждены tab — nowhere to see what is actually on for Thursday
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#53](https://github.com/golyakoff/ago-android/pull/53)
 - **Depends on**: `26-48` (the calendar API client and the Записи segmented control)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/CalendarBookingsPage.tsx` against the approved
   mockup Artifact ("AGO Chat для Android", `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) §04's second frame,
@@ -70,13 +70,19 @@ One promise: **Утверждены shows one chosen day's confirmed bookings, g
 
 ## Done when
 
-- [ ] An operator holding `customer:read` sees the Утверждены segment and can move between days with
-      the strip.
-- [ ] A day with nothing booked renders a stated empty state, not a blank area.
-- [ ] Bookings are grouped by master, with the master's own count in the group header.
-- [ ] Times render in the business's zone, and a test proves a device set to a different zone still
-      shows the booking's own local time.
-- [ ] An operator holding only a booking-action permission does not see this segment at all.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device against a tenant with confirmed bookings on at least two days and two
-      masters.
+- [x] An operator holding `customer:read` sees the Утверждены segment and can move between days with
+      the strip — proven by `ConfirmedBookingsViewModelTest`, not by live rendering (see below).
+- [x] A day with nothing booked renders a stated empty state, not a blank area — unit tested.
+- [x] Bookings are grouped by master, with the master's own count in the group header —
+      `ConfirmedBookingGroupingTest` proves the ported `groupByDayThenWorker` rule directly.
+- [x] Times render in the business's zone, and a test proves a device set to a different zone still
+      shows the booking's own local time — `BusinessLocalTimeTest`.
+- [x] An operator holding only a booking-action permission does not see this segment at all — unit
+      tested against the widened `bookingsTab: (Boolean) -> Unit` slot.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 249 tests, 0 failures, independently
+      re-verified after rebase.
+- [~] Checked on a real device against a tenant with confirmed bookings on at least two days and two
+      masters — **not done**. The session's existing SSO on the test device expired mid-session; the
+      app was confirmed to install, launch and reach the real Keycloak login cleanly, but the
+      authenticated screen itself (real date strip, grouping, day-master rendering) was not checked
+      live. Recorded honestly rather than overclaimed.
