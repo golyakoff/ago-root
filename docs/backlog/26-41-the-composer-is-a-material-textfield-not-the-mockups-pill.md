@@ -1,7 +1,7 @@
 # 26-41 · The composer is a Material `TextField`, not the mockup's pill
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#47](https://github.com/golyakoff/ago-android/pull/47)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -108,12 +108,18 @@ inside a bar with the wrong padding and no edge, which is not a state worth havi
 
 ## Done when
 
-- [ ] The field is a 40dp sunken pill with no underline in any state — unfocused, focused, and with
+- [x] The field is a 40dp sunken pill with no underline in any state — unfocused, focused, and with
       text in it.
-- [ ] The composer has a hairline above it and the mockup's padding and gaps.
-- [ ] The placeholder reads «Сообщение…».
-- [ ] Typing, growing to five lines, sending, and the draft surviving a rotation all still work.
-- [ ] Checked in both light and dark — `--sunken` inverts between them (`Color.kt:41`, `:46`) and a
+- [x] The composer has a hairline above it and the mockup's padding and gaps.
+- [x] The placeholder reads «Сообщение…».
+- [x] Typing, growing to five lines, sending, and the draft surviving a rotation all still work.
+- [x] Checked in both light and dark — `--sunken` inverts between them (`Color.kt:41`, `:46`) and a
       field that reads as sunken in one theme can read as raised in the other.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked against the mockup on a real device.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Checked against the mockup on a real device.
+
+Confirmed live on the real device, both themes, plus a real send. Real CI (`BackContractDialogsTabTest`)
+caught a genuine regression in the first draft — the placeholder was a `Text` sibling beside
+`BasicTextField`, leaving two disconnected semantics nodes so `performTextInput` on the placeholder text
+could not focus the field. Fixed by moving the placeholder into `BasicTextField`'s own `decorationBox`,
+which also gives TalkBack one node instead of two for what is visually one control.
