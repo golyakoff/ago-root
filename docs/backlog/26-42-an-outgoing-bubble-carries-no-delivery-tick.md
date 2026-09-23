@@ -1,7 +1,7 @@
 # 26-42 · An outgoing bubble carries no delivery tick
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#47](https://github.com/golyakoff/ago-android/pull/47)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -120,9 +120,16 @@ One promise: **an operator's own bubble says whether the visitor's widget acknow
 
 ## Done when
 
-- [ ] An operator's bubble shows one tick before delivery and two after; a visitor's shows none.
-- [ ] The second tick appears live, on a bubble already on screen, with no navigation away and back —
+- [x] An operator's bubble shows one tick before delivery and two after; a visitor's shows none.
+- [x] The second tick appears live, on a bubble already on screen, with no navigation away and back —
       verified against a real widget acknowledging a real message, not only against a fixture.
-- [ ] A repeated `MessageDelivered` for the same message changes nothing.
-- [ ] The tick is legible on the solid brand fill in both light and dark.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] A repeated `MessageDelivered` for the same message changes nothing.
+- [x] The tick is legible on the solid brand fill in both light and dark.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+
+Verified end-to-end against the real deployed backend: a scripted visitor client (real visitor
+session, real hub connection, calling `AcknowledgeDeliveredAsync` exactly the way `ago-widget`'s own
+`connection.ts` does) received a real operator message sent from the connected device and acknowledged
+it — the app's own bubble, already on screen with no navigation away and back, updated from one tick to
+two. Confirmed the wire method name (`"MessageDelivered"`) matches `ago-chat`'s own
+`ResolveMessageDeliveredTargetsHandler` exactly.

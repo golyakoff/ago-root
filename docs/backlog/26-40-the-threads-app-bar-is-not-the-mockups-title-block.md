@@ -1,7 +1,7 @@
 # 26-40 · The thread's app bar is not the mockup's title block
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#47](https://github.com/golyakoff/ago-android/pull/47)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -125,12 +125,14 @@ same `title = {}` slot of the same `TopAppBar`, and either landing alone leaves 
 
 ## Done when
 
-- [ ] The thread's app bar shows the visitor's name with no eight-character code.
-- [ ] A second line under it shows the conversation's state and its age, in the mockup's `.sub`
+- [x] The thread's app bar shows the visitor's name with no eight-character code.
+- [x] A second line under it shows the conversation's state and its age, in the mockup's `.sub`
       treatment.
-- [ ] The state is a word an operator reads, localized in `strings.xml`, not the wire spelling.
-- [ ] A thread opened without its list row in hand renders the title with no subtitle and does not
+- [x] The state is a word an operator reads, localized in `strings.xml`, not the wire spelling.
+- [x] A thread opened without its list row in hand renders the title with no subtitle and does not
       crash or draw a stray separator.
-- [ ] Nothing hardcodes a channel name.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked against the mockup on a real device, on a conversation with a real elapsed time.
+- [x] Nothing hardcodes a channel name.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Checked against the mockup on a real device, on a conversation with a real elapsed time.
+
+Confirmed live on the real device (`F6VCHEZDAMRCPNJZ`): "Тигр · Пончик" / "в работе · 21 ч", no code.
