@@ -1,7 +1,7 @@
 # 26-52 · Записи has no Клиенты tab
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#57](https://github.com/golyakoff/ago-android/pull/57)
 - **Depends on**: `26-48` (the calendar API client and the Записи segmented control)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/CalendarContactsPage.tsx` against the approved
   mockup Artifact ("AGO Chat для Android", `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) §04's own
@@ -61,11 +61,17 @@ One promise: **Клиенты lists this tenant's real customers, read-only, wit
 
 ## Done when
 
-- [ ] An operator holding `customer:read` sees the Клиенты segment and the tenant's real customers.
-- [ ] A customer with no recorded name renders through `IdentifierText`, never as a full GUID and
+- [x] An operator holding `customer:read` sees the Клиенты segment and the tenant's real customers —
+      implemented and unit tested, not verified live (see below).
+- [x] A customer with no recorded name renders through `IdentifierText`, never as a full GUID and
       never as an invented label.
-- [ ] `phoneVerifiedAt` and `phoneConfirmedByOperatorAt` are visibly two separate facts.
-- [ ] No unmasked phone number reaches the screen from this item.
-- [ ] An empty customer base renders a stated empty state.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device against a tenant with at least one named and one nameless customer.
+- [x] `phoneVerifiedAt` and `phoneConfirmedByOperatorAt` are visibly two separate facts — confirmed by
+      code review, each gets its own line.
+- [x] No unmasked phone number reaches the screen from this item — confirmed by code review, the
+      masked value is rendered verbatim with no reveal control anywhere in the change.
+- [x] An empty customer base renders a stated empty state.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device against a tenant with at least one named and one nameless customer —
+      **not done**. The app was confirmed to install, launch and reach the real Keycloak login
+      cleanly, but the authenticated customer-list content itself was not checked live — the
+      session's existing SSO expired mid-session. Recorded honestly rather than overclaimed.
