@@ -1,7 +1,13 @@
 # 26-80 · Opening a conversation never tells the server it was read
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#66](https://github.com/golyakoff/ago-android/pull/66),
+  independently verified by the managing session (`./gradlew ktlintCheck lint test assembleDebug
+  assembleDebugAndroidTest` green, 319 unit tests passed, 0 failures; a real CI Android emulator ran
+  the full instrumented suite). Found, mid-implementation, that `ago-console`'s own "newest loaded is
+  newest on screen" shortcut does not hold for this app's `ThreadScreen` (no auto-re-scroll to a new
+  arrival) — the read watermark is derived from `MessageList`'s own live scroll state instead, not
+  ported blindly.
 - **Found**: 2026-09-23, by the author, asking a plain question — "по какому принципу рисуются цифры в
   синих кружочках рядом с диалогами?" — while looking at the real app.
 
@@ -83,13 +89,19 @@ tells the server what was actually read — the same way `ago-console` already d
 
 ## Done when
 
-- [ ] Opening a conversation on a real device, reading its messages, then returning to «Мои» shows the
-      badge lowered (or gone) without restarting the app or waiting for an unrelated refresh.
-- [ ] A new visitor message arriving while the conversation is already open and read gets counted
-      correctly once it is itself read (i.e., the watermark-based clear, not a zero-reset, is
-      preserved end to end) — unit tested against the same race `MarkReadByOperator`'s own doc comment
-      describes, not just the happy path.
-- [ ] The mark-read call is debounced/de-duplicated — a test proves it is not re-sent for a sequence
-      already confirmed sent.
-- [ ] A failed mark-read call does not surface any error UI to the operator.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green.
+- [~] Opening a conversation on a real device, reading its messages, then returning to «Мои» shows the
+      badge lowered (or gone). **Partial**: no signed-in session was available in this session's own
+      sandbox (the same standing SSO-expiry limitation noted elsewhere in this stage), so the real
+      end-to-end round trip against a live backend was never watched happen — covered instead by the
+      unit tests below plus a real CI Android emulator running every touched instrumented test green.
+- [x] A new visitor message arriving while the conversation is already open and read gets counted
+      correctly once it is itself read — unit tested (`a higher sequence arriving after one was
+      already confirmed sent is still forwarded`), proving the client's own watermark never suppresses
+      a later, higher sequence.
+- [x] The mark-read call is debounced/de-duplicated — unit tested (`a sequence already confirmed sent
+      is not re-sent`, `rapid successive reports... collapse into one call`).
+- [x] A failed mark-read call does not surface any error UI to the operator — `ConversationsApi.markRead`
+      never throws (classifies transport/status failures internally), and `ThreadViewModel.markReadUpTo`
+      never reads its `Boolean` result; unit tested for 403/409/dropped-connection.
+- [x] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green — independently
+      re-verified by the managing session twice (before and after rebasing onto 26-77's own follow-up).
