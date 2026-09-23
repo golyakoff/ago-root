@@ -1,7 +1,7 @@
 # 26-69 · `tappingSignOutCallsOnSignOut` fails 100% of the time on a real device, and never on CI's emulator
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#48](https://github.com/golyakoff/ago-android/pull/48)
 - **Found**: 2026-09-23, verifying PR #47 (26-40/26-41/26-42) — a full `connectedDebugAndroidTest` run
   on the real connected phone (`F6VCHEZDAMRCPNJZ`, 23106RN0DA, Android 15) failed one test outside that
   PR's own diff, on `ago-android` `main` at `280ebeb`.
@@ -82,8 +82,10 @@ on CI's emulator.**
 
 ## Done when
 
-- [ ] `tappingSignOutCallsOnSignOut` passes at least 5 consecutive times on the real connected device.
-- [ ] The root cause is stated, not just the fix — which of the two candidate mechanisms above (or a
-      third one) actually explains it.
-- [ ] No other `SettingsScreenTest` case regresses.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] `tappingSignOutCallsOnSignOut` passes at least 5 consecutive times on the real connected device.
+- [~] The root cause is stated as a working fix (`performScrollTo()` before the click), not as a
+      confirmed mechanism — neither of the two candidates above was independently proven; the fix is
+      the standard remedy for a `LazyColumn`-bottom-item click regardless of which one it was, and 5/5
+      repeated real-device runs support it working.
+- [x] No other `SettingsScreenTest` case regresses.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
