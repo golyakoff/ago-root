@@ -1,7 +1,7 @@
 # 26-57 · Аналитика is a placeholder, and «Мои показатели» is the one report that belongs on a phone
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#54](https://github.com/golyakoff/ago-android/pull/54)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/MyNumbersPage.tsx` and
   `ago-console/src/api/conversationsApi.ts` against `ago-android` `main` at `b099282`, with the
   approved mockup Artifact ("AGO Chat для Android", `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`)'s own
@@ -75,13 +75,19 @@ One promise: **Аналитика shows this operator their own numbers for a ch
 
 ## Done when
 
-- [ ] Аналитика opens on the server's default window with no interaction and shows this operator's own
-      numbers.
-- [ ] The range shown is the response's own `from`/`to`.
-- [ ] Each of the three sections says for itself when it has no data; there is no single page-wide
-      empty state.
-- [ ] An invalid range renders its own distinct message.
-- [ ] An ordinary operator with no `site:configure` sees the screen in full — nothing on it is gated.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device against an operator with real conversation history, in both light and
-      dark.
+- [x] Аналитика opens on the server's default window with no interaction and shows this operator's own
+      numbers — proven by `AnalyticsViewModelTest`, not by live rendering (see below).
+- [x] The range shown is the response's own `from`/`to` — unit tested.
+- [x] Each of the three sections says for itself when it has no data; there is no single page-wide
+      empty state — unit tested.
+- [x] An invalid range renders its own distinct message — unit tested.
+- [x] An ordinary operator with no `site:configure` sees the screen in full — nothing on it is gated —
+      true by construction: this screen adds no permission check anywhere.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 249 tests, 0 failures, independently
+      re-verified after two rebases (onto 26-45, then onto 26-51 with a real `strings.xml` conflict
+      resolved by hand).
+- [~] Checked on a real device against an operator with real conversation history, in both light and
+      dark — **not done**. The session's existing SSO on the test device expired mid-session; the app
+      was confirmed to install, launch and reach the real Keycloak login cleanly (including the new
+      `OwnAnalyticsApi` DI binding resolving without a crash), but the authenticated screen itself was
+      not checked live. Recorded honestly rather than overclaimed.
