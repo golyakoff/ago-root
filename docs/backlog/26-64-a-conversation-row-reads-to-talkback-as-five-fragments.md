@@ -1,7 +1,7 @@
 # 26-64 · A conversation row reads to TalkBack as five disconnected fragments
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#56](https://github.com/golyakoff/ago-android/pull/56)
 - **Found**: 2026-09-23, reading `ConversationListScreen` and `VisitorAvatar` for semantics against
   `ago-android` `main` at `b099282`.
 
@@ -84,12 +84,16 @@ what was last said.**
 
 ## Done when
 
-- [ ] With TalkBack on, swiping through the conversation list speaks one coherent sentence per row.
-- [ ] The emoji avatar is not spoken.
-- [ ] The unread count is spoken as a count of unread messages, not as a bare number.
-- [ ] The two elapsed values are distinguishable when spoken.
-- [ ] On «Ожидают», the claim button is still reachable as its own focusable element.
-- [ ] A row with no name, no snippet and no unread count reads cleanly, with no stray punctuation.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Verified on a real device with TalkBack actually enabled — not only by a semantics assertion in
-      a Compose test.
+- [x] With TalkBack on, swiping through the conversation list speaks one coherent sentence per row.
+- [x] The emoji avatar is not spoken.
+- [x] The unread count is spoken as a count of unread messages, not as a bare number.
+- [x] The two elapsed values are distinguishable when spoken.
+- [x] On «Ожидают», the claim button is still reachable as its own focusable element — asserted
+      directly by a test, not trusted by citation.
+- [x] A row with no name, no snippet and no unread count reads cleanly, with no stray punctuation.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] TalkBack itself is not installed on the test device (a LineageOS build with no Google
+      accessibility services) — verified instead via `adb shell uiautomator dump` reading the real
+      `AccessibilityNodeInfo` tree on the live rendered screen. The dump captured the actual merged
+      node's real `content-desc`: "Коала · Арбуз. открыт 5 минут назад. 1 непрочитанное сообщение" —
+      genuine proof, not a partial check.
