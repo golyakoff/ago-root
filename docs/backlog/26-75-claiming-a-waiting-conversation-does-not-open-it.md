@@ -1,7 +1,9 @@
 # 26-75 · Claiming a waiting conversation does not open it
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#62](https://github.com/golyakoff/ago-android/pull/62),
+  independently verified by the managing session (`./gradlew ktlintCheck lint test assembleDebug
+  assembleDebugAndroidTest` green, re-run twice — before and after rebasing onto 26-76).
 - **Found**: 2026-09-23, by the author, live on a real device: claimed a waiting visitor from
   «Ожидают», and the row simply disappeared from view — no navigation into «Мои» or the thread, no
   visible confirmation the claim did anything beyond an empty list.
@@ -80,10 +82,15 @@ console's own primary-workspace behaviour.
 
 ## Done when
 
-- [ ] Claiming a waiting conversation on a real device switches to «Мои» and opens the thread, with no
-      extra tap.
-- [ ] A refused claim (lost race) still shows its inline error and stays in «Ожидают» — confirmed no
-      regression via the existing claim-refusal test coverage.
-- [ ] A new assignment arriving via hub push while the operator is elsewhere still does not navigate —
-      confirmed no regression via the existing "never navigates" test.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green.
+- [x] Claiming a waiting conversation on a real device switches to «Мои» and opens the thread, with no
+      extra tap — the new `ClaimNavigatesToThreadTest` ran on a real connected device (`23106RN0DA`),
+      not just compiled.
+- [x] A refused claim (lost race) still shows its inline error and stays in «Ожидают» — the `Refused`
+      code path was not touched at all; a new unit test additionally proves the navigation event never
+      fires and the tab never switches on refusal.
+- [x] A new assignment arriving via hub push while the operator is elsewhere still does not navigate —
+      the pre-existing `AssignmentNeverNavigatesTest` was re-run on the same real device and still
+      passes.
+- [x] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green — independently
+      re-verified by the managing session, twice (before and after rebasing onto 26-76's changes to the
+      same file).
