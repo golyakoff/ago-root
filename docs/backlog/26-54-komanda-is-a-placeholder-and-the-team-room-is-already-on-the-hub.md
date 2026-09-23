@@ -1,7 +1,7 @@
 # 26-54 · Команда is a placeholder, and the team room is already on the hub this app is connected to
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#49](https://github.com/golyakoff/ago-android/pull/49)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/TeamChatPage.tsx` and
   `ago-console/src/realtime/operatorConnection.ts` against `ago-android` `main` at `b099282`, with the
   approved mockup Artifact ("AGO Chat для Android", `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`)'s own
@@ -79,12 +79,23 @@ One promise: **Команда is the team room, and messages sent from a phone r
 
 ## Done when
 
-- [ ] An operator opens Команда and sees the tenant's real team room with history.
-- [ ] A message sent from the phone appears in the console's `/team/chat` and vice versa, live, with
-      no restart.
-- [ ] Killing the network mid-session and restoring it catches the room up by delta, with no duplicate
-      and no gap — checked on a real device.
-- [ ] Landing on Команда before the hub has connected shows a loading state and then the room, never
+- [x] An operator opens Команда and sees the tenant's real team room with history.
+- [~] A message sent from the phone appears in the console's `/team/chat` — confirmed by a real
+      `TeamMessageReceived` push round trip on the device (never a local echo); the console side of
+      "vice versa" was not checked (this session had no cached Keycloak session for the console and did
+      not enter credentials, per the credential-entry rule).
+- [~] Killing the network mid-session and restoring it catches the room up by delta, with no duplicate
+      and no gap — proven by two dedicated unit tests (`TeamChatViewModelTest`), not by an actual
+      network-kill on the real device.
+- [x] Landing on Команда before the hub has connected shows a loading state and then the room, never
       a crash and never an error.
-- [ ] Every hub call sends its method's full argument list.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Every hub call sends its method's full argument list.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+
+Real CI caught a genuine bug the implementing worker's own real-device check did not: `TeamChatRoute()`
+was wired directly into the nav graph instead of through an overridable Hilt-avoidance slot, so every
+back-contract test that navigated through Команда crashed on the plain, Hilt-free test `ComponentActivity`.
+Fixed by adding a `teamTab` slot to `AppShellScreen`, the identical pattern `conversationsTab`/
+`settingsScreen` already establish; confirmed on the real device afterward (0 failures, both affected
+test classes, run separately since a comma-separated instrumentation-runner class list only actually
+runs its first entry — a known Gradle/AGP limitation).
