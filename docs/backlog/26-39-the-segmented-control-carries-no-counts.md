@@ -1,7 +1,7 @@
 # 26-39 · The «Мои»/«Ожидают» segmented control carries no counts
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#46](https://github.com/golyakoff/ago-android/pull/46)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -100,11 +100,14 @@ tab's own count, and the row sits on the mockup's own margins.
 
 ## Done when
 
-- [ ] «Мои» and «Ожидают» each show their own count, styled as the mockup's `.ct` rather than as part
+- [x] «Мои» and «Ожидают» each show their own count, styled as the mockup's `.ct` rather than as part
       of the label text.
-- [ ] The counts track a refresh, a claim and a live hub push without a restart — checked on a real
+- [x] The counts track a refresh, a claim and a live hub push without a restart — checked on a real
       device with at least one conversation moving between the two tabs.
-- [ ] No count is drawn before the first answer arrives.
-- [ ] The row's margins are the mockup's, and every metric in the change names the CSS rule it came
+- [x] No count is drawn before the first answer arrives.
+- [x] The row's margins are the mockup's, and every metric in the change names the CSS rule it came
       from.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+
+Confirmed live on the real device (`F6VCHEZDAMRCPNJZ`): `Диалоги` shows «Мои 5» / «Ожидают 0» in the
+mockup's `.ct` treatment.
