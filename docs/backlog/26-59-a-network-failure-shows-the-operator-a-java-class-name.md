@@ -1,7 +1,7 @@
 # 26-59 · A network failure shows the operator a Java class name, and possibly the API hostname
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#60](https://github.com/golyakoff/ago-android/pull/60)
 - **Found**: 2026-09-23, reading `ago-android` `main` at `b099282` — every path that turns a caught
   exception into on-screen text.
 
@@ -93,11 +93,22 @@ screen.**
 
 ## Done when
 
-- [ ] Putting a real device into airplane mode and opening the app produces a stated Russian sentence
+- [~] Putting a real device into airplane mode and opening the app produces a stated Russian sentence
       on every screen that can fail — sign-in, the conversation list, the thread — and no class name
-      anywhere.
-- [ ] No API hostname appears on any screen in that state.
-- [ ] A `503` from the server renders as something other than `http.503`.
-- [ ] A genuine claim refusal still renders the server's own `detail`, unchanged.
-- [ ] All four `describe()` copies are gone, and a test fails if one comes back.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+      anywhere. **Partial**: the sign-in screen's own routing-failure path was reachable and correct;
+      the conversation list and thread need a signed-in session the session's expired SSO couldn't
+      provide, and an airplane-mode toggle attempt on the test device was blocked by the OS. Covered
+      instead by unit/instrumented tests exercising the classification directly.
+- [~] No API hostname appears on any screen in that state — same partial coverage as above.
+- [x] A `503` from the server renders as something other than `http.503` — unit tested
+      (`KtorConversationsApiTest`).
+- [x] A genuine claim refusal still renders the server's own `detail`, unchanged — unit tested, and the
+      type system now makes the old conflation (`ClaimResult.Refused` carrying a transport failure)
+      impossible to reintroduce.
+- [x] All four `describe()` copies are gone, and a test fails if one comes back — `NoRawExceptionDescriptionTest`
+      greps the whole repo for the old shape; a fifth, undocumented copy was found and fixed in
+      passing, and one known survivor (`TeamChatViewModel.kt`, out of this item's scope) is tracked in
+      the test's own allowlist rather than silently excluded.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — independently re-verified twice, after
+      rebasing onto 26-64 and again onto 26-52/26-66/26-65, confirming the new classification and
+      26-52's/26-64's own changes coexist correctly in the shared files both touch.
