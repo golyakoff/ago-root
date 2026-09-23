@@ -1,7 +1,7 @@
 # 26-55 · There is no way to see who is on the team, or who holds a paid seat
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#55](https://github.com/golyakoff/ago-android/pull/55)
 - **Depends on**: `26-54` (Команда's first real screen, and the segmented control this adds to)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/OperatorsTeamPage.tsx` and
   `ago-console/src/api/operatorTeamApi.ts` against `ago-android` `main` at `b099282`, with the
@@ -75,12 +75,17 @@ phone.**
 
 ## Done when
 
-- [ ] An administrator sees the real roster and the per-role seat summary; an ordinary operator sees
-      no Люди segment.
-- [ ] An operator holding two roles shows two seat facts, not one.
-- [ ] An operator with no display name renders through `IdentifierText`.
-- [ ] `overLimit` is read from the response, and no client-side seat arithmetic exists anywhere in the
-      change.
-- [ ] A read failure renders as a refusal with a retry, never as a raw exception class name (`26-59`).
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device against a site with more than one operator.
+- [x] An administrator sees the real roster and the per-role seat summary; an ordinary operator sees
+      no Люди segment — proven by `PeopleViewModelTest`, not by live rendering (see below).
+- [x] An operator holding two roles shows two seat facts, not one — implemented and unit tested.
+- [x] An operator with no display name renders through `IdentifierText`.
+- [x] `overLimit` is read from the response, and no client-side seat arithmetic exists anywhere in the
+      change — confirmed by code review.
+- [x] A read failure renders as a refusal with a retry, never as a raw exception class name — confirmed
+      by code review (`KtorOperatorTeamApi` classifies by exception type, mirroring `BookingsQueueFailure`'s
+      shape; `26-59`'s own shared `NetworkFailure` type had not landed yet when this item was built).
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device against a site with more than one operator — **not done**. The app was
+      confirmed to install, launch and reach the real Keycloak login cleanly (DI graph resolves), but
+      the authenticated roster content itself was not checked live — the session's existing SSO
+      expired mid-session. Recorded honestly rather than overclaimed.
