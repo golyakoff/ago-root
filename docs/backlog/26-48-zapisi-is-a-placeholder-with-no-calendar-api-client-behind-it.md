@@ -1,7 +1,7 @@
 # 26-48 · Записи is a placeholder, and there is no calendar API client behind it
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#50](https://github.com/golyakoff/ago-android/pull/50)
 - **Found**: 2026-09-23, reading `ago-console`'s calendar surface and `ago-android`'s own
   `scope-inventory.md` against `ago-android` `main` at `b099282`, with the approved mockup Artifact
   ("AGO Chat для Android", `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) §04 for the screen itself.
@@ -76,14 +76,22 @@ One promise: **Записи shows this tenant's real pending-booking queue, read
 
 ## Done when
 
-- [ ] An operator holding any of the four gate permissions opens Записи and sees the tenant's real
-      pending bookings, oldest deadline first.
-- [ ] A deployment with no calendar base URL configured renders a stated "not configured" message, not
+- [~] An operator holding any of the four gate permissions opens Записи and sees the tenant's real
+      pending bookings, oldest deadline first — confirmed for a *genuinely empty* queue against the real
+      backend; no reachable tenant had an actual pending booking to check the populated card against
+      live, so that layout is proven by unit tests only.
+- [x] A deployment with no calendar base URL configured renders a stated "not configured" message, not
       a spinner and not a crash.
-- [ ] A failure to read the queue renders as a refusal with a retry, and never as a raw exception
+- [x] A failure to read the queue renders as a refusal with a retry, and never as a raw exception
       class name (`26-59` states that rule for the whole app; this new adapter must be born obeying it
       rather than adding a fifth copy of `describe()`).
-- [ ] No name is invented for a worker, service or calendar anywhere on the screen.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device against a tenant with at least one pending booking, in both light and
-      dark.
+- [x] No name is invented for a worker, service or calendar anywhere on the screen.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device, in both light and dark — against the "not configured" and
+      genuinely-empty-queue states; not against a populated one (see the first box above).
+
+Rebasing onto `26-54` (landed in between) produced real merge conflicts in `AppShellScreen.kt`,
+`PlaceholderScreens.kt`, `strings.xml` and `BackContractBottomBarTest.kt` — both items independently
+replaced adjacent placeholder screens. Resolved by hand and independently re-verified by the managing
+session, including the merged `BackContractBottomBarTest` (now visiting Записи, Команда and Аналитика in
+one test) on the real device.
