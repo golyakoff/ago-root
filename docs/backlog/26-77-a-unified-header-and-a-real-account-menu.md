@@ -1,7 +1,13 @@
 # 26-77 · A unified header, and a real account menu instead of a stray kebab
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#64](https://github.com/golyakoff/ago-android/pull/64), with
+  four live-device corrections found by the author right after merge and fixed in a follow-up,
+  [ago-android#65](https://github.com/golyakoff/ago-android/pull/65): the presence dot was clipped at
+  the avatar's own corner (a `CircleShape` clip on the wrong box), the menu header's own avatar was
+  drawn larger than the trigger and carried a redundant second presence dot, Настройки kept its own
+  "Выйти" button duplicating the new menu's, and Тема stayed a column of radio rows instead of the
+  mockup's own segmented tabs. Both PRs independently verified by the managing session.
 - **Found**: 2026-09-23, by the author, comparing his own real device against the mockup Artifact
   ("AGO Chat Design", `https://claude.ai/code/artifact/8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) — the
   top-right corner of the app bar (online dot, kebab menu) is a different, ad-hoc shape on every
@@ -130,24 +136,36 @@ consistent place to be reached from — with nothing left broken by moving them 
 
 ## Done when
 
-- [ ] A shared header composable exists and is used by all five top-level destinations (Диалоги,
-      Записи, Команда, Аналитика, Ещё) — verified by reading each screen's own `TopAppBar` call site,
-      not just the new composable's own existence.
-- [ ] Every one of those five screens shows the avatar (initials + presence dot with glow) at the
-      rightmost position of its app bar; a screen with its own icon (Диалоги's search) keeps it to the
-      avatar's left.
-- [ ] Tapping the avatar opens the lean account menu: header (avatar, name, email), "Настройки" with a
-      chevron, divider, "Выйти" — the same, non-danger color as "Настройки".
-- [ ] "Настройки" opens the real `SettingsScreen` (Type B header, unchanged content — Тема, Сайт).
-- [ ] "Выйти" from the new menu does what `ConversationListOverflowMenu`'s "Выйти" does today —
-      confirmed no regression in the sign-out flow itself.
-- [ ] `ConversationListOverflowMenu` (and any equivalent on Команда) is removed/superseded by the new
-      menu — no leftover second sign-out path.
-- [ ] "Ещё" shows Каналы (unchanged) plus real Автоматизация and Администрирование rows, each opening
+- [x] A shared header composable (`AccountAvatarAction`) exists and is used by all five top-level
+      destinations (Диалоги, Записи, Команда, Аналитика, Ещё) — confirmed by reading each screen's own
+      `TopAppBar` call site directly, not just the composable's own existence.
+- [x] Every one of those five screens shows the avatar (initials + presence dot with glow) at the
+      rightmost position of its app bar; Диалоги's own search icon stays to its left. The dot's own
+      clipped-corner bug (found live by the author right after merge) is fixed in the follow-up,
+      ago-android#65.
+- [x] Tapping the avatar opens the lean account menu: header (avatar, name, email), "Настройки" with a
+      chevron, divider, "Выйти" — the same, non-danger color as "Настройки". The header's own avatar
+      was oversized and carried a redundant second presence dot in the first pass; both fixed in
+      ago-android#65, per the author's own live-device review.
+- [x] "Настройки" opens the real `SettingsScreen` (Type B header). Content is not literally unchanged
+      as first written here — the follow-up PR also removed Settings' own now-duplicate "Выйти" button
+      and turned Тема into the mockup's own segmented tabs instead of a column of radio rows — both
+      corrections the author asked for on the same live-device pass, not scope this item's own text
+      anticipated, but squarely in its spirit (one real account/settings surface, not two).
+- [x] "Выйти" from the new menu does what `ConversationListOverflowMenu`'s "Выйти" did — same
+      `onSignOut` callback plumbing, confirmed by reading the diff; no regression in the sign-out flow
+      itself.
+- [x] `ConversationListOverflowMenu` is deleted outright (confirmed no other caller before removal);
+      Команда gained a real sign-out path for the first time, having had none before this item.
+- [x] "Ещё" shows Каналы (unchanged) plus real Автоматизация and Администрирование rows, each opening
       `PlaceholderDestinationScreen`; the old single "Настройки" row is gone.
-- [ ] `HubConnectionDot`'s existing accessibility `contentDescription` behavior is preserved on the
-      new avatar+presence composable — verified live or via an instrumented test, not assumed.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green.
+- [x] `HubConnectionDot`'s accessibility behavior is preserved — confirmed by the real CI Android
+      emulator actually executing `AccountAvatarActionTest.thePresenceDotStillSpeaksItsConnectionState`
+      and its eight siblings (all 9/9 passed on `emulator-5554`, ago-android#64's own CI run), not just
+      compiled.
+- [x] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green on both PRs —
+      independently re-verified by the managing session each time, including a full CI-emulator
+      instrumented run.
 
 ## Where the visual spec lives
 
