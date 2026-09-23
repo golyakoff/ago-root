@@ -1,7 +1,12 @@
 # 26-76 · The queue-row preview goes blank for a booking step, when the real words already exist
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-chat#356](https://github.com/golyakoff/ago-chat/pull/356) and
+  [ago-android#61](https://github.com/golyakoff/ago-android/pull/61), independently verified by the
+  managing session: `ago-chat` `dotnet build -c Release` 0 warnings/errors, `dotnet test -c Release`
+  3984/3984 passed (Domain 791, Application 1514, FakeCrm 21, Architecture 53, Concurrency 90,
+  Integration 1515); `ago-android` `./gradlew ktlintCheck lint test assembleDebug
+  assembleDebugAndroidTest` green.
 - **Found**: 2026-09-23, by the author, live on a real device — a conversation with 7 unread messages
   and a booking flow in progress showed no snippet line at all, reading identically to a conversation
   with zero messages. Discussed in chat rather than filed as an open question, because the author's own
@@ -109,19 +114,24 @@ operator can tell at a glance that it is one.**
 
 ## Done when
 
-- [ ] `ConversationSummaryDto` carries `LastMessageContentKind: string?`, additive, documented.
-- [ ] A conversation whose latest message is a real module step renders its preview as the first line
+- [x] `ConversationSummaryDto` carries `LastMessageContentKind: string?`, additive, documented.
+- [x] A conversation whose latest message is a real module step renders its preview as the first line
       of that step's already-rendered `Body` — unit tested against a multi-line fixture (prompt +
       numbered actions + "Ответьте номером.") asserting only the first line survives.
-- [ ] A conversation whose latest message is a `ConfirmationCard` renders its own title line, not the
+- [x] A conversation whose latest message is a `ConfirmationCard` renders its own title line, not the
       `label: value` detail lines under it — unit tested.
-- [ ] A conversation whose latest message is an attachment still renders no preview and no content
+- [x] A conversation whose latest message is an attachment still renders no preview and no content
       kind — unchanged behaviour, regression-tested.
-- [ ] The Android conversation list shows a 📅 prefix on the snippet line whenever the row's last
-      message came from a module step, and no prefix otherwise — confirmed live against a real
-      in-progress booking conversation on a real device.
-- [ ] `ConversationSummaryDto`'s own doc comment states the real, narrower reason attachments alone
+- [~] The Android conversation list shows a 📅 prefix on the snippet line whenever the row's last
+      message came from a module step, and no prefix otherwise. **Partial**: proven by a real Compose
+      test (`ConversationListRowTest`) asserting the prefix appears for a non-null content kind and not
+      for a plain-text row - not confirmed against a live signed-in device with a real in-progress
+      booking conversation, since this session had no such conversation available to check against and
+      `adb` was not usable from this shell at the time.
+- [x] `ConversationSummaryDto`'s own doc comment states the real, narrower reason attachments alone
       stay blank, replacing the sentence this item makes false.
-- [ ] `ago-chat`: `dotnet format --verify-no-changes`, `dotnet build -c Release`, `dotnet test -c
-      Release` green.
-- [ ] `ago-android`: `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green.
+- [x] `ago-chat`: `dotnet format --verify-no-changes`, `dotnet build -c Release`, `dotnet test -c
+      Release` green — independently re-verified by the managing session, 3984/3984 across all six
+      assemblies.
+- [x] `ago-android`: `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green —
+      independently re-verified by the managing session.
