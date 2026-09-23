@@ -1,7 +1,7 @@
 # 26-43 · The Settings screen's back arrow is still a literal «←»
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#45](https://github.com/golyakoff/ago-android/pull/45)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -76,9 +76,14 @@ exactly rather than approximating it. No new icon, no new string, no new compone
 
 ## Done when
 
-- [ ] Settings' back control draws `AgoIcons.Back` and carries `R.string.action_back` as its
+- [x] Settings' back control draws `AgoIcons.Back` and carries `R.string.action_back` as its
       `contentDescription`.
-- [ ] TalkBack announces it as «Назад».
-- [ ] Back from Settings still lands on the Ещё list (back-contract clause 2, `26-16`) — the existing
+- [x] TalkBack announces it as «Назад» — `SettingsScreenTest.backArrowCallsOnBack` finds it by that
+      `contentDescription` (rewritten in the same change; the real CI regression this caused and its
+      fix are recorded in the PR).
+- [x] Back from Settings still lands on the Ещё list (back-contract clause 2, `26-16`) — the existing
       instrumented coverage still passes.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+
+Confirmed live on the real device (`F6VCHEZDAMRCPNJZ`): Settings draws the real vector back arrow in
+both light and dark.

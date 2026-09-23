@@ -1,7 +1,7 @@
 # 26-44 · An in-screen section label is not the mockup's `.slabel`
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#45](https://github.com/golyakoff/ago-android/pull/45)
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -104,10 +104,15 @@ One promise: **a section label inside a screen is drawn the mockup's way, once.*
 
 ## Done when
 
-- [ ] One composable draws every in-screen section label; `MoreScreen` no longer has its own copy.
-- [ ] Settings' three headings render as small, heavy, letterspaced, uppercase, faint-ink labels —
+- [x] One composable draws every in-screen section label (`SectionLabel`, `ui/components/`);
+      `MoreScreen` no longer has its own copy.
+- [x] Settings' three headings render as small, heavy, letterspaced, uppercase, faint-ink labels —
       not violet.
-- [ ] The strings in `strings.xml` are unchanged and still sentence case.
-- [ ] Checked in both light and dark: `--ink-faint` inverts (`Color.kt:27`, `:35`) and a label that is
+- [x] The strings in `strings.xml` are unchanged and still sentence case.
+- [x] Checked in both light and dark: `--ink-faint` inverts (`Color.kt:27`, `:35`) and a label that is
       quiet in one theme must still be legible in the other.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+
+Confirmed live on the real device (`F6VCHEZDAMRCPNJZ`): «ТЕМА» / «О ПРИЛОЖЕНИИ» render small, heavy,
+letterspaced, uppercase, faint-ink in light mode and stay legible (not invisible, not full-white)
+in dark.
