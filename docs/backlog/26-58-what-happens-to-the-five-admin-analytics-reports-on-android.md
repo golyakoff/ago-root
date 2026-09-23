@@ -78,5 +78,5 @@ Two facts that bear on the answer:
 - [x] Every report the answers say to build has its own numbered item (`26-70`..`26-74`).
 - [x] Every report the answers say **not** to build has its exclusion recorded here with the reason —
       none; all five port.
-- [ ] `scope-inventory.md` §5 is corrected in `ago-android` to reflect that all five now have a real
-      item rather than "redesign"/"as-is" with no owner.
+- [x] `scope-inventory.md` §5 is corrected in `ago-android` to reflect that all five now have a real
+      item rather than "redesign"/"as-is" with no owner — `ago-android@5f2d474`, landed 2026-09-23.
