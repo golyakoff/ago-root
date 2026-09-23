@@ -1,9 +1,7 @@
 # 26-58 · What happens to the five administrator analytics reports on Android
 
 - **Stage**: 26
-- **Status**: blocked
-- **Depends on**: `26-57` (Аналитика's first real screen — this item decides what, if anything, sits
-  behind it)
+- **Status**: done — decided, remainder carried out as `26-70`..`26-74`
 - **Found**: 2026-09-23, reading `ago-console/src/shell/consoleNav.ts:187-199` and
   `ago-android/docs/scope-inventory.md` §5 against `ago-android` `main` at `b099282`.
 
@@ -44,32 +42,41 @@ Two facts that bear on the answer:
   — and an overflow that opens an empty menu is the shape `26-40` already rejected for the thread's
   own `⋮`.
 
-## Open questions
+## Open questions, answered
 
-1. **Do the four `site:configure` reports port to Android at all, or does the app link out to the
-   console for them the way `/account/billing` links out for checkout (`scope-inventory.md` §9)?**
-   They are desk work with no time pressure, which is the exact test `scope-inventory.md` §2 used to
-   exclude the five platform-owner screens. Excluding them is a defensible answer; so is porting them
-   as "date-range chips, stat cards, one horizontally-scrollable table per breakdown". What is not
-   defensible is building them by default because they exist.
-2. **If they port, is it one screen with a breakdown picker, or four destinations behind an
-   overflow?** The four share a shape; the console keeps them as four routes because a rail has room
-   for four labels. A phone may not want four.
-3. **Does `/calendar/phone-reveals` come to Android with `26-53`, or separately?** It is the audit
-   read-back for the reveal this batch adds. Landing the reveal without the read-back is a real,
-   if small, asymmetry worth deciding on purpose.
+1. **Do the four `site:configure` reports port to Android at all?** **Yes — the author's own answer,
+   2026-09-23**: `scope-inventory.md` §2's exclusion is for the five *platform-owner* screens (AGO's
+   own operators, managing the platform itself); these four are *tenant-owner* screens — the shop
+   owner's own numbers about their own business, the party who is actually paying for the product. The
+   analogy this item originally drew to the platform-owner exclusion was the wrong one: "desk work with
+   no time pressure" describes AGO's own back office, not a tenant checking how their site is doing.
+   All four port.
+2. **One screen with a picker, or four destinations behind an overflow?** **Four, behind an overflow**
+   — the mockup itself already answers this, not a fresh design call: its own graph draws
+   `MyNumbers -- "⋮ · site:configure" --> SiteStats` and three siblings, i.e. four separate destinations
+   reached from one overflow menu, matching the console's own four routes exactly rather than
+   collapsing them into a single screen with a breakdown picker.
+3. **Does `/calendar/phone-reveals` port, and does it come with `26-53` or separately?** Porting it
+   follows from the same reasoning as (1) — it is the tenant's own audit trail of who looked up a
+   customer's phone, gated on `calendar:configure`, not a platform-owner concern. It is a different
+   *promise* from `26-53` (26-53 performs a reveal; this reads back a history of reveals already
+   performed) — rule 15's own test — so it is its own item, not folded into 26-53.
 
-## Scope, once the questions are answered
+## The remainder, carried out to its own numbers
 
-Nothing here is implementation. This item's whole output is: the answers above recorded, and **a new
-numbered item per report that is actually going to be built** — a remainder gets a number, not a link
-(`CLAUDE.md` rule 14). If the answer to (1) is "link out", that is a small item of its own and this
-one closes as decided, not as done-nothing.
+- `26-70` — the Аналитика overflow menu itself, plus «Аналитика сайта» (`/analytics/site`), its first
+  real destination. Filed together because an overflow with nothing behind it is the dead-menu shape
+  `26-40` already rejected — the menu and its first item are one promise.
+- `26-71` — «Отчёт по конверсии» (`/analytics/conversion`).
+- `26-72` — «Разбивка по тегам» (`/analytics/tags`).
+- `26-73` — «Воронка записи» (`/analytics/booking-flow`).
+- `26-74` — «Показы телефонов» (`/calendar/phone-reveals`), the audit read-back.
 
 ## Done when
 
-- [ ] Each of the three questions above has an answer recorded in this file.
-- [ ] Every report the answers say to build has its own numbered item.
-- [ ] Every report the answers say **not** to build has its exclusion recorded here with the reason,
-      the way `scope-inventory.md` §2 records each owner screen's.
-- [ ] `scope-inventory.md` §5 is corrected in `ago-android` if any row's disposition changed.
+- [x] Each of the three questions above has an answer recorded in this file.
+- [x] Every report the answers say to build has its own numbered item (`26-70`..`26-74`).
+- [x] Every report the answers say **not** to build has its exclusion recorded here with the reason —
+      none; all five port.
+- [ ] `scope-inventory.md` §5 is corrected in `ago-android` to reflect that all five now have a real
+      item rather than "redesign"/"as-is" with no owner.
