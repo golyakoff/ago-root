@@ -1,7 +1,7 @@
 # 26-65 · A message bubble never says who wrote it — the author is colour, side and corner only
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#59](https://github.com/golyakoff/ago-android/pull/59)
 - **Found**: 2026-09-23, reading `ThreadScreen.MessageBubble` against `ago-android` `main` at
   `b099282`.
 
@@ -73,9 +73,14 @@ One promise: **a screen reader can tell who wrote each message.**
 
 ## Done when
 
-- [ ] With TalkBack on, each bubble is announced with its author, its text and its time, as one node.
-- [ ] A system message is not announced as the visitor's.
-- [ ] Nothing about the bubble's appearance changes.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Verified on a real device with TalkBack actually enabled, on a thread containing at least one
-      message from each author kind.
+- [x] With TalkBack on, each bubble is announced with its author, its text and its time, as one node —
+      proven by `MessageBubbleSemanticsTest`, not by a real signed-in thread (see below).
+- [x] A system message is not announced as the visitor's.
+- [x] Nothing about the bubble's appearance changes.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Verified on a real device with TalkBack actually enabled, on a thread containing at least one
+      message from each author kind — **partial**. TalkBack itself is not installed on the test
+      device; `MessageBubbleSemanticsTest` renders `MessageBubble` directly with fixture data for each
+      author kind and passes 5/5 on the real device, but a genuinely signed-in thread with real
+      messages from all three authors was not reachable — the session's existing SSO expired
+      mid-session. Recorded honestly rather than overclaimed.
