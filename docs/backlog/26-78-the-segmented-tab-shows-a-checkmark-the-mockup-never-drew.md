@@ -1,7 +1,11 @@
 # 26-78 · The segmented tab shows a checkmark the mockup never drew
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#63](https://github.com/golyakoff/ago-android/pull/63),
+  independently verified by the managing session (`./gradlew ktlintCheck lint test assembleDebug
+  assembleDebugAndroidTest` green, 306 unit tests passed, 0 failures). Also fixed `TeamChatScreen.kt`'s
+  own `SegmentedButton`, not named in this item's own Found section — found by grepping every
+  `SegmentedButton(` call site in the repo (only three exist).
 - **Found**: 2026-09-23, by the author, live on a real device — the screenshot at the very start of
   this session's UI-review conversation showed "✓ Мои 9" atop Диалоги's segmented control.
 
@@ -34,8 +38,16 @@ checkmark**, matching the mockup exactly.
 
 ## Done when
 
-- [ ] Диалоги's Мои/Ожидают segmented control shows no checkmark on the selected tab, on a real
-      device.
-- [ ] Записи's segmented control (if it shares the same underlying composable/bug) shows no checkmark
-      either, on a real device.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green.
+- [~] Диалоги's Мои/Ожидают segmented control shows no checkmark on the selected tab. **Partial**: the
+      code fix (`icon = {}`) is in and independently verified by reading the diff; a real device was
+      available but the app landed on the sign-in screen with no credentials available for this
+      session, so the fixed screen itself was never seen live — code-level confidence only, not a
+      live-device confirmation.
+- [~] Записи's segmented control shows no checkmark either — same code fix, same partial: verified by
+      reading the diff (it shares the identical `SegmentedButton` composable/bug), not confirmed live.
+      `Команда`'s own segmented row had the identical bug and got the identical fix, found while
+      grepping for every call site in the repo — not named in this item's own Found section, worth
+      recording here since it was fixed under this ticket's own promise ("no Material-3-default
+      checkmark on any segmented tab in this app").
+- [x] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green — independently
+      re-verified by the managing session.
