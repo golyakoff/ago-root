@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "../ago-console", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "scratch-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8731", "--directory", ".scratch-preview"],
+      "port": 8731
     }
   ]
 }
