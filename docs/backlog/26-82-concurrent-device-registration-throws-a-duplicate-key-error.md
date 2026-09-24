@@ -1,7 +1,7 @@
 # 26-82 · Concurrent device registration throws a duplicate-key error instead of upserting
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-chat#358](https://github.com/golyakoff/ago-chat/pull/358).
 - **Found**: 2026-09-24, by the author, live on the demo stand — reported as "the message reaches the
   dialog list very slowly" while testing `26-06`'s push registration on a real phone. Investigated by
   reading `Ago.Chat.Api`'s real pod logs on the live demo cluster: not the cause of that particular
@@ -56,6 +56,7 @@ no retry and no visible signal to the operator that their device's token may now
 
 ## Done when
 
-- [ ] Two concurrent registration calls for the same `(operatorId, installationId)` both succeed —
-      proven by a real concurrent test, not by inspection.
-- [ ] `dotnet format`/`build`/`test` green.
+- [x] Two concurrent registration calls for the same `(operatorId, installationId)` both succeed —
+      proven by a real `AsyncRendezvous`-forced concurrent test, not by inspection.
+- [x] `dotnet format`/`build`/`test` green: 4002/4004 passing independently, the 2 failures proven
+      environmental (isolated re-run 5/5 green).
