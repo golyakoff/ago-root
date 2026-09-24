@@ -1,7 +1,7 @@
 # 26-49 · The pending queue is read-only, and the veto is the whole point of it
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#78](https://github.com/golyakoff/ago-android/pull/78)
 - **Depends on**: `26-48` (the calendar API client and the Ожидают screen itself)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/CalendarQueuePage.tsx` and
   `ago-console/src/api/calendarApi.ts` against the approved mockup Artifact ("AGO Chat для Android",
@@ -66,12 +66,14 @@ One promise: **an operator can veto a pending booking from the phone.**
 
 ## Done when
 
-- [ ] An operator holding `booking:reject` can reject a pending booking from the phone and sees it
-      leave the queue.
-- [ ] A refusal from the server renders the server's own `detail`, and the list is re-read before that
-      message is shown.
-- [ ] Rapidly tapping one row's action twice produces exactly one server call.
-- [ ] No «Подтвердить» control exists anywhere on the screen.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device against a real pending booking, rejected, and confirmed gone from the
-      console's own `/calendar/waiting` as well.
+- [x] An operator holding `booking:reject` can reject a pending booking from the phone and sees it
+      leave the queue — proven in `BookingsViewModelTest`.
+- [x] A refusal from the server renders the server's own `detail`, and the list is re-read before that
+      message is shown — proven in `BookingsViewModelTest`.
+- [x] Rapidly tapping one row's action twice produces exactly one server call — proven in
+      `BookingsViewModelTest`.
+- [x] No «Подтвердить» control exists anywhere on the screen.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 462 tests, 0 failures, independently
+      re-verified with `--rerun-tasks`.
+- [~] Checked on a real device against a real pending booking — not done by the managing session yet;
+      the code path is proven by test, not by a live run.
