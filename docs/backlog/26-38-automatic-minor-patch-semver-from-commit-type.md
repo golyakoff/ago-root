@@ -1,7 +1,9 @@
 # 26-38 · MINOR and PATCH compute automatically from commit type; MAJOR stays the author's own call
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — shipped (`ago-android` `b099282`). Found still marked "ready" in the queue despite
+  the code being live; caught 2026-09-24 while cross-checking the ready queue against real git history.
+  The one remaining Done-when box is now settled below, against the real release list.
 - **Found**: 2026-09-23, by the author, after noticing every push all day landed in the same `v0.1.0`
   release: "мы с тобой говорили про автоматический семвер, сделай" — followed by a correction once the
   first draft (auto-patch only, MAJOR.MINOR hand-set) was shown: "патч - это багфикс без брейкинг
@@ -57,5 +59,7 @@ identical rule still applies to history so far.
 - [x] The computed version reaches the actual built APK (filename + `versionName`), verified with a
       real local `-PagoReleaseVersion=0.1.1` build producing `AGO_Chat_v0.1.1.apk`.
 - [x] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] A real CI run of `publish-apk` produces a version genuinely computed by this logic, confirmed by
-      the managing session reading the real published release — not merely reasoned about locally.
+- [x] A real CI run of `publish-apk` produces a version genuinely computed by this logic — confirmed
+      2026-09-24 against the real release list (`gh release list`): patch and minor bumps both observed
+      live across today's ~15 merges (e.g. `v0.10.0` → `v0.10.1` on a `fix` commit → `v0.11.0` on the
+      next `feat`), not merely reasoned about locally.

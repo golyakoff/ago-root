@@ -1,7 +1,9 @@
 # 26-37 · Drop "release" from the published APK's filename
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — shipped (`ago-android` `c8ec1bc`/`a2b4a09`). Found still marked "ready" in the
+  queue despite every Done-when box already ticked — a queue-row oversight, not unfinished work; caught
+  2026-09-24 while cross-checking the ready queue against real git history before dispatching from it.
 - **Found**: 2026-09-23, by the author, after seeing the real published asset name and preferring a
   shorter one.
 
