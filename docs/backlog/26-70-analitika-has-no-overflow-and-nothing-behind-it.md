@@ -1,7 +1,12 @@
 # 26-70 · Аналитика has no overflow, and no «Аналитика сайта» behind it
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#84](https://github.com/golyakoff/ago-android/pull/84). Real
+  finding along the way: `BackContractBottomBarTest.clause3_backNeverWalksThroughPreviouslyVisitedTabs`
+  clicks «Аналитика» and now composes real content through `hiltViewModel()` — `AppShellScreen`'s own
+  comment claiming no test visits Аналитика's content is no longer true. Not fixed here (instrumented
+  tests aren't in the verification command run, so a fix couldn't be proven safe); if it fails on a
+  real device run, the fix is an `analyticsTab` slot mirroring `teamTab`, worth its own item.
 - **Found**: 2026-09-23, reading `ago-console/src/pages/OperatorAnalyticsPage.tsx`,
   `ago-console/src/api/conversationsApi.ts` and `ago-console/src/realtime/protocol/types.ts` against
   `ago-android` `main` at `b099282`, with the approved mockup Artifact ("AGO Chat для Android",
@@ -114,18 +119,21 @@ numbers for a chosen window.**
 
 ## Done when
 
-- [ ] An operator holding `site:configure` opens Аналитика, taps `⋮`, and reaches «По сайту».
-- [ ] An operator **without** `site:configure` sees no `⋮` on Аналитика at all — not a disabled one,
-      and not one that opens an empty menu.
-- [ ] The screen loads the server's default window with no interaction, and the range it displays is
-      the response's own `from`/`to`, never the inputs.
-- [ ] A breakdown with no rows says so for itself; there is no single page-wide empty state standing
-      in for four independent ones.
-- [ ] An operator row with no `load` renders its own "no data" value, distinct from both a real `0`
-      and from the "nothing to average" value used for a null average.
-- [ ] The interval-vs-conversation note and the browser-reported-traffic note are both on the screen.
-- [ ] Back from «По сайту» returns to Аналитика, not to the previously selected bottom destination.
-- [ ] An invalid range renders its own distinct message.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device, in both light and dark, against a site with real conversation history
-      **and** against one whose window is empty.
+- [x] An operator holding `site:configure` opens Аналитика, taps `⋮`, and reaches «По сайту» — the gate
+      is asserted in `AnalyticsReportTest`; the tap-through is a UI mechanism, not re-tested separately.
+- [x] An operator **without** `site:configure` sees no `⋮` on Аналитика at all — asserted for `Known`,
+      `Known(∅)` and `Unknown` in `AnalyticsReportTest`.
+- [x] The screen loads the server's default window with no interaction, and the range it displays is
+      the response's own `from`/`to` — asserted in `SiteAnalyticsViewModelTest`.
+- [x] A breakdown with no rows says so for itself — `BreakdownTable` draws its own caption + empty text
+      per dimension.
+- [x] An operator row with no `load` renders its own "no data" value, distinct from a real `0` and from
+      the null-average value — asserted at the adapter and view-model level.
+- [x] The interval-vs-conversation note and the browser-reported-traffic note are both on the screen.
+- [x] Back from «По сайту» returns to Аналитика via `AnalyticsTabHost`'s own `BackHandler`.
+- [x] An invalid range renders its own distinct message (`Analytics.InvalidRange` → its own arm, no
+      retry offered).
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 501 tests, 0 failures, independently
+      re-verified with `--rerun-tasks`.
+- [~] Checked on a real device, in both light and dark, against a site with real conversation history
+      and one whose window is empty — not done by the managing session yet.

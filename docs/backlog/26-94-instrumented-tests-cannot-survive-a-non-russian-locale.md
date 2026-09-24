@@ -1,7 +1,15 @@
 # 26-94 · The instrumented test suite cannot survive a non-Russian locale, on device or in CI
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#83](https://github.com/golyakoff/ago-android/pull/83).
+  Confirmed live: a real GitHub CI run of this exact fix passed all 14 previously-broken classes on the
+  real `en-US` emulator. `LocaleForcingTestRunner` calls the platform `LocaleManager` directly in
+  `onCreate`, before `Instrumentation` creates the target `Application` — not
+  `AppCompatDelegate.setApplicationLocales`, the item's own first-suggested API, which decompiling
+  `androidx.appcompat:appcompat:1.8.0` showed to be a dead end for an app with no `AppCompatActivity`
+  anywhere in these flows. One follow-up class (`DialoguesTabUnreadBadgeTest`, written by a parallel
+  `26-46` after this item started) needed a second, unrelated fix — `useUnmergedTree = true`, since
+  `NavigationBarItem` merges its icon and label into one semantics node.
 - **Found**: 2026-09-24, landing `26-91` — adding `values-en/strings.xml` made 14 test classes (42
   test methods) fail on GitHub's CI emulator, which boots `en-US`. `26-91`'s own PR (`ago-android#74`)
   excludes those 14 classes via `@FlakyOnCi` to keep `publish-apk` unblocked; this item is the real fix
@@ -72,12 +80,12 @@ rather than continuing to fight the device/emulator's locale from outside it:
 
 ## Done when
 
-- [ ] All 42 previously-failing tests across the 14 classes pass in a real CI run, with `@FlakyOnCi`
-      removed from every one of them.
-- [ ] The mechanism does not depend on the device or emulator's own locale — stated and proven (e.g. by
-      showing the same tests still pass if the CI emulator's default locale ever changes, or by
-      reasoning about the mechanism directly).
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` and a real `connectedDebugAndroidTest` run both
-      green, counted from a real, non-cached run.
-- [ ] `docs/architecture.md` gains a short note on how instrumented UI tests pin their locale, so the
-      next test added to this suite does it the same way rather than reinventing it.
+- [x] All previously-failing tests across the 14 classes (70 methods, not 42 — `@FlakyOnCi` is
+      class-level, so the earlier count undercounted) pass in a real CI run, with `@FlakyOnCi` removed
+      from every one of them — confirmed on `ago-android#83`'s own real GitHub Actions run.
+- [x] The mechanism does not depend on the device or emulator's own locale — proven by reasoning
+      (`LocaleForcingTestRunner`'s own doc comment) and by the real CI run passing on the emulator's
+      native `en-US` boot locale.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` and a real `connectedDebugAndroidTest` run both
+      green — 435 unit tests locally, and the full CI instrumented run green on the real emulator.
+- [x] `docs/architecture.md` gains "Pinning the locale instrumented UI tests render against (26-94)".
