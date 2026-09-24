@@ -1,9 +1,11 @@
 # 26-84 · Backgrounding the Android app silently releases the operator's conversations
 
 - **Stage**: 26
-- **Status**: filed — as the question. The mechanism and the evidence are both real and confirmed;
-  which of several fixes is right is a product call about how a mobile operator is expected to work,
-  not something this session decides on its own (`CLAUDE.md` rule 14).
+- **Status**: the author chose a direction the same day — `26-85` (foreground service, keep the
+  connection alive rather than loosen the server-side grace period) — and it has landed
+  (`ago-android#72`). **Still open**: the real-device proof that the connection genuinely survives
+  ordinary backgrounding, which `26-85` itself could not run in its own sandbox. This item closes once
+  that proof exists (or once it doesn't, and a further fix is needed).
 - **Found**: 2026-09-24, by the author, live on the demo stand, while trying to reproduce a reported
   "the conversation list feels slow to update" symptom. The real cause turned out to be several layers
   deeper than list-refresh timing.
