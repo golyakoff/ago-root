@@ -1,7 +1,13 @@
 # 26-85 · An Operator stays online in the background, the way the phone itself is always reachable
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#72](https://github.com/golyakoff/ago-android/pull/72), independently
+  verified by the managing session (`ktlintCheck`/`lint`/`test`/`assembleDebug`/`assembleDebugAndroidTest`
+  all green after rebasing onto `26-87`'s own merge, 0 conflicts; a real CI Android emulator ran the full
+  instrumented suite green). 226 tests, 0 failures, re-counted from the real JUnit XML. Read the crux
+  fix (`OperatorHubConnectionLifecycle`'s new `presenceGate` check) and the permission gating directly —
+  `Permission.CONVERSATION_SEND`'s wire string (`"conversation:send"`) cross-checked against `ago-chat`'s
+  real `Permission.ConversationSend` and matches exactly.
 - **Found**: 2026-09-24, by the author, live on the demo stand, investigating `26-84`.
 - **Depends on**: `26-06`/`26-18`/`26-19` (push, done), `26-84` (the mechanism this item exists to fix
   the consequence of).
@@ -74,13 +80,16 @@ navigation app already uses to survive backgrounding.
 
 ## Done when
 
-- [ ] A real phone, screen off, app backgrounded for over a minute, still shows a live connection in
-      the server's own connection registry — proven directly (the same check this session used to find
-      the problem), not inferred from the notification being present.
-- [ ] An assignment taken before backgrounding is still held after backgrounding for over a minute —
-      proven against real `conversation_assignments` rows, the same table this session read to find the
-      bug.
-- [ ] The foreground service does not start for an identity holding no `conversation:send` permission.
-- [ ] Battery-optimization exemption is requested once, at a meaningful moment, and the app remains
-      functional (falls back gracefully) if refused.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [~] A real phone, screen off, app backgrounded for over a minute, still shows a live connection in
+      the server's own connection registry — not yet proven; no physical device in this sandbox. The
+      mechanism (`OperatorPresenceService` + `presenceGate`) is implemented and unit-tested; the real
+      round-trip is a real-device task, tracked as the reason `26-84` also stays open.
+- [~] An assignment taken before backgrounding is still held after backgrounding for over a minute —
+      same reason, not yet proven on a real device.
+- [x] The foreground service does not start for an identity holding no `conversation:send` permission —
+      proven directly (`DefaultOperatorPresenceControllerTest`).
+- [x] Battery-optimization exemption is requested once, at a meaningful moment, and the app remains
+      functional if refused — the app never conditions behavior on the outcome; the ask-once state
+      machine is unit-tested. Real cross-OEM battery-manager behavior stays `[~]`, untestable here.
+- [x] `./gradlew ktlintCheck lint test` green — 226 tests, 0 failures, independently re-run and counted
+      by the managing session.
