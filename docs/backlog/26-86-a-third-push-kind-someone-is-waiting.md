@@ -1,7 +1,14 @@
 # 26-86 · A third push kind: someone is waiting
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-chat#357](https://github.com/golyakoff/ago-chat/pull/357),
+  [ago-android#73](https://github.com/golyakoff/ago-android/pull/73), independently verified by the
+  managing session. Read the actual diffs (the `ConversationEnteredQueue` hook, the centralized `reason`
+  field, `IncomingPush.kt`'s new discriminator) — all check out, and the `reason` wire values match
+  exactly between server and client. `dotnet test`: **4001/4001** passed, all 6 real assemblies
+  confirmed present (not a truncated run). `./gradlew test`: **230/230** passed. Two real regressions
+  the worker found and fixed along the way (`SendMessageOutboxTests`, `OutboxDispatcherTests`) — both
+  pre-existing tests assumed one outbox row per first message, now correctly two.
 - **Found**: 2026-09-24, by the author, while deciding `26-85`'s own presence model.
 - **Depends on**: `26-05`'s fan-out shape (`NotifyOperatorDevicesHandler`), `26-18`'s channel/settings
   machinery, `26-19`'s notification-settings screen.
@@ -72,13 +79,16 @@ it yet.** One promise: **nobody misses a waiting visitor because their phone was
 
 ## Done when
 
-- [ ] A new visitor conversation entering `Waiting` produces a real push to every eligible operator on
-      the site, proven against a real send (or an honest `[~]` if only provable via `MockEngine`/fake in
-      this sandbox, matching this stage's own established pattern).
-- [ ] The notification names no message body and no visitor identity beyond what the existing two kinds
-      already show.
-- [ ] The settings toggle exists, defaults on, and turning it off actually stops the notification.
-- [ ] `26-81`'s own gap (no explicit `reason` on the wire) is closed for all three kinds in the same
-      change - closing `26-81` itself when this lands.
-- [ ] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android) both
-      green.
+- [~] A new visitor conversation entering `Waiting` produces a real push to every eligible operator on
+      the site — proven end-to-end against real Postgres/RabbitMQ/`PermissionChecker`, but only against
+      `RecordingPushSender`/a fake, never actual RuStore delivery — the identical, already-accepted limit
+      the other two kinds carry.
+- [x] The notification names no message body and no visitor identity beyond what the existing two kinds
+      already show — stronger, in fact: the wire data carries only `conversationId` + `reason`.
+- [x] The settings toggle exists, defaults on (via `PushNotificationChannel.entries`), and turning it off
+      stops the notification.
+- [x] `26-81`'s own gap is closed for all three kinds in the same change — `data["reason"]` is now added
+      once, centrally, in `SendToOperatorAsync`; closing `26-81` itself as part of landing this.
+- [x] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android) both
+      green — independently re-run and counted by the managing session, matching the worker's own report
+      exactly on both sides.
