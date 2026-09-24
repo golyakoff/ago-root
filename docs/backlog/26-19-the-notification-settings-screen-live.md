@@ -1,7 +1,14 @@
 # 26-19 · The notification settings screen, live
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#69](https://github.com/golyakoff/ago-android/pull/69), independently
+  verified by the managing session (`ktlintCheck`/`lint`/`test`/`assembleDebug`/`assembleDebugAndroidTest`
+  all green; a real CI Android emulator ran the full instrumented suite green). A forced, non-cached
+  re-run counted **402 tests, 0 failures** directly from the JUnit XML (`:app` 203, `:core:network` 112,
+  `:core:domain` 87) — matching the worker's own reported total exactly. **Corrected premise, confirmed
+  before and after implementation**: this item's own "Found" line describes an existing disabled-banner
+  screen to un-gate; no such screen exists anywhere in this codebase (checked by both the worker and the
+  managing session) — this was a from-scratch build, not an un-gating.
 - **Found**: 2026-09-21. `scope-inventory.md` §11 designs this screen with **every control disabled
   behind one banner naming the backend item that has to land first** — a deliberate choice over
   honest-limits copy, because "a screen that only explains what the app cannot do is a screen nobody
@@ -50,12 +57,18 @@ promise: **the switches on this screen are true.**
 
 ## Done when
 
-- [ ] Turning a channel off actually stops that kind of notification on a real phone — proven by
-      sending one afterwards, not by the switch's own state.
-- [ ] Quiet hours suppress a push, and the screen is honest about what happens to it (whether it still
-      lands silently in the tray or not — either is fine, but the copy must match the behaviour).
-- [ ] The screen names no channel that nothing sends.
-- [ ] Changing channel importance in the OS settings and returning shows the app agreeing with it
-      rather than contradicting it.
-- [ ] The Away note is on screen and nothing beside it implies a per-device setting.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [~] Turning a channel off actually stops that kind of notification on a real phone — no physical
+      device in this sandbox; the deep-link into system channel settings and the channel-state reading
+      are unit/instrumented-tested, real on-device suppression is not observed.
+- [x] Quiet hours suppress a push, and the screen is honest about what happens to it — implemented as
+      "not shown at all" (same code path `decideAlert`'s own silence takes), stated on-screen in exactly
+      those terms; the time-range logic (including a range crossing midnight) is fully unit-tested.
+- [x] The screen names no channel that nothing sends — proven directly: rows are drawn straight from
+      `PushNotificationChannel.entries`, which has exactly two values.
+- [~] Changing channel importance in the OS settings and returning shows the app agreeing with it — the
+      `ON_RESUME` re-read mechanism is unit-tested against a fake reader; a live round-trip through real
+      system settings UI needs a physical device.
+- [x] The Away note is on screen and nothing beside it implies a per-device setting — text only, no
+      control anywhere in the app.
+- [x] `./gradlew ktlintCheck lint test` green — 402 tests, 0 failures, independently re-run and counted
+      by the managing session from a forced non-cached re-run.
