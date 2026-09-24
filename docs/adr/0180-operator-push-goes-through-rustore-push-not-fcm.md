@@ -1,6 +1,9 @@
 # ADR-0180: Operator push goes through RuStore Push, not FCM — and RuStore's distributor model replaces three of ADR-0179's mechanics
 
-- **Status**: Accepted
+- **Status**: Accepted; **amended by ADR-0181** (2026-09-24) - FCM is reintroduced as the *primary*
+  transport with RuStore kept as the fallback, reversing this ADR's single-provider "RuStore, not FCM"
+  choice while keeping its RuStore adapter (now the fallback path) and all of ADR-0179 it preserved.
+  The residency trade this ADR closed by changing the destination is reopened deliberately there.
 - **Date**: 2026-09-21
 - **Stage**: 26
 - **Supersedes**: part of ADR-0179 — its provider choice and everything downstream of it (the

@@ -10,6 +10,11 @@
   first evidence for. The body below is unchanged - not one line - because this directory's own rule
   is that a `Status` pointer is the only edit an accepted ADR may receive, and an amendment in the
   body is what makes a file look current while carrying its own reversal several screens down.
+- **Amended by ADR-0181** (2026-09-24): FCM returns as the *primary* transport with RuStore kept as the
+  fallback. This restores this ADR's original FCM provider choice and its `FCM_SERVICE_ACCOUNT_JSON`
+  credential (§4) as one of two transports, and is the first exercise of §5's own trigger - a real
+  second provider making the `provider` column and `PushMessage`-shaped port a routing seam rather than
+  preparation. The schema (§1), fan-out (§2) and client-owns-loudness (§3) rulings are untouched.
 - **Date**: 2026-09-21
 - **Stage**: 26
 
