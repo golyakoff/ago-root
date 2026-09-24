@@ -1,7 +1,7 @@
 # 26-53 · A masked phone cannot be revealed from the phone
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#78](https://github.com/golyakoff/ago-android/pull/78)
 - **Depends on**: `26-52` (Клиенты — the first screen in the app with a masked phone on it)
 - **Found**: 2026-09-23, reading `ago-console/src/calendar/calendarFormat.tsx` and
   `ago-console/src/api/calendarApi.ts` against the approved mockup Artifact ("AGO Chat для Android",
@@ -70,9 +70,12 @@ recorded as having happened on Android.**
 
 ## Done when
 
-- [ ] A masked phone on Клиенты shows a Показать control; an unmasked one does not.
-- [ ] Revealing writes an audit record whose surface names Android, confirmed by reading
-      `/calendar/phone-reveals` in the console after doing it on a real device.
-- [ ] A customer with more than one row on screen is revealed once, on all of them.
-- [ ] A refusal leaves the number masked and says why.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] A masked phone on Клиенты shows a Показать control; an unmasked one does not.
+- [~] Revealing writes an audit record whose surface names Android, confirmed by reading
+      `/calendar/phone-reveals` in the console after doing it on a real device — not done by the
+      managing session yet; the request shape (`surface: "AndroidContacts"`) is proven by test.
+- [x] A customer with more than one row on screen is revealed once, on all of them — proven in
+      `ContactsViewModelTest` (synthetic duplicate-row case).
+- [x] A refusal leaves the number masked and says why — proven in `ContactsViewModelTest`.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 462 tests, 0 failures, independently
+      re-verified with `--rerun-tasks`.

@@ -1,7 +1,12 @@
 # 26-68 · A thread restored after process death shows the conversation's id as the visitor's
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#76](https://github.com/golyakoff/ago-android/pull/76). A
+  real finding along the way: `26-40` had already retired the app bar's own eight-character code before
+  this landed, so the bug's original visible symptom no longer reproduced on `main` — the fabricated
+  value was dead data, read by nothing. The defect was still real for any future consumer of
+  `visitorId`, and the attachment-grant/permanent-mismatch cases were both fully live; documented in
+  `ago-android/docs/architecture.md`.
 - **Found**: 2026-09-23, tracing `ConversationsTabHost`'s row lookup against `ago-android` `main` at
   `b099282`.
 
@@ -91,11 +96,16 @@ One promise: **the thread never presents a substituted value as the visitor's id
 
 ## Done when
 
-- [ ] Killing the process with a thread open and returning never shows a conversation id where a
-      visitor identifier belongs — reproduced on a real device with "don't keep activities" on.
-- [ ] A thread whose conversation is not in either half of the queue does not display a fabricated
-      identity.
-- [ ] The ordinary path — tapping a row — renders exactly as it does today.
-- [ ] `visitorDisplayPrefixParts`' tests cover the newly-possible absent-id combination.
-- [ ] The attachment-grant fallback has a stated answer in the change and in the report.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Killing the process with a thread open and returning never shows a conversation id where a
+      visitor identifier belongs — not reproduced on a real device by the managing session yet; the
+      fallback itself is removed and covered at the unit level.
+- [x] A thread whose conversation is not in either half of the queue does not display a fabricated
+      identity — `identityUnavailable`, derived from `listState.isStale`.
+- [x] The ordinary path — tapping a row — renders exactly as it does today (unchanged; `row` is always
+      found on that path).
+- [x] `visitorDisplayPrefixParts`' tests cover the newly-possible absent-id combination — 5 new cases,
+      20 total in the file.
+- [x] The attachment-grant fallback has a stated answer: `Boolean?`, "absent until known" chosen over a
+      silent `false`.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 435 tests, 0 failures, independently
+      re-verified with `--rerun-tasks`.

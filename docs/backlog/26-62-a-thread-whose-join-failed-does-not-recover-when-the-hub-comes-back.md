@@ -1,7 +1,7 @@
 # 26-62 · A thread whose join failed does not recover when the hub comes back
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#79](https://github.com/golyakoff/ago-android/pull/79)
 - **Found**: 2026-09-23, tracing `ThreadViewModel` against `OperatorHubConnection` on `ago-android`
   `main` at `b099282`.
 
@@ -84,9 +84,12 @@ One promise: **a thread that failed to load loads itself when the connection com
 
 ## Done when
 
-- [ ] Opening a thread with the network off shows the join error; restoring the network loads the
-      thread with no tap — checked on a real device, in a conversation with no new messages arriving.
-- [ ] Rotating the device on a healthy thread issues no extra join, proven by a test.
-- [ ] The dot and the thread body never simultaneously claim connected-and-failed.
-- [ ] `retryJoin` remains the one entry point; there is no second join path.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Opening a thread with the network off shows the join error; restoring the network loads the
+      thread with no tap — not checked on a real device by the managing session yet; proven at the
+      `ThreadViewModelTest` level with a real reconnect transition.
+- [x] Rotating the device on a healthy thread issues no extra join, proven by a test.
+- [x] The dot and the thread body never simultaneously claim connected-and-failed — proven by a test
+      collecting every state emission during recovery.
+- [x] `retryJoin` remains the one entry point; there is no second join path.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 440 tests, 0 failures, independently
+      re-verified with `--rerun-tasks`.

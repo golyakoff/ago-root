@@ -1,7 +1,12 @@
 # 26-93 · Signing out of the app never ends the Keycloak SSO session in the browser
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#75](https://github.com/golyakoff/ago-android/pull/75). The
+  realm client also needed a live fix outside this repo: `ago-android`'s Keycloak client had no
+  `post.logout.redirect.uris` registered, and Keycloak 26 treats that as zero valid post-logout
+  redirects (not "same as `redirectUris`") — every real sign-out failed with "Invalid redirect uri"
+  until this was applied by hand against the live realm and persisted in
+  [ago-deploy#264](https://github.com/golyakoff/ago-deploy/pull/264).
 - **Found**: 2026-09-24, by the author, live on a real device — "я не могу по-настоящему
   разлогиниться в приложении на телефоне, чтобы зайти под другим аккаунтом. Очистка кэша приложения
   и даже переустановка не помогают, у меня не спрашивают логин и пароль, а сразу логинят в
@@ -49,14 +54,14 @@ cookies are cleared by hand.
 
 ## Done when
 
-- [ ] After sign-out, the same device's Chrome no longer holds a live Keycloak session for that
-      realm — proven by opening the realm's account console directly in Chrome post-sign-out and
-      seeing a login prompt, not an active session.
-- [ ] Signing in again after signing out prompts for credentials, on the same device, with no app
-      reinstall involved.
-- [ ] A failure of the end-session call (network down, realm unreachable) does not prevent local
-      sign-out from completing — the operator is never stuck signed in to this app because the
-      network call to leave the IdP failed.
-- [ ] `./gradlew ktlintCheck lint test` green; the existing `AgoAuthSessionSignOutTest`/
-      `AgoAuthSessionSignOutOrderingTest` extended to cover the new ordering, not just asserted by eye.
-- [ ] No new string literal in any view — resources in both languages (`26-91`'s standing rule).
+- [~] After sign-out, the same device's Chrome no longer holds a live Keycloak session for that
+      realm — not yet reproduced on a real device by the managing session since the realm fix landed;
+      the mechanism (RP-Initiated Logout via Custom Tab) is proven at the ordering-test level.
+- [~] Signing in again after signing out prompts for credentials, on the same device — same as above,
+      pending a real-device check now that the realm client carries the redirect URI.
+- [x] A failure of the end-session call does not prevent local sign-out from completing —
+      `completeSignOut(data: Intent?)` runs unconditionally regardless of how the round trip ended,
+      proven in `AgoAuthSessionSignOutOrderingTest`.
+- [x] `./gradlew ktlintCheck lint test` green — 430 tests, 0 failures, independently re-verified with
+      `--rerun-tasks`; both sign-out tests extended for the new two-step ordering.
+- [x] No new string literal in any view — none was needed; nothing user-facing was added.
