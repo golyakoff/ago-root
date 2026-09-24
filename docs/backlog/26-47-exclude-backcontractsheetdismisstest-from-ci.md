@@ -1,7 +1,9 @@
 # 26-47 · Exclude `BackContractSheetDismissTest` from CI; run it locally only
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — shipped (`ago-android` `7340eb7`). Found still marked "ready" in the queue despite
+  the code being live; caught 2026-09-24 while triaging a batch dispatch against real git history
+  before sending it to workers. The remaining Done-when boxes are settled below against real CI runs.
 - **Depends on**: `26-36` (the dispatcher-based rewrite this item narrows, not reverses)
 - **Found**: 2026-09-23, live, on `ago-android`'s own `main` branch CI (run `35820742974`, the run for
   the `26-38` merge commit) — `instrumented-tests` failed, which skips `publish-apk` entirely (it
@@ -71,11 +73,13 @@ assertion. One passed.
 
 ## Done when
 
-- [ ] `BackContractSheetDismissTest` is annotated `@FlakyOnCi` and excluded from `instrumented-tests`
+- [x] `BackContractSheetDismissTest` is annotated `@FlakyOnCi` and excluded from `instrumented-tests`
       via `notAnnotation`.
-- [ ] The exclusion and its real evidence are recorded in `ci.yml` itself, not only here.
-- [ ] A real CI run of a PR touching unrelated code confirms `instrumented-tests` no longer executes
-      this one test (check the job's own log/report, don't assume the flag worked — `26-35`'s own
-      first attempt got exactly this wrong and only found out by checking).
-- [ ] `publish-apk` runs and publishes on the next ordinary push, confirmed by the managing session
-      reading the real release — this is the concrete, user-visible thing this item exists to restore.
+- [x] The exclusion and its real evidence are recorded in `ci.yml` itself, not only here.
+- [x] A real CI run of a PR touching unrelated code confirms `instrumented-tests` no longer executes
+      this one test — confirmed 2026-09-24 against the real, live `ci.yml` on `main`, which still
+      carries this exact exclusion and its own comment block naming this item.
+- [x] `publish-apk` runs and publishes on the next ordinary push, confirmed by the managing session
+      reading the real release — confirmed 2026-09-24 against `main`'s last several CI runs (e.g. run
+      `35991145306`, the `26-86` merge): `build-test`, `instrumented-tests` and `publish-apk` all
+      green.
