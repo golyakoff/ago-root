@@ -468,13 +468,21 @@ What idempotency actually rests on, both halves client-side:
   doing the work**, and it survives intact *because* the design already renders the notification in
   app code rather than letting the SDK draw it: the client calls `NotificationManagerCompat.notify`
   with that tag and Android's notification manager collapses delivered notifications by it.
-- **Client-side dedupe by `MessageId`**, which the data payload carries — the same
-  dedupe-by-message-id the widget already does for redelivered broker messages (`messaging.md`).
-  `RemoteMessage.messageId` also exists as a provider-assigned id, so there is a second field
-  available if the payload's own ever proves insufficient.
+- **Client-side dedupe by `RemoteMessage.messageId`** — the provider-assigned id, used as the primary
+  key rather than the domain `data["messageId"]` this section originally expected: `26-18` found that
+  the assignment kind's own payload carries no domain `messageId` at all (`{conversationId}` only), so
+  a domain-id-first scheme would have had nothing to dedupe that kind on. The domain payload is the
+  fallback for the (undocumented, never observed) case where RuStore hands the app a message with no
+  provider id of its own.
 
 That is idempotent *in effect*, which is what rule 5 asks for. An `inbox` row per push would add a
 database write to every notification to prevent a duplicate the tag already collapses.
+
+**The payload also names no `reason`/`kind` of its own** — `NotifyOperatorDevicesHandler` has
+`"assigned"`/`"message"` constants server-side but only ever puts them in a metric tag, never on the
+wire, so `26-18`'s client infers the kind from whether `messageId` is present. That works today and is
+a real, fragile implicit contract rather than an explicit one; carried out as `26-81` rather than fixed
+inside `26-18`.
 
 *What is genuinely lost with the collapse key*, stated so nobody meets it as a surprise: FCM
 additionally collapsed **undelivered** messages queued for a phone that was offline. RuStore does

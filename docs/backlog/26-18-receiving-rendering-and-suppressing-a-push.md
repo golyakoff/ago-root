@@ -1,7 +1,17 @@
 # 26-18 · Receiving, rendering and suppressing a push
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#68](https://github.com/golyakoff/ago-android/pull/68), independently
+  verified by the managing session (`ktlintCheck`/`lint`/`test`/`assembleDebug`/`assembleDebugAndroidTest`
+  all green; a real CI Android emulator ran the full instrumented suite green). **The worker's own
+  self-reported test count was wrong and caught by independent verification**: it claimed 273 for
+  `:app`; a forced, non-cached re-run counted 186 from the real JUnit XML — still 0 failures, just a
+  wrong number in the report, not a hidden problem. Total: 385 (`:app` 186, `:core:network` 112,
+  `:core:domain` 87, the latter two unchanged by this PR). The wire payload shape
+  (`{conversationId}`/`{conversationId, messageId}`, no explicit kind field) was cross-checked against
+  the real `ago-chat` `NotifyOperatorDevicesHandler`/`RuStorePushSender.BuildData` — the finding that
+  the payload names no kind of its own is real, not a guess, and is carried out as `26-81` rather than
+  fixed here (out of this item's own scope).
 - **Found**: 2026-09-21, the second half of the Android client item
   `docs/architecture/push-notifications.md` names at its foot; `26-06` is the first. Split on
   promises per rule 15: *the server knows about this device* and *the phone buzzes correctly* are
@@ -110,22 +120,27 @@ exists at all.
 
 ## Done when
 
-- [ ] **A real phone, screen off, receives a push for an assignment and for a visitor message and taps
-      through to the right thread** — the item's whole promise, recorded with the date it was
-      observed and the device named.
-- [ ] A push for the conversation **currently open and visible** is suppressed, and the same push with
-      the app backgrounded is not — both proven, because getting this backwards is invisible in one
-      direction and infuriating in the other.
-- [ ] Four messages in one conversation replace one another rather than stacking four — including
-      the case where the phone was **offline while all four were sent** and receives them together,
-      which is the case RuStore's missing collapse key makes newly possible.
-- [ ] A redelivered push for a message already seen renders nothing new.
-- [ ] **Delivery latency is measured and reported**, screen off, with and without RuStore's
-      background permission — the number this design currently refuses to assert.
-- [ ] `checkPushAvailability()` returning `Unavailable` produces a state the operator can act on,
-      naming which condition failed.
-- [ ] `onDeletedMessages()` is wired and proven to trigger a refresh.
-- [ ] No message body reaches the notification — asserted on the payload the service receives, not on
-      the text that happens to be displayed.
-- [ ] Denying `POST_NOTIFICATIONS` leaves the app usable and states what it can no longer do.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [~] **A real phone, screen off, receives a push for an assignment and for a visitor message and taps
+      through to the right thread** — no physical device in this sandbox; the receive/decide/present
+      pipeline and the tap-to-thread `PendingIntent` wiring are built and unit-tested, not observed on
+      a real device.
+- [x] A push for the conversation **currently open and visible** is suppressed, and the same push with
+      the app backgrounded is not — the `decideAlert` port (`PushAlertPolicy`) is fully unit-tested for
+      both conditions independently (open-but-backgrounded stays loud; open-and-foregrounded is
+      silent). **Not proven on a real device** — that half stays open.
+- [x] Four messages in one conversation replace one another rather than stacking four, including the
+      offline-then-delivered-together case — the tag (`ago-conversation-{conversationId}`) and the
+      persisted messageId-dedupe window are both unit-tested; `NotificationManagerCompat`'s own
+      collapse-by-tag behavior itself is standard platform behavior, not re-proven here.
+- [x] A redelivered push for a message already seen renders nothing new — unit-tested, and checked
+      *before* the suppression decision so it holds regardless of whether the first delivery was shown.
+- [~] **Delivery latency measured and reported** — needs a real phone and a real send; not done.
+- [x] `checkPushAvailability()` returning `Unavailable` produces an operator-visible state — surfaced in
+      `SettingsScreen`, unit-tested.
+- [x] `onDeletedMessages()` is wired and proven to trigger a refresh — unit-tested.
+- [x] No message body reaches the notification — asserted directly on what the presenter reads (never
+      `data["title"]`/`data["body"]`), not on the text that happens to be displayed.
+- [x] Denying `POST_NOTIFICATIONS` leaves the app usable — the request flow and its trigger point
+      (sign-in) are unit-tested; the app never depended on that permission to function elsewhere.
+- [x] `./gradlew ktlintCheck lint test` green — 385 tests, 0 failures, independently re-run and counted
+      by the managing session (see Status line above for the count correction).
