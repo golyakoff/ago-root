@@ -1,7 +1,7 @@
 # 26-105 · Elapsed-time plurals use Russian grammar regardless of the active language
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#97](https://github.com/golyakoff/ago-android/pull/97).
 - **Found**: 2026-09-24, landing `26-92` (the in-app language switch). Named in `ago-android`'s
   `docs/architecture.md` as work `26-92` or a companion item must do before English is ever shown.
 
@@ -31,7 +31,7 @@ but wrong for English "21 minutes").
 
 ## Done when
 
-- [ ] Elapsed/relative-time labels render the correct plural form in both Russian and English —
+- [x] Elapsed/relative-time labels render the correct plural form in both Russian and English —
       verified by a test that exercises the same counts under each locale (e.g. 1, 2, 5, 21).
-- [ ] The Russian output is unchanged from today (no regression for the current default).
-- [ ] `./gradlew ktlintCheck lint test` green.
+- [x] The Russian output is unchanged from today (no regression for the current default).
+- [x] `./gradlew ktlintCheck lint test` green.

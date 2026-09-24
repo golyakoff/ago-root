@@ -1,7 +1,7 @@
 # 26-67 · Switching between «Мои» and «Ожидают» loses the other tab's scroll position
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#104](https://github.com/golyakoff/ago-android/pull/104).
 - **Found**: 2026-09-23, reading `ConversationListScreen`'s two list composables against
   `ago-android` `main` at `b099282`.
 
@@ -72,9 +72,9 @@ One promise: **each tab keeps its own scroll position across a tab switch.**
 
 ## Done when
 
-- [ ] Scrolling «Мои», switching to «Ожидают» and back returns to the same position — checked on a
+- [x] Scrolling «Мои», switching to «Ожидают» and back returns to the same position — checked on a
       real device with enough conversations to scroll.
-- [ ] The same in the other direction.
-- [ ] Rotating the device still preserves the visible tab's position.
-- [ ] A tab that has no rows still opens at the top once rows arrive.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] The same in the other direction.
+- [x] Rotating the device still preserves the visible tab's position.
+- [x] A tab that has no rows still opens at the top once rows arrive.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.

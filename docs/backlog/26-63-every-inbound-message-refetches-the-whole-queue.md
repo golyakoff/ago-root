@@ -1,7 +1,7 @@
 # 26-63 · Every inbound message re-fetches the whole queue, one request per message
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#99](https://github.com/golyakoff/ago-android/pull/99).
 - **Found**: 2026-09-23, tracing `ConversationListViewModel`'s hub handlers against `ago-android`
   `main` at `b099282`.
 
@@ -75,11 +75,11 @@ One promise: **a burst of pushes produces one queue read, not one per push.**
 
 ## Done when
 
-- [ ] Ten messages arriving across assigned conversations within a few seconds produce one queue
+- [x] Ten messages arriving across assigned conversations within a few seconds produce one queue
       fetch, not ten — counted, not asserted (the request count is observable with a proxy or a
       counting fake in a view-model test).
-- [ ] A single message arriving on its own still updates the row without a perceptible delay on a real
+- [~] A single message arriving on its own still updates the row without a perceptible delay on a real — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.
       device.
-- [ ] A push arriving while a fetch is in flight still results in a subsequent fetch.
-- [ ] The unread badge and the «Новый» pill still change the instant the push arrives.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] A push arriving while a fetch is in flight still results in a subsequent fetch.
+- [x] The unread badge and the «Новый» pill still change the instant the push arrives.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.

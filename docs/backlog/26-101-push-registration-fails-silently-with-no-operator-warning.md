@@ -1,7 +1,7 @@
 # 26-101 · Push registration fails silently — the operator is never told push won't work
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#95](https://github.com/golyakoff/ago-android/pull/95).
 - **Found**: 2026-09-24, live debugging with the author. On a device with no RuStore/VK push host,
   `RuStorePushClient.getToken()` fails (`Host push app is not installed`, `No available hosts found`),
   the client classifies it as a quiet `false` (per `KtorDeviceRegistrationApi`'s catch-all), no device
@@ -34,7 +34,7 @@ the operator has no signal that their device is unregistered or its token stale.
 
 ## Done when
 
-- [ ] A device that cannot obtain a push token (no host / IPC failure) shows the operator a clear,
+- [x] A device that cannot obtain a push token (no host / IPC failure) shows the operator a clear,
       non-transient warning instead of silently succeeding — asserted in a test.
-- [ ] A transient network failure does not raise that warning (retried quietly).
-- [ ] `./gradlew ktlintCheck lint test` green.
+- [x] A transient network failure does not raise that warning (retried quietly).
+- [x] `./gradlew ktlintCheck lint test` green.

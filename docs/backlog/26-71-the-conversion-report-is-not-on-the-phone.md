@@ -1,7 +1,7 @@
 # 26-71 · «Отчёт по конверсии» is not on the phone
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#94](https://github.com/golyakoff/ago-android/pull/94).
 - **Found**: 2026-09-23, reading `ago-console/src/pages/ConversionReportPage.tsx`,
   `ago-console/src/api/conversationsApi.ts` and `ago-console/src/realtime/protocol/types.ts` against
   `ago-android` `main` at `b099282`, with the approved mockup Artifact ("AGO Chat для Android",
@@ -79,15 +79,15 @@ window.**
 
 ## Done when
 
-- [ ] An operator holding `site:configure` reaches «Конверсия» from Аналитика's overflow and sees the
+- [x] An operator holding `site:configure` reaches «Конверсия» from Аналитика's overflow and sees the
       site's recorded outcomes for the server's default window with no interaction.
-- [ ] The not-a-verified-sale caveat is visible on the screen beside the numbers, not hidden behind a
+- [x] The not-a-verified-sale caveat is visible on the screen beside the numbers, not hidden behind a
       scroll of tables.
-- [ ] `unsetCount` is shown as its own figure, never folded into "not converted".
-- [ ] A `null` conversion rate renders its own value, distinct from `0%`.
-- [ ] An operator row with no name renders the truncated id, never an invented label.
-- [ ] Each of the three presets produces the range the response then echoes back.
-- [ ] An invalid range renders its own distinct message.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device, in both light and dark, against a window with recorded outcomes and
+- [x] `unsetCount` is shown as its own figure, never folded into "not converted".
+- [x] A `null` conversion rate renders its own value, distinct from `0%`.
+- [x] An operator row with no name renders the truncated id, never an invented label.
+- [x] Each of the three presets produces the range the response then echoes back.
+- [x] An invalid range renders its own distinct message.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device, in both light and dark, against a window with recorded outcomes and — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.
       one with none at all.

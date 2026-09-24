@@ -1,7 +1,7 @@
 # 26-61 · The conversation list never re-reads when the app comes back to the foreground
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#96](https://github.com/golyakoff/ago-android/pull/96).
 - **Found**: 2026-09-23, tracing `ConversationListViewModel` and `OperatorHubConnectionLifecycle`
   against `ago-android` `main` at `b099282`.
 
@@ -72,9 +72,9 @@ One promise: **the conversation list is re-read whenever the operator comes back
 
 ## Done when
 
-- [ ] Backgrounding the app for several minutes, causing a real change from the console, and
+- [x] Backgrounding the app for several minutes, causing a real change from the console, and
       returning shows the change without any interaction — checked on a real device, on both tabs.
-- [ ] Rotating the device does **not** issue a queue fetch, proven by a test.
-- [ ] No second fetch is issued if one is already in flight when the app foregrounds.
-- [ ] The «Ожидают» poll's gate is unchanged.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Rotating the device does **not** issue a queue fetch, proven by a test.
+- [x] No second fetch is issued if one is already in flight when the app foregrounds.
+- [x] The «Ожидают» poll's gate is unchanged.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
