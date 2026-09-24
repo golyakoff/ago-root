@@ -142,8 +142,9 @@ rotation, and goes silent on sign-out. **Nothing receives or renders anything ye
 - [~] `checkPushAvailability()`'s result on the test device — **not recorded**, no physical device with
       a RuStore account available in this sandbox. The mechanism is wired and surfaced, not hidden; the
       actual reading is a real-device task.
-- [~] Whether push works without publishing the app through RuStore — **still unanswered**;
-      `docs/architecture/push-notifications.md` updated to say so plainly rather than guess. Needs
-      someone installing the unpublished APK on a real device and attempting registration.
+- [x] Whether push works without publishing the app through RuStore — **answered, 2026-09-24: yes.**
+      The author installed the unpublished `v0.14.1` release APK directly on a real phone, signed in,
+      and received real RuStore push notifications against the live demo backend.
+      `docs/architecture/push-notifications.md` records the finding.
 - [x] `./gradlew ktlintCheck lint test` green — 342 tests, 0 failures (`:app` 143, `:core:network` 112,
       `:core:domain` 87), independently re-run by the managing session, not just the worker's report.

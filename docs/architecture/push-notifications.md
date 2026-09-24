@@ -437,13 +437,21 @@ un-restricted, is not. The trade was made for data residency (`adr/0180`) with t
 *is* strictly better than the FCM design had is that the condition is now programmatically checkable
 on the device, where "does this phone have Play Services" was named with no API beside it.
 
-**Still not established, and it matters for how the app is distributed:** whether push works for an app
-registered in the console but never published through RuStore. The condition list asks for uploaded
-app data and a matching fingerprint, not for a published listing — but it does not say the two are
-independent, and RuStore's documentation does not answer it. `26-06` shipped the client-side
-registration code and the real console project (`1Q8iLXwwBZViuznG6eCTHgkzrTE9Bto6`, `25-216`) now
-exists, but this specific question needs a real device actually installing the unpublished APK and
-attempting registration — nobody has run that check yet. Still open.
+**Answered, 2026-09-24 — push works without publishing.** The condition list asks for uploaded app
+data and a matching fingerprint, not for a published listing, and that turns out to be the whole
+story: the author installed the unpublished release APK (`v0.14.1`) directly on a real phone, signed
+in as an operator, and received real RuStore push notifications for both an assignment and visitor
+messages — confirmed live against the real demo backend (`chat-api.reserve-me.ru`), never through
+RuStore's own store. This settles the distribution question `26-06` and `adr/0180` both left open:
+this app can ship as a direct APK and push still works.
+
+*A separate, real anomaly found the same session, not yet root-caused*: individual new messages
+produced fast, clean, single pushes (39–107ms from `messages.created_at` to the RuStore send call,
+measured directly against real Worker logs and Postgres timestamps) — but roughly every three minutes
+a burst of ~9–10 additional push HTTP calls fired together in under half a second, not corresponding
+1:1 to any single fresh message. No failure or retry was logged at the application level for these in
+a 3-hour log window, so the delay is invisible to `Ago.Chat.Worker`'s own logging and needs live
+RabbitMQ/consumer-level diagnostics to actually locate — carried out as `26-83`.
 
 ### Idempotency, without an inbox row
 
