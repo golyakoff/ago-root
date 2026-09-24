@@ -45,6 +45,22 @@ Three independent pieces of evidence, all from the same live test window (08:44�
    fires on every ordinary backgrounding too: screen lock, switching to another app for a moment,
    an incoming call.
 
+5. **Worse than a single grace cycle — the `operator-disconnect-grace` queue stayed saturated for over
+   20 minutes straight**, well past the end of active testing. A `rabbitmqctl list_queues` poll every
+   ~10 seconds from 08:40 to 09:04 UTC shows `messages_unacknowledged` pinned at a constant **50**
+   (this consumer's own prefetch ceiling, per its doc comment's "bounds this consumer's throughput to
+   the broker's own prefetch count" remark) the *entire* window, while `messages_ready` — the backlog
+   waiting *behind* that saturation — climbed from 4 to a peak of **14** around 08:47 and only slowly
+   drained to 9 by 09:03, twenty minutes after the visible test ended. A consumer that holds every
+   delivery unacked for its own 30-second `GracePeriod` staying pinned at its prefetch ceiling for
+   twenty-plus minutes means **`OperatorPresenceLost` kept being published far faster, and for far
+   longer, than one operator backgrounding their phone once should ever produce** — either a genuine
+   sustained reconnect loop (matching the pattern already found on the web console's own hub
+   connection, `26-83`'s own investigation), or `OperatorPresenceLost` is being re-published on every
+   sweep of `OperatorDisconnectSweepJob` for an operator already known to be gone, rather than once per
+   actual disconnect. **Not yet distinguished — this item's own scope below now includes finding out
+   which.**
+
 **Put together**: the 30-second grace period was written and reasoned about for a desktop console tab
 staying open. On a phone, screen-off or switching apps for **more than 30 seconds** — completely
 ordinary handling of a physical device — silently unassigns every conversation the operator is holding,
@@ -81,10 +97,16 @@ engineering default:
 - **Show the operator, in the app, when a conversation they were holding has been released** — orthogonal
   to any of the above and probably worth doing regardless of which timing fix is chosen.
 
-## Scope (once a direction is chosen — not this item's own job to pick)
+## Scope
 
-- Whichever mechanism is chosen, prove it with a real backgrounding test on a real phone: background
-  for under the threshold (no release), background for over it (release, and the app finds out).
+- **First, distinguish the two candidate causes named above** — is `OperatorPresenceLost` firing once
+  per genuine disconnect (meaning the Android app really is reconnecting/disconnecting continuously for
+  20+ minutes, a client-side reconnect-storm bug), or is `OperatorDisconnectSweepJob`/some other periodic
+  path re-publishing it repeatedly for an operator already known to be gone (a server-side dedup gap)?
+  This changes which side of the wire the real fix belongs on, and neither has been confirmed yet.
+- Once a direction on the grace-period/backgrounding question itself is chosen (see options above),
+  prove it with a real backgrounding test on a real phone: background for under the threshold (no
+  release), background for over it (release, and the app finds out).
 - Update `docs/architecture/realtime.md`/`push-notifications.md` to state the real, chosen behavior —
   today neither document mentions that backgrounding interacts with assignment at all.
 
