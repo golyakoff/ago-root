@@ -1,7 +1,10 @@
 # 26-87 · The account avatar sits 8dp off in «Ещё», causing a visible shift on tab switch
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#71](https://github.com/golyakoff/ago-android/pull/71), independently
+  verified by the managing session (fresh non-cached re-run: 205 real tests, 0 failures; the worker's
+  own claimed 200 was off by 5 — a report error, not a code error). A real CI Android emulator ran the
+  full instrumented suite green.
 - **Found**: 2026-09-24, by the author, live on a real device — "кружочек пользователя с зелёной точкой
   раздела «Ещё» смещён от правого края на 2 миллиметра влево относительно своего же положения во всех
   других разделах... эффект смещения при переключении между разделами."
@@ -24,6 +27,7 @@
 
 ## Done when
 
-- [ ] All five top-level screens pass the identical `end = 4.dp` (or whatever single value is chosen) to
-      `AccountAvatarAction`.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [x] All five top-level screens pass the identical `end = 4.dp` to `AccountAvatarAction` — confirmed by
+      grep across all five call sites.
+- [x] `./gradlew ktlintCheck lint test` green — 205 tests, 0 failures, independently re-run and counted
+      by the managing session.

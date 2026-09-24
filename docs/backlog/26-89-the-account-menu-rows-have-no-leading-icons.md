@@ -1,7 +1,11 @@
 # 26-89 · The account menu's «Настройки»/«Выйти» rows have no leading icon, the mockup draws one
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#71](https://github.com/golyakoff/ago-android/pull/71), independently
+  verified by the managing session against the real diff — both icons' path data matches the mockup's
+  own `#i-sliders`/`#i-logout` `<symbol>` elements exactly, and a new `AgoIconsTest` case checks each
+  node-for-node against the mockup's literal SVG string via the file's existing `PathParser`-based
+  comparison, not eyeballed.
 - **Found**: 2026-09-24, by the author — "согласно мокапам у пунктов меню пользователя «Настройки» и
   «Выйти» должны быть слева иконки, даже нарисовано какие. Необходимо их добавить."
 - **Verified against the real mockup** (`AGO Chat Design` artifact,
@@ -37,7 +41,8 @@
 
 ## Done when
 
-- [ ] Both icons exist in `AgoIcons.kt`, transcribed faithfully from the mockup's own path data.
-- [ ] «Настройки» shows the sliders icon on the left, the chevron on the right (unchanged).
-- [ ] «Выйти» shows the logout icon on the left, no trailing icon.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [x] Both icons exist in `AgoIcons.kt`, transcribed faithfully from the mockup's own path data.
+- [x] «Настройки» shows the sliders icon on the left, the chevron on the right (unchanged).
+- [x] «Выйти» shows the logout icon on the left, no trailing icon.
+- [x] `./gradlew ktlintCheck lint test` green — 205 tests, 0 failures, independently re-run and counted
+      by the managing session.
