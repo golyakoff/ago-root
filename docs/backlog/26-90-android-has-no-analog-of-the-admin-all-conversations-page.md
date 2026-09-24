@@ -1,7 +1,13 @@
 # 26-90 · Android has no analog of the console's admin "all conversations" page
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-chat#359](https://github.com/golyakoff/ago-chat/pull/359) (backend
+  contract) and [ago-android#82](https://github.com/golyakoff/ago-android/pull/82) (the tab itself).
+  Real finding, reported not silently fixed: rows are not tappable — `OperatorHub.JoinConversationAsync`
+  assigns before it reads, and `Conversation.AssignTo` accepts only a `Waiting` conversation, so a tap
+  on this admin-wide list would incorrectly claim a queued conversation or throw for one assigned
+  elsewhere/closed. Shipped with a quiet on-screen note; the real gap (a server-side read-only history
+  for a `site:configure` holder without assigning) is named, not filed as its own item yet.
 - **Found**: 2026-09-24, by the author — "у нас не хватает в разделе Диалоги аналога страницы
   `https://office.reserve-me.ru/conversations/all`. Администратор должен мочь видеть список диалогов,
   зайти в них, почитать историю диалога. Сейчас на этой странице можно даже удалить диалоги старые."
