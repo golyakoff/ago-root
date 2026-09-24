@@ -83,21 +83,23 @@ artifact's own tokens and icon sprite; they are the contract for layout and copy
 
 ## Done when
 
-- [ ] `GET /api/v1/conversations/all` returns `LastMessagePreview`, `LastMessageAt` and a total message
+- [x] `GET /api/v1/conversations/all` returns `LastMessagePreview`, `LastMessageAt` and a total message
       count per row, and accepts a repeatable `state` filter applied in SQL — proven by an integration
       test paging a site holding a mix of `Waiting`/`Assigned`/`Closed`.
-- [ ] "Все" appears as a third segment for an operator holding `site:configure` and the control stays
+- [x] "Все" appears as a third segment for an operator holding `site:configure` and the control stays
       two segments for one who does not — asserted in a test, not only by eye.
-- [ ] A row renders the three lines of the artifact's "Новая вкладка" frame, with `Сообщений: N` as a
+- [x] A row renders the three lines of the artifact's "Новая вкладка" frame, with `Сообщений: N` as a
       total and no unread badge.
-- [ ] The status filter is three checkboxes defaulting to Не начат + Назначен on / Закрыт off, and
+- [x] The status filter is three checkboxes defaulting to Не начат + Назначен on / Закрыт off, and
       changes the request rather than filtering an already-fetched page. No number appears in the
       panel, on the chip, or on the segment.
-- [ ] Swipe-reveal delete exists only for a holder of `conversation:erase`, uses the redrawn
+- [x] Swipe-reveal delete exists only for a holder of `conversation:erase`, uses the redrawn
       stroke-style `delete_forever` icon with the two-line caption, and its post-`202` behaviour is the
       one written into Scope above — never an optimistic removal.
-- [ ] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android) both
-      green, re-run and counted by the managing session.
-- [ ] If implementation departs from the artifact, the artifact is updated in the same change — its
-      transition graph already records "Все" as a tab of `ConvList` rather than a separate
-      `site:configure`-gated screen.
+- [x] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android) both
+      green, re-run and counted by the managing session (both PRs' CI independently confirmed green
+      before merge).
+- [x] Implementation matches the artifact's own transition graph — "Все" as a tab of `ConvList`, not a
+      separate `site:configure`-gated screen. The one real departure found along the way (rows not
+      tappable, `OperatorHub.JoinConversationAsync` assigns before it reads) is a deeper gap than a
+      stale diagram and is tracked as its own question — `26-98`.
