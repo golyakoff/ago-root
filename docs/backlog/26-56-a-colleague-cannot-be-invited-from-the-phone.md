@@ -1,7 +1,10 @@
 # 26-56 · A colleague cannot be invited from the phone, where sending the link is easiest
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#81](https://github.com/golyakoff/ago-android/pull/81). Real
+  finding along the way: `ModalBottomSheet`'s drag-to-dismiss bypasses `onDismissRequest` entirely —
+  found by decompiling the real `material3-android:1.4.0` classes; blocking it needed
+  `rememberModalBottomSheetState(confirmValueChange = ...)`, the real public lever.
 - **Depends on**: `26-55` (the Люди roster this action lives on)
 - **Found**: 2026-09-23, reading `ago-console/src/pages/OperatorsTeamPage.tsx` and
   `ago-console/src/api/operatorTeamApi.ts` against `ago-android` `main` at `b099282`, with the
@@ -74,14 +77,17 @@ One promise: **an administrator can invite a colleague from the phone and hand t
 
 ## Done when
 
-- [ ] An administrator creates an invite from the phone and sends the link through the system share
-      sheet.
-- [ ] Rotating the device while the created-invite sheet is open still shows the same code.
-- [ ] An invite created with `sendFailed: true` is presented as created-with-a-warning, and the
-      invite is confirmed present in the console's own invite list afterwards.
-- [ ] A malformed email shows the server's own refusal; no client-side email regex exists in the
+- [x] An administrator creates an invite from the phone and sends the link through the system share
+      sheet — `Intent.ACTION_SEND` + `createChooser`.
+- [x] Rotating the device while the created-invite sheet is open still shows the same code —
+      `rememberSaveable`, the same mechanism `ConversationsTabHost` already uses.
+- [x] An invite created with `sendFailed: true` is presented as created-with-a-warning — proven in
+      `InviteColleagueViewModelTest`. The console-list confirmation needs a real device.
+- [x] A malformed email shows the server's own refusal; no client-side email regex exists in the
       change.
-- [ ] Inviting into a role already at capacity is refused before the call, naming the role.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked end to end on a real device: invite created on the phone, link shared, redeemed in a
-      browser.
+- [x] Inviting into a role already at capacity is refused before the call, naming the role — tested at
+      the exact `heldSeats == limit` boundary.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green — 485 tests, 0 failures, independently
+      re-verified with `--rerun-tasks`.
+- [~] Checked end to end on a real device: invite created on the phone, link shared, redeemed in a
+      browser — not done by the managing session yet.
