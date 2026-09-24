@@ -437,10 +437,13 @@ un-restricted, is not. The trade was made for data residency (`adr/0180`) with t
 *is* strictly better than the FCM design had is that the condition is now programmatically checkable
 on the device, where "does this phone have Play Services" was named with no API beside it.
 
-**Not established, and it matters for how the app is distributed:** whether push works for an app
+**Still not established, and it matters for how the app is distributed:** whether push works for an app
 registered in the console but never published through RuStore. The condition list asks for uploaded
 app data and a matching fingerprint, not for a published listing — but it does not say the two are
-independent, and RuStore's documentation does not answer it. `26-06` finds out.
+independent, and RuStore's documentation does not answer it. `26-06` shipped the client-side
+registration code and the real console project (`1Q8iLXwwBZViuznG6eCTHgkzrTE9Bto6`, `25-216`) now
+exists, but this specific question needs a real device actually installing the unpublished APK and
+attempting registration — nobody has run that check yet. Still open.
 
 ### Idempotency, without an inbox row
 
@@ -879,7 +882,7 @@ not have to guess at a plausible-sounding API.
 | | |
 |---|---|
 | Maven repository | `https://nexus-external.rustore.ru/repository/maven-rustore-exposed/` |
-| Dependency | `ru.rustore.sdk:pushclient` — **7.4.0** is the newest in the published release history as of 2026-09-21 |
+| Dependency | `ru.rustore.sdk:pushclient` — **7.5.0**, the version `26-06` actually pinned (read from the real `maven-metadata.xml` on `nexus-external.rustore.ru` on 2026-09-24; newer than the 7.4.0 recorded here three days earlier) |
 | Minimum Kotlin | 1.8 |
 | Credentials file | **None.** There is no `google-services.json` equivalent — initialisation takes a project-ID string and nothing else |
 | Initialisation | `RuStorePushClient.init(application, projectId, logger)`, or automatically via the `ru.rustore.sdk.pushclient.project_id` manifest meta-data. **Not multi-process safe** — initialise in the main process only |

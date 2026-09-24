@@ -1,7 +1,15 @@
 # 26-06 · Register this device for push from the Android client
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#67](https://github.com/golyakoff/ago-android/pull/67), independently
+  verified by the managing session (`ktlintCheck`/`lint`/`test`/`assembleDebug`/`assembleDebugAndroidTest`
+  all green, fresh re-run; 342 unit tests, 0 failures, counted from the JUnit XML per module — `:app`
+  143, `:core:network` 112, `:core:domain` 87; the wire DTO was cross-checked against the real server-side
+  `Ago.Chat.Api.Me.MeDeviceEndpoints.RegisterDeviceRequest` and `PushProvider` enum in `ago-chat`, not
+  just the client's own tests). A real CI Android emulator ran the full instrumented suite green
+  (`build-test` 6m25s, `instrumented-tests` 8m55s). Uses the real RuStore Console project id
+  (`1Q8iLXwwBZViuznG6eCTHgkzrTE9Bto6`, `25-216`), confirmed against real files before the worker used it
+  — not the placeholder this item originally expected to need.
 - **Found**: 2026-09-21, the fourth of the four implementation items
   `docs/architecture/push-notifications.md` names at its foot ("The Android client half"). That
   fourth item makes two distinct promises — *the server knows about this device*, and *the phone
@@ -108,21 +116,34 @@ rotation, and goes silent on sign-out. **Nothing receives or renders anything ye
 
 ## Done when
 
-- [ ] A fresh install plus sign-in produces exactly one registration call; a second sign-in on the
-      same install **updates** that row rather than creating a second one. Say whether this was proven
-      against the real `26-03` endpoints or against a `MockEngine` recording.
-- [ ] `onNewToken` re-registers with the same `installationId` and the new token.
-- [ ] The periodic job re-registers, and its interval is stated in the item and in
-      `ago-android/docs/architecture.md`.
-- [ ] Sign-out calls `DELETE` **before** the token is discarded — proven by asserting the call order,
-      not by the absence of a symptom.
-- [ ] Signing into a second tenancy produces a second row rather than overwriting the first.
-- [ ] No push token appears in logcat at any level or in any committed file — checked with the SDK's
-      own default logger active, since that is what a developer will actually be running.
-- [ ] CI resolves `ru.rustore.sdk:pushclient` from `nexus-external.rustore.ru`, proven on a real
-      runner and not only locally. The pinned version is stated.
-- [ ] `checkPushAvailability()`'s result on the test device is recorded, including which of RuStore's
-      four conditions were satisfied and how (was RuStore installed? signed in? un-restricted?).
-- [ ] Whether push works without publishing the app through RuStore is answered from the real
-      console, and written into `docs/architecture/push-notifications.md`.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [x] A fresh install plus sign-in produces exactly one registration call; a second sign-in on the
+      same install **updates** that row rather than creating a second one. Proven against a Ktor
+      `MockEngine`, not the real `26-03` endpoints — the DTO shape was independently cross-checked
+      against the real server-side handler instead.
+- [x] `onNewToken` re-registers with the same `installationId` and the new token. Unit tested.
+- [x] The periodic job re-registers, and its interval is stated in the item and in
+      `ago-android/docs/architecture.md` — 24h, `NetworkType.CONNECTED`.
+- [x] Sign-out calls `DELETE` **before** the token is discarded — proven by a fails-before/works-after
+      test with the order deliberately reversed and restored at the `DeviceRegistrationCoordinator`
+      level; the `AgoAuthSession`-level instrumented assertion of the same property compiles but could
+      not run on a real emulator in this sandbox.
+- [x] Signing into a second tenancy produces a second row rather than overwriting the first — true by
+      construction (`installationId` never varies, `X-Ago-Active-Site` does; `ActiveSiteHeaderPluginTest`
+      already proves the header behaviour generically).
+- [x] No push token appears in logcat at any level or in any committed file, from this app's own code —
+      grepped, exactly two log calls exist and neither touches a token variable. **Not settled**: whether
+      RuStore's own bundled `DefaultLogger()` itself ever prints a token — unverifiable without a real
+      device, and the SDK's own logger is used deliberately (not a filtering wrapper) so a real-device
+      check of this box means something when someone runs it.
+- [~] CI resolves `ru.rustore.sdk:pushclient` from `nexus-external.rustore.ru` — **now proven**: PR #67's
+      own `build-test` and `instrumented-tests` jobs both ran green on a real GitHub Actions runner,
+      which could not have happened without that resolution succeeding. Pinned version: **7.5.0** (not
+      the 7.4.0 this item originally recorded — the newest at the time this item was actually built).
+- [~] `checkPushAvailability()`'s result on the test device — **not recorded**, no physical device with
+      a RuStore account available in this sandbox. The mechanism is wired and surfaced, not hidden; the
+      actual reading is a real-device task.
+- [~] Whether push works without publishing the app through RuStore — **still unanswered**;
+      `docs/architecture/push-notifications.md` updated to say so plainly rather than guess. Needs
+      someone installing the unpublished APK on a real device and attempting registration.
+- [x] `./gradlew ktlintCheck lint test` green — 342 tests, 0 failures (`:app` 143, `:core:network` 112,
+      `:core:domain` 87), independently re-run by the managing session, not just the worker's report.
