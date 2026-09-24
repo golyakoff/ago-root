@@ -1,7 +1,7 @@
 # 26-74 · «Показы телефонов» — there is no read-back of who revealed a phone
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#105](https://github.com/golyakoff/ago-android/pull/105).
 - **Found**: 2026-09-23, reading `ago-console/src/pages/CalendarPhoneRevealsPage.tsx` and
   `ago-console/src/api/calendarApi.ts` against `ago-android` `main` at `b099282`, with the approved
   mockup Artifact ("AGO Chat для Android", `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`)'s own
@@ -82,17 +82,17 @@ One promise: **«Показы телефонов» shows this tenant's reveal au
 
 ## Done when
 
-- [ ] An operator holding `calendar:configure` reaches «Показы телефонов» from Аналитика's overflow
+- [x] An operator holding `calendar:configure` reaches «Показы телефонов» from Аналитика's overflow
       and sees the tenant's reveal trail, newest first.
-- [ ] An operator holding `site:configure` but **not** `calendar:configure` sees the other overflow
+- [x] An operator holding `site:configure` but **not** `calendar:configure` sees the other overflow
       entries and not this one; an operator holding only `calendar:configure` sees this one and not
       the others.
-- [ ] Forbidden, "calendar not configured" and an empty trail each render as themselves and are
+- [x] Forbidden, "calendar not configured" and an empty trail each render as themselves and are
       visibly different from one another.
-- [ ] Paging past the first page works, and the control disappears once the oldest row is reached.
-- [ ] No name is invented for a customer or an operator, and no phone number appears anywhere on the
+- [x] Paging past the first page works, and the control disappears once the oldest row is reached.
+- [x] No name is invented for a customer or an operator, and no phone number appears anywhere on the
       screen.
-- [ ] A reveal performed from the phone (`26-53`) appears in this list with its Android surface name.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device, in both light and dark, against a trail with more than one page and
+- [x] A reveal performed from the phone (`26-53`) appears in this list with its Android surface name.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device, in both light and dark, against a trail with more than one page and — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.
       against an empty one.

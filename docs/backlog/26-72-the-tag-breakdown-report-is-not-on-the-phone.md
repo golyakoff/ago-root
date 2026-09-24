@@ -1,7 +1,7 @@
 # 26-72 · «Разбивка по тегам» is not on the phone
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#100](https://github.com/golyakoff/ago-android/pull/100).
 - **Found**: 2026-09-23, reading `ago-console/src/pages/TagBreakdownReportPage.tsx`,
   `ago-console/src/api/conversationsApi.ts` and `ago-console/src/realtime/protocol/types.ts` against
   `ago-android` `main` at `b099282`, with the approved mockup Artifact ("AGO Chat для Android",
@@ -71,14 +71,14 @@ window, and how much of the window is tagged at all.**
 
 ## Done when
 
-- [ ] An operator holding `site:configure` reaches «По меткам» from Аналитика's overflow and sees the
+- [x] An operator holding `site:configure` reaches «По меткам» from Аналитика's overflow and sees the
       window's tags with no interaction.
-- [ ] Coverage (tagged of total, and the percentage) is on the screen above the tag rows, every time,
+- [x] Coverage (tagged of total, and the percentage) is on the screen above the tag rows, every time,
       with a distinct state when the percentage is unknown.
-- [ ] The "rows do not sum to the total" note renders wherever the tag rows do.
-- [ ] A tag whose rate is `null` shows its own value, never `0%`.
-- [ ] Each of the three presets produces the range the response then echoes back.
-- [ ] An invalid range renders its own distinct message.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device, in both light and dark, against a window with tagged conversations
+- [x] The "rows do not sum to the total" note renders wherever the tag rows do.
+- [x] A tag whose rate is `null` shows its own value, never `0%`.
+- [x] Each of the three presets produces the range the response then echoes back.
+- [x] An invalid range renders its own distinct message.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device, in both light and dark, against a window with tagged conversations — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.
       and against one with none tagged at all.

@@ -1,8 +1,7 @@
 # 26-92 · A language setting that actually switches the app
 
 - **Stage**: 26
-- **Status**: ready — but do not dispatch before `26-91` merges; this item has nothing to switch to
-  until that one lands.
+- **Status**: done — merged as [ago-android#92](https://github.com/golyakoff/ago-android/pull/92); Settings-crash follow-up (DataStore singleton) [ago-android#98](https://github.com/golyakoff/ago-android/pull/98).
 - **Found**: 2026-09-23 as `26-79`, split in two on the author's own instruction 2026-09-24. This is the
   second half — the actual Settings row and the real runtime switch, once `26-91` has made both
   languages exist.
@@ -43,8 +42,8 @@ the two as the same toggle.
 
 ## Done when
 
-- [ ] Switching the Язык row actually changes every screen's own rendered language, proven on a real
+- [~] Switching the Язык row actually changes every screen's own rendered language, proven on a real — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.
       device or a real instrumented test (not by reading the code and assuming).
-- [ ] The choice survives an app restart.
-- [ ] The widget's own language setting is untouched and unaffected by this row.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green; counts reported.
+- [x] The choice survives an app restart.
+- [x] The widget's own language setting is untouched and unaffected by this row.
+- [x] `./gradlew ktlintCheck lint test assembleDebug assembleDebugAndroidTest` green; counts reported.

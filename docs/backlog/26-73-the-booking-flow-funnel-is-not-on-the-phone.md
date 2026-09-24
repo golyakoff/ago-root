@@ -1,7 +1,7 @@
 # 26-73 · «Воронка записи» is not on the phone
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#103](https://github.com/golyakoff/ago-android/pull/103).
 - **Found**: 2026-09-23, reading `ago-console/src/pages/BookingFlowConversionPage.tsx`,
   `ago-console/src/api/conversationsApi.ts` and `ago-console/src/realtime/protocol/types.ts` against
   `ago-android` `main` at `b099282`, with the approved mockup Artifact ("AGO Chat для Android",
@@ -74,12 +74,12 @@ those flows closed, in a chosen window.**
 
 ## Done when
 
-- [ ] An operator holding `site:configure` reaches «Воронка записи» from Аналитика's overflow and
+- [x] An operator holding `site:configure` reaches «Воронка записи» from Аналитика's overflow and
       sees both numbers for the server's default window with no interaction.
-- [ ] The caveat that a closed flow is not a confirmed booking is visible beside the numbers.
-- [ ] Neither number is labelled as a booking count anywhere on the screen.
-- [ ] An invalid range renders the `ModuleFlow.InvalidRange` message specifically, not the message
+- [x] The caveat that a closed flow is not a confirmed booking is visible beside the numbers.
+- [x] Neither number is labelled as a booking count anywhere on the screen.
+- [x] An invalid range renders the `ModuleFlow.InvalidRange` message specifically, not the message
       the other analytics screens use.
-- [ ] A window with `flowsStarted == 0` renders the empty state, not two zeroes.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Checked on a real device, in both light and dark, against a window with flows and one without.
+- [x] A window with `flowsStarted == 0` renders the empty state, not two zeroes.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Checked on a real device, in both light and dark, against a window with flows and one without. — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.

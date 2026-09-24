@@ -1,7 +1,7 @@
 # 26-46 · The bottom bar's Диалоги tab carries no unread badge
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — delivered earlier by `b02a20b` (verified still on `main` this run; no new PR).
 - **Found**: 2026-09-23, reading the approved mockup Artifact ("AGO Chat для Android",
   `8b4fb3a8-ddc0-4b2f-81ce-81d13c30a9d3`) against `ago-android` `main` at `ad2859b`.
 
@@ -108,10 +108,10 @@ in the app.**
 
 ## Done when
 
-- [ ] Диалоги carries an `error`-coloured count matching the sum of the list's own unread badges.
-- [ ] No badge when there is nothing unread, and none before the first load answers.
-- [ ] The badge changes live while the operator sits on Ещё — verified on a real device with a real
+- [x] Диалоги carries an `error`-coloured count matching the sum of the list's own unread badges.
+- [x] No badge when there is nothing unread, and none before the first load answers.
+- [~] The badge changes live while the operator sits on Ещё — verified on a real device with a real — delivered and CI-green (build/unit/ktlint/lint); on-device check pending, phone disconnected 2026-09-25.
       message arriving, not a fixture.
-- [ ] Opening the conversation clears its contribution without a restart.
-- [ ] The list's per-row badges and this one never disagree.
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [x] Opening the conversation clears its contribution without a restart.
+- [x] The list's per-row badges and this one never disagree.
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.

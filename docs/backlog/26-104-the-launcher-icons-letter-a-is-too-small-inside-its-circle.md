@@ -1,7 +1,7 @@
 # 26-104 · The launcher icon's letter «A» is too small inside its circle
 
 - **Stage**: 26
-- **Status**: done — merged as [ago-android#88](https://github.com/golyakoff/ago-android/pull/88) (cosmetic).
+- **Status**: done — merged as [ago-android#93](https://github.com/golyakoff/ago-android/pull/93) (notification icon enlarged; the first pass's launcher change was reverted).
 - **Found**: 2026-09-24, by the author, from a real notification: the «A» monogram reads as a tiny
   glyph floating in a large blue circle. It shows up wherever the app icon is drawn as an avatar —
   the notification shade's large icon, the launcher, the task switcher.
