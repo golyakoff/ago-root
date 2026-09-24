@@ -1,7 +1,9 @@
 # 26-88 · The thread screen still shows a bare hub-connection dot, left over from before `26-77`
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — [ago-android#71](https://github.com/golyakoff/ago-android/pull/71), independently
+  verified by the managing session against the real diff (the `HubConnectionDot` call and its import are
+  gone from `ThreadScreen.kt`, confirmed no other reference to it remains in that file).
 - **Found**: 2026-09-24, by the author, live on a real device — "если выбрать конкретный диалог, то всё
   ещё видно рудиментарную зелёную точку (одну, без кружочка пользователя) справа. Она смущает здесь."
 - **Verified — root cause already found**: `ThreadScreen.kt`'s own `TopAppBar` still renders
@@ -26,6 +28,7 @@
 
 ## Done when
 
-- [ ] The bare dot is gone from `ThreadScreen`'s app bar; the `HubConnectionDot` import is removed if
-      nothing else in this file uses it.
-- [ ] `./gradlew ktlintCheck lint test` green; counts reported.
+- [x] The bare dot is gone from `ThreadScreen`'s app bar; the `HubConnectionDot` import is removed
+      (nothing else in the file used it).
+- [x] `./gradlew ktlintCheck lint test` green — 205 tests, 0 failures, independently re-run and counted
+      by the managing session.
