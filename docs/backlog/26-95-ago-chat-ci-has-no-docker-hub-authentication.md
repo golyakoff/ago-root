@@ -1,7 +1,12 @@
 # 26-95 · `ago-chat`'s CI has no Docker Hub authentication, and Testcontainers hit its rate limit live
 
 - **Stage**: 26
-- **Status**: ready — the fix needs the author's own call on where the credential comes from
+- **Status**: ready — the fix needs the author's own call on where the credential comes from. As of
+  2026-09-24 `Ago.Chat.Integration.Tests` is excluded from CI's `Test` step (`--filter
+  "FullyQualifiedName!~Ago.Chat.Integration.Tests"`) as a stopgap, at the author's own explicit
+  instruction, after two separate real hangs (both cancelled by hand after 40-50 minutes) blocked
+  unrelated PRs (`26-82`, `26-90`) from merging. The project runs locally only until this item lands
+  a real credential; the exclusion is this item's own `Done when` to remove, not a separate item.
 - **Found**: 2026-09-24, landing `26-82` — `Ago.Chat.Integration.Tests` hung for 30+ minutes on GitHub's
   hosted runner, twice on the identical commit, with no code change between the two runs.
 
@@ -65,3 +70,5 @@ One promise: **Testcontainers in CI pulls its images authenticated, not anonymou
       at least one Testcontainers fixture.
 - [ ] `Ago.Chat.Integration.Tests` completes in CI within the same rough window a healthy local run
       already takes (single-digit minutes), not 30+.
+- [ ] The `--filter "FullyQualifiedName!~Ago.Chat.Integration.Tests"` stopgap is removed from
+      `.github/workflows/ci.yml`'s `Test` step, and the project runs in CI again.

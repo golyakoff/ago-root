@@ -1,7 +1,12 @@
 # 26-96 · A service cannot be edited or deleted anywhere in the product
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-calendar#72](https://github.com/golyakoff/ago-calendar/pull/72),
+  [ago-console#276](https://github.com/golyakoff/ago-console/pull/276) and
+  [ago-android#85](https://github.com/golyakoff/ago-android/pull/85). Chose archive
+  (`Service.IsActive`), not delete — `events.service_id` survives forever and four read models
+  resolve a booking's service name through it. `GET /configuration` keeps returning archived
+  services so a worker card or past booking can still resolve the name.
 - **Found**: 2026-09-24, scoping the Записи (bookings/calendar) build-out for Android. Named three times
   already in this codebase's own docs before this item existed: `ago-console/src/pages/
   CalendarServicesPage.tsx:56-61` ("a real gap, not an oversight"), `ago-android/docs/navigation.md:527`
@@ -54,15 +59,15 @@ rotation, without breaking anything that already references it.**
 
 ## Done when
 
-- [ ] A service's name, duration, price and description can be changed from both the console and the
+- [x] A service's name, duration, price and description can be changed from both the console and the
       phone; the same call updates the record both clients read.
-- [ ] The deactivate/delete question is decided and documented (option (a) or (b) above, and why) before
-      any client-side work started on it — not discovered mid-implementation.
-- [ ] A service referenced by an existing worker or a real booking cannot silently disappear from either
-      client's own display of that worker/booking.
-- [ ] `dotnet format`/`build`/`test` (ago-calendar) green; `ago-console`'s full command set
-      (`typecheck`/`lint`/`test`/`ux-gate`) green; `./gradlew ktlintCheck lint test assembleDebug`
-      (ago-android) green.
-- [ ] Checked once against a real tenant: edit a real service, confirm the booking widget reflects the
-      new price/description; if (a) was chosen, archive a service a worker performs and confirm the
-      worker's card still names it correctly.
+- [x] The deactivate/delete question is decided and documented (archive via `Service.IsActive`, not
+      delete — `events.service_id` survives forever) before any client-side work started on it.
+- [x] A service referenced by an existing worker or a real booking cannot silently disappear from either
+      client's own display of that worker/booking — `GET /configuration` keeps returning archived
+      services.
+- [x] `dotnet format`/`build`/`test` (ago-calendar): 867 tests, 0 failed. `ago-console`'s full command
+      set (`typecheck`/`lint`/`test`/`ux-gate`): all green. `./gradlew ktlintCheck lint test
+      assembleDebug` (ago-android): 550 tests, 0 failed.
+- [~] Checked against a real tenant — not done by the managing session; verified locally only (unit/
+      integration tests, no live demo-tenant walkthrough).
