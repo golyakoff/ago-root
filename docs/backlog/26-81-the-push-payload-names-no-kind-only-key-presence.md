@@ -1,7 +1,9 @@
 # 26-81 · The push payload names no kind of its own — only inferred from which keys are present
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — closed in the same change as `26-86` ([ago-chat#357](https://github.com/golyakoff/ago-chat/pull/357),
+  [ago-android#73](https://github.com/golyakoff/ago-android/pull/73)), which needed a real discriminator
+  for its own third push kind anyway.
 - **Found**: 2026-09-24, by `26-18`'s own worker while writing `parseIncomingPush` (`ago-android`). Not a
   bug — the client's inference is correct today — but a fragile shape, found while wiring the very code
   that depends on it.
@@ -37,9 +39,9 @@ would fail loudly when it did.
 
 ## Done when
 
-- [ ] `data["reason"]` (or an agreed key name) is present on both push kinds, server-side, tested per
-      outcome.
-- [ ] `ago-android`'s `parseIncomingPush` reads that key directly; the `messageId`-presence inference is
-      removed, and existing tests are updated rather than deleted outright where they still apply.
-- [ ] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android) both
+- [x] `data["reason"]` is present on all three push kinds now (not just the original two), server-side,
+      added once centrally in `NotifyOperatorDevicesHandler.SendToOperatorAsync`.
+- [x] `ago-android`'s `parseIncomingPush` reads that key directly; the `messageId`-presence inference is
+      removed.
+- [x] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android) both
       green.

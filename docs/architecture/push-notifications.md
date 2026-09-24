@@ -63,7 +63,7 @@ already; one does not exist at all, and that is a finding rather than a gap to f
 | A conversation was assigned | **`Ago.Chat.Contracts.ConversationAssignedToOperator`**, outboxed from `Ago.Chat.Domain.ConversationAssigned` by `ConversationAssignedToOperatorMapper`. Carries `ConversationId`, `SiteId`, `VisitorId`, **`OperatorId`**, `CorrelationId`, `OccurredAt` | Ready. Nothing new needed |
 | A conversation was **transferred** to this operator | The same contract — `ConversationTransferredMapper` maps `ConversationTransferred` onto `ConversationAssignedToOperator` too | Ready, and covered **for free**. The console already alerts on it for the same reason |
 | A visitor sent a message on an assigned conversation | **`Ago.Chat.Contracts.MessageAccepted`**, outboxed from `MessageAdded`. Carries `MessageId`, `SiteId`, `ConversationId`, `AuthorKind`, `Sequence`, `CorrelationId`, `OccurredAt`. Deliberately **no body** | Ready, but it does not name an operator — the conversation has to be loaded to find one, exactly as `ResolveMessageDeliveryTargetsHandler` already does |
-| A conversation entered the **waiting queue** | **Nothing.** There is no `ConversationStarted` contract and no mapper for one. `realtime.md` states it in so many words: "nothing broadcasts 'a new conversation started waiting' to every operator of a site (only the operator it eventually gets assigned to ever hears about it)" — the console's own waiting list is a 15-second poll (`WorkspaceLayout.tsx`'s own `WAITING_REFRESH_INTERVAL_MS`) | **No signal exists**, and the console does not alert on this either. Out of scope, see [What this design deliberately leaves out](#what-this-design-deliberately-leaves-out) |
+| A conversation entered the **waiting queue** | **`Ago.Chat.Domain.ConversationEnteredQueue`** exists as of `26-86`, raised from `Conversation.AddVisitorMessage`'s own `Pending -> Waiting` transition, outboxed as `Ago.Chat.Contracts.ConversationWaitingForOperator` | Built for the **mobile push** fan-out only (`26-86`) — every operator on the site holding `conversation:read` gets pushed. The **console's own** waiting list still polls every 15 seconds (`WorkspaceLayout.tsx`'s own `WAITING_REFRESH_INTERVAL_MS`); this event was not wired into `alerts.ts`, which stays out of this design's own scope |
 | A pending booking nearing its confirm-by deadline | `Ago.Calendar.Contracts.BookingPendingStateChanged` exists — **in a different product, a different repository and a different database**, with no consumer in `ago-chat` and no chat-side recipient. AGO Calendar has its own console and its own fan-out to its own tenant principals | Out of scope. `adr/0027`'s own boundary; a chat push for a calendar event would be the cross-product coupling that boundary exists to prevent |
 
 The first two rows are the whole of what this design fans out, and they are exactly the two things
@@ -486,11 +486,12 @@ What idempotency actually rests on, both halves client-side:
 That is idempotent *in effect*, which is what rule 5 asks for. An `inbox` row per push would add a
 database write to every notification to prevent a duplicate the tag already collapses.
 
-**The payload also names no `reason`/`kind` of its own** — `NotifyOperatorDevicesHandler` has
-`"assigned"`/`"message"` constants server-side but only ever puts them in a metric tag, never on the
-wire, so `26-18`'s client infers the kind from whether `messageId` is present. That works today and is
-a real, fragile implicit contract rather than an explicit one; carried out as `26-81` rather than fixed
-inside `26-18`.
+**The payload now names its own kind explicitly.** `26-18` shipped without this (`26-81`'s own finding:
+the client had to infer the kind from whether `messageId` was present, a real but fragile implicit
+contract); `26-86` closed it, adding a third kind at the same time — every push now carries
+`data["reason"]` (`"assigned"` / `"message"` / `"waiting"`), added once, centrally, in
+`NotifyOperatorDevicesHandler.SendToOperatorAsync`, and `parseIncomingPush` (`ago-android`) reads it
+directly rather than re-deriving it.
 
 *What is genuinely lost with the collapse key*, stated so nobody meets it as a surprise: FCM
 additionally collapsed **undelivered** messages queued for a phone that was offline. RuStore does
@@ -664,8 +665,8 @@ New instruments, in `ChatMetrics`, following the existing naming:
 
 | Instrument | Kind | Tags |
 |---|---|---|
-| `ago.chat.push.sends` | Counter | `reason` (`assigned`/`message`), `provider`, `outcome` (`delivered` / `token_gone` / `failed`) |
-| `ago.chat.push.suppressed` | Counter | `reason` — why the handler decided **not** to send (`no_devices`, `not_visitor`, `unassigned`). The number that distinguishes "push is broken" from "nobody has ever registered a device" |
+| `ago.chat.push.sends` | Counter | `reason` (`assigned`/`message`/`waiting`, `26-86` added the third), `provider`, `outcome` (`delivered` / `token_gone` / `failed`) |
+| `ago.chat.push.suppressed` | Counter | `reason` — why the handler decided **not** to send (`no_devices`, `not_visitor`, `unassigned`, and `no_eligible_operators` for the `waiting` kind, `26-86`). The number that distinguishes "push is broken" from "nobody has ever registered a device" |
 | `ago.chat.push.tokens_revoked` | Counter | `cause` (`signed_out` / `provider_unregistered` / `operator_removed`) |
 
 `ago.chat.push.suppressed{reason="no_devices"}` deserves its own line, because it is the failure this
