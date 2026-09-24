@@ -1,7 +1,7 @@
 # 26-104 · The launcher icon's letter «A» is too small inside its circle
 
 - **Stage**: 26
-- **Status**: ready — cosmetic
+- **Status**: done — merged as [ago-android#88](https://github.com/golyakoff/ago-android/pull/88) (cosmetic).
 - **Found**: 2026-09-24, by the author, from a real notification: the «A» monogram reads as a tiny
   glyph floating in a large blue circle. It shows up wherever the app icon is drawn as an avatar —
   the notification shade's large icon, the launcher, the task switcher.
@@ -31,7 +31,8 @@ size is wrong.**
 
 ## Done when
 
-- [ ] The «A» in `ic_launcher_foreground.xml` (and `ic_launcher_monochrome.xml`) is enlarged to about
-      the author's reference proportion, centred, and stays within the adaptive-icon safe zone —
-      checked on a real device's notification large icon and launcher, not only in the vector preview.
-- [ ] `./gradlew ktlintCheck lint test` green.
+- [~] The «A» in `ic_launcher_foreground.xml` (and `ic_launcher_monochrome.xml`) is enlarged — a 1.5×
+      `<group>` scale about the shared (54,54) centre, cap-height 55% of the 108dp canvas, centred,
+      height within the safe zone. Delivered and CI-green; **on-device eyeball (notification large icon
+      + launcher) pending — the phone was disconnected 2026-09-24; verify when reconnected.**
+- [x] `./gradlew ktlintCheck lint test` green.

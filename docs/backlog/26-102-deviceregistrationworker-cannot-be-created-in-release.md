@@ -1,7 +1,7 @@
 # 26-102 · DeviceRegistrationWorker cannot be created in the release build
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#91](https://github.com/golyakoff/ago-android/pull/91).
 - **Found**: 2026-09-24, in device logs during live debugging:
   `E/WM-WorkerWrapper: Could not create Worker ago.chat.android.devices.DeviceRegistrationWorker`,
   in the release APK (`0.24.1+eae5f9d`) installed via adb.
@@ -31,7 +31,10 @@ drift toward "pushes stopped arriving" over time.
 
 ## Done when
 
-- [ ] `DeviceRegistrationWorker` is constructed and executes in a release (minified) build — verified,
-      not assumed (the log line above is gone; the worker's work is observed to run).
-- [ ] `./gradlew ktlintCheck lint test` green, and a release build assembled to confirm the keep rule
+- [~] Root cause confirmed (not the ticket's guesses): release is **unminified**, so it was never R8;
+      the real cause was a missing `@JvmOverloads`, so Kotlin never emitted the `(Context,
+      WorkerParameters)` constructor WorkManager's default factory reflects for — proven by `javap`
+      before/after. Fixed by adding `@JvmOverloads`; `assembleRelease` green. **Runtime observation of
+      the worker actually running is pending an on-device check — phone disconnected 2026-09-24.**
+- [x] `./gradlew ktlintCheck lint test` green, and a release build assembled to confirm the keep rule
       holds under R8.

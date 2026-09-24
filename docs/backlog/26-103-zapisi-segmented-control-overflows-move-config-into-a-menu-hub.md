@@ -1,8 +1,7 @@
 # 26-103 · The Записи segmented control overflows — move configuration into a ⋮ menu/hub
 
 - **Stage**: 26
-- **Status**: ready — designed and approved by the author 2026-09-24; the design is in the reference
-  artifact.
+- **Status**: done — merged as [ago-android#89](https://github.com/golyakoff/ago-android/pull/89).
 - **Found**: 2026-09-24, by the author on a real device — a screenshot of Записи with the segmented
   control wrapping badly. `26-96` (Услуги) and `26-97` (Часы) each added a segment, so the control now
   carries **five** (Ожидают / Утверждены / Клиенты / Услуги / Часы) and the layout breaks.
@@ -44,10 +43,10 @@ already exist.
 
 ## Done when
 
-- [ ] The Записи segmented control shows exactly three segments (Ожидают / Утверждены / Клиенты) and no
+- [x] The Записи segmented control shows exactly three segments (Ожидают / Утверждены / Клиенты) and no
       longer wraps at any supported width.
-- [ ] A ⋮ control opens an anchored menu with Услуги and Часы, each opening its existing screen; the ⋮
+- [x] A ⋮ control opens an anchored menu with Услуги and Часы, each opening its existing screen; the ⋮
       control and each entry appear only for a holder of `calendar:configure` (asserted in a test, not
       only by eye).
-- [ ] Matches the reference artifact's 3-segment + open-popover frame (layout and copy).
-- [ ] `./gradlew ktlintCheck lint test` green; new strings are resources in both languages (`26-91`).
+- [x] Matches the reference artifact's 3-segment + open-popover frame (layout and copy).
+- [x] `./gradlew ktlintCheck lint test` green; new strings are resources in both languages (`26-91`).

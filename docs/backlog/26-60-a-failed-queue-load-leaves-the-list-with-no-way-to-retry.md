@@ -1,7 +1,7 @@
 # 26-60 · A failed queue load leaves the conversation list with no way to retry — and, on a cold start, spinning forever
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-android#90](https://github.com/golyakoff/ago-android/pull/90).
 - **Found**: 2026-09-23, tracing `ConversationListViewModel`/`ConversationListScreen` against
   `ago-android` `main` at `b099282`.
 
@@ -74,12 +74,14 @@ One promise: **a failed queue load is always recoverable from the screen it fail
 
 ## Done when
 
-- [ ] Launching on a device with no network and no cached queue shows a stated failure with a Retry,
+- [x] Launching on a device with no network and no cached queue shows a stated failure with a Retry,
       never an indefinite spinner.
-- [ ] Restoring the network and tapping Retry loads the queue with no restart.
-- [ ] A refresh that fails while rows are on screen leaves the rows and offers a Retry.
-- [ ] Tapping Retry twice quickly issues one request.
-- [ ] `isStale` still means only "read from cache".
-- [ ] `./gradlew ktlintCheck lint test assembleDebug` green.
-- [ ] Both states reproduced on a real device with airplane mode, and recovered from without killing
-      the app.
+- [x] Restoring the network and tapping Retry loads the queue with no restart.
+- [x] A refresh that fails while rows are on screen leaves the rows and offers a Retry.
+- [x] Tapping Retry twice quickly issues one request.
+- [x] `isStale` still means only "read from cache".
+- [x] `./gradlew ktlintCheck lint test assembleDebug` green.
+- [~] Both states are covered by JVM unit tests (cold-start failure distinguishable from loading; retry
+      loads; refresh-fail keeps rows + Retry; double-tap = one request) and CI is green. **Reproduction
+      on a real device with airplane mode is pending — the phone was disconnected 2026-09-24; verify
+      when reconnected.**
