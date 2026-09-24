@@ -1,9 +1,9 @@
 # 26-79 · The app has no second interface language to switch to
 
 - **Stage**: 26
-- **Status**: filed — as the question, per `CLAUDE.md` rule 14 ("filed as the question when the honest
-  item would decide something"). This is a product/commercial scope call, not a small implementation
-  task, and is not scoped for implementation here.
+- **Status**: done — decided by the author, 2026-09-24: build it, split in two per `CLAUDE.md` rule 15
+  (one quick promise — every string is a resource in both languages — and one real feature — the switch
+  itself). Carried out to `26-91` (the resources) and `26-92` (the switch, depends on `26-91`).
 - **Found**: 2026-09-23, while scoping `26-77` (the account menu). The author asked to record that the
   app's own "Язык" setting is the interface language, distinct from the widget's own language — while
   writing that item, checking what a "Язык" row in Settings would actually take to build for real
