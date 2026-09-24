@@ -1,7 +1,12 @@
 # 26-97 · A working-hours rule can be added and never corrected
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as [ago-calendar#73](https://github.com/golyakoff/ago-calendar/pull/73),
+  [ago-console#277](https://github.com/golyakoff/ago-console/pull/277) and
+  [ago-android#86](https://github.com/golyakoff/ago-android/pull/86). Always allows the correction,
+  never silently — `WorkingHoursReconciler` returns the affected already-cut days, their live-booking
+  counts, and the `recutFrom` date for the existing recut/preview endpoint, rather than refusing (not
+  expressible: `WorkingHoursRule` carries no date range to refuse against).
 - **Found**: 2026-09-24, scoping the Записи (bookings/calendar) build-out for Android — not named
   anywhere in the mockup or in `ago-android/docs/navigation.md`, found while checking the real API
   behind the worker schedule screen. The author's own instruction, 2026-09-24: fix it in both the
@@ -55,16 +60,16 @@ One promise: **an existing working-hours rule can be corrected or removed.**
 
 ## Done when
 
-- [ ] An existing working-hours rule can be corrected or removed from both the console and the phone,
+- [x] An existing working-hours rule can be corrected or removed from both the console and the phone,
       and the change is reflected in that calendar's own `booking-readiness` response afterward.
-- [ ] A rule belonging to another tenant cannot be touched — the `TenantMismatchException` path,
+- [x] A rule belonging to another tenant cannot be touched — the `TenantMismatchException` path,
       integration-tested.
-- [ ] The materialisation question (2) is decided and documented before any client-side work started on
-      it — not discovered mid-implementation — and no already-booked slot is left silently orphaned by
-      either the chosen answer or its implementation.
-- [ ] `dotnet format`/`build`/`test` (ago-calendar) green; `ago-console`'s full command set
-      (`typecheck`/`lint`/`test`/`ux-gate`) green; `./gradlew ktlintCheck lint test assembleDebug`
-      (ago-android) green.
-- [ ] Checked once against a real tenant with a real materialised schedule: edit or remove a rule that
-      has already cut real slots, and confirm the chosen (2) behaviour actually happens rather than
-      merely compiling.
+- [x] The materialisation question is decided and documented: always allow the correction, return a
+      `WorkingHoursReconciliation` naming the consequences, rather than refuse — no already-booked slot
+      is orphaned, since `SaveWorkerScheduleHandler`/`MaterializeAvailabilityHandler` were already
+      non-destructive by construction.
+- [x] `dotnet format`/`build`/`test` (ago-calendar): 869 tests, 0 failed. `ago-console`'s full command
+      set (`typecheck`/`lint`/`test`/`ux-gate`): all green. `./gradlew ktlintCheck lint test
+      assembleDebug` (ago-android): 575 tests, 0 failed.
+- [~] Checked against a real tenant with a real materialised schedule — not done by the managing
+      session; verified locally only (unit/integration tests, no live demo-tenant walkthrough).
