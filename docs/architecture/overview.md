@@ -3,37 +3,49 @@
 ## Components
 
 ```
-   visitor page                 operator console
-  [ widget.js ]                 [    SPA      ]
-        |                              |
-        |  WebSocket (SignalR) + REST  |          file bytes go straight to storage,
-        +--------------+---------------+          never through the API  ---------+
-                       |                                                          |
-                 [ NGINX Gateway ]  TLS, coarse rate limits, least_conn,          |
-                       |           no sticky sessions (edge.md)                   |
-                       v                                                          |
-        +--------------------------------+                                        |
-        |  Chat.Api (N replicas)         |  holds connections, handles commands,   |
-        |  Minimal API + SignalR hubs    |  serves read queries, signs upload URLs |
-        +----+--------------+------------+                                        |
-             |              |                                                     |
-   outbox write        publish / subscribe                                        |
-             |              |                                                     |
-             v              v                                                     v
-   +----------------+  +--------------+                              +--------------------+
-   |   PostgreSQL   |  |   RabbitMQ   |                              | S3 / MinIO         |
-   | source of truth|  |  (-> Kafka)  |                              | attachments        |
-   +----------------+  +------+-------+                              +--------------------+
-             ^                |                                                     ^
-             |                v                                                     |
-   +---------+-----------------------------+                                        |
-   |  Chat.Worker (N replicas)             |  outbox dispatcher, persistence,       |
-   |  background consumers                 |  assignment engine, thumbnails, -------+
-   +---------------------------------------+  orphan cleanup
+   visitor page          operator console          operator phone
+  [ widget.js ]          [     SPA      ]          [ Android app ]
+        |                       |                         |
+        |         WebSocket (SignalR) + REST              |   both operator clients
+        +-----------+-----------+-------------------------+   share one surface
+                    |
+              [ NGINX Gateway ]  TLS, coarse rate limits, least_conn,
+                    |            no sticky sessions (edge.md)
+                    v                                          file bytes go straight to
+        +--------------------------------+                     storage, never through the
+        |  Chat.Api (N replicas)         |  holds conns,       API - it only signs the
+        |  Minimal API + SignalR hubs    |  handles commands,  upload URL --------------+
+        +----+--------------+------------+  serves reads,                               |
+             |              |               signs upload URLs                           |
+   outbox write        publish / subscribe                                             v
+             |              |                                              +--------------------+
+             v              v                                              | S3 / MinIO         |
+   +----------------+  +--------------+                                    | attachments        |
+   |   PostgreSQL   |  |   RabbitMQ   |                                    +--------------------+
+   | source of truth|  |  (-> Kafka)  |                                              ^
+   +----------------+  +------+-------+                                               |
+             ^                |                                            thumbnails |
+             |                v                                                        |
+   +---------+-----------------------------+                                           |
+   |  Chat.Worker (N replicas)             |  outbox dispatcher, persistence, --------+
+   |  background consumers                 |  assignment engine, thumbnails,
+   |                                       |  operator-push fan-out (below), orphan cleanup
+   +---------------------------------------+
                        |
                   +----+-----+
                   |  Redis   |  cache + rate limits + connection registry + presence
                   +----------+
+
+
+   Operator push (adr/0178-0181): when a visitor is waiting, Chat.Worker fans a derived,
+   data-only notification out to each of the operator's registered devices. The transport is
+   chosen per device, the server never suppresses on presence, and the client - not the
+   server - decides whether to make a sound:
+
+        +---------------+  push (no message body)     +----------------------+
+        |  Chat.Worker  | --------------------------> |  FCM      (primary)  |
+        |  push fan-out |  per device, keyed by       |  RuStore  (fallback) | --> [ Android app ]
+        +---------------+  operator_devices.provider  +----------------------+
 ```
 
 ## Three hosts, one solution
@@ -72,11 +84,22 @@ hot path that exists from Stage 1; `Webhooks` arrives in Stage 6 (`resilience.md
    respects per-operator capacity, and writes the assignment with optimistic concurrency.
 3. `ConversationAssigned` is published; both parties are notified through the same fan-out path.
 
+**Operator push** (the native Android client, `adr/0178`-`0181`):
+
+1. The app registers a device against the operator's own account (`operator_devices`, keyed by
+   installation, provider chosen per device: FCM primary, RuStore fallback).
+2. On `ConversationAssignedToOperator` and on a visitor `MessageAccepted`, a `Worker` consumer fans a
+   derived, data-only push out to that operator's devices - the same rule the console's in-tab alerts
+   apply, now off the socket.
+3. The server never suppresses on presence; the client decides whether to be loud. No message body ever
+   leaves the server. Details: `realtime.md`.
+
 ## What is authoritative where
 
 | Data | Owner | Notes |
 |---|---|---|
 | Conversations, messages, assignments, attachment metadata | PostgreSQL | The only source of truth |
+| Operator push devices (`operator_devices`, per-device provider) | PostgreSQL | Registration is an idempotent upsert keyed by installation |
 | Attachment bytes | S3 / MinIO | Immutable once `ready`; metadata still lives in Postgres |
 | Cached site config, operator profiles, hot read pages | Redis | Copies. A flush costs latency, never correctness |
 | Which node holds connection X | Redis | Rebuildable, TTL'd, lossy by design |

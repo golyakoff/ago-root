@@ -3,7 +3,9 @@
 > **Status: live.** A shop can embed AGO Chat right now — try it at the links below. This is a
 > portfolio project: **AGO Platform** is a backend platform (hosting, realtime transport, messaging,
 > persistence, caching, object storage, observability); **AGO Chat** is the first product on it, a
-> customer-support chat a shop embeds with one script tag. **AGO Calendar** (booking/scheduling,
+> customer-support chat a shop embeds with one script tag — visitors chat from the widget, and
+> operators answer from a web console or a native Android app (Kotlin/Jetpack Compose) that
+> pushes them the moment a visitor is waiting. **AGO Calendar** (booking/scheduling,
 > `docs/roadmap.md` Stage 20) is the second, and is live too — a real product decision, not a stand-in,
 > chosen because it shares nothing with chat except the platform underneath and proves the platform
 > boundary holds for an unrelated product, not just in theory. The whole thing exists to demonstrate
@@ -50,40 +52,52 @@ production, Docker Desktop locally) · OpenTelemetry → Prometheus/Grafana/Jaeg
 ## Architecture, in one diagram
 
 ```
-   visitor page                 operator console
-  [ widget.js ]                 [    SPA      ]
-        |                              |
-        |  WebSocket (SignalR) + REST  |          file bytes go straight to storage,
-        +--------------+---------------+          never through the API  ---------+
-                       |                                                          |
-                 [ NGINX Gateway ]  TLS, coarse rate limits, least_conn,          |
-                       |           no sticky sessions (edge.md)                   |
-                       v                                                          |
-        +--------------------------------+                                        |
-        |  Chat.Api (N replicas)         |  holds connections, handles commands,   |
-        |  Minimal API + SignalR hubs    |  serves read queries, signs upload URLs |
-        +----+--------------+------------+                                        |
-             |              |                                                     |
-   outbox write        publish / subscribe                                        |
-             |              |                                                     |
-             v              v                                                     v
-   +----------------+  +--------------+                              +--------------------+
-   |   PostgreSQL   |  |   RabbitMQ   |                              | S3 / MinIO         |
-   | source of truth|  | behind a port|                              | attachments        |
-   +----------------+  +------+-------+                              +--------------------+
-             ^                |                                                     ^
-             |                v                                                     |
-   +---------+-----------------------------+                                        |
-   |  Chat.Worker (N replicas)             |  outbox dispatcher, persistence,       |
-   |  background consumers                 |  assignment engine, thumbnails, -------+
-   +---------------------------------------+  orphan cleanup
+   visitor page          operator console          operator phone
+  [ widget.js ]          [     SPA      ]          [ Android app ]
+        |                       |                         |
+        |         WebSocket (SignalR) + REST              |   both operator clients
+        +-----------+-----------+-------------------------+   share one surface
+                    |
+              [ NGINX Gateway ]  TLS, coarse rate limits, least_conn,
+                    |            no sticky sessions (edge.md)
+                    v                                          file bytes go straight to
+        +--------------------------------+                     storage, never through the
+        |  Chat.Api (N replicas)         |  holds conns,       API - it only signs the
+        |  Minimal API + SignalR hubs    |  handles commands,  upload URL --------------+
+        +----+--------------+------------+  serves reads,                               |
+             |              |               signs upload URLs                           |
+   outbox write        publish / subscribe                                             v
+             |              |                                              +--------------------+
+             v              v                                              | S3 / MinIO         |
+   +----------------+  +--------------+                                    | attachments        |
+   |   PostgreSQL   |  |   RabbitMQ   |                                    +--------------------+
+   | source of truth|  | behind a port|                                              ^
+   +----------------+  +------+-------+                                               |
+             ^                |                                            thumbnails |
+             |                v                                                        |
+   +---------+-----------------------------+                                           |
+   |  Chat.Worker (N replicas)             |  outbox dispatcher, persistence, --------+
+   |  background consumers                 |  assignment, thumbnails,
+   |                                       |  operator-push fan-out (below), orphan cleanup
+   +---------------------------------------+
                        |
                   +----+-----+
                   |  Redis   |  cache + rate limits + connection registry + presence
                   +----------+
 
 
-   AGO Calendar — additive (adr/0027): its own repo, its own two hosts, platform unchanged.
+   Operator push - the Android app's reason to exist (adr/0178-0181). When a visitor is
+   waiting, Chat.Worker fans a derived, data-only notification out to each of the operator's
+   registered devices; the transport is chosen per device, the server never suppresses on
+   presence, and the client - not the server - decides whether to make a sound:
+
+        +---------------+  push (no message body)     +----------------------+
+        |  Chat.Worker  | --------------------------> |  FCM      (primary)  |
+        |  push fan-out |  per device, keyed by       |  RuStore  (fallback) | --> [ Android app ]
+        +---------------+  operator_devices.provider  +----------------------+
+
+
+   AGO Calendar - additive (adr/0027): its own repo, its own two hosts, platform unchanged.
    The one place it touches Chat directly:
 
         operator console                          visitor's chat conversation
@@ -101,8 +115,22 @@ production, Docker Desktop locally) · OpenTelemetry → Prometheus/Grafana/Jaeg
            v            v
    (same PostgreSQL,   (same RabbitMQ - its own topics:
     own ago_calendar    BookingConfirmed, ModuleQuantityImpact*,
-    database, same      contact-collected, entitlement/lease...)
-    Redis too)
+    database, same      entitlement / lease ... - the old contact->customer
+    Redis too)          copy is gone; person identity is below)
+
+
+   Person identity - chat owns it, the calendar only references it (adr/0184). Chat is the
+   account's single Person registry. The calendar keeps NO person copy: it stores only
+   Event.person_id - an opaque reference to the chat Person - plus the write-gating facts
+   rule 8 makes it own (no-show history, verified-phone). A booking opened from a chat
+   conversation already carries the person id and reuses it; a booking with no chat origin
+   mints a person id locally and tells chat to create the Person:
+
+      +----------------------+   PersonRegistered{ personId, accountId, phone, name }
+      |  Calendar            | -----------------------------------------------------> chat
+      |  (no-chat-origin     |   chat consumes it and creates the Person; no synchronous
+      |   booking)           |   cross-service call on any write path
+      +----------------------+
 ```
 
 Three hosts (`Api`, `Worker`, a third `Webhooks` bulkhead not pictured) share the same
