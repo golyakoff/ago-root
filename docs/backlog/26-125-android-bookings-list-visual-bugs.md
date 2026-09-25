@@ -1,7 +1,7 @@
 # 26-125 · [android] Записи→Утверждены list visual bugs (time truncated, master not uppercase, missing dot, unmasked phone)
 
 - **Stage**: 26 — fixes on the shipped `26-117` screen, found on the deployed APK.
-- **Status**: ready.
+- **Status**: done — merged as `ago-android#112` (time/uppercase/dot/masked-phone). Empty name itself is `26-132`/`26-133`.
 - **Found**: 2026-09-25, author on device (screenshot).
 
 ## Bugs (all on `ConfirmedBookingsScreen.kt`)
@@ -24,7 +24,7 @@ backend, not yet built. This ticket only ensures the fallback is correct (masked
 `26-112`.
 
 ## Done when
-- [ ] Full `HH:mm` shows; master header uppercase; «Услуга · длительность» with the dot; fallback phone
+- [x] Full `HH:mm` shows; master header uppercase; «Услуга · длительность» with the dot; fallback phone
       masked (no full number on the list).
-- [ ] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; a test for the mask +
+- [x] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; a test for the mask +
       the time format; counts reported.

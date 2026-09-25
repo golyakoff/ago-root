@@ -1,7 +1,7 @@
 # 26-130 · [ago-android-design] Split the Android mockup artifact into a git-hosted design mini-site
 
 - **Stage**: 26 — design-ops. New repo `ago-android-design` (created), mirrors `ago-brandbook`'s static-bundle pattern.
-- **Status**: ready — author-approved (public, unadvertised; domain `android-design.reserve-me.ru`).
+- **Status**: done — mini-site built and pushed to the new repo `ago-android-design` (main): shared shell + 6 sections + index, corrected glyphs, ago-brandbook-style Docker/CI; docker build passes. A real name/email baked into the source artifact's account screen was found and replaced with fictional (the published artifact 8b4fb3a8 was also fixed). Hosting = `26-131` (blocked on DNS).
 - **Found**: 2026-09-25 — editing the one ~200 KB mockup Artifact per iteration is expensive; move the source
   of truth to small per-section files in git, publish as a static site like the brand-book.
 
@@ -27,7 +27,7 @@
   the domain to be provisioned.
 
 ## Done when
-- [ ] Repo holds: shared shell, `index.html`, the six section pages with the artifact's screens split in,
+- [x] Repo holds: shared shell, `index.html`, the six section pages with the artifact's screens split in,
       corrected glyphs, and the ago-brandbook-style Docker/nginx/CI scaffold.
-- [ ] `docker build` succeeds and `version.json` names the commit (CI's own check).
-- [ ] The old Artifact stays as a snapshot; this repo is the new source of truth.
+- [x] `docker build` succeeds and `version.json` names the commit (CI's own check).
+- [x] The old Artifact stays as a snapshot; this repo is the new source of truth.
