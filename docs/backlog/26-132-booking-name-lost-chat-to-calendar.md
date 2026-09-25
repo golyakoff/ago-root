@@ -27,3 +27,35 @@ also dropped. Do NOT implement yet — report the diagnosis and the fix shape.
 ## Done when
 - [ ] The drop point is named with evidence; the fix is proposed (contract/mapping change), with a note on
       whether phone/email are affected too; a follow-up implementation ticket is filed from the finding.
+
+---
+
+## Diagnosis (Opus trace, 2026-09-25) — two flows conflated, two real drops
+
+**Wording correction:** the widget booking module has NO form of its own — it renders only the primitives
+the calendar sends (phone-only). The mandatory name+phone+email form is the separate **contact-capture**
+control (`ago-widget/src/ui/contactCapture.ts`, `23-58`), which stores AGO Chat `VisitorContactDetail`
+rows (Name/Phone/Email) — a chat-identity form, not the booking.
+
+The booking flow is a separate step machine collecting only a phone, so the name is lost twice:
+- **Drop 1 (definitive for chat bookings):** `ago-calendar` `ReplyToModuleTaskHandler.cs:409-412` books with
+  `DisplayName: null`; `ChatBookingTaskState` = Service→Worker→Date→Slot→Phone→Completed (no name/email
+  step); `ChatBookingTask` stores phone only. The calendar side would persist a name if supplied
+  (`BookEventHandler`→`BookingStore` writes `customers.display_name`; read store projects it) — never given.
+- **Drop 2 (cross-boundary loss):** name+email are collected + published for every kind via `ContactCollected`
+  (`ago-chat`), but `ago-calendar` `ContactCollectedConsumer.cs:70-74` discards every kind except Phone, and
+  the phone upsert never writes `display_name`. Trickier to fix: customer keyed on `source_contact_id` = the
+  phone detail id; a Name detail has a different id, so correlating needs a shared visitor/conversation key.
+
+**Email:** collected + mandatory but the calendar has NO destination — no email column on `customers`, no
+email on `BookEvent`/`BookEventRequest`/`BookingAttempt`. New additive change if email must be on a booking.
+
+## Fix options (author's call)
+- **A** — collect the name inside the booking flow (add `AwaitingName` + a name `FormStep`, forward as
+  `BookEvent.DisplayName`). ago-calendar only, one small migration. Reliable for all new chat bookings;
+  downside: may re-ask the name that contact-capture already has.
+- **B** — reuse the name already collected (contact-capture) by correlating to the booking via a shared
+  visitor/conversation key (fix Drop 2 properly). No re-ask, best UX, bigger change.
+- **Email** — separate larger ticket (new column + contract + step), only if email must be on a booking.
+
+Implementation ticket filed once the author picks A vs B (+ email scope).
