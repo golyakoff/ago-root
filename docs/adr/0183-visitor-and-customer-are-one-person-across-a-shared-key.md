@@ -1,6 +1,9 @@
 # ADR-0183: a visitor and a customer are one person, joined by a shared key, not one row
 
-- **Status**: Proposed
+- **Status**: Rejected (author, 2026-09-25) — rejected the copy/shared-key hybrid outright: no duplicating
+  person data between products, no backfill-alignment. One source of truth for a person is required (a
+  cross-product attribute like "creditworthy" set once, seen everywhere). Superseded by the `26-134` round-2
+  decision (chat-as-person-registry vs a standalone user-api) — a later ADR will record the chosen shape.
 - **Date**: 2026-09-25
 - **Stage**: 26
 - **Amends**: ADR-0147 (its idempotency key and event payload; its publish/consume/backfill/no-auto-merge

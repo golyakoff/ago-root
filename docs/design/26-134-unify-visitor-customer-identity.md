@@ -41,4 +41,23 @@ extends adr/0093 to the end-person).
 - Erasure spans the keyed pair (personal-data.md records the edge).
 - Two-owner asymmetry is permanent (a customer with no visitor is a normal null-key state).
 
-Full evidence (file:line) is in the design-pass report; the decision is ADR-0183.
+Full evidence (file:line) is in the design-pass report; the decision was drafted as ADR-0183.
+
+---
+
+## Round 2 (author, 2026-09-25) — hybrid REJECTED; choose between two no-copy options
+The author rejected the copy/shared-key hybrid (d) and ADR-0183 outright: no duplicating person data
+between products, no backfill-alignment. **One source of truth** for a person is required — a cross-product
+attribute (e.g. "creditworthy") set once, seen everywhere. Also corrected: a standalone user-service is a
+separate service, NOT `Ago.Platform` — adr/0012 does not forbid it (round 1 wrongly conflated the two).
+Decisive input: the platform very likely will not grow past the current 2 products (maybe a 3rd, unlikely).
+
+Re-analysis (round 2) chooses between EXACTLY two options and recommends one decisively:
+- **(B)** Chat becomes the person registry; the calendar kills its `customers` copy and references chat by a
+  user id, reading all person data from chat (handle: booking-only people with no chat visitor; where
+  creditworthy/notes/no-shows live; rule 8 on the booking write path; migration).
+- **(C)** A new standalone `user-api` service owns the person; both chat and calendar reference/read it
+  (handle: rule 8 on both write paths; a 3rd deployable's cost vs the "won't grow" input; migrating both
+  visitors and customers).
+
+A later ADR records the chosen shape (supersedes ADR-0183, amends adr/0147/0093).
