@@ -372,3 +372,28 @@ columns exist).
 | Attachment-upload grant toggle | `conversation:attachment_upload_grant` |
 
 All hide-not-disable; the server's `IPermissionChecker` is the real boundary.
+
+---
+
+## Author decisions (2026-09-25) — these supersede the open questions above
+
+1. **No "Недействительно" / name-assessment.** The name is always trusted and shown as written — we
+   cannot and need not verify it; if a person asks to be addressed a certain way we just record and use
+   it. **GAP-4 (Name assessment) is dropped entirely.** The КОНТАКТНЫЕ ДАННЫЕ «Имя» row is plain text,
+   no invalid state, no label.
+2. **«Ограничить» is one reversible action.** A block is a *status*, not an irreversible act: the panel
+   shows «Ограничить»; a blocked visitor shows «Снять ограничение» to reverse it. Reuse the console's
+   existing reversible restriction mechanism (`visitorRestrictionsApi` / `RestrictedVisitorsPage`). The
+   un-block path is in scope. No second destructive verb.
+3. **Widen «Прошлые диалоги» to all visitors** (including widget-only, no channel identity): the row lists
+   *this visitor's other conversations on this site*, so it is never dead. Needs the ADR + `personal-data.md`
+   update (privacy-boundary change).
+4. **Header via a new `visitor-summary` endpoint** (first-visit date + dialog count). Confirmed.
+5. **«N диалогов» = count of this visitor's distinct conversations on this site, including the current
+   one**, same widened scope as #3 — the header N and the «Прошлые диалоги» list always agree (current one
+   marked). Past dialogs are **read-only** (view transcript, no takeover). Count **on panel open** (few per
+   visitor — cheap; no dedicated count fields).
+
+Implementation is filed as `26-114` (chat: visitor conversation history + summary + ADR), `26-115`
+(android: contact-panel data clients), `26-116` (android: Permission constants + emoji-name fallback), and
+further tickets as lanes free (bottom-sheet shell, per-section UI, write actions incl. reversible block).
