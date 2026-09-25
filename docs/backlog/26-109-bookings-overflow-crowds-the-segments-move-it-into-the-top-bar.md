@@ -1,7 +1,7 @@
 # 26-109 · The Записи overflow «⋮» crowds the segmented tabs — move it into the top bar next to the avatar
 
 - **Stage**: 26
-- **Status**: ready — direction decided (see below); a small single-file layout move.
+- **Status**: done — `BookingsConfigMenu` moved into the `TopAppBar` actions (left of `AccountAvatarAction`); the segment row now takes full width. Merged as `ago-android#107`. On-device confirmation lands with the next published APK.
 - **Found**: 2026-09-25, by the author, live on a real phone. The «⋮» config menu sits in the second
   row alongside the segmented control, eating enough width that «Утверждены» wraps to two lines and the
   three segments «Ожидают | Утверждены | Клиенты» no longer fit on one row.
@@ -47,8 +47,8 @@ component that would only ever wrap one screen's items.
 
 ## Done when
 
-- [ ] The «⋮» renders in the `TopAppBar` next to the «AG» avatar; the three segments
+- [x] The «⋮» renders in the `TopAppBar` next to the «AG» avatar; the three segments
       «Ожидают | Утверждены | Клиенты» fit on one row with no wrapping.
-- [ ] `BookingsConfigMenu` still self-hides when it has no entries.
-- [ ] `./gradlew ktlintCheck lint test` green and `:app:compileDebugAndroidTestKotlin` compiles; existing
+- [x] `BookingsConfigMenu` still self-hides when it has no entries (its own `if (entries.isEmpty()) return` is untouched).
+- [x] `./gradlew ktlintCheck lint test` green (698 tests, 0 failed) and `:app:compileDebugAndroidTestKotlin` compiles; existing
       Bookings tests updated if they asserted the old placement.
