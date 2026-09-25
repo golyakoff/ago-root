@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — implementation of `26-112` (design: `docs/design/26-112-bookings-names-contacts-navigation.md`;
   approved mockup lives in the Android mockup Artifact, «Утверждены» slot + «Детальная запись» slot).
-- **Status**: ready — mockup approved by the author through four correction rounds; **every correction below
+- **Status**: done — merged as `ago-android#111`; Записи→Утверждены redrawn to the approved mockup (710 tests). Two follow-ups filed: `26-121` (calendar SMS/Источник fields, rendered «—» until then) and the dialog-link nav awaits `origin_conversation_id` (26-112 backend).
   is a hard requirement, not a suggestion. Do not "cut corners" on any of them.**
 - **Depends on**: nothing for the visual + phone reveal (name/phone are already on the confirmed-booking
   payload — `customerDisplayName`, `phone`, `masked`). The chat→dialog navigation depends on the
@@ -69,14 +69,14 @@ it. This ticket makes the Android screen match the approved mockup exactly.
 
 ## Done when
 
-- [ ] The «Утверждены» list matches the approved mockup: name-prominent rows, masked-phone/«Без имени»
+- [x] The «Утверждены» list matches the approved mockup: name-prominent rows, masked-phone/«Без имени»
       fallback (never the hex), month+year labels inside the scrolling day container in the muted sub-label
       style (no divider, year each, ellipsis, no scrollbar), and chat(left)+phone(right) Material icons on
       every row.
-- [ ] Row tap opens the booking-detail sheet exactly per the mockup: name header; date-left/time-right with
+- [x] Row tap opens the booking-detail sheet exactly per the mockup: name header; date-left/time-right with
       no dot; «Мастер» own row; «Телефон» with «Показать» reusing the existing reveal; «Источник» plain text;
       «Перейти к диалогу» + «Закрыть».
-- [ ] The chat icon / «Перейти к диалогу» navigates to the booking's origin dialog when the field is present,
+- [x] The chat icon / «Перейти к диалогу» navigates to the booking's origin dialog when the field is present,
       renders per mockup when it is not, with a TODO to the backend link ticket. Icons are always both.
-- [ ] Strings are resources (ru + en). `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin`
+- [x] Strings are resources (ru + en). `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin`
       green; tests for name-vs-fallback and the month-label boundary/ellipsis; counts reported.
