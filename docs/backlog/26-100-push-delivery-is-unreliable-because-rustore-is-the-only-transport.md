@@ -1,14 +1,12 @@
 # 26-100 · Push delivery is unreliable because RuStore is the only transport — add FCM primary, RuStore fallback
 
 - **Stage**: 26
-- **Status**: in progress — design done (ADR-0181, ago-root#1567) and **both code halves merged**:
-  server [ago-chat#361](https://github.com/golyakoff/ago-chat/pull/361) (FCM adapter + provider routing,
-  no-op for existing rustore devices) and client [ago-android#101](https://github.com/golyakoff/ago-android/pull/101)
-  (transport selection by Play Services, FCM gateway/receiver). **Stays open** pending two operator
-  steps that cannot be done unattended without a device: (1) wire `FCM_SERVICE_ACCOUNT_JSON` into the
-  stand and deploy `ago-chat` (the Worker `ValidateOnStart`s it, so it must land with the secret); (2)
-  verify end-to-end delivery on a real Google-services phone (heads-up with no distributor kept
-  resident). The Firebase project (`ago-chat-783f7`) and both artifacts exist (`c:/git/ago/firebase/`).
+- **Status**: in progress — design (ADR-0181) and both code halves merged, and **deployed to the stand
+  2026-09-25**: `ago-chat` moved to `2fc67db` (`ago-deploy#266` wired `FCM_SERVICE_ACCOUNT_JSON` into the
+  Worker; the real key lives in the node's `.env`, never committed), the Worker booted healthy with FCM
+  (`ValidateOnStart` passed), smoke 40/40, drift checks PASS. **Remaining (needs a device):** verify
+  end-to-end FCM delivery on a real Google-services phone (a heads-up with no distributor kept resident) —
+  then this closes.
 - **Found**: 2026-09-24, in a live end-to-end debugging session with the author on two real devices.
 - **Decision** (author, 2026-09-24): pursue **option A — FCM as the primary transport, RuStore as the
   fallback** — explicitly to reach "reliability like competitors / banks." The two rejected options and
