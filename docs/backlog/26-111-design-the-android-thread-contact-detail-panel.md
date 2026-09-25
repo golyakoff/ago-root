@@ -1,7 +1,7 @@
 # 26-111 · Design the Android thread's contact-detail / visitor-info panel (the "detailed conversation window")
 
 - **Stage**: 26
-- **Status**: ready — a design/scoping pass (no production code), the deliverable is a spec plus a
+- **Status**: design done, pending author decisions — design doc at `docs/design/26-111-thread-contact-detail-panel.md`; 8 product questions and a proposed implementation-ticket breakdown await the author, and the correct contact-detail mockup needs re-attaching (the committed asset was the wrong screenshot, removed). Original: a design/scoping pass (no production code), the deliverable is a spec plus a
   proposed breakdown into implementation tickets for the author to approve, mirroring `26-00`'s "plan and
   mockup before Kotlin" shape.
 - **Found**: 2026-09-25. The author asked (the day before) for an Opus design pass on the "detailed
