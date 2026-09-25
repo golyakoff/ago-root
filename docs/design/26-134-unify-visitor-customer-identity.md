@@ -61,3 +61,16 @@ Re-analysis (round 2) chooses between EXACTLY two options and recommends one dec
   visitors and customers).
 
 A later ADR records the chosen shape (supersedes ADR-0183, amends adr/0147/0093).
+
+### Round-2 verdict (2026-09-25) — B, decisively; author accepted
+Recommendation and reasoning recorded as **ADR-0184 (Accepted by the author, 2026-09-25)**: option **B**
+(chat is the account's single person registry; the calendar kills its `customers` copy and references the
+person by an opaque id). C loses on YAGNI + rule 8: with <=2–3 products a standalone `user-api` adds a third
+deployable/DB/erasure surface while rule 8 keeps the write-gating facts (no-show, verified-phone) per-product
+regardless, and it would force chat into a person<->channel **copy** to keep message routing local — the copy
+the author rejected. B and C expose the identical external contract (one referenced person id, attributes read
+for display), so B is C with the registry co-located in chat, and B→C stays a mechanical extraction if a
+hub-less third product ever appears. The one honest bound stated in the ADR: "one source of truth for *every*
+attribute" is limited by rule 8 — no-show and verified-phone remain calendar-owned operational facts, surfaced
+on the person view by console-side display-merge, not relocated. **Subsumes 26-132, 26-133, 26-112 C1.**
+Implementation scope (slice plan) is being drawn separately before any code starts.
