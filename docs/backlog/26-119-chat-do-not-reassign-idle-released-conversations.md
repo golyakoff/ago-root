@@ -1,7 +1,7 @@
 # 26-119 · [chat] Do not re-assign an idle conversation that has no pending visitor message (fix A for the 5-min push storm)
 
 - **Stage**: 26 — fix **A** for `26-83` (root cause diagnosed 2026-09-25, author chose A+C).
-- **Status**: ready — direction decided (A+C); this is A.
+- **Status**: done — merged as `ago-chat#364` (26-83 fix A: assignment only claims a Waiting conversation whose latest message is from the Visitor; both claimers; no migration).
 - **Depends on**: nothing.
 
 ## The root cause (confirmed live on the stand)
@@ -42,9 +42,9 @@ idle conversation released for inactivity (visitor silent) has no pending inboun
 
 ## Done when
 
-- [ ] An idle conversation released for inactivity is **not** re-assigned while no new visitor message is
+- [x] An idle conversation released for inactivity is **not** re-assigned while no new visitor message is
       pending; it stays `Waiting` (and auto-closes at its window). A conversation with a pending inbound
       message is still assigned exactly as before.
-- [ ] A test proves: released-idle → not re-claimed next cycle; new inbound → claimable again.
-- [ ] `dotnet format` / build (0 warnings) / full suite green, counts reported. No migration expected;
+- [x] A test proves: released-idle → not re-claimed next cycle; new inbound → claimable again.
+- [x] `dotnet format` / build (0 warnings) / full suite green, counts reported. No migration expected;
       say so (or route via the migration lane if one is genuinely needed).

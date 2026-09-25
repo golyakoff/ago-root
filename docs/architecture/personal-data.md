@@ -137,12 +137,15 @@ not who is legally answerable for them — that second question is `16-04`'s and
 Every row in the table above describes *where* data is held; this is a note on a new *who*.
 `GetVisitorHistoryHandler`'s cross-conversation rule (`authorization.md`'s own "A new way to read
 someone else's conversation") lets an operator read a past, `Closed` conversation's `messages.body`
-by proving they are assigned to a different, live conversation with the same channel-identified
+by proving they are assigned to a different, live conversation with the same
 visitor — the first case in this codebase where a message becomes visible to an operator who was
-never a party to the conversation that contains it. Scoped, not open-ended: gated on the visitor
-having a `channel_identity` at all (a widget visitor's history is structurally unreachable, `14-01`'s
-model) and on the requesting operator holding a live assignment with that same visitor, proven by a
-test that a different operator at the same site cannot pull it for a conversation they are not on.
+never a party to the conversation that contains it. Scoped, not open-ended: **`26-114`/`adr/0182`
+widened the visitor scope from "has a `channel_identity`" to per-visitor-on-site** — a returning
+widget visitor's history is now reachable too (it used to be structurally empty, which made the
+panel dead for most conversations, since most AGO Chat visitors are widget-only). The **access
+boundary is unchanged**: still gated on the requesting operator holding a live assignment with that
+same visitor on that site, proven by a test that a different operator at the same site cannot pull it
+for a conversation they are not on — the widening removes an excluded *visitor*, not a new *caller*.
 `16-02`'s erasure guarantees are unaffected by this widening: erasing a conversation or a site removes
 the rows this handler reads from the same cascade as every other read path, so there is nothing new
 to delete, only a new way the same rows could have been read before they were.

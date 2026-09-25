@@ -1,7 +1,7 @@
 # 26-114 · [chat] A visitor's conversation history + summary on this site (list, count, first-seen)
 
 - **Stage**: 26 — implementation of `26-111` (design: `docs/design/26-111-thread-contact-detail-panel.md`).
-- **Status**: ready — direction fully decided (26-111 author decisions #3, #4, #5).
+- **Status**: done — merged as `ago-chat#363` (visitor-summary endpoint + widened history + ADR-0182); 4037 tests green, no migration.
 - **Depends on**: nothing (backend-only; unblocks the Android summary + past-dialogs clients later).
 
 ## What and why
@@ -39,8 +39,8 @@ channel identity, and there is no first-seen / conversation-count on any wire DT
 
 ## Done when
 
-- [ ] The endpoint(s) return firstSeenAt + conversationCount + the conversation list for a visitor scoped
+- [x] The endpoint(s) return firstSeenAt + conversationCount + the conversation list for a visitor scoped
       to the site, count == list scope, for widget-only visitors too.
-- [ ] ADR-0182 written (row reported, not committed to the index) + `personal-data.md` updated.
-- [ ] `dotnet format` / build (0 warnings) / full test suite green, counts reported; a test proves a
+- [x] ADR-0182 written (row reported, not committed to the index) + `personal-data.md` updated.
+- [x] `dotnet format` / build (0 warnings) / full test suite green, counts reported; a test proves a
       widget-only visitor with multiple conversations gets them all, and the count matches.

@@ -1,7 +1,7 @@
 # 26-115 · [android] Contact-detail panel data layer (contact details + phone/email reveal, tags, notes)
 
 - **Stage**: 26 — implementation of `26-111` (design: `docs/design/26-111-thread-contact-detail-panel.md`).
-- **Status**: ready — over chat endpoints that already exist (26-111 design mapped them).
+- **Status**: done — merged as `ago-android#109` (contact-panel data clients); 33 tests. Note: reveal endpoint hardcodes surface=ConsoleContactPanel (no body) — an AndroidThread surface needs a backend follow-up.
 - **Depends on**: nothing — these back existing `ago-chat` endpoints; no backend change needed.
 
 ## What and why
@@ -36,7 +36,7 @@ would collide on that file, CLAUDE.md rule 13).
 
 ## Done when
 
-- [ ] Domain ports + Ktor clients for contact details, phone/email reveal, tags (read/apply/remove), notes
+- [x] Domain ports + Ktor clients for contact details, phone/email reveal, tags (read/apply/remove), notes
       (list/add), all wired in `AppModule`, each confirmed against the real chat endpoint.
-- [ ] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; unit tests for each
+- [x] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; unit tests for each
       client (success + not-configured/failure classification), counts reported.

@@ -1,7 +1,7 @@
 # 26-116 · [android] Permission constants + localized emoji-name fallback dictionary
 
 - **Stage**: 26 — implementation of `26-111` (design: `docs/design/26-111-thread-contact-detail-panel.md`).
-- **Status**: ready — foundation, no backend dependency.
+- **Status**: done — merged as `ago-android#110` (Permission constants + emoji-pair name fallback, ru/en).
 - **Depends on**: nothing. Lands early; the contact panel's per-element permission gating and the
   emoji-pair name fallback both build on it.
 
@@ -30,7 +30,7 @@ file-disjoint from `26-115`'s data clients (no `AppModule` edit here) and can ru
 
 ## Done when
 
-- [ ] Permission constants present; emoji-pair localized fallback helper with `ru`+`en` resources; never a
+- [x] Permission constants present; emoji-pair localized fallback helper with `ru`+`en` resources; never a
       hex code as a fallback.
-- [ ] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; fallback unit tests pass,
+- [x] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; fallback unit tests pass,
       counts reported.
