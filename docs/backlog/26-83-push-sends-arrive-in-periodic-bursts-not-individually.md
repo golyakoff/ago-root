@@ -75,3 +75,25 @@ genuinely separate send.
       is measured and ruled in or out directly (not assumed).
 - [ ] The root cause is named, or the finding "RuStore itself batches delivery" is recorded with the
       evidence for it, in `docs/architecture/push-notifications.md`.
+
+---
+
+## Root cause — diagnosed 2026-09-25 (live on the stand)
+
+Pushes go out in a batch **every exactly 5 minutes** (~45 sends/cycle across tenants; an operator gets a
+batch = their idle/assigned conversations), not per message. The 5-minute source is
+`AutoCloseInactiveConversationsJob` (`Interval` = 5 min): its `25-118` release pass moves an idle-but-not-
+old widget conversation `Assigned`→`Waiting`; `ConversationAssignmentJob` re-assigns any `Waiting`
+conversation (`WaitingConversationClaimQuery` selects Waiting rows regardless of whether anything awaits a
+reply) → assignment/waiting push; next cycle it is still idle → released → re-assigned → pushed again. The
+conversation churns `Assigned↔Waiting` every 5 min and pushes each time. (Outbox is not the cause — it polls
+every 5s with LISTEN/NOTIFY, so live delivery is instant.)
+
+## Decision (author, 2026-09-25): fix A + C
+
+- **A — `26-119`**: the assignment job must not re-assign a `Waiting` conversation with no pending inbound
+  visitor message; idle-released conversations stay `Waiting` and auto-close, breaking the churn.
+- **C — `26-120`**: dedup operator pushes per (operator, conversation) within a short window (the `26-108`
+  IRateLimiter pattern), as a safety net against any other repeat-trigger.
+
+This item stays open as the tracking parent until `26-119` and `26-120` land, then closes.
