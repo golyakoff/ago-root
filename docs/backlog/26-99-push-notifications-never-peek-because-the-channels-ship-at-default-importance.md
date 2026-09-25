@@ -1,7 +1,8 @@
 # 26-99 · Push notifications never peek because the channels ship at DEFAULT importance
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — channels ship at `IMPORTANCE_HIGH` (`ago-android` `eae5f9d`); heads-up peek and
+  lock-screen display confirmed by the author 2026-09-25 on the crash-fixed fresh install.
 - **Found**: 2026-09-24, by the author on a real device — "телефон даже выключенный должен пикать
   уведомлением в шторке, я настроил чтобы было видно", but nothing peeks. Confirmed live over `adb`.
 
@@ -48,8 +49,7 @@ channel importance.
 - [x] All three push channels are created at `IMPORTANCE_HIGH`; the presence channel is unchanged.
       Landed `ago-android` `eae5f9d` (`fix(26-99): create push channels at IMPORTANCE_HIGH so notifications peek`).
 - [x] `./gradlew ktlintCheck lint test` green — passed in CI on the merged PR.
-- [ ] Proven on a real device: a visitor message to a waiting/assigned conversation produces a heads-up
-      that peeks over the screen and shows on the lock screen (`dumpsys notification` reports the channels
-      at `mImportance=4`). **Blocked on the phone**, disconnected from debug for ~24h (author, 2026-09-25);
-      note this needs a fresh install for the raised importance to take effect (see the constraint above).
-      Item stays open until this device proof exists.
+- [x] Proven on a real device: a visitor message to a waiting/assigned conversation produces a heads-up
+      that peeks over the screen and shows on the lock screen. Confirmed by the author 2026-09-25 on the
+      crash-fixed fresh install (the reinstall that the raised-importance constraint above required):
+      the heads-up peeks and shows on the lock screen ("оба сработали", alongside 26-100's instant delivery).

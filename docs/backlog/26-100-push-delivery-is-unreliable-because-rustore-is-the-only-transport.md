@@ -1,12 +1,19 @@
 # 26-100 · Push delivery is unreliable because RuStore is the only transport — add FCM primary, RuStore fallback
 
 - **Stage**: 26
-- **Status**: in progress — design (ADR-0181) and both code halves merged, and **deployed to the stand
-  2026-09-25**: `ago-chat` moved to `2fc67db` (`ago-deploy#266` wired `FCM_SERVICE_ACCOUNT_JSON` into the
-  Worker; the real key lives in the node's `.env`, never committed), the Worker booted healthy with FCM
-  (`ValidateOnStart` passed), smoke 40/40, drift checks PASS. **Remaining (needs a device):** verify
-  end-to-end FCM delivery on a real Google-services phone (a heads-up with no distributor kept resident) —
-  then this closes.
+- **Status**: done — design (ADR-0181) and both code halves merged, deployed to the stand 2026-09-25
+  (`ago-chat` `2fc67db`; `ago-deploy#266` wired `FCM_SERVICE_ACCOUNT_JSON` into the Worker, real key in
+  the node's `.env`, never committed; Worker booted healthy with FCM `ValidateOnStart`, smoke 40/40,
+  drift PASS), and **verified end-to-end on a real Google-services phone 2026-09-25**: the author
+  confirmed messages are delivered instantly as a heads-up with the app not kept resident and RuStore
+  not woken by hand — the exact reliability this item exists for, and the failure it replaced (RuStore
+  had to be launched manually before a push arrived).
+- **Note on the crash found while landing this**: the first CI release (`0.31.0`) shipped the four FCM
+  `BuildConfig` identifiers empty (`agoFcmProperty` had an empty-string fallback and CI has no
+  `local.properties`), so `FirebaseOptions.Builder().setApplicationId("")` threw at startup on every
+  Google-Play device. Fixed by committing the four (public) identifiers as real defaults and guarding
+  `FirebaseApp.initializeApp` behind a non-blank check (`ago-android#106`, `ea2b15c`) — the release the
+  author actually verified above.
 - **Found**: 2026-09-24, in a live end-to-end debugging session with the author on two real devices.
 - **Decision** (author, 2026-09-24): pursue **option A — FCM as the primary transport, RuStore as the
   fallback** — explicitly to reach "reliability like competitors / banks." The two rejected options and
@@ -86,16 +93,18 @@ Opus, covering both repos — the contract is shared) that produces:
 
 ## Done when
 
-- [ ] A new ADR records "FCM primary, RuStore fallback", amending `adr/0179`/`adr/0180`, with the
-      transport-selection rule and the trade-off stated.
-- [ ] `ago-chat` has an FCM adapter behind `IPushSender`, selected per device by `provider`, with the
-      RuStore adapter unchanged — proven by a test sending through each provider.
-- [ ] `ago-android` registers an FCM token where Play Services is present (RuStore otherwise) and
-      surfaces an FCM push through the existing notification path.
-- [ ] Proven on a real Google-services device: a visitor message produces a heads-up **without** the
-      app or any distributor kept resident — the reliability this item exists for.
-- [ ] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android)
-      green.
+- [x] A new ADR records "FCM primary, RuStore fallback", amending `adr/0179`/`adr/0180`, with the
+      transport-selection rule and the trade-off stated. — ADR-0181, merged.
+- [x] `ago-chat` has an FCM adapter behind `IPushSender`, selected per device by `provider`, with the
+      RuStore adapter unchanged — proven by a test sending through each provider. Merged; Worker's
+      `ValidateOnStart` passed on the stand deploy.
+- [x] `ago-android` registers an FCM token where Play Services is present (RuStore otherwise) and
+      surfaces an FCM push through the existing notification path. Merged.
+- [x] Proven on a real Google-services device: a visitor message produces a heads-up **without** the
+      app or any distributor kept resident — the reliability this item exists for. Confirmed by the
+      author 2026-09-25 on the crash-fixed release (`ea2b15c`): "сообщения доставляются мгновенно".
+- [x] `dotnet format`/`build`/`test` (ago-chat) and `./gradlew ktlintCheck lint test` (ago-android)
+      green. — green in CI on the merged PRs.
 
 ## Implementation plan
 
