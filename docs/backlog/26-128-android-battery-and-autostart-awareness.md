@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — implementation of the author-approved battery/autostart mockup (round 3, circles
   slightly smaller). Designed with the kept-in-context worker; this is its implementation phase.
-- **Status**: ready — mockup approved; build it.
+- **Status**: done — merged as `ago-android#113` (first-launch sheet + Режим работы/Автозапуск rows; permission-free intent; OEM autostart uniform UI; smaller circles). BOOT_COMPLETED inference = `26-129`.
 - **Found**: 2026-09-25.
 
 ## Feature (per the approved mockup + decisions)
@@ -43,7 +43,7 @@ than the round-3 mockup — humanized value, expandable card with explanation + 
 - No `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` manifest permission (Option 2 chosen).
 
 ## Done when
-- [ ] First-launch prompt (combined, non-blocking) + the two Settings rows with correct glyphs/detection and
+- [x] First-launch prompt (combined, non-blocking) + the two Settings rows with correct glyphs/detection and
       the system-dialog buttons per the mockup; uniform UI (no OEM names); circles slightly smaller.
-- [ ] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; tests for battery
+- [x] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; tests for battery
       detection state→glyph and the OEM intent selection/fallback; counts reported.
