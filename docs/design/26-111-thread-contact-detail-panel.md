@@ -241,7 +241,23 @@ Grounded in the paraphrase (a bottom sheet over the open thread). Confirm agains
 
 ---
 
-## 5. Product questions (not decided here — CLAUDE.md rule 14 "file as the question")
+## 5a. Answers (author, 2026-09-25) — decided
+
+- **Q1 — Имя: NO validity concept at all.** A name is never «Недействительно»/«не подтверждено». We show
+  the form and trust whatever the person entered — it is always "as they introduced themselves", we do not
+  need to know if it is real. So: name is display-only, no assessment, and **drop the "оператор ещё не
+  подтвердил" caption for the Name row** (neither Option A's pill nor Option B). (Phone/Email assessment,
+  which the backend already supports, is unaffected — this is about Name only.)
+- **Q2 — «Ограничить» = one action (`block-visitor`), but REVERSIBLE.** Offer the single block, and it must
+  be liftable (`POST /visitor-restrictions/{visitorId}/lift`) — "mal li я ошибся". Not `close-as-spam`.
+- **Q3 — already shipped** (26-114 / ADR-0182): `visitor-summary` endpoint (Option A).
+- **Q4 — exclude** `Pending` (never-written) and erased rows from the count.
+- **Q5 — already shipped** (26-114 / ADR-0182): past dialogs widened to per-visitor-on-site.
+- **Q6 — read-only, no actions.** (A future "one continuous dialog" visual is possible but not now.)
+- **Q7 — hide, not disable** (mirror the console / navigation.md).
+- **Q8 — fetch the notes list on open** (N is tiny); no separate count field.
+
+## 5. Product questions (original — answered in §5a above)
 
 **Q1 — Имя «Недействительно»: display label or settable state?**
 - *Option A* — a display label for "unverified name" (the existing caption as a pill). Cost: **0**
