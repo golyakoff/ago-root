@@ -1,7 +1,7 @@
 # 26-110 · The release APK ships with AGO Calendar unconfigured, so «Записи» is empty though Calendar is deployed
 
 - **Stage**: 26
-- **Status**: merged (ago-android#108), pending device confirmation — the CI release step now passes `-PagoCalendarApiBaseUrl=https://calendar-api.reserve-me.ru`; the main `publish-apk` run for the merge succeeded, so the published APK carries the calendar origin. Stays open until the author confirms on a reinstalled APK that Записи loads real data.
+- **Status**: done — confirmed on a reinstalled APK by the author 2026-09-25 (Записи loads the booking, Услуги and Часы). Was: the CI release step now passes `-PagoCalendarApiBaseUrl=https://calendar-api.reserve-me.ru`; the main `publish-apk` run for the merge succeeded, so the published APK carries the calendar origin. Stays open until the author confirms on a reinstalled APK that Записи loads real data.
 - **Found**: 2026-09-25, by the author, live on a real phone: the Записи (Bookings) screen shows nothing
   on the stand release build even though a booking exists for the account, the schedule is set, the
   masters/services are configured, and `Ago.Calendar.Api` is deployed on the stand with the data.
@@ -61,5 +61,5 @@ and fixes the actual gap.
 - [x] The CI release build passes `-PagoCalendarApiBaseUrl=https://calendar-api.reserve-me.ru`; the
       published APK's `AGO_CALENDAR_API_BASE_URL` is that origin (not empty). Verified locally via
       `generateReleaseBuildConfig` with the flag; the main `publish-apk` run for the merge succeeded.
-- [ ] Verified on a real phone: the Записи screen loads the real booking(s)/services/hours from
-      `Ago.Calendar.Api` instead of the empty state.
+- [x] Verified on a real phone: the Записи screen loads the real booking(s)/services/hours from
+      `Ago.Calendar.Api` instead of the empty state. Confirmed by the author 2026-09-25.
