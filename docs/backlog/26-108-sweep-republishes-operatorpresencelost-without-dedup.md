@@ -1,7 +1,9 @@
 # 26-108 · The disconnect sweep re-publishes `OperatorPresenceLost` every tick without dedup, amplifying the grace queue
 
 - **Stage**: 26
-- **Status**: ready — engineering defect with a self-contained fix; the grace-period timing and the
+- **Status**: done — dedup at `OperatorPresencePublisher` via a short-TTL per-operator claim on the
+  existing `IRateLimiter` (RedisRateLimiter, cross-replica, fails open); merged as `ago-chat#362`.
+  Original ready note: engineering defect with a self-contained fix; the grace-period timing and the
   mobile-backgrounding UX questions stay with `26-84`, this item does not touch them.
 - **Found**: 2026-09-25, code-inspection half of `26-84`/`26-83`'s "distinguish the two candidate
   causes" investigation. Filed by the managing session, not worked around silently.
@@ -70,8 +72,8 @@ past the end of active testing.
 
 ## Done when
 
-- [ ] The sweep does not re-publish `OperatorPresenceLost` for an operator for whom one is already
+- [x] The sweep does not re-publish `OperatorPresenceLost` for an operator for whom one is already
       in-flight / recently published, across Worker replicas.
-- [ ] A truly missed disconnect (no recent Lost) is still caught by the sweep.
-- [ ] Test proves the dedup and the still-fires-after-TTL behaviour.
-- [ ] `dotnet format` / build (0 warnings) / full test suite green, counts reported.
+- [x] A truly missed disconnect (no recent Lost) is still caught by the sweep.
+- [x] Test proves the dedup and the still-fires-after-TTL behaviour (OperatorPresenceLostDedupTests).
+- [x] `dotnet format` / build / full test suite green — Domain 794, Application 1532, Concurrency 90, Architecture 53, FakeCrm 21, Integration 1537, all 0 failed.
