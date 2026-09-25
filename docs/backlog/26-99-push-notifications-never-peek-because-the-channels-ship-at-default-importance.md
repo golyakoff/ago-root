@@ -45,8 +45,11 @@ channel importance.
 
 ## Done when
 
-- [ ] All three push channels are created at `IMPORTANCE_HIGH`; the presence channel is unchanged.
-- [ ] `./gradlew ktlintCheck lint test` green.
+- [x] All three push channels are created at `IMPORTANCE_HIGH`; the presence channel is unchanged.
+      Landed `ago-android` `eae5f9d` (`fix(26-99): create push channels at IMPORTANCE_HIGH so notifications peek`).
+- [x] `./gradlew ktlintCheck lint test` green — passed in CI on the merged PR.
 - [ ] Proven on a real device: a visitor message to a waiting/assigned conversation produces a heads-up
       that peeks over the screen and shows on the lock screen (`dumpsys notification` reports the channels
-      at `mImportance=4`).
+      at `mImportance=4`). **Blocked on the phone**, disconnected from debug for ~24h (author, 2026-09-25);
+      note this needs a fresh install for the raised importance to take effect (see the constraint above).
+      Item stays open until this device proof exists.
