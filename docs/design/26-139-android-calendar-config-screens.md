@@ -52,11 +52,14 @@ when the operator holds none of the four. The full «Конфигурация з
   `BookingsTab.kt`/`BookingsScreen.kt`/`AppShellScreen.kt`/`AppModule.kt`/both `strings.xml`). PRs one at a
   time.
 
-## Author decisions (small)
-1. **Calendar timezone on create** — free-text default `Europe/Moscow` (minimal) vs localized dropdown
-   (console has it since 25-16). Rec: free-text now, dropdown later. (Edit never changes tz.)
-2. **`(нужна правка)` backfill badge** on worker rows — include vs drop as console-specific noise. Rec: drop
-   unless the demo tenant has backfilled workers.
+## Author decisions (settled, 2026-09-25)
+1. **Calendar timezone on create → localized dropdown** (as the console has since 25-16), NOT free-text. The
+   Setup screen (26-142) needs a source of IANA zones + localized labels — mirror how ago-console builds its
+   timezone `Select` (check `25-16`); prefer a bundled localized zone list over a new endpoint unless the
+   console already exposes one. Edit still never changes tz (`PUT /calendars/{id}` omits it).
+2. **`(нужна правка)` backfill badge → dropped.** It reflects the console's `displayNameIsCustom == false`
+   (auto-derived name on backfilled records); noise for a fresh Android build. Do not render it on the
+   Masters card (26-140).
 
 ## Deferred (named, not papered over)
 Full readiness-chain hub «Может ли клиент записаться?» (26-143); Masters drill-downs (schedule/slots/recut).
