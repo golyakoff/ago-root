@@ -1,9 +1,19 @@
-# Analytics: from compute-on-read to pre-computed rollups
+# Analytics: raw events in a dedicated store, daily rollups on top
 
-**Status:** design proposal. Decision recorded in [`adr/0186`](../adr/0186-precomputed-analytics-rollups.md).
+**Status:** design proposal. Decision recorded in [`adr/0186`](../adr/0186-analytics-on-a-dedicated-event-store.md).
 **Scope:** AGO Chat's operator/site analytics family (Stage 18 `18-08`..`18-14`, plus the calendar-side
-phone-reveal and booking-funnel reports). No platform-shape change — a product-local read-model change
-of the kind `adr/0004` already governs.
+phone-reveal and booking-funnel reports). A product-local read-model change of the kind `adr/0004`
+already governs — plus **one new Infrastructure dependency**, which is why it also carries an ADR and
+touches `ago-deploy`, `secrets.md` and `personal-data.md`. No platform-shape change: `Ago.Platform.*`
+gains nothing, and the store sits behind AGO Chat's own Infrastructure adapter (§6).
+
+> **This revises an earlier pass** that proposed maintaining the rollups **in the operational
+> Postgres** off the outbox. The author rejected that direction: Postgres is already the scaling
+> bottleneck for concurrent conversations (`concurrency.md`, `caching.md`, rule 8), and adding
+> analytics ingestion, raw-event storage and aggregation load to it spends the exact resource the rest
+> of the platform is trying to protect. This version keeps the problem statement, the O(conversations)
+> diagnosis, the 499 incident and the screen enumeration below unchanged, and replaces the storage and
+> maintenance mechanism (§4 onward). `adr/0186` records why.
 
 ## 1. Problem statement
 
@@ -32,7 +42,9 @@ every screen load, by every operator, unindexable because the aggregation is the
 `O(N)`-per-request shape that produces the 499 that was observed on plumbing that was otherwise healthy.
 
 This is not a missing index. There is no index that turns "average first-response time across every
-conversation started in the last 30 days" into a point read; the aggregate *is* the work.
+conversation started in the last 30 days" into a point read; the aggregate *is* the work. And it runs on
+the **operational Postgres** — the same instance serving every visitor mint, every message write and every
+capacity claim, which `concurrency.md` and `caching.md` already treat as the resource under most pressure.
 
 ## 2. What each analytics screen needs
 
@@ -49,231 +61,435 @@ Enumerated so the pre-computed model can be checked against every consumer, not 
 | Phone reveals (contact) | `IContactRevealRepository.List…` | `contact_reveals.id` keyset | (a receipt list, not an aggregate) | one row per reveal event | `contact_reveals` |
 | Widget install funnel | `IWidgetActivityReadStore` | `day` (UTC) | site | loads / opens / conversations | **`site_widget_activity` — already a daily rollup** |
 
-Two of these are already the right shape and are the precedent this design generalises:
+Two of these are already the right *shape* and are the precedent this design generalises — while showing
+its limit:
 
-- **`site_widget_activity`** (`23-07`) is a per-`(site_id, day)` counter table, maintained by an
-  `ON CONFLICT (site_id, day) DO UPDATE SET loads = loads + excluded.loads` incremental upsert
-  (`WidgetActivityWriter`). Its read (`WidgetActivityReadStore`) is a trivial `SUM` over a day range —
-  **O(days), instant.** This design says: do that for the rest of analytics, off the outbox rather than
-  off a best-effort in-memory accumulator.
+- **`site_widget_activity`** (`23-07`) is a per-`(site_id, day)` counter table maintained by an
+  increment upsert, read as an O(days) `SUM`. It proves the **rollup shape** is right. It lives in the
+  operational Postgres and is fed by a best-effort in-memory accumulator, and it is the very thing this
+  design does *not* copy verbatim: its counters are approximate by licence, and it puts a daily table on
+  the same instance under load. This design keeps its read shape and moves the storage off Postgres.
 - **Phone reveals** are already a keyset list of individual receipt rows, not an aggregation — nothing to
-  pre-compute. It stays as is.
+  pre-compute, and nothing to move. It stays as is.
 
-## 3. Events available vs. events needed
+## 3. The two-layer model, and where each layer lives
 
-The platform already has the machinery this design needs: a transactional **outbox** (state change + integration
-event in one transaction, `adr/0005`), the **`OutboxDispatcher`** draining it to RabbitMQ, **competing idempotent
-consumers** with an **`inbox` ledger** (`(message_id, consumer)`, `adr/0017`), and the exact precedent consumer —
-**`UnreadCounterConsumer`**, which maintains a counter off `MessageAccepted` idempotently. A rollup consumer off
-the outbox is the natural fit (see §5). But the current event set was built for delivery and fan-out, not for
-analytics, so some inputs are not yet on the broker.
+The author's own framing — "store the raw events, build reports on top, like Grafana" — is adopted in
+full, and this time the engine matches it. Two layers:
+
+| Layer | What it is | Where it lives |
+|---|---|---|
+| **Raw events** | An append-only, write-only log of every analytics-relevant fact, one row per event, no lossy pre-quantization. The substrate any current *or future* report is sliced from — by hour, by segment, by funnel step. | A **dedicated event store** (§5: ClickHouse), never the operational Postgres |
+| **Daily rollups** | A derived, narrow table: per tenant-local **day** × site × dimension, additive counters and decomposed averages/rates. A *view* on the raw layer, cheap to read, cheap to rebuild, never the only stored form. | The same event store, produced by an **aggregator** (§7) |
+
+The raw layer is the source of truth *for analytics*; PostgreSQL remains the source of truth for the
+business (`data-model.md`). The raw layer is reconstructible from PostgreSQL by backfill (§8) for as long
+as PostgreSQL still holds the underlying conversations — which is what keeps the new store a *projection*
+in spirit even though it holds facts (attribution, funnel steps) that PostgreSQL does not retain forever.
+
+### 3.1 The freshness contract — eventual consistency is accepted, and shown
+
+**Analytics is explicitly allowed to be stale.** There is no requirement for real-time or query-time-exact
+computation. Report data may lag by up to roughly **one day** and that is fine. The two real requirements
+are the ones this design optimises for:
+
+1. **Reads are fast** — an instant grouped scan over a pre-computed rollup, never a live aggregation.
+2. **The staleness is known and displayed up front** — every analytics response carries an explicit
+   **`computedAsOf`** marker so the UI can state the data currency ("computed on data as of …"). A bounded,
+   explicit, *shown* as-of marker, never a hidden lag a reader mistakes for live.
+
+This permits the **simplest** aggregator that meets those two: a **scheduled/batch** rollup, not a tight
+streaming pipeline. Raw events are still ingested continuously (§4) — they are cheap and the raw layer must
+stay complete for future reports — but the *rollups* need not be near-real-time. The consequence, folded
+through the rest of this document: the consistency/latency language is relaxed to "fast reads + a known,
+displayed freshness marker", the "today's partial day" handling is whatever the batch cadence naturally
+gives (§7), and `computedAsOf` comes from the last successful rollup run (§7.3).
+
+## 4. Delivery path — how a fact reaches the raw layer
+
+The operational write path is untouched. Nothing publishes from a request handler (rule 4); nothing
+queries the event store to make a write decision (rule 8, and it never could — it is a different engine).
+
+```
+state change in Ago.Chat.Api / Worker
+   │  (same DB transaction, rule 4)
+   ▼
+outbox row  ──OutboxDispatcher──▶  RabbitMQ  ──▶  AnalyticsIngestConsumer (Ago.Chat.Worker)
+(operational Postgres)              (Kafka later,        │  batches N events / T ms
+                                     adr/0006)           ▼
+                                              ClickHouse  analytics_events  (raw, append-only)
+                                                          │
+                                                          ▼  (aggregator, §7)
+                                              ClickHouse  analytics_daily_rollups  (derived)
+```
+
+### 4.1 Events available vs. events needed
+
+The platform already has the machinery for the *delivery* half: a transactional **outbox** (`adr/0005`),
+the **`OutboxDispatcher`** draining it to RabbitMQ, and competing consumers (`adr/0017`). The current
+event set was built for delivery and fan-out, not analytics, so some inputs are not yet on the broker.
 
 | Analytics input | Event today | Gap |
 |---|---|---|
-| Conversation started (+ site, visitor) | `ConversationStarted` **domain event only — no mapper, not published** | Needs an integration event, **enriched** with the read-time attribution dimensions: resolved channel label, `traffic_referrer_host`, `traffic_utm_campaign` |
-| First visitor / first operator message | `MessageAccepted` (published; carries `conversation_id`, `author_kind`, `sequence`, `OccurredAt`) | **Sufficient** — the consumer derives first-of-kind timestamps from the stream |
+| Conversation started (+ site, visitor, attribution) | `ConversationStarted` **domain event only — no mapper, not published** | Needs an integration event, **enriched** with the read-time attribution dimensions: resolved channel label, `traffic_referrer_host`, `traffic_utm_campaign`, **and the tenant IANA zone** (§9) |
+| First visitor / first operator message | `MessageAccepted` (published; carries `conversation_id`, `author_kind`, `sequence`, `OccurredAt`) | **Sufficient** — the aggregator derives first-of-kind timestamps from the stream |
 | Operator attribution | `ConversationAssignedToOperator`, `ConversationTransferred` (both published) | Sufficient for the assigned-operator fallback; first-operator attribution comes from `MessageAccepted` |
-| Conversation closed (+ duration, missed) | `ConversationClosed` → wire `ConversationEnded` (published) | **Needs to carry `closed_at`** (it may already; confirm) — duration and missed are resolved at close |
+| Conversation closed (+ duration, missed) | `ConversationClosed` → wire `ConversationEnded` (published) | **Confirm it carries `closed_at`**; duration and missed are resolved at close |
 | Conversion outcome | `SetConversationOutcomeHandler` writes `conversations.outcome` — **no integration event** | Needs `ConversationOutcomeRecorded` (carries new outcome; supersedes prior) |
 | Tags | `TagConversation` / `UntagConversation` — **no integration event** | Needs `ConversationTagged` / `ConversationUntagged` (carry `tag_id`) |
-| Booking-funnel task | `module_tasks` open/close — **no integration event** | Needs `ModuleTaskOpened` / `ModuleTaskClosed` (carry `module_key`) — or leave module-flow compute-on-read (§9) |
+| Booking-funnel task | `module_tasks` open/close — **no integration event** | Needs `ModuleTaskOpened` / `ModuleTaskClosed` (carry `module_key`) — or leave module-flow compute-on-read (§10) |
 | Phone reveals | `contact_reveals` row write — no event | **No change** — a receipt list, not an aggregate |
 
-Every new event obeys the existing contract rules (`messaging.md`): past-tense fact, ids + immutable values
-only, **no message body / no personal data on the wire** (`personal-data.md`), keyed by `conversation_id`,
-`MessageId` as the idempotency key. Each is staged to the outbox **in the same transaction** as the state
-change it reports (rule 4) — e.g. `ConversationOutcomeRecorded` beside the `outcome` column write.
+Every new event obeys the existing contract rules (`messaging.md`): past-tense fact, ids + immutable
+values only, **no message body / no personal data on the wire** (`personal-data.md`), keyed by
+`conversation_id`, `MessageId` as the idempotency key. Each is staged to the outbox **in the same
+transaction** as the state change it reports (rule 4).
 
-## 4. The pre-computed model
+### 4.2 The ingestion consumer
 
-Two layers, matching the "raw events + rollups layered on top" (the author's Grafana analogy), realised in
-Postgres rather than a separate store (§5 argues why Postgres earns it here):
+A new competing consumer, **`AnalyticsIngestConsumer`**, in `Ago.Chat.Worker`, subscribed to the topics
+above plus `MessageAccepted`. Its only job is to translate each event into one raw row and **insert in
+batches** — ClickHouse rewards large inserts and punishes per-row ones, so the consumer buffers events and
+flushes on a size **or** time bound (whichever first), acking the batch once the insert returns.
 
-### 4.1 Layer 1 — a per-conversation fact projection
+**Idempotency without the Postgres inbox.** Every other consumer records `(message_id, consumer)` in the
+operational Postgres `inbox` (rule 5, `adr/0017`). This one **must not** — a row per analytics event is
+exactly the operational-Postgres write load this whole design exists to avoid. Idempotency moves into the
+event store instead:
 
-`analytics_conversation_facts` — **one row per conversation**, the materialised current state the rollup deltas
-are computed against. This is what makes incremental maintenance both *correct under change* (an edited outcome,
-a removed tag) and *naturally idempotent* (reprocessing recomputes the same state).
+- Each raw row carries `event_id` = the outbox `MessageId`. The raw table is a **`ReplacingMergeTree`**
+  ordered on a key that includes `event_id`, so a redelivered event collapses to one row on background
+  merge.
+- Because merges are asynchronous, a duplicate can be briefly present. Counters therefore are **not**
+  computed by a naive insert-time trigger that would double-count it; they are recomputed from the
+  **deduplicated** raw layer by the aggregator (§7), which is idempotent by construction. At-least-once
+  redelivery, out-of-order arrival and late events are then all the same operation: recompute the
+  affected day from raw.
 
-| Column | Notes |
-|---|---|
-| `conversation_id` (PK) | |
-| `site_id`, `created_at` (timestamptz), `created_day` (date) | `created_day` = `created_at` at **UTC** (§4.4) — the bucket this conversation belongs to, fixed for life |
-| `channel_label`, `attributed_operator_id`, `referrer_label`, `utm_campaign` | the resolved attribution dimensions — the same values the current `SiteAnalyticsSql` computes at read time, resolved once here |
-| `first_visitor_at`, `first_operator_at` (nullable) | `min()` folded from the `MessageAccepted` stream |
-| `closed_at` (nullable), `state`, `outcome`, `missed` (bool) | resolved at close / outcome events |
-| `applied_hash` or per-metric "last contributed" snapshot | what this row last added to the rollup, so a delta is `new − old` |
+This is the first AGO consumer that does not use the Postgres inbox ledger. That is a deliberate,
+recorded consequence (`adr/0186`), not an oversight — the ledger's guarantee is replaced by the store's
+own dedup semantics, which is the only version of the guarantee that keeps the load off Postgres.
 
-Tags are a child table `analytics_conversation_fact_tags (conversation_id, tag_id)` because a conversation holds
-zero-to-many — the same reason `TagBreakdownReadStore` runs a separate fan-out query today.
+## 5. Choosing the event store
 
-This layer is bounded (one row per conversation, indexed by `(site_id, created_day)`), and it replaces the
-expensive `LEFT JOIN LATERAL` over the 64-partition `messages` table with an **incremental fold** done once per
-message as it happens, instead of re-scanning history on every read.
+Judged on: write throughput for high-volume append-only events; raw-retention + arbitrary
+re-aggregation; **operational weight for a 1–2-person team pre-launch** (a new stateful pod means deploy,
+PVC, secret, backup, upgrades — `edge.md`, `secrets.md`, `take-a-backup`); and fit with the existing
+single-node k8s stand (postgres/redis/rabbitmq/minio, each one Deployment + one RWO PVC).
 
-### 4.2 Layer 2 — daily rollup buckets
+| Engine | Write throughput | Raw retain + re-slice | Ops weight (pre-launch) | Stand fit | Verdict |
+|---|---|---|---|---|---|
+| **ClickHouse** (MergeTree family) | Excellent — columnar, built for high-volume batched inserts | Excellent — raw `MergeTree` kept indefinitely at this volume; rollups are ordinary tables or materialized views; re-slice by any column | **Moderate** — one stateful pod, one binary, one secret; backup via native `BACKUP` to the existing MinIO, or `clickhouse-backup` | Same single-Deployment + RWO-PVC shape as rabbitmq/minio; HTTP + native ports | **Recommended** |
+| TimescaleDB, **separate instance** | Good, row-store at heart; columnar only via compressed chunks | Good — hypertables + continuous aggregates; SQL familiar | Moderate–low *conceptually* (reuses Npgsql/Dapper + `pg_dump` backup) but it is **a second Postgres flavour to version and operate** | Fits, but now two Postgres-family engines on the box | Runner-up — loses on compression/scan for wide append-only events and on adding a *second* Postgres to reason about; wins only on tooling familiarity |
+| Kafka-as-log + an OLAP sink | Excellent ingest | Only with the sink — Kafka answers no query itself | **High** — Kafka is "later" (`adr/0006`), and this is *two* new systems (log + sink) | Poor — nothing on the stand today | Rejected — does not serve reads on its own, and doubles the new-infra count |
+| Elasticsearch / OpenSearch | Good | Aggregations possible but memory-hungry; a search engine, not a columnar OLAP one | **High** — JVM heap tuning, shard management | Poor | Rejected — wrong shape, heaviest ops for the team size |
+| Druid / Pinot | Excellent at real-time OLAP | Excellent | **Very high** — multi-component (coordinator/broker/historical/…) | Poor — many pods | Rejected — purpose-built for a scale and a team this project is nowhere near |
+| DuckDB / Parquet on MinIO | Good in batch; awkward for concurrent streaming appends | Columnar Parquet, re-sliceable; **no incremental rollup, no server** | **Low infra** (no new pod, reuses MinIO) but **high code** — you build the query process, file compaction and the rollup engine yourself | Reuses MinIO | Honourable mention — the lightest *infra*, but it moves the complexity into code we maintain and loses a real query server; revisit only if a new pod is genuinely unacceptable |
 
-`analytics_daily_rollups` — a **narrow, long** table generalising the current `GROUPING SETS` output:
+**Recommendation: ClickHouse, single node.** It is the classic events-analytics fit, and it earns its
+one new pod: a raw `MergeTree` table takes cheap batched inserts and columnar aggregation, retains raw
+without pre-quantization, re-slices by any column for future reports, expresses rollups either as
+materialized views or as recompute targets, offers TTL for retention tiering, and backs up natively to
+the MinIO bucket already on the stand. Its honest cost is the subject of `adr/0186`'s Consequences: a
+second stateful datastore, a new secret, a new backup path, and a store that is eventually consistent
+with Postgres. The runner-up worth naming is TimescaleDB on a *separate* instance (declined: a second
+Postgres to operate buys tooling familiarity but not ClickHouse's columnar fit), and the lightest-infra
+idea worth naming is DuckDB/Parquet-on-MinIO (declined: it trades a pod for a pile of code we would own).
 
-| Column | Notes |
-|---|---|
-| `site_id`, `day` (date, UTC), `dimension_type`, `dimension_key` | PK. `dimension_type` ∈ {`total`, `channel`, `operator`, `referrer`, `campaign`, `tag`}. `dimension_key` = the channel label / operator id / host / campaign / tag id, or `''` for `total` |
-| `conversation_count` (bigint) | |
-| `first_response_seconds_sum`, `first_response_count` | avg first-response = sum / count (decomposed, per `date-and-time.md` "ordering never depends on a clock" and `OperatorLoadReport`'s own sum-of-sums fold) |
-| `duration_seconds_sum`, `duration_count` | avg duration = sum / count |
-| `missed_count` | |
-| `converted_count`, `not_converted_count`, `follow_up_count`, `unset_count`, `recorded_count` | conversion metrics (meaningful at `total` and `operator` scope; zero elsewhere). Rate = converted / recorded, computed at read |
+## 6. The raw event schema
 
-A single conversation contributes to **five rows for its `created_day`** — `total` + its channel + operator +
-referrer + campaign — exactly reproducing GROUPING SETS, plus one `tag` row per tag it holds. Storing rates and
-averages **decomposed** (numerator/denominator, sum/count) is load-bearing: counters must be additive to be
-maintainable incrementally, and the read reconstitutes the rate — never the store.
+One wide, append-only table. Representative ClickHouse DDL — the column *set* is the design point, not
+the exact types:
 
-Reads become: `SELECT … WHERE site_id = @s AND day >= @from AND day < @to GROUP BY dimension_type, dimension_key`
-— **O(days), a bounded scan on the PK**, no `messages` touch at all.
+```sql
+CREATE TABLE analytics_events
+(
+    event_id        UUID,                          -- = outbox MessageId; dedup key
+    event_type      LowCardinality(String),        -- see the vocabulary below
+    occurred_at     DateTime64(3, 'UTC'),          -- the UTC instant (rule 11)
+    tenant_zone     LowCardinality(String),        -- tenant IANA zone as-of-event (§9)
+    site_id         UUID,
+    conversation_id Nullable(UUID),
+    visitor_id      Nullable(UUID),
+    operator_id     Nullable(UUID),
+    channel         LowCardinality(String),        -- resolved channel label
+    referrer_host   String,                        -- traffic attribution
+    utm_campaign    String,
+    outcome         LowCardinality(String),        -- for ConversationOutcomeRecorded
+    tag_id          Nullable(UUID),                -- one event per tag add/remove
+    module_key      LowCardinality(String),        -- for module-task events
+    missed          Nullable(UInt8),               -- resolved at close
+    schema_version  UInt16,
+    correlation_id  UUID,
+    ingested_at     DateTime DEFAULT now()         -- for lag observability
+)
+ENGINE = ReplacingMergeTree(ingested_at)
+PARTITION BY toYYYYMM(occurred_at)
+ORDER BY (site_id, event_type, occurred_at, event_id);   -- event_id in the key ⇒ dedup on merge
+```
 
-### 4.3 The rollup consumer (Infrastructure, in `Ago.Chat.Worker`)
+**Metrics are derived, not pre-stored, wherever the raw stream already carries the inputs.** First-response
+seconds is not a column: it is `first-operator-message occurred_at − conversation-created occurred_at`,
+computed per conversation by the aggregator from the `MessageAccepted` / `ConversationStarted` rows.
+Duration is `closed_at − created_at`. Keeping these as derivations, not stored scalars, is what lets a
+future report redefine "first response" (business hours only? excluding auto-replies?) by changing a query
+rather than re-emitting events.
 
-A new **competing, idempotent** consumer — the shape `UnreadCounterConsumer` already proves — subscribed to the
-analytics-relevant topics. Per message, in **one transaction**:
+Event-type vocabulary (each a past-tense fact, one row per occurrence): `ConversationStarted`,
+`VisitorMessageSent`, `OperatorMessageSent`, `ConversationEnded`, `ConversationOutcomeRecorded`,
+`ConversationTagged`, `ConversationUntagged`, `ModuleTaskOpened`, `ModuleTaskClosed`, `WidgetLoaded`,
+`WidgetOpened`. Phone reveals stay in Postgres as a receipt list (§2); they are listed here only to note
+they were considered and left where they are.
 
-1. Record `(message_id, consumer)` in the `inbox` ledger; a duplicate is detected, skipped, acked (rule 5).
-2. Load (or create) the `analytics_conversation_facts` row for the conversation.
-3. Compute the **new** resolved fact from the event; compute the **delta** = new − old across every affected
-   `(dimension_type, dimension_key, metric)`.
-4. Apply the delta to `analytics_daily_rollups` with `ON CONFLICT (site_id, day, dimension_type, dimension_key)
-   DO UPDATE SET metric = metric + excluded.metric` — the identical increment-upsert `WidgetActivityWriter` uses,
-   made **idempotent** here by the fact-snapshot delta (re-applying a settled fact yields delta 0) and the inbox
-   ledger, where `WidgetActivityWriter`'s best-effort accumulator tolerated loss instead.
-5. Persist the updated fact row.
+This schema covers every screen in §2: site/own analytics (started + message + ended + attribution),
+conversion (outcome), tag breakdown (tag events + started for coverage), booking funnel (module-task
+events), widget funnel (load/open/started). It deliberately holds more than today's reports need — that
+is the point of a raw layer.
 
-Because the contribution is `new − old` against a stored snapshot, **at-least-once redelivery, out-of-order
-arrival, and later corrections are all the same operation**: recompute the fact, re-derive the delta. A
-`ConversationOutcomeRecorded` that flips Converted→NotConverted emits `−1 converted, +1 not_converted` with no
-special case.
+## 7. The aggregator — daily rollups per tenant-local day
 
-### 4.4 The UTC day boundary, and the one honest tension
+The rollup table generalises today's `GROUPING SETS` output into a narrow, long shape, keyed by the
+**tenant-local day**:
 
-Rule 11 stores `timestamptz` and the bucket key is `created_at` **at UTC**. This matches current behaviour: the
-existing stores window on raw `DateTimeOffset` comparisons with **no zone applied at all**, and the default
-window is `clock.UtcNow.AddDays(-30)` — already instant/UTC-based.
+```sql
+CREATE TABLE analytics_daily_rollups
+(
+    site_id                   UUID,
+    local_day                 Date,                    -- tenant-local calendar day (§9)
+    dimension_type            LowCardinality(String),  -- total|channel|operator|referrer|campaign|tag
+    dimension_key             String,                  -- label / id / host / '' for total
+    conversation_count        UInt64,
+    first_response_seconds_sum UInt64,  first_response_count UInt64,   -- avg = sum/count
+    duration_seconds_sum      UInt64,  duration_count       UInt64,   -- avg = sum/count
+    missed_count              UInt64,
+    converted_count UInt64, not_converted_count UInt64,
+    follow_up_count UInt64, unset_count UInt64, recorded_count UInt64,
+    rebuilt_at                DateTime
+)
+ENGINE = ReplacingMergeTree(rebuilt_at)
+ORDER BY (site_id, local_day, dimension_type, dimension_key);
+```
 
-`date-and-time.md` says "any daily aggregation takes an explicit zone parameter." The current endpoints are not
-daily aggregations in that sense — they take instant `from`/`to`. Pre-computing to **UTC-day** buckets means the
-minimum read granularity becomes one UTC day: a `from`/`to` is snapped to UTC-day boundaries. For the 30-day and
-7-day windows every screen actually uses this is exact; sub-day windows (which no screen requests) are no longer
-served. A future tenant-local-day refinement — bucketing by the tenant's IANA zone, or keeping UTC buckets and
-re-summing with a zone offset — is a separate decision, flagged as an **open question** below, not built in blindly.
+Averages and rates are stored **decomposed** (sum + count, numerator + denominator) so they stay additive
+and the read reconstitutes the ratio — never the store. A conversation contributes to five dimension rows
+for its local day (`total` + channel + operator + referrer + campaign) plus one `tag` row per tag,
+reproducing GROUPING SETS.
 
-### 4.5 Backfill
+### 7.1 Engine-native materialized view vs. a scheduled aggregator — and the choice
 
-A new rollup table is empty for history that predates it. A one-time, **idempotent** Worker backfill job replays
-existing state directly with SQL: it runs essentially the current aggregation SQL, but `GROUP BY created_day`
-(and the dimensions), and `INSERT … ON CONFLICT DO NOTHING` (or a from-scratch rebuild guarded by a marker) into
-the rollup tables and fact projection. This is the one place the old O(N) query is still allowed to run — once,
-offline, not on the request path. It is re-runnable (a `SELECT DISTINCT day` existence guard, the same shape the
-calendar's daily projection uses) and lands in the migration lane's wake, not inside the migration.
-
-## 5. Options considered
-
-| Option | What it is | Verdict |
+| Option | How it works | Verdict |
 |---|---|---|
-| **(a) Outbox-driven rollup tables + per-conversation fact projection, maintained by a new analytics consumer** | §4. Postgres tables, the platform's own outbox/inbox/consumer machinery | **Recommended** |
-| (b) Periodic materialized views (`REFRESH MATERIALIZED VIEW CONCURRENTLY` on a timer) | Keep the current SQL, refresh it every N minutes into a matview read by the endpoints | Rejected: the refresh still runs the full O(N) aggregation every cycle — it moves the cost off the request path but does not remove it, and it scales with total history, not with change. Staleness is the whole refresh interval. No incremental path. |
-| (c) Dedicated time-series / event store (ClickHouse, TimescaleDB, Prometheus-style) + rollups | The literal Grafana analogy — a separate columnar/TSDB engine | Rejected **for now**: it earns its keep at metrics volumes (millions of points/sec, high-cardinality time series) this product is nowhere near, and it violates the platform's own shape — a new stateful dependency to run, back up, secure and reason about (`secrets.md`, `personal-data.md`), a second source of truth to keep consistent, for aggregate volumes a Postgres rollup table serves from a bounded PK scan. `data-model.md`'s "PostgreSQL is the only source of truth; everything else is a cache, a queue, or a projection" is the rule this would break. Revisit only if a measured Postgres rollup is itself the bottleneck. |
-| (d) Hybrid — rollups in Postgres now, keep the door open to (c) | (a) plus a note | This is what (a) *is*: the consumer and the read port are engine-agnostic; moving the rollup store later is an Infrastructure swap, not a contract change |
+| **(a) Incremental materialized view** | A ClickHouse MV fires on each insert into `analytics_events`, writing deltas into a `SummingMergeTree` rollup | Rejected as the *primary* mechanism: an MV sees each inserted row, so a **redelivered** event (present until the raw `ReplacingMergeTree` merges it away) is summed **twice**. Making it correct means deduping before the MV, which the MV cannot do. It is also rigid about late events and tenant-zone/DST edge cases. |
+| **(b) Scheduled recompute from the deduplicated raw** | An `AnalyticsRollupAggregator` `BackgroundService` in `Ago.Chat.Worker` periodically runs, per touched `(site, local_day)`, `INSERT INTO analytics_daily_rollups SELECT … FROM analytics_events FINAL … GROUP BY …` for that day, computing `local_day = toDate(occurred_at, tenant_zone)` | **Recommended.** Recompute from the deduplicated (`FINAL`, or a `GROUP BY event_id` inner) raw is **idempotent**: running it twice yields the same rollup, so at-least-once redelivery, out-of-order arrival and late events cannot corrupt a counter. Re-slicing one day is a bounded columnar scan of that day's partition. |
 
-**Recommendation: (a).** It reuses machinery that already exists and is already proven in production
-(`OutboxDispatcher`, the inbox ledger, `UnreadCounterConsumer`, `site_widget_activity`'s increment-upsert),
-introduces no new operational dependency, keeps Postgres the single source of truth, and turns every analytics
-read into a bounded O(days) scan. The "Grafana" instinct is right about the *architecture* (raw resolved facts +
-rollups) and wrong only about the *engine* — at this product's volume Postgres is the engine.
+This is exactly where the author's "separate aggregator service" earns its place over pure MVs: the
+aggregator *owns* the rollup definition and can rebuild any day idempotently from raw, which is also what
+makes adding a new report (a new dimension, a new metric) a change to the aggregator query plus a rebuild,
+not an event re-emission.
 
-## 6. How it fits Clean Architecture
+### 7.2 Cadence, "today", and the resulting staleness
+
+Because eventual consistency is accepted (§3.1), the aggregator is a **plain scheduled batch**, not a
+near-real-time loop. The recommended cadence is a **run every hour** (an ordinary `PeriodicTimer`
+`BackgroundService`), which keeps the *maximum* staleness a reader ever sees to about an hour while still
+being a trivially simple batch job; the constraint permits as coarse as **once a day**, and the cadence is
+a single configurable value — start hourly, loosen to daily if even that proves more than needed, tighten
+only if a real reason appears. Whatever it is, it is stated in the deployed configuration and surfaced
+through `computedAsOf`, so the reader never has to guess.
+
+**"Today" (the partial current tenant-local day)** needs no special read path and no live-union trick. Each
+run recomputes every dirty day *including* the current local day from raw, so today's partial bucket is as
+fresh as the last run — i.e. at most one cadence-interval stale, exactly like every other day. There is no
+"combine live + rollup" path: the whole point of accepting eventual consistency is that the rollup *is* the
+answer, and its currency is shown rather than hidden.
+
+**Late events** need no reconcile machinery beyond the cadence either. The aggregator recomputes any
+`(site, local_day)` that has seen inserts since its last run — a cheap `max(ingested_at)` watermark per day,
+or a small "dirty days" set — so a late event whose `occurred_at` falls in an already-closed day simply
+marks that day dirty and it is rebuilt on the next run. Because a rebuild is a full recompute of the day
+from the deduplicated raw, there is never a delta to get wrong.
+
+### 7.3 Where `computedAsOf` comes from
+
+Each successful aggregator run records one metadata row — an `analytics_rollup_runs` entry holding the run's
+completion instant (UTC) and the newest `local_day` it covered. The **freshness marker returned with every
+analytics response is the last successful run's completion instant** (rendered in the caller's zone,
+`date-and-time.md`), optionally alongside the covered `local_day` for a human-friendly "data as of
+<yesterday>". If a run fails, `computedAsOf` simply does not advance — the reader sees honestly older data,
+never silently-partial data, because a failed run writes no metadata row and leaves the previous rollup in
+place. This is the one piece of state the reads consult beyond the rollup itself (§8).
+
+## 8. Reads — behind the unchanged ports
+
+The Application read **ports keep their query signatures**: `IOperatorAnalyticsReadStore`,
+`IConversionReportReadStore`, `ITagBreakdownReadStore` (and `IModuleFlowReadStore`,
+`IWidgetActivityReadStore` if migrated). Only the implementations move — into a new Infrastructure adapter
+project talking to ClickHouse (§ below). The engine stays swappable: replacing ClickHouse later is an
+Infrastructure edit, not a contract change.
+
+**The one intended contract change is the freshness marker** (§3.1). Every analytics response gains a
+`computedAsOf` field — an **additive** change (`api-design.md` / `messaging.md` versioning: a new optional
+field is compatible), so existing clients keep working and the Android screen adds a "data as of …" line.
+The cleanest Clean-Architecture expression is a small dedicated port, `IAnalyticsFreshnessReadStore`
+(`GetLastRollupRunAsync`), that the analytics endpoints call **once** alongside the aggregate read, rather
+than threading a timestamp through every aggregate method — one query against `analytics_rollup_runs`
+(§7.3), one place, injected into the endpoints that assemble analytics responses. Handlers'
+aggregate-shaped logic is untouched; they gain one freshness read and one response field.
+
+A read becomes a grouped range scan on the rollup PK:
+
+```sql
+SELECT dimension_type, dimension_key, sum(conversation_count), …
+FROM analytics_daily_rollups FINAL
+WHERE site_id = @s AND local_day >= @from AND local_day < @to
+GROUP BY dimension_type, dimension_key
+```
+
+**O(days), independent of total history**, and it never touches `messages`.
+
+### How it fits Clean Architecture
 
 | Layer | What goes here | Why |
 |---|---|---|
 | Domain | Nothing new | Analytics is a read concern; no new invariant |
-| Application (`Abstractions`) | The **rollup read ports** — either the existing `IOperatorAnalyticsReadStore` / `IConversionReportReadStore` / `ITagBreakdownReadStore` interfaces kept **unchanged** (only their implementation swapped), or narrower rollup-shaped ports if the response DTOs change. New **event contracts** in `Ago.Chat.Contracts`. The consumer's work, if it invokes a use case, is an Application handler (the `RecordUnreadMessageHandler` shape) | Dependency rule: Application declares the port, knows no Npgsql. Keeping the read ports' signatures means the endpoints and handlers (`GetOwnAnalyticsForOperatorHandler`) are untouched — the swap is invisible above Infrastructure |
-| Infrastructure (`Infrastructure.Postgres`) | The rollup read-store implementations (Dapper over `analytics_daily_rollups`), the fact-projection writer, the migration | `adr/0004`: Dapper for read models. Same place `WidgetActivityReadStore` already lives |
-| Host (`Ago.Chat.Worker`) | The new analytics **consumer** (`BackgroundService`, competing, idempotent), its options, DI wiring; the backfill job | Consumers run in Worker (`messaging.md`); DI wiring lives only in hosts (rule 1) |
+| Application (`Abstractions`) | The read **ports' query signatures kept**; one new small port `IAnalyticsFreshnessReadStore`; new **event contracts** in `Ago.Chat.Contracts` | Dependency rule: Application declares the ports, knows no ClickHouse client. Query signatures unchanged; the additive `computedAsOf` comes from the one new freshness port (§8) |
+| Infrastructure — **new project `Ago.Chat.Infrastructure.Analytics`** | The ClickHouse read-store implementations, the ingest consumer's store writer, the aggregator's SQL, the ClickHouse DDL/migration runner | `adr/0004`'s read side, in its own adapter because the engine and its driver are new. Keeps the ClickHouse dependency out of `Infrastructure.Postgres` |
+| Host (`Ago.Chat.Worker`) | `AnalyticsIngestConsumer`, `AnalyticsRollupAggregator`, the backfill job, DI wiring, options | Consumers/BackgroundServices run in Worker (`messaging.md`); DI wiring lives only in hosts (rule 1) |
 
-**What stays vs. changes in the three current read stores:**
+**The ClickHouse connection is an external resource behind a port (rule 2)** — no client leaks into
+Domain or Application. The one new NuGet is a ClickHouse ADO.NET provider (e.g. `ClickHouse.Client`); it
+replaces hand-rolling the HTTP + RowBinary protocol, and hand-rolling is worse because batched inserts,
+connection pooling and type mapping are exactly the fiddly, well-solved parts a maintained provider
+gives — state the package and this reasoning in the slice that adds it.
 
-| Store | Change |
-|---|---|
-| `OperatorAnalyticsReadStore` | **Reimplemented** against `analytics_daily_rollups`. The `LEFT JOIN LATERAL` over `messages` and the `GROUPING SETS` pass are deleted; the read becomes a grouped range scan. The `GROUPING SETS` *semantics* (total + per-dimension, the `grouping()` disambiguation, the "no manufactured zero row" rules) move into how rollup rows are selected. The zero-conversation → explicit-zero-bucket special case is preserved. |
-| `ConversionReportReadStore` | **Reimplemented** against the conversion columns of the rollup table. The `MinimumSampleForRate` ranking stays in C# (it reads `recorded_count` from the bucket). |
-| `TagBreakdownReadStore` | **Reimplemented** against the `tag` dimension rows + a `total` row for coverage. The "counts once per tag, sum ≠ total" property is naturally preserved (tag rows are independent of the total). |
-| `OperatorLoadReportReadStore` | **Deferred / possibly unchanged** — see §9. Its `concurrent_load` overlap computation does not reduce to an additive daily counter, and `data-model.md` explicitly calls interval-overlap aggregation "a read concern for whenever a report is measurably slow, not before." Not the 499 culprit. |
-| `ModuleFlowReadStore` | Optional rollup (started/closed are simple additive counters); low priority. |
+## 9. Tenant-local-day handling
 
-## 7. Consistency and latency contract
+**The day boundary is the tenant's IANA zone, not UTC.** This is a decided constraint, and it changes two
+things from the earlier (UTC-day) draft.
 
-- **Eventually consistent.** A counter reflects an event once the outbox has dispatched it and the consumer has
-  applied it. Bound = outbox lag + consumer processing. Measured precedents on this stack: outbox publish lag is
-  a live gauge (`nfr.md`), and a cross-product outbox→consumer round trip was measured at **~450–490 ms**
-  end-to-end (`messaging.md`, `22-08`); a same-process consumer is faster. Analytics tolerates this by nature —
-  a 30-day report does not need the last two seconds.
-- **No read-your-write guarantee, and that is allowed here.** Rule 8 forbids caching *what a write decision
-  depends on* (capacity, sequences, compare-and-set reads). Analytics counters are **not** such a read — no write
-  decision consults them — so serving them from a projection is not a rule-8 violation. This is the distinction
-  that makes the whole design legal.
-- **"Today" (the partial current day)** is served identically to any other day: today's `(site_id, today)` bucket
-  rows are updated continuously as events arrive, so a `[from, today]` read includes today's partial bucket as
-  fresh as the last consumed event. No special "combine live + rollup" read path is needed — the difference from
-  `site_widget_activity` is only that this consumer is outbox-driven and idempotent rather than a periodic flush.
+- **Where the zone comes from.** AGO Chat's `sites` table has **no** IANA zone column today — the calendar
+  product owns zones (`adr/0049`), chat has never needed one. So this design **adds `sites.time_zone`**
+  (IANA string, e.g. `Europe/Moscow`), defaulting to a single configured deployment default (recommended:
+  `UTC`, labelled as such) for every existing row — no backfill invents a zone nobody set. The enriched
+  `ConversationStarted` integration event carries `tenant_zone` resolved from the site at publish time, so
+  every raw event self-describes its zone and the aggregator needs no lookup.
+- **How the local day is computed.** `local_day = toDate(occurred_at, tenant_zone)` in the aggregator.
+  Storing the **UTC instant + the zone string** per event (never a pre-localised day) means the raw layer
+  is zone-agnostic and any future re-slice — a different zone, an hourly bucket — is still possible.
+- **DST** is handled by the engine's tz database: `toDate(instant, zone)` maps each instant to the correct
+  local calendar day across a DST transition, and the at-least-one-DST-boundary test (`date-and-time.md`)
+  covers it.
+- **A zone that changes** (a tenant edits `sites.time_zone`) re-labels *future* events; past raw events
+  keep the zone they were stamped with, so historical days do not silently re-bucket. If a full
+  re-label is ever wanted, it is a raw re-read (backfill, §10) — not a schema problem.
 
-## 8. Performance — the load test to run (rule 7)
+## 10. Backfill from existing Postgres
 
-No numbers are invented here. This section states the test that must produce them before any "it scales" claim,
-following the `load/` convention (`load/scenarios/`, k6, honest reporting).
+A new store is empty for history that predates it. A one-time, **re-runnable** Worker backfill job reads
+existing `conversations` / `messages` / `conversation_tags` / outcomes from the operational Postgres
+(read-only, off-peak — this is the one place the old O(N) read still runs, once, offline, never on the
+request path), synthesises the corresponding raw events with their historical `occurred_at` and the site's
+`tenant_zone`, and inserts them into `analytics_events`. The aggregator then builds the rollups.
 
-- **Seed** a site to realistic volume — e.g. 10k / 100k conversations across a 30-day window, each with a message
-  history and a mix of channels, operators, referrers, campaigns, tags and outcomes (a seeding script, not the
-  demo tenant).
-- **Baseline:** measure `GET /conversations/analytics/me` and `/conversations/analytics` p50/p95/p99 against the
-  **current** compute-on-read stores at each volume — this is the number that regresses today and the reason for
-  the change. Expect it to climb roughly linearly with conversation × message volume.
-- **After:** same requests against the rollup stores. Expected shape: **flat in total history, linear only in the
-  requested day count** (≤ 30 rows-worth of buckets per dimension). Report the crossover and the absolute p95.
-- **Consumer:** measure sustained ingest — events/sec the analytics consumer keeps up with, its lag under a
-  message burst, and that the outbox lag gauge stays bounded. Confirm idempotency by replaying a batch and
-  asserting counters are unchanged.
-- **Backfill:** time the backfill job at each volume; confirm it is re-runnable without double-counting.
+It is idempotent by construction: each synthesised row's `event_id` is **derived deterministically** from
+the source row id + event kind, so a second run inserts identical rows that the `ReplacingMergeTree`
+collapses. It is also the **reconciliation tool** — if the rollups are ever suspected wrong, re-run
+backfill for a window and let the aggregator rebuild.
 
-Report the real numbers in the load run's `load/reports/` entry. Until then the claim is "expected O(days)", not
-"measured".
+## 11. Retention, cost, backup
 
-## 9. Slice breakdown
+- **Raw retention.** The author wants raw kept for future report development, with no lossy
+  pre-quantization. At this product's volume ClickHouse's columnar compression makes raw cheap; the
+  recommendation is to **keep raw indefinitely for now** and add a TTL (or an S3/MinIO cold-tier via a
+  ClickHouse S3 disk) only when a measured size justifies it. Rollups are tiny and kept indefinitely.
+- **Backup.** The new store is a new backup surface. `k8s/backup/backup.sh` currently `pg_dump`s every
+  Postgres database and mirrors the MinIO bucket; it must gain a **ClickHouse step** — `BACKUP DATABASE
+  analytics TO S3(<minio>/…)` (reusing the MinIO already backed up), or `clickhouse-backup`, added to the
+  same GPG-encrypt-and-pull pipeline and named in the backup manifest's enumeration so a run that silently
+  omits it is caught (`take-a-backup`, "the failure that looks like success"). Priority ranking for
+  restore: **rollups are reconstructable from raw; raw is reconstructable from Postgres by backfill for
+  the window Postgres still holds** — so the genuinely irreplaceable data is raw events older than what
+  Postgres can reproduce (e.g. after a conversation is erased or pruned). That is what the backup protects.
+- **Secret.** A new `CLICKHOUSE_PASSWORD` in `infra-credentials`, read by `Ago.Chat.Worker` (ingest +
+  aggregate) and `Ago.Chat.Api` (reads). It gets a row in `secrets.md` (rotation class **Restart** — the
+  processes reconnect; the stored data is not encrypted under it) and a key in each `.env.example`.
+- **Personal data.** The raw layer holds `visitor_id` / `conversation_id` / `operator_id` — identifiers
+  that single out individuals — but **no message body, name or phone** (same contract rule as every
+  integration event, `messaging.md` / `personal-data.md`). The event store is therefore a **new place
+  personal data lives**, and `personal-data.md` gets a row for it in the same change. Erasure: the ids may
+  legitimately **dangle** after a conversation is erased — the same decision `conversation_assignments`
+  already makes ("erasing a conversation must not take last month's numbers with it"), since the raw layer
+  holds counts and ids, not content. A **site-level** erasure (`SiteErased`, already published,
+  `messaging.md`) is the one that should propagate: the analytics consumer can subscribe to it and
+  `ALTER TABLE analytics_events DELETE WHERE site_id = …` (plus the rollups), so a wholly-erased tenant
+  leaves no analytics trace. Recommended, and called out as a consequence rather than silently assumed.
 
-Vertical slices, each landing one promise green (rule 15). Dependencies noted; **M** marks the migration-lane
-slices (one migration in flight at a time, rule 13).
+## 12. Performance — the load test to run (rule 7)
 
-| # | Slice | Depends on | Size | Lane |
+No numbers are invented here. This states the test that must produce them before any "it scales" claim,
+following the `load/` convention (k6, honest reporting into `load/reports/`).
+
+- **Seed** the operational Postgres to realistic volume (e.g. 10k / 100k conversations across a 30-day
+  window, with message histories and a mix of channels, operators, referrers, campaigns, tags, outcomes) —
+  a seeding script, not the demo tenant.
+- **Backfill:** run it at each volume; time it; run it **twice** and assert raw row count is stable (dedup)
+  and rollups identical (idempotent/re-runnable).
+- **Ingest throughput:** drive conversation-lifecycle events through outbox → broker → consumer; measure
+  events/sec the `AnalyticsIngestConsumer` sustains, batch-flush latency, ClickHouse insert rate, consumer
+  lag under a burst — and, the load-bearing check, that **operational-Postgres write-path metrics are
+  unchanged** (the entire point of moving the load off it).
+- **Aggregator:** measure per-day recompute time for the busiest day at each volume, and confirm one full
+  scheduled run completes well inside its cadence at the top volume (so `computedAsOf` keeps advancing).
+  Freshness here is the batch cadence by design (§7.2), not a near-real-time target — the test confirms the
+  cadence is *achievable*, and that `computedAsOf` reflects the last successful run.
+- **Reads:** p50/p95/p99 for `/analytics`, `/analytics/me`, `/conversion-report`, `/tag-breakdown`
+  against the **current** compute-on-read Postgres stores (the baseline that regresses, expected to climb
+  ~linearly with volume) and against the ClickHouse rollups (expected flat in total history, linear only
+  in requested day count). Report the crossover and the absolute p95.
+- **Idempotency / late events:** replay a batch, assert counters unchanged; inject an out-of-order and a
+  late event, assert the affected day reconciles.
+
+Until those numbers exist the claim is "expected O(days)", not "measured".
+
+## 13. Slice breakdown
+
+Vertical slices, each landing one promise green (rule 15). Dependencies noted; **M** marks the one
+operational-Postgres migration (`sites.time_zone`) — the migration lane, one migration in flight at a
+time (rule 13). ClickHouse DDL is *not* an EF migration, but only one schema change should be in flight at
+once as a matter of prudence. **`ago-deploy`/infra** is flagged where a slice touches it.
+
+| # | Slice | Depends on | Size | Repo / lane |
 |---|---|---|---|---|
-| S1 | **Event contracts + publishers.** New integration events (`ConversationStarted` enriched with channel/referrer/campaign; `ConversationOutcomeRecorded`; `ConversationTagged`/`ConversationUntagged`; confirm `ConversationEnded` carries `closed_at`), each staged to the outbox in the same transaction as its state change (rule 4), with mappers and contract tests. No consumer yet. | — | M–L | — |
-| S2 | **Rollup + fact schema migration.** `analytics_conversation_facts` (+ `_fact_tags`), `analytics_daily_rollups`, indexes/PKs. EF migration; `down` drops cleanly. Backup before applying (`take-a-backup`). | — | M | **migration** |
-| S3 | **The analytics consumer.** Competing, idempotent (inbox ledger), fact-projection + delta upsert, subscribed to S1's topics + `MessageAccepted`. Testcontainers integration test: events in → buckets correct; redelivery → unchanged; out-of-order → correct. | S1, S2 | L | — |
-| S4 | **Backfill job.** Worker job that rebuilds facts + buckets from existing `conversations`/`messages`/`conversation_tags` in `created_day` groups; idempotent, re-runnable. | S2, (S3 for parity) | M | — |
-| S5 | **Switch site + own analytics reads.** Reimplement `OperatorAnalyticsReadStore` against the rollup; keep `IOperatorAnalyticsReadStore` signature so `GetOwnAnalyticsForOperatorHandler` is untouched. Parity test: rollup read == old SQL on a fixture. | S3, S4 | M | — |
-| S6 | **Switch conversion read.** Reimplement `ConversionReportReadStore` against rollup conversion columns; keep ranking + `MinimumSampleForRate` in C#. | S3, S4 | S–M | — |
-| S7 | **Switch tag-breakdown read.** Reimplement `TagBreakdownReadStore` against `tag` + `total` rows. | S3, S4 | S–M | — |
-| S8 | **Load test + report.** §8, into `load/scenarios/` + `load/reports/`. Gates the "it scales" claim. | S5–S7 | M | — |
-| S9 (optional) | **Module-flow rollup** (`ModuleTaskOpened`/`Closed` events + counters). Simple additive; low priority. | S1–S3 | S–M | — |
-| — (deferred) | **Operator-load rollup.** The `concurrent_load` overlap does not reduce to an additive daily counter; leave compute-on-read until measured slow (`data-model.md`). Revisit as its own design if a load test flags it. | — | — | — |
+| S1 | **`sites.time_zone` + event contracts + publishers.** Add `sites.time_zone` (IANA, default UTC; EF migration). New integration events (`ConversationStarted` enriched with channel/referrer/campaign/**tenant_zone**; `ConversationOutcomeRecorded`; `ConversationTagged`/`Untagged`; confirm `ConversationEnded` carries `closed_at`), each staged to the outbox in the same transaction (rule 4), with mappers + contract tests. No consumer yet. | — | ago-chat · **migration** |
+| S2 | **ClickHouse on the stand.** Deployment + Service + RWO PVC (rabbitmq/minio shape); `CLICKHOUSE_PASSWORD` in `infra-credentials` + `.env.example`; `secrets.md` row; `backup.sh` ClickHouse step + manifest enumeration; `personal-data.md` row. Comes up healthy, backup names it. | — | **ago-deploy + ago-root docs** |
+| S3 | **Raw event schema + DDL runner.** `analytics_events` (`ReplacingMergeTree`, partitioning, ordering); a small idempotent ClickHouse DDL runner (`CREATE … IF NOT EXISTS`) in `Ago.Chat.Infrastructure.Analytics`; connection behind config. | S2 | ago-chat |
+| S4 | **Ingestion consumer.** `AnalyticsIngestConsumer` (competing; batched inserts; `event_id` dedup; **no Postgres inbox**) subscribed to S1's topics + `MessageAccepted`. Testcontainers (ClickHouse) test: events in → raw rows correct; redelivery → deduped. | S1, S3 | ago-chat |
+| S5 | **Scheduled aggregator + rollup table + run metadata.** `analytics_daily_rollups`; `analytics_rollup_runs` (freshness); `AnalyticsRollupAggregator` (`PeriodicTimer`, configurable cadence, default hourly) recomputing each dirty `(site, local_day)` — including today — from deduplicated raw; `local_day = toDate(occurred_at, tenant_zone)`. Test: raw → rollups correct; a DST-boundary day; a late event rebuilds its day; `computedAsOf` advances only on a successful run. | S4 | ago-chat |
+| S6 | **Backfill job.** Reads Postgres history → synthesises raw events (deterministic `event_id`) → ClickHouse; re-runnable; is also the reconciliation tool. | S3 (S5 to verify parity) | ago-chat |
+| S7a | **Switch site + own analytics reads + `computedAsOf`.** Reimplement `OperatorAnalyticsReadStore` in `Infrastructure.Analytics` (query signature unchanged); add `IAnalyticsFreshnessReadStore` and the additive `computedAsOf` field on the analytics responses (§8). Parity test: ClickHouse read == old SQL on a fixture; response carries a freshness marker. | S5, S6 | ago-chat |
+| S7b | **Switch conversion read.** Reimplement `ConversionReportReadStore` against the rollup conversion columns; keep ranking + `MinimumSampleForRate` in C#. | S5, S6 | ago-chat |
+| S7c | **Switch tag-breakdown read.** Reimplement `TagBreakdownReadStore` against `tag` + `total` rows. | S5, S6 | ago-chat |
+| S8 | **Load test + report.** §12, into `load/scenarios/` + `load/reports/`. Gates the "it scales" claim. | S7a–c | ago-chat |
+| S9 (optional) | **Module-flow rollup.** `ModuleTaskOpened`/`Closed` events + counters; simple additive; low priority. | S1, S4, S5 | ago-chat |
+| — (deferred) | **Operator-load rollup.** Its `concurrent_load` overlap does not reduce to an additive daily counter and it was not the 499 culprit; leave compute-on-read until measured slow (`data-model.md`). Revisit as its own design. | — | — |
 
-Ordering: **S1 and S2 first** (contracts and schema, independent, S2 in the migration lane). **S3** needs both.
-**S4** unblocks the read switches with historical data. **S5–S7** switch one report each — each is one promise
-that lands green independently. **S8** last. This is a genuine split (each read switch is deployable alone with
-the old stores still correct behind their unchanged ports), not a "first breaks, second fixes" cut.
+Ordering: **S1 and S2 first** (S1 in the migration lane; S2 is pure infra, independent). **S3** needs the
+store up; **S4** needs contracts + schema; **S5** needs raw arriving; **S6** unblocks the read switches
+with history. **S7a/b/c** switch one report each — each deployable alone with the old Postgres stores
+still correct behind their unchanged ports (a genuine split, not "first breaks, second fixes"). **S8**
+last. Each read switch is one promise that lands green independently.
 
 ## Open questions for the author
 
-1. **UTC-day vs tenant-local-day buckets.** The design buckets by UTC day (preserves today's instant/UTC
-   behaviour; §4.4). `date-and-time.md` anticipates a per-zone daily aggregation. Serve reports on UTC-day
-   boundaries for now, and treat tenant-local-day as a later refinement — or bake the tenant's IANA zone into the
-   bucket key from the start? (Recommendation: UTC now, refine later — no real tenants yet to need it.)
-2. **Operator-load: deferred, or in scope?** It is the one report that does not reduce to an additive counter and
-   was not the 499 culprit. Recommendation: defer it (S-deferred) rather than force a rollup shape that fights the
-   overlap computation.
+1. **`sites.time_zone` default.** The constraint fixes the *boundary* (tenant IANA zone); it does not fix
+   what an existing row with no zone set should read. Recommendation: `UTC`, labelled as UTC
+   (`date-and-time.md`), with a per-site editable value later — no real tenants yet to need per-tenant
+   zones on day one. Confirm the default, and whether editing it should ever trigger a historical
+   re-label (recommendation: no — future events only).
+2. **Aggregator cadence.** Eventual consistency up to ~1 day is accepted (§3.1). Recommendation: run
+   **hourly** (max staleness ~1 h, still a trivial batch), configurable, loosenable to daily. Confirm the
+   cadence, and whether the displayed marker should read as a precise instant ("as of 14:00") or a
+   day-grained "as of yesterday".
+3. **Module-flow (S9) and operator-load (deferred): in or out of this milestone?** Module-flow is a cheap
+   additive add; operator-load genuinely does not fit the daily-counter shape and is not the timeout
+   culprit. Recommendation: include S9 if capacity allows, keep operator-load deferred as its own design.
