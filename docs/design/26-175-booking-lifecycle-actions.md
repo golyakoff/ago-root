@@ -1,7 +1,24 @@
 # 26-175 — Booking-lifecycle operator actions (design)
 
-Status: **design / scoping**. No production code, no tickets filed by this pass. Issue
-`golyakoff/ago-root#1685`.
+Status: **partly filed** (2026-09-26). Issue `golyakoff/ago-root#1685`.
+
+**Reschedule wave — filed and in flight** (author approved the model 2026-09-26): the reschedule
+half of §4/§7 is now real. `ADR-0187` (Accepted) records the cancel-old + claim-new model with two
+author amendments to this doc's recommendations — (a) the reschedule emits **one
+`BookingRescheduled(old→new)` event now** (not the deferred contract §4.4 proposed), because raw
+events are retained from day one (`adr/0186`) and a cancel/new-booking pair would be
+indistinguishable in that history from a real cancellation; (b) a **stable external booking id** is
+explicitly deferred to a future reschedule-chain root id (the event's `previousBookingId` keeps it
+recoverable). Tickets: **`26-208`** (calendar+chat backend — folds B+C-chat+D into one cross-repo
+promise), **`26-209`** (android confirmed-sheet «Перенести оператором»), **`26-210`** (console
+`CalendarBookingsPage` «Перенести»).
+
+**Deferred to a later, separate wave** (author's call — keep review load one product-change at a
+time): the operator-**Confirm** capability (§3 / tickets A, F, I) and the confirmed-sheet
+**Отменить + Не пришёл** additions and pending-queue no-show removal (§5 / ticket G, and the console
+pending rework). Not filed yet.
+
+The design below is unchanged as the record of the whole scoping pass.
 
 The author's request (2026-09-26): rework the operator actions on a booking.
 
