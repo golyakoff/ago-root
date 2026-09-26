@@ -1,8 +1,19 @@
 # ADR-0186: Analytics — raw events in ClickHouse, rollups in a dedicated Postgres analytics database
 
-- **Status**: Proposed
+- **Status**: Accepted (author, 2026-09-26)
 - **Date**: 2026-09-26
 - **Stage**: 18 (Operator productivity) — a scaling follow-up to `18-08`..`18-14`
+
+> **Amendment (author, 2026-09-26, on acceptance): the ingest consumer + aggregator ship as a new
+> standalone service in its own repository `ago-analytics`, NOT inside `Ago.Chat.Worker`.** Decision
+> points 3–4 below are realised there. `ago-chat` keeps only (a) publishing the analytics events through
+> its outbox and (b) the report *reads* (point 5, Dapper on `ago_analytics`). ClickHouse (raw) and the
+> `ago_analytics` Postgres database (rollups) are both written by this new service; `ago-chat` reads
+> `ago_analytics` and never touches ClickHouse. Reasoning: the analytics pipeline scales, deploys, fails
+> and (later) relocates independently of the chat hosts — the same repo-per-service shape `ago-calendar`
+> already is (`docs/architecture/repositories.md`, `adr/0012`), and it keeps the high-volume ingest/rollup
+> work entirely out of the chat deployables. The new service's shape is designed in
+> `docs/design/analytics-precompute.md`.
 
 ## Context
 
