@@ -15,6 +15,11 @@
   credential (§4) as one of two transports, and is the first exercise of §5's own trigger - a real
   second provider making the `provider` column and `PushMessage`-shaped port a routing seam rather than
   preparation. The schema (§1), fan-out (§2) and client-owns-loudness (§3) rulings are untouched.
+- **Amended by ADR-0185** (2026-09-26): §1's revocation list gains a fourth cause - a bounded,
+  timer-based prune of a row whose `last_seen_at` has not moved in 14 days - reversing this ADR's own
+  "none of them is a timer" ruling for the one case `26-83`/`26-122` found it could never reach: RuStore
+  answers `200` for some tokens a reinstall leaves behind, so "the provider says the token is gone"
+  structurally cannot fire for them. Nothing else in §1 changes.
 - **Date**: 2026-09-21
 - **Stage**: 26
 
