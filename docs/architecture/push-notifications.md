@@ -126,7 +126,7 @@ token, which is the single decision that makes token rotation work at all.
 | `token` | `text not null` | The RuStore push token. A **value on** the row, replaced in place on every refresh |
 | `created_at` | `timestamptz not null` | |
 | `last_seen_at` | `timestamptz not null` | Rewritten on every re-registration. What an operational query sorts by to find dead installs |
-| `revoked_at` | `timestamptz null` | Set on sign-out, on operator removal, or when the provider says the token is gone |
+| `revoked_at` | `timestamptz null` | Set on sign-out, on operator removal, when the provider says the token is gone, or (`26-123`) by the stale-timeout prune below |
 | `last_failure_at` | `timestamptz null` | |
 | `failure_reason` | `text null`, bounded | The provider's own short error code. Bounded for the identical reason `ChannelDelivery.MaxProviderDetailLength` is: a failure reason is a code or a phrase, never an essay |
 
@@ -198,14 +198,23 @@ why `adr/0180` changed nothing here: RuStore's is `onNewToken(token: String)` on
 `RuStoreMessagingService`, and its documentation says in so many words that after it fires *the app
 is responsible for delivering the new token to its own server*.
 
-**Nothing on the server ever expires a row on a timer.** A phone in a drawer for three weeks is not a
-revoked device, and guessing otherwise silences somebody's notifications for a reason they cannot
-see. Rows go dead by exactly two mechanisms, both of which are facts rather than guesses: an explicit
-revocation, or the provider itself saying the token is gone (below).
+**Was true until `26-123`: nothing on the server ever expired a row on a timer.** The reasoning stood
+on the provider being trustworthy — "a phone in a drawer for three weeks is not a revoked device, and
+guessing otherwise silences somebody's notifications for a reason they cannot see." `26-83`/`26-122`'s
+own live investigation (2026-09-25) found the premise false for RuStore specifically: a reinstall or
+re-login whose client-generated `device_id` does not survive the reinstall (`26-122`'s own remarks on
+why `Settings.Secure.ANDROID_ID` is not a universal guarantee) leaves a row RuStore's send API keeps
+answering `200 OK` for — it never reports the equivalent of an FCM `UNREGISTERED` for a token like
+this, so "the provider says the token is gone" (below) structurally cannot fire, and the row would
+otherwise live forever. `26-123`/`adr/0185` adds a fourth, timer-based path for exactly this gap — see
+below — deliberately much coarser than "three weeks" (`OperatorDevicePruneJobOptions.Threshold`
+defaults to 14 days, chosen against `last_seen_at`'s real, verified refresh cadence: `adr/0185`'s own
+reasoning). Rows still go dead by the three mechanisms below in the common case; the timer is the
+backstop for the case none of them was ever going to catch.
 
 ### Revocation
 
-Three paths, and the first one is the one that is easy to get wrong.
+Four paths. The first one is the one that is easy to get wrong, and the last one is new.
 
 **Sign-out, that device only.**
 
@@ -240,8 +249,11 @@ design that pretended otherwise would leave a stranger's phone buzzing about a t
 
 The sender reports the outcome and the handler calls
 `IOperatorDeviceRepository.RevokeByTokenAsync(provider, token, reason)`. **This is the mechanism that
-actually keeps the table clean**, and it is the reason the table needs no sweep job: the provider
-tells us, on the next send, and we believe it.
+keeps the table clean for a token RuStore actually reports on** — but `26-83`/`26-122` found live that
+this is not every token: RuStore keeps answering `200 OK` (never `INVALID_ARGUMENT`/`NOT_FOUND`) for a
+send to some tokens left behind by a reinstall, so this path never fires for them and the row would
+otherwise live forever. `26-123`/`adr/0185`'s stale-timeout prune (below) is the sweep job this
+paragraph used to say was unnecessary.
 
 **The adapter keys on `status` and `code`, never on `message`.** RuStore's own published example of a
 malformed-token response carries the text *"The registration token is not a valid FCM registration
@@ -260,6 +272,23 @@ consumes `OperatorRemovedFromSite` and releases that operator's conversations. I
 — revoke every device row for that `(operator_id)`. A new consumer for this would be a second
 subscriber to one contract for one extra repository call; the existing one is already `Competing`,
 already idempotent by the same `adr/0020` reasoning, and already in the right place.
+
+**`26-123`/`adr/0185`: no activity for `Threshold` (default 14 days).** `Ago.Chat.Worker`'s
+`OperatorDevicePruneJob` runs on a `PeriodicTimer` (`OperatorDevicePruneJobOptions.Interval`, same
+`BackgroundService` shape as every other retention job in this host) and bounded-batch `UPDATE`s any
+`revoked_at IS NULL AND last_seen_at < now - Threshold` row, mirroring
+`AccessRecordPruneJob`/`OutboxPruneJob`'s own `FOR UPDATE SKIP LOCKED` bounded-batch shape — a plain
+`Revoke()`, never a delete, so the row stays as an auditable trail the same way the three paths above
+leave one. This is the backstop for exactly the gap the previous section names: a token RuStore never
+reports dead for. The default is not invented — it is checked against the one real refresh mechanism
+`last_seen_at` has, **on every registration call**
+(`RegisterOperatorDeviceHandler`/`OperatorDevice.Refresh`), and `ago-android`'s
+`WorkManagerDeviceRegistrationScheduler` calls that endpoint once every 24 hours regardless of push
+activity or foreground use, specifically so a rotation missed while the app was not running still
+lands (this doc's own "three places" above). A live device therefore refreshes at least daily; 14
+days is 14 times that cadence, wide enough that ordinary lost connectivity is never mistaken for
+abandonment. See `adr/0185` for the full reasoning and for what changed in `adr/0179` §1's original
+"never by a timer" ruling.
 
 ---
 
@@ -667,7 +696,7 @@ New instruments, in `ChatMetrics`, following the existing naming:
 |---|---|---|
 | `ago.chat.push.sends` | Counter | `reason` (`assigned`/`message`/`waiting`, `26-86` added the third), `provider`, `outcome` (`delivered` / `token_gone` / `failed`) |
 | `ago.chat.push.suppressed` | Counter | `reason` — why the handler decided **not** to send (`no_devices`, `not_visitor`, `unassigned`, and `no_eligible_operators` for the `waiting` kind, `26-86`). The number that distinguishes "push is broken" from "nobody has ever registered a device" |
-| `ago.chat.push.tokens_revoked` | Counter | `cause` (`signed_out` / `provider_unregistered` / `operator_removed`) |
+| `ago.chat.push.tokens_revoked` | Counter | `cause` (`signed_out` / `provider_unregistered` / `operator_removed` / `stale_timeout`, `26-123`) |
 
 `ago.chat.push.suppressed{reason="no_devices"}` deserves its own line, because it is the failure this
 whole feature is most likely to die of in practice: everything works, nobody registered, and every
