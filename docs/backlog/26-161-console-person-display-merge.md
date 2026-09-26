@@ -3,7 +3,7 @@
 - **Stage**: 26 — ADR-0184 (option B) front-end. Design:
   `docs/design/26-134-person-identity-implementation.md` (S4 console half + S7). Backend landed +
   deployed (chat #368, calendar #76). **Depends on**: nothing further — the chat Person API is live.
-- **Status**: ready.
+- **Status**: done — merged ago-console#279 (c73c699) and deployed to the stand (console 2315100c, smoke 43/0). Closed #1622/#1625 alongside.
 - Carries the console half of the identity unification that closes #1622 (26-132) and #1625 (26-133).
 
 ## One promise
@@ -30,6 +30,6 @@ of a calendar-local customer copy, and the retired customer-merge feature is gon
   person endpoint.
 
 ## Done when
-- [ ] Console reads person names from chat's API, degrades gracefully; merge UI removed; all callers
-      updated; `npm run typecheck && npm run lint && npm run test && npm run ux-gate` green.
-- [ ] Deployed to the stand (`deploy.sh console <sha>`) after merge.
+- [x] Console reads person names from chat's API, degrades gracefully; merge UI removed; all callers
+      updated; `npm run typecheck && npm run lint && npm run test && npm run ux-gate` green (test 1687, ux-gate 67).
+- [x] Deployed to the stand (`deploy.sh console 2315100c`) after merge — smoke 43/0.

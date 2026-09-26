@@ -2,11 +2,13 @@
 
 - **Stage**: 26 — ADR-0184 (option B) front-end. Design:
   `docs/design/26-134-person-identity-implementation.md` (S4 android half). Backend landed + deployed.
-- **Status**: ready — **verify the premise first** (background-worker-brief §0.6): confirm what the
-  Android operator app actually needs. It already reads `ConversationSummary` (visitorName +
-  emoji-pair fallback) from chat's API; ADR-0184 keeps that shape. Establish whether any real change
-  is needed (e.g. surfacing a person name for calendar-origin conversations) or whether this is a
-  no-op / small adjustment, and say so plainly rather than inventing work.
+- **Status**: done — merged ago-android#136 (0d73233), build-test + instrumented-tests green. NOT a
+  no-op: the premise check found a real regression the deployed calendar `95ce462` introduced (it
+  renamed `ContactResponse.CustomerId`→`PersonId` and dropped the name fields), which would have
+  broken the Android calendar-backed screens (Клиенты/Утверждены) against the live backend. Fixed by a
+  new `PersonsApi` client (chat `GET /api/v1/persons?ids=`) + display-merge with graceful fallback.
+  `ConversationSummary`'s own name path was confirmed unaffected. Android ships via RuStore/FCM (not a
+  node deploy) — picked up in the next release build.
 
 ## One promise
 The Android operator app displays a conversation's person consistently with chat as the Person owner
@@ -20,6 +22,6 @@ The Android operator app displays a conversation's person consistently with chat
   `hiltViewModel()` under plain `ComponentActivity` — keep VM construction lazy/route-default.
 
 ## Done when
-- [ ] Either the change lands green, or the item is closed with a recorded reason that no change is
-      needed. If landing: `JAVA_HOME=<jdk-17-adoptium>` `./gradlew ktlintCheck lint test
-      :app:compileDebugAndroidTestKotlin` green; strings both languages.
+- [x] Change landed green: `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin`
+      BUILD SUCCESSFUL (KtorPersonsApi 9, ContactsViewModel 16, ConfirmedBookingsViewModel 12,
+      KtorBookingsApi 36). No new user-facing strings. Fixed a real regression, not a no-op.
