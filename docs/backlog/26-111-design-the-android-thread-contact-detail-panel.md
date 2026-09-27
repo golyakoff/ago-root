@@ -1,9 +1,9 @@
 # 26-111 · Design the Android thread's contact-detail / visitor-info panel (the "detailed conversation window")
 
 - **Stage**: 26
-- **Status**: design done, pending author decisions — design doc at `docs/design/26-111-thread-contact-detail-panel.md`; 8 product questions and a proposed implementation-ticket breakdown await the author, and the correct contact-detail mockup needs re-attaching (the committed asset was the wrong screenshot, removed). Original: a design/scoping pass (no production code), the deliverable is a spec plus a
-  proposed breakdown into implementation tickets for the author to approve, mirroring `26-00`'s "plan and
-  mockup before Kotlin" shape.
+- **Status**: done — design delivered (`docs/design/26-111-thread-contact-detail-panel.md` with the
+  author's Q1–Q8 in §5a, plus `docs/design/26-111-contact-panel-slices.md`); sliced into implementation
+  tickets `26-143`..`26-153`, which are tracked and landing under their own numbers.
 - **Found**: 2026-09-25. The author asked (the day before) for an Opus design pass on the "detailed
   conversation window" and it was not filed at the time — filed now, with the author's own mockup.
 
@@ -61,7 +61,9 @@ masked phone from the phone — reuse, don't rebuild).
 
 ## Done when
 
-- [ ] A design doc exists (`docs/design/` or this item, the author's call) covering §1–§4 against the
-      real console/backend and the mockup.
-- [ ] A proposed, ordered list of implementation tickets (§5) is in hand for the author to approve.
-- [ ] The product questions are written as questions, each with options and their cost.
+- [x] A design doc exists (`docs/design/` or this item, the author's call) covering §1–§4 against the
+      real console/backend and the mockup. — `docs/design/26-111-thread-contact-detail-panel.md`.
+- [x] A proposed, ordered list of implementation tickets (§5) is in hand for the author to approve. —
+      `docs/design/26-111-contact-panel-slices.md`; approved and filed as `26-143`..`26-153`.
+- [x] The product questions are written as questions, each with options and their cost. — Q1–Q8 in §5a
+      of the design doc, answered by the author.

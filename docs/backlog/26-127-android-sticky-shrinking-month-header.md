@@ -1,7 +1,8 @@
 # 26-127 · [android + mockup] Sticky, shrinking current-month header over the day strip
 
 - **Stage**: 26 — visual polish for Записи→Утверждены (and the mockup Artifact).
-- **Status**: ready — author-directed design below.
+- **Status**: done — sticky, shrinking month header shipped (ago-android#128); mockup updated
+  (ago-android-design bca6e08).
 - **Found**: 2026-09-25.
 
 ## The interaction
@@ -22,7 +23,10 @@ months.)
   state) so it is the recorded target.
 
 ## Done when
-- [ ] The current month is sticky-left while its days are in view; the next month emerging on the right
-      shrinks the current until it hands off and becomes sticky; repeats both directions.
-- [ ] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; counts reported.
-- [ ] Mockup Artifact updated to show the sticky/shrinking state.
+- [x] The current month is sticky-left while its days are in view; the next month emerging on the right
+      shrinks the current until it hands off and becomes sticky; repeats both directions. — ago-android#128
+      (778f98c).
+- [x] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; counts reported. —
+      landed via ago-android#128 through the CI gate.
+- [x] Mockup Artifact updated to show the sticky/shrinking state. — ago-android-design bca6e08,
+      "illustrate the sticky, shrinking month header on booking.html".

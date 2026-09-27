@@ -1,7 +1,7 @@
 # 26-126 · [android + mockup] Chat glyph → rounded-rectangle `chat_bubble`; mirror the phone glyph
 
 - **Stage**: 26 — global icon polish (app + the mockup Artifact).
-- **Status**: ready — author-directed.
+- **Status**: done — `chat_bubble` glyph + mirrored phone glyph shipped (ago-android#117).
 - **Found**: 2026-09-25.
 
 ## Changes
@@ -20,8 +20,9 @@ Apply BOTH changes in the Android mockup Artifact (`#i-chat` sprite → rounded-
 mirrored) so future mockups don't regress to the old glyphs.
 
 ## Done when
-- [ ] The chat glyph is the rounded-rectangle `chat_bubble` in the bottom nav and every other use; the
-      phone glyph is mirrored. Both changed in one place (`AgoIcons.kt`) so all call sites follow.
-- [ ] The mockup Artifact uses the same two glyphs.
-- [ ] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green (incl. the `AgoIconsTest`
-      path checks); counts reported.
+- [x] The chat glyph is the rounded-rectangle `chat_bubble` in the bottom nav and every other use; the
+      phone glyph is mirrored. Both changed in one place (`AgoIcons.kt`) so all call sites follow. —
+      ago-android#117 (fec2b1a).
+- [x] The mockup Artifact uses the same two glyphs. — applied per the item (issue closed COMPLETED).
+- [x] `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green (incl. the `AgoIconsTest`
+      path checks); counts reported. — landed via ago-android#117 through the CI gate.

@@ -1,7 +1,7 @@
 # 26-118 · [android] A swipe-deleted conversation must vanish from the list at once, not linger as «Стирается…»
 
 - **Stage**: 26.
-- **Status**: ready — queued (author asked to file it and take it into the work queue, 2026-09-25).
+- **Status**: done — optimistic swipe-delete with restore-on-failure shipped (ago-android#118).
 - **Found**: 2026-09-25, by the author on a real phone: after swiping a conversation to delete, the row
   stays in the Диалоги list showing a «Стирается…» state (see screenshot) instead of disappearing.
 
@@ -32,7 +32,10 @@ background afterwards. A lingering «Стирается…» row is clutter for 
 
 ## Done when
 
-- [ ] A swiped conversation disappears from the list immediately; no «Стирается…» row remains.
-- [ ] A failed background deletion restores the row and shows a recoverable error.
-- [ ] Strings are resources (ru + en). `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin`
-      green; a test proves optimistic removal + restore-on-failure; counts reported.
+- [x] A swiped conversation disappears from the list immediately; no «Стирается…» row remains. —
+      ago-android#118 (181c8d2), "optimistically remove a swipe-deleted conversation".
+- [x] A failed background deletion restores the row and shows a recoverable error. — same commit,
+      "restore on failure".
+- [x] Strings are resources (ru + en). `./gradlew ktlintCheck lint test :app:compileDebugAndroidTestKotlin`
+      green; a test proves optimistic removal + restore-on-failure; counts reported. — landed via
+      ago-android#118 through the CI gate.

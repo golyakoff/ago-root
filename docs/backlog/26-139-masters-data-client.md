@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — first slice of the Android calendar-config screens. Design:
   `docs/design/26-139-android-calendar-config-screens.md`.
-- **Status**: ready — in flight.
+- **Status**: done — Masters data client shipped (ago-android#120).
 
 ## One promise
 A `core` data client (port + Ktor adapter) over the already-live worker endpoints, so the Masters screen
@@ -15,5 +15,5 @@ A `core` data client (port + Ktor adapter) over the already-live worker endpoint
   `GET /configuration`. Adapter tests. `core/**` only. Mirrors `WorkingHoursApi`/`KtorWorkingHoursApi`.
 
 ## Done when
-- [ ] Port + adapter cover list/get/create/update/delete + config read; refusal detail surfaced; tests green;
-      `ktlintCheck lint test` green; no `app/` files touched.
+- [x] Port + adapter cover list/get/create/update/delete + config read; refusal detail surfaced; tests green;
+      `ktlintCheck lint test` green; no `app/` files touched. — ago-android#120 (cb3d9b3).

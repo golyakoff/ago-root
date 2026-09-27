@@ -1,7 +1,9 @@
 # 26-132 · Booking customer name is lost between the chat booking form and the calendar booking
 
 - **Stage**: 26 — bug. Confirmed user-facing on the stand (Записи shows a phone, no name).
-- **Status**: ready — analysis first (this item), then a fix once the drop point is pinned.
+- **Status**: done — the drop points were diagnosed (below) and the fix was filed as `26-133`; the
+  underlying name-loss was ultimately resolved structurally by ADR-0184 (`26-134`/`26-136`), landed +
+  deployed.
 - **Found**: 2026-09-25, author: the in-chat/widget booking form requires name + phone + email (all three
   mandatory), yet `Ago.Calendar.Api`'s ConfirmedBooking has no `customerDisplayName` for the resulting
   booking — so the name is being dropped somewhere in the chat→calendar handoff, not merely "not collected".
@@ -25,8 +27,10 @@ statement of the drop, and a proposed fix (which contract field / mapping to add
 also dropped. Do NOT implement yet — report the diagnosis and the fix shape.
 
 ## Done when
-- [ ] The drop point is named with evidence; the fix is proposed (contract/mapping change), with a note on
-      whether phone/email are affected too; a follow-up implementation ticket is filed from the finding.
+- [x] The drop point is named with evidence; the fix is proposed (contract/mapping change), with a note on
+      whether phone/email are affected too; a follow-up implementation ticket is filed from the finding. —
+      diagnosis below (Drop 1 / Drop 2 / email), fix options A/B; follow-up filed as `26-133` (author
+      chose B). Resolved structurally by ADR-0184 (`26-134`/`26-136`), landed + deployed.
 
 ---
 

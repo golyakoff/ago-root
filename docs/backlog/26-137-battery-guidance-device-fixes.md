@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — follow-up to `26-128` (battery/autostart awareness). Found by the author on a real MIUI
   device.
-- **Status**: ready.
+- **Status**: done — battery/autostart device-test fixes shipped (ago-android fd2d2cc, v0.36.1).
 - **Found**: 2026-09-25.
 
 ## Issues (from device testing)
@@ -22,8 +22,10 @@
    `strokeIcon` — the status indicators on the rows).
 
 ## Done when
-- [ ] «Настройки батареи» opens the per-app unrestricted dialog directly (with fallback); copy matches.
-- [ ] A recommendation + deep-link for the "pause app if unused" toggle exists, honestly worded.
-- [ ] No "АГО Чат" remains — brand is "AGO Chat" everywhere.
-- [ ] Check/Exclamation status glyphs are bolder and slightly larger, clearly legible.
-- [ ] `ktlintCheck`, `lint`, `test`, `:app:compileDebugAndroidTestKotlin` green; strings as resources both langs.
+- [x] «Настройки батареи» opens the per-app unrestricted dialog directly (with fallback); copy matches. —
+      ago-android fd2d2cc (v0.36.1), "device-test fixes for battery/autostart awareness".
+- [x] A recommendation + deep-link for the "pause app if unused" toggle exists, honestly worded. — fd2d2cc.
+- [x] No "АГО Чат" remains — brand is "AGO Chat" everywhere. — fd2d2cc.
+- [x] Check/Exclamation status glyphs are bolder and slightly larger, clearly legible. — fd2d2cc.
+- [x] `ktlintCheck`, `lint`, `test`, `:app:compileDebugAndroidTestKotlin` green; strings as resources both langs.
+      — landed via the CI gate (v0.36.1).

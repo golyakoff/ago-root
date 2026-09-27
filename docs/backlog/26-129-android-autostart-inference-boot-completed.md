@@ -1,7 +1,7 @@
 # 26-129 · [android] Infer "didn't autostart after reboot" via a BOOT_COMPLETED marker (autostart follow-up)
 
 - **Stage**: 26 — follow-up to `26-128` (autostart status is otherwise unreadable on AOSP).
-- **Status**: ready — lower priority; the honest after-the-fact signal.
+- **Status**: done — BOOT_COMPLETED autostart marker shipped (ago-android#129).
 - **Found**: 2026-09-25, designing `26-128`.
 
 ## Idea
@@ -13,6 +13,8 @@ evidence autostart was blocked — flip the «Автозапуск» row to oran
 автоматически после последней перезагрузки»). Inference after the fact, never a live/proactive read.
 
 ## Done when
-- [ ] After a real reboot where autostart was blocked, the «Автозапуск» row honestly reflects it with the
-      specific reason; where it did autostart, it does not falsely warn.
-- [ ] Tests for the boot-marker comparison logic; suite green.
+- [x] After a real reboot where autostart was blocked, the «Автозапуск» row honestly reflects it with the
+      specific reason; where it did autostart, it does not falsely warn. — ago-android#129 (b479a3e),
+      BOOT_COMPLETED marker + last-boot comparison.
+- [x] Tests for the boot-marker comparison logic; suite green. — landed via ago-android#129 through the
+      CI gate.

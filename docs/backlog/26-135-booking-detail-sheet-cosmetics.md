@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — third cosmetic pass on the confirmed-booking detail sheet (`26-117` built it, `26-125`
   fixed the first round). The mockup is the source of truth; the app must match it.
-- **Status**: ready.
+- **Status**: done — round-3 detail-sheet cosmetics shipped (ago-android e35b739, v0.36.x).
 - **Found**: 2026-09-25 (author, side-by-side mockup vs app).
 
 ## Scope (`ConfirmedBookingsScreen.kt` detail sheet only)
@@ -18,7 +18,9 @@ Four differences the author flagged between the mockup (left) and the app (right
    the primary label (new string resource, both languages) if the pair does not fit at ~360dp.
 
 ## Done when
-- [ ] Detail-sheet labels match the date-line size; values bold + right-aligned; dividers between rows;
-      both actions in one row that fits — verified against the mockup.
-- [ ] `BookingsScreen.kt`'s own `BookingDetailRow` usage is not visually regressed.
-- [ ] `ktlintCheck`, `lint`, `test`, `:app:compileDebugAndroidTestKotlin` green; no new literal strings.
+- [x] Detail-sheet labels match the date-line size; values bold + right-aligned; dividers between rows;
+      both actions in one row that fits — verified against the mockup. — ago-android e35b739.
+- [x] `BookingsScreen.kt`'s own `BookingDetailRow` usage is not visually regressed. — e35b739 parametrised
+      the shared row's label style with the default unchanged.
+- [x] `ktlintCheck`, `lint`, `test`, `:app:compileDebugAndroidTestKotlin` green; no new literal strings. —
+      landed via the CI gate (v0.36.x).

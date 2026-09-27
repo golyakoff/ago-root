@@ -1,7 +1,7 @@
 # 26-124 · [console] VisitorHistoryPanel must render unconditionally after `HasChannelIdentity` removal
 
 - **Stage**: 26 — follow-up to `26-114` (which removed `VisitorHistoryResponse.HasChannelIdentity`).
-- **Status**: ready — a required console fix; without it the returning-history panel regresses to never showing.
+- **Status**: done — `VisitorHistoryPanel` now renders unconditionally (ago-console, b3316e1).
 - **Found**: 2026-09-25, landing `26-114`: the backend widened visitor history to per-visitor-on-site and
   dropped the `HasChannelIdentity` wire field, but `ago-console`'s `VisitorHistoryPanel.tsx` still gates on
   `hasChannelIdentity === false` (via `types.ts` + tests). With the field now absent (undefined → falsy),
@@ -19,6 +19,7 @@
 
 ## Done when
 
-- [ ] The console renders the visitor-history panel for every visitor (no `hasChannelIdentity` gate); the
-      field is gone from types/fixtures.
-- [ ] typecheck / lint / test / ux-gate green.
+- [x] The console renders the visitor-history panel for every visitor (no `hasChannelIdentity` gate); the
+      field is gone from types/fixtures. — ago-console b3316e1, "render VisitorHistoryPanel unconditionally
+      after HasChannelIdentity removal".
+- [x] typecheck / lint / test / ux-gate green. — landed via the console gate.

@@ -1,11 +1,9 @@
 # 26-98 · The "Все" list cannot be read without claiming a row, and that may not be what a `site:configure` holder wants
 
 - **Stage**: 26
-- **Status**: ready — **decided (author, 2026-09-25): Option 1 — a genuine read-only view.** A
-  `site:configure` holder can open a conversation from «Все» to read it without assigning it. Needs a
-  server read path that opens a thread's history without `AssignTo`, plus an Android read-only ThreadScreen
-  mode that disables every reply/action affordance. To be rewritten to that scope and taken (queued behind
-  `26-118`, which touches the same conversation-list area).
+- **Status**: done — Option 1 (a genuine read-only view) was chosen by the author and shipped:
+  server read path `GetConversationHistoryAsSiteConfigureHolder` (no `AssignTo`, gated `site:configure`)
+  plus an Android read-only ThreadScreen mode.
 - **Found**: 2026-09-24, landing `26-90`'s Android half (`ago-android#82`) — reported at the time, not
   silently worked around.
 
@@ -59,5 +57,7 @@ assigning it to themselves?** Three readings, each with a real cost:
 
 ## Done when
 
-- [ ] The author picks one of the three readings above (or another), and this item is rewritten to that
-      scope before any code changes.
+- [x] The author picks one of the three readings above (or another), and this item is rewritten to that
+      scope before any code changes. — author picked Option 1 (2026-09-25); shipped as ago-chat#371
+      (824f413) + ago-android#150 (b840921), deploy pin bumped (ago-deploy 09e6b11). Audit-record
+      follow-up filed as 26-173 (#1683).

@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — Android calendar-config screen. Design:
   `docs/design/26-139-android-calendar-config-screens.md`. **Depends on 26-139** (data client).
-- **Status**: ready — queued behind 26-139.
+- **Status**: done — Мастера screen shipped (ago-android#121).
 
 ## One promise
 A single **Мастера** screen — worker dictionary CRUD — in the app, reachable from the `⋮` config hub,
@@ -21,5 +21,6 @@ reusing the Услуги (26-96) screen pattern.
   both `strings.xml`).
 
 ## Done when
-- [ ] Мастера screen full CRUD, gated `calendar:configure`, appears in the ⋮ hub; a test asserts the gating;
-      `ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; strings in both languages.
+- [x] Мастера screen full CRUD, gated `calendar:configure`, appears in the ⋮ hub; a test asserts the gating;
+      `ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; strings in both languages. —
+      ago-android#121 (8ee1661).

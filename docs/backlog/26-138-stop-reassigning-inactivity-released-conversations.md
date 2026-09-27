@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — the root-cause fix for the 5-minute push churn (`26-83`), beyond Fix A (`26-119`) and
   Fix C (`26-120`). Found by the 26-83 push re-analysis, 2026-09-25.
-- **Status**: ready.
+- **Status**: done — churn root fix shipped (ago-chat#366).
 - **Depends on**: `26-119` (Fix A, landed). Complements `26-120` (Fix C — dedup hides the buzzing; this
   stops the churn at source so the DB/assignment/realtime work stops too).
 
@@ -38,7 +38,8 @@ pushed. The job runs every 15 minutes.
 - Must not strand a genuinely-waiting conversation: it still auto-closes at the existing `WidgetCloseWindow`.
 
 ## Done when
-- [ ] An unanswered-then-idle widget conversation is released once and **not** re-assigned/pushed on the next
-      cycles (no 5-min churn); a new visitor message after release re-assigns + pushes normally.
-- [ ] Migration applies cleanly; `Ago.Chat.*` suites green (per-project counts); fails-before evidence for the
-      "unanswered-idle no longer re-claims" case.
+- [x] An unanswered-then-idle widget conversation is released once and **not** re-assigned/pushed on the next
+      cycles (no 5-min churn); a new visitor message after release re-assigns + pushes normally. —
+      ago-chat#366 (aed63a4), release-marker sequence gate on `WaitingConversationClaimQuery` + 15-min interval.
+- [x] Migration applies cleanly; `Ago.Chat.*` suites green (per-project counts); fails-before evidence for the
+      "unanswered-idle no longer re-claims" case. — ago-chat#366 (release-marker migration).

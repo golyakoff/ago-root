@@ -1,7 +1,8 @@
 # 26-122 · [android+chat] Re-registering a device replaces its prior registration (dedup by stable device-id) — fix A for accumulating device rows
 
 - **Stage**: 26 — part of the `26-83` push-noise cleanup (device-registration accumulation axis).
-- **Status**: ready — direction decided (author: A+B; C folded into A).
+- **Status**: done — fix A shipped: device_id column + upsert by (operator, device_id) in ago-chat#369,
+  Android sends `Settings.Secure.ANDROID_ID` in ago-android#139.
 - **Found**: 2026-09-25 — one operator had 5 active registrations (1 FCM + 4 stale RuStore) from repeated
   reinstalls/re-logins; each push event fanned out to all 5. The stale rows were revoked by hand on the
   stand as immediate relief; this item is the mechanism so it does not recur.
@@ -31,7 +32,11 @@ re-registration that replaces the prior row regardless of provider.
 
 ## Done when
 
-- [ ] A device re-registering (reinstall / re-login / RuStore→FCM) results in **one** active row for that
-      (operator, device), not an added one; the prior row is revoked/replaced.
-- [ ] Client sends a stable device id; server upserts by (operator, device). Migration via the migration lane.
-- [ ] Tests both sides; ago-chat + ago-android suites green, counts reported.
+- [x] A device re-registering (reinstall / re-login / RuStore→FCM) results in **one** active row for that
+      (operator, device), not an added one; the prior row is revoked/replaced. — ago-chat#369 (9efb236),
+      upsert by (operator_id, device_id).
+- [x] Client sends a stable device id; server upserts by (operator, device). Migration via the migration
+      lane. — ago-android#139 (a6e6c67) sends `Settings.Secure.ANDROID_ID`; migration
+      `Stage26AddOperatorDeviceId` (additive).
+- [x] Tests both sides; ago-chat + ago-android suites green, counts reported. — ago-chat#369 +
+      ago-android#139, both build-test green.
