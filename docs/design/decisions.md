@@ -599,3 +599,39 @@ rather than empty, and the reading deliberately does not reach them.
 
 **What this does not catch, by construction:** a field whose *type* changes shape while staying
 present. `assertHasKeys` checks presence, which is what the chosen reading asks for.
+
+
+## Validation at every API boundary, and the two `/me/tenancies` readers (`23-41`, 2026-09-27)
+
+`23-41` named three readings and left the choice open; `23-99` (above) took **reading 2** (an error
+boundary per route) as the immediate blast-radius fix. The remaining, deliberately-deferred half of
+`23-41` — the boundary question and the shared-route sub-question — was decided now.
+
+**The author chose reading 3: validate at the API boundary.** Each reader validates the shape it was
+promised and rejects a mismatch as a typed, *localized* error the existing `catch` already handles, so
+a contract breach becomes an ordinary caught error state rather than a render crash. This does not undo
+reading 2 — the error boundary stays as defence in depth — it removes this *class of cause* at the
+source, which reading 2 only contained.
+
+- **Reading 1 (one shell boundary)** was already rejected in `23-99`: one boundary means one broken
+  component still takes the whole page.
+- **Reading 2 (a boundary per route)** bounds the damage but depends on every future screen
+  remembering to sit inside a boundary — the failure mode relocated, not removed. Kept as a backstop.
+- **Reading 3 (validate at the boundary)** is the most work — a decision about every response type in
+  two products — but the only one that makes a rendered blank page from an absent field structurally
+  impossible. The mechanism already existed: `shapeGuard.ts`'s `assertHasKeys` / `requiredKeysOf` from
+  `23-99`. `23-41` landed the incident's own reader (the calendar `/me/tenancies` reader, which was
+  still returning `... as TenanciesBody` unvalidated) plus a real *localized* surfacing of a
+  `shape.mismatch` (previously it fell through to a raw English sentence). Rolling the guard out to the
+  remaining ~35 readers is its own item, `23-118`, so each lands green (rule 15).
+
+**The shared-route sub-question — resolved: the two `/api/v1/me/tenancies` readers stay separate,
+both now validated.** They are two independently-versioned backends (`adr/0012`) answering *different
+questions*: `Ago.Chat.Api` lists every shop administered (`{siteId, siteName}`); `Ago.Calendar.Api`
+lists shops with a provisioned calendar module (`{tenantId, tenantName}`). Merging them into one
+reader would force it to tell two wire shapes apart and decide which it received — that guessing is
+exactly what produced the incident. With per-boundary validation the cross-shape collision is now
+*structurally impossible to render*: a chat body reaching the calendar reader fails `tenantId` /
+`tenantName` presence and becomes an ordinary caught `CalendarApiError`, never a blank page.
+
+Landed in `ago-console` `feat/23-41-validate-api-boundary` (PR #287).

@@ -1,8 +1,10 @@
 # one missing field from one API renders an empty page, everywhere in the console
 
 - **Stage**: 23
-- **Status**: ready — 3 of 4 Done-when closed (`ago-console#43b983f`, `23-99` done). One question
-  remains: whether the two `/api/v1/me/tenancies` routes stay as they are.
+- **Status**: done — all four Done-when closed. The last (the `/me/tenancies` route question) was
+  resolved 2026-09-27 by choosing reading 3 (validate at the API boundary): the calendar reader now
+  validates and the two routes stay separate. `ago-console` PR #287; `docs/design/decisions.md`. The
+  guard's rollout to the remaining readers is carried out as `23-118`.
 - **Depends on**: nothing
 - **Decision**: the shape is a real choice and this item **states it as a question**, because "what
   should a console do when a backend breaks its own contract" is not a decision to make by writing code.
@@ -77,7 +79,13 @@ will produce the same trap for the next fixture, the next proxy rule and the nex
       case; `23-99`'s `requiredKeysOf` compile-time guard covers the non-throwing "field silently
       absent" case by making a dropped required field fail the build before it ever ships, rather than
       rendering a false empty state at runtime.
-- [ ] Whether the two `/api/v1/me/tenancies` routes stay as they are is answered either way.
+- [x] Whether the two `/api/v1/me/tenancies` routes stay as they are is answered either way.
+      **Answered: they stay separate, both now validated** (2026-09-27, reading 3). Merging them would
+      force one reader to disambiguate two backends' wire shapes — the guessing that caused the
+      incident. The calendar `/me/tenancies` reader (the incident's own code, still returning
+      `... as TenanciesBody` unvalidated) now validates `tenantId`/`tenantName` and rejects a mismatch
+      as a localized `shape.mismatch` error. `ago-console` PR #287. Guard rollout to the remaining
+      ~35 readers carried out as `23-118`.
 
 ## Out of scope
 
