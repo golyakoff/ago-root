@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — Android calendar-config screen. Design:
   `docs/design/26-139-android-calendar-config-screens.md`. **Depends on 26-141** (data client).
-- **Status**: ready — queued behind 26-141.
+- **Status**: done — Настройка/Календари screen shipped (ago-android#124); calendar-config epic complete.
 
 ## One promise
 A single **Настройка** screen (menu label Настройка; primary section Календари) — embed/allowed-origins +
@@ -20,6 +20,6 @@ calendars list/create/edit — reachable from the `⋮` hub, reusing the app's s
 - **Serializes with 26-140** (shared hub/nav/DI/strings files); land after 26-140, rebase on it.
 
 ## Done when
-- [ ] Настройка screen: origins save + calendar create (localized tz dropdown)/edit; gated `calendar:configure`;
+- [x] Настройка screen: origins save + calendar create (localized tz dropdown)/edit; gated `calendar:configure`;
       appears in the ⋮ hub; gating asserted in a test; `ktlintCheck lint test :app:compileDebugAndroidTestKotlin`
-      green; strings both languages.
+      green; strings both languages. — ago-android#124 (ddbad6d).

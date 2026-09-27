@@ -3,11 +3,8 @@
 - **Stage**: 26. Design: `docs/design/26-154-android-booking-readiness-hub.md` (the scoping pass;
   premise verified — backend `GET /booking-readiness` exists in full, Android has nothing yet, no
   backend change / no migration needed).
-- **Status**: ready. Product decisions taken (author accepted the scoping doc's recommendations,
-  2026-09-26): own `⋮` entry «Готовность» first in the menu; short label «Готовность» with the full
-  question as the page title; «Исправить» does an in-hub swap (back → Записи); re-read on open + retry
-  (no pull-to-refresh); interim `ScheduleSaved`/`SlotsMaterialized` targets point at the Masters list
-  until 26-155 lands.
+- **Status**: done — «Готовность» booking-readiness hub shipped (ago-android#144, 40ba2a5), first entry
+  in the Записи `⋮` hub, reading `GET /booking-readiness` (no backend change).
 
 ## One promise
 The Android app surfaces the calendar booking-readiness chain (can a client book? what's missing?) on a
@@ -23,6 +20,6 @@ The Android app surfaces the calendar booking-readiness chain (can a client book
 - Strings both languages; no literals.
 
 ## Done when
-- [ ] «Готовность» screen reads booking-readiness, renders the chain, «Исправить» navigates, gated +
+- [x] «Готовность» screen reads booking-readiness, renders the chain, «Исправить» navigates, gated +
       appears in the `⋮` hub; `ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green; strings
-      both languages.
+      both languages. — ago-android#144 (36204ef/40ba2a5), 824 tests green.

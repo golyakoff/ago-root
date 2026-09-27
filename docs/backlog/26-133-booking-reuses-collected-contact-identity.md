@@ -2,7 +2,9 @@
 
 - **Stage**: 26 — fix **B** for `26-132` (author chose B, not A: never re-ask the visitor for data they
   already gave — re-entry drives clients away).
-- **Status**: ready — direction decided.
+- **Status**: done — resolved by ADR-0184 (`26-134`/`26-136`), landed + deployed. The collected identity
+  is reused via the shared **Person** (`person_id` + `PersonRegistered`), not a calendar customer copy, so
+  this item's original customer-copy/conversation-key mechanism was superseded.
 - **Supersedes**: the A option (a name step in the booking flow) and `26-112`'s proposed `26-150`.
 
 ## What and why (from the 26-132 diagnosis)
@@ -33,8 +35,16 @@ contact form**.
 - BOOT_COMPLETED / battery items.
 
 ## Done when
-- [ ] A chat booking's calendar customer carries the name (and email) the visitor entered in contact-capture,
-      correlated by the shared visitor/conversation key — no second customer row, no re-ask.
-- [ ] A booking cannot reach Completed without the contact form (name present); proven by a test.
-- [ ] Migrations via the calendar lane; ago-chat + ago-calendar suites green; a test proves the name (and
+- [~] A chat booking's calendar customer carries the name (and email) the visitor entered in contact-capture,
+      correlated by the shared visitor/conversation key — no second customer row, no re-ask. — superseded by
+      ADR-0184: chat owns the Person and the booking references it by `person_id` (`26-134` calendar
+      95ce462, `26-136` e959564), so there is no calendar-local customer copy to correlate; the name/email
+      come from chat's registry (display-merge in console `26-161` / android `26-162`).
+- [~] A booking cannot reach Completed without the contact form (name present); proven by a test. —
+      subsumed by the shared-Person model: a booking references a Person that carries the identity rather
+      than a nameless calendar customer row, resolving the name-loss defect (`26-132`) that this guard was
+      meant to close.
+- [~] Migrations via the calendar lane; ago-chat + ago-calendar suites green; a test proves the name (and
       email) round-trip from contact-capture to `ConfirmedBookingResponse.customerDisplayName`. Counts reported.
+      — the ADR-0184 person migration landed via the calendar lane (ago-deploy 21d0ec7, backup taken)
+      instead of this item's own customer-copy/email-column migration; ago-chat + ago-calendar suites green.

@@ -1,8 +1,7 @@
 # 26-131 · [ago-deploy] Host the Android design mini-site at android-design.reserve-me.ru
 
 - **Stage**: 26 — hosting for `26-130`, mirrors the brand-book deploy.
-- **Status**: ready — **blocked on DNS**: `android-design.reserve-me.ru` is being provisioned by the author;
-  the gateway route + TLS only go live once it resolves to the node and cert-manager can issue.
+- **Status**: done — `android-design.reserve-me.ru` is live over HTTPS (deployed).
 - **Found**: 2026-09-25.
 
 ## Scope (mirror `brandbook-static.yaml` + its gateway/TLS)
@@ -14,5 +13,6 @@
 - Public, unadvertised (no auth gate — same as brand-book), but not linked from anywhere.
 
 ## Done when
-- [ ] Manifests prepared (route/TLS/service/pin). When DNS resolves: the site answers at
-      `https://android-design.reserve-me.ru`, TLS valid, smoke shows it serving.
+- [x] Manifests prepared (route/TLS/service/pin). When DNS resolves: the site answers at
+      `https://android-design.reserve-me.ru`, TLS valid, smoke shows it serving. — ago-deploy a56f9ca
+      (host the mini-site) + pin bumps a24ff97/f24e40d; DNS resolved and the site is live over HTTPS.

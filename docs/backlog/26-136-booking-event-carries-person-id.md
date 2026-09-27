@@ -2,7 +2,8 @@
 
 - **Stage**: 26 — S1 (first EXPAND slice) of ADR-0184 (option B). See
   `docs/design/26-134-person-identity-implementation.md`.
-- **Status**: ready — in flight (migration lane).
+- **Status**: done — ADR-0184 S1 shipped: chat 0effbb7 + calendar e959564, migration M1 applied,
+  deployed to stand.
 - **Found**: 2026-09-25, scoping ADR-0184.
 
 ## The one promise
@@ -22,8 +23,9 @@ A chat-origin booking stores the chat person id and the originating conversation
 - Out of scope (later slices): display-name persistence, the `customers` table, `ContactCollected`, merge.
 
 ## Done when
-- [ ] A chat booking yields `events.person_id` == the visitor's id and `events.origin_conversation_id` ==
-      the conversation id (integration test).
-- [ ] Additive wire fields tolerated when absent (old-shape test still books); `customers` unchanged; no chat
-      migration; M1 applies cleanly.
-- [ ] ago-chat and ago-calendar suites green (per-project counts reported). Subsumes **26-112 C1**.
+- [x] A chat booking yields `events.person_id` == the visitor's id and `events.origin_conversation_id` ==
+      the conversation id (integration test). — calendar e959564, chat 0effbb7 (ADR-0184 S1).
+- [x] Additive wire fields tolerated when absent (old-shape test still books); `customers` unchanged; no chat
+      migration; M1 applies cleanly. — same slice; migration M1 applied (ago-deploy ef0dd58).
+- [x] ago-chat and ago-calendar suites green (per-project counts reported). Subsumes **26-112 C1**. —
+      merged + deployed to stand, both suites green.

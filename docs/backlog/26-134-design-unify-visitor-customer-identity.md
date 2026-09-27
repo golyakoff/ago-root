@@ -2,8 +2,8 @@
 
 - **Stage**: 26 — an ADR-level design/analysis pass (no code). Reconsiders a boundary the author has hit
   repeatedly in practice.
-- **Status**: ready — the author wants a genuine reconsideration; `26-133` (the copy-not-link bug fix) is
-  frozen pending the outcome, because the fix's shape depends on it.
+- **Status**: done — design delivered as ADR-0184 (option B) + `docs/design/26-134-person-identity-implementation.md`;
+  fully implemented and deployed across all four repos.
 - **Found**: 2026-09-25 — recurring pain: "a chat visitor is not the same as a calendar customer", surfaced
   again by `26-132` (the booking name lost across the chat→calendar boundary).
 
@@ -41,5 +41,8 @@ mis-application of adr/0027's own "identity unifies" ruling?
 - Any implementation. This decides the direction; implementation tickets follow the author's approval.
 
 ## Done when
-- [ ] A design doc with the evidence, the options+costs, a recommendation, and a draft ADR — enough for the
-      author to decide whether to unify visitor/customer identity, and if so, how.
+- [x] A design doc with the evidence, the options+costs, a recommendation, and a draft ADR — enough for the
+      author to decide whether to unify visitor/customer identity, and if so, how. —
+      `docs/design/26-134-person-identity-implementation.md` + ADR-0184 (option B chosen: chat owns the
+      Person, calendar references by `person_id`); implemented across chat #368, calendar #76, console
+      #279, android #136.

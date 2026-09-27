@@ -2,7 +2,7 @@
 
 - **Stage**: 26 — Android calendar-config slice. Design:
   `docs/design/26-139-android-calendar-config-screens.md`.
-- **Status**: ready — in flight.
+- **Status**: done — calendar-setup data client shipped (ago-android#119).
 
 ## One promise
 A `core` data client (port + Ktor adapter) over the live configuration/allowed-origins/calendars endpoints,
@@ -16,5 +16,5 @@ so the Настройка/Календари screen (26-142) is a pure UI build.
   26-139. Mirrors `WorkingHoursApi`/`KtorWorkingHoursApi`.
 
 ## Done when
-- [ ] Port + adapter cover config read + allowed-origins save + calendar create/update; tests green;
-      `ktlintCheck lint test` green; no `app/` files touched.
+- [x] Port + adapter cover config read + allowed-origins save + calendar create/update; tests green;
+      `ktlintCheck lint test` green; no `app/` files touched. — ago-android#119 (a8d291a).

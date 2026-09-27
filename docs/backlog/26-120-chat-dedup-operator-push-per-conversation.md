@@ -1,7 +1,7 @@
 # 26-120 · [chat] Dedup operator push notifications per (operator, conversation) within a short window (fix C for the push storm)
 
 - **Stage**: 26 — fix **C** (safety net) for `26-83`; complements `26-119` (fix A).
-- **Status**: ready — direction decided (A+C); this is C.
+- **Status**: done — operator-push dedup fix C shipped (ago-chat#367).
 - **Depends on**: nothing (independent of A; the two compose — A removes the churn source, C guarantees no
   repeat push slips through regardless of cause).
 
@@ -37,8 +37,10 @@ short-TTL claim before sending, reusing the existing `IRateLimiter` (RedisRateLi
 
 ## Done when
 
-- [ ] A repeated operator push for the same (operator, conversation, kind) within the TTL is suppressed;
-      the first one always sends; a genuinely new message still pushes.
-- [ ] Cross-replica safe (shared marker), fails open if the marker store is down.
-- [ ] A test proves dedup within the window and send-again after TTL / on a new message.
-- [ ] `dotnet format` / build (0 warnings) / full suite green, counts reported.
+- [x] A repeated operator push for the same (operator, conversation, kind) within the TTL is suppressed;
+      the first one always sends; a genuinely new message still pushes. — ago-chat#367 (4b6b3e4).
+- [x] Cross-replica safe (shared marker), fails open if the marker store is down. — ago-chat#367,
+      reuses `IRateLimiter` (RedisRateLimiter), fail-open.
+- [x] A test proves dedup within the window and send-again after TTL / on a new message. — ago-chat#367.
+- [x] `dotnet format` / build (0 warnings) / full suite green, counts reported. — landed via
+      ago-chat#367 through the CI gate.

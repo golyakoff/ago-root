@@ -2,7 +2,8 @@
 
 - **Stage**: 26 — Android app. Pattern to mirror: the shipped «Утверждены» (Confirmed) view —
   `ConfirmedBookingsScreen.kt` (`ConfirmedBookingRow` + `ConfirmedBookingDetailSheet`/`Body`, 26-117).
-- **Status**: ready — author-requested 2026-09-26 from a live screenshot.
+- **Status**: done — pending queue redrawn to the Confirmed row+sheet style (ago-android#141);
+  mockup in ago-android-design#6.
 
 ## Why
 The «Ожидают» (Pending) tab is a raw engineering view: it renders bare hex ids (`Услуга 01a08a02`,
@@ -30,7 +31,11 @@ the same visual language as the Confirmed tab, and offers only the actions valid
 - Strings as resources both languages; no literals.
 
 ## Done when
-- [ ] Pending tab renders names (no hex) + a detail card matching the Confirmed style; only
-      logically-valid pending actions shown (no «Не пришёл»); gating unchanged.
-- [ ] Verified: `ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green (+ calendar suite if
-      the read model is touched); strings both languages.
+- [x] Pending tab renders names (no hex) + a detail card matching the Confirmed style; only
+      logically-valid pending actions shown (no «Не пришёл»); gating unchanged. — ago-android#141
+      (d2b7c43): names not hex, «Не пришёл» removed, «Отклонить»/«Отменить» only; «Принять» surfaced as
+      «Подтвердится через N ч» (backend auto-confirms via veto window). Console same-bug follow-up filed
+      as #1672.
+- [x] Verified: `ktlintCheck lint test :app:compileDebugAndroidTestKotlin` green (+ calendar suite if
+      the read model is touched); strings both languages. — names were already on the wire
+      (26-50/ADR-0184), so no read-model change; landed via the CI gate.
