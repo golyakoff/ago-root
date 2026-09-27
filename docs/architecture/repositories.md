@@ -8,6 +8,7 @@ the whole tree being moved:
 ago/
   ago-root/       this repository — docs, ADRs, conventions, skills, backlog, load/
   ago-platform/   ago-chat/   ago-widget/   ago-console/   ago-deploy/
+  ago-calendar/   ago-landing/   ago-android/   ago-analytics/
 ```
 
 `ago-landing` was added later than the five above (it ships the marketing page routed at the apex
@@ -31,6 +32,7 @@ paths, so **if the tree is moved, recreate them** — nothing else in the docume
 | `ago-landing` | the public marketing page at the apex domain | a static page, served from the demo overlay | nothing |
 | `ago-calendar` | `Ago.Calendar.*` — Domain, Application, Contracts, Infrastructure, Module, **and its own hosts** (Api, Worker, Migrator) | Docker images, published to GHCR by CI under the commit SHA (`adr/0047`) | `Ago.Platform.*` packages |
 | `ago-android` | AGO Chat's native Android operator client — Kotlin/Compose, three Gradle modules (`:core:domain`, `:core:network`, `:app`) | a Play Store artifact | the public API contract |
+| `ago-analytics` | `Ago.Analytics.*` — the standalone analytics service (`adr/0186`): an ingest consumer writing AGO Chat/Calendar events as raw rows into **ClickHouse**, and a scheduled aggregator rolling them up into a dedicated **`ago_analytics`** Postgres database; one host image runs the worker (default) or the schema migrator/backfill (`migrate`/`backfill` arg) | a Docker image (`ago-analytics-host`), GHCR by CI under the commit SHA | `Ago.Platform.*` packages |
 | `ago-root` | docs, ADRs, conventions, skills, backlog, `load/` scenarios and reports | the rules everything else obeys | nothing |
 
 `ago-android` joined the table with Stage 26 (`26-00`) and is a **client**, not a product: it is on

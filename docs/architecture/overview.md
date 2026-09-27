@@ -105,6 +105,15 @@ hot path that exists from Stage 1; `Webhooks` arrives in Stage 6 (`resilience.md
 | Which node holds connection X | Redis | Rebuildable, TTL'd, lossy by design |
 | Presence / typing | Redis | Ephemeral, never persisted |
 | Delivery of events between nodes | Broker | At-least-once, never a store |
+| Raw analytics events | ClickHouse | Write-only, retained, re-sliceable; deduped by `event_id` (`ReplacingMergeTree`). Never read on a write path (`adr/0186`) |
+| Analytics rollups (per-site, per-tenant-local-day) | `ago_analytics` Postgres (a **separate** database) | A precomputed read model; eventual consistency, carries `computedAsOf`; O(days) reads. No cross-DB join to `ago_chat` (`adr/0186`) |
 
 Redis losing everything must degrade the system (reconnects, cache misses, stale presence) and never
 corrupt it. That constraint is what keeps the whole design honest.
+
+**Analytics runs off to the side (`adr/0186`).** The `ago-analytics` service consumes AGO Chat/Calendar
+events from the broker into ClickHouse (raw) and a scheduled aggregator rolls them into `ago_analytics`;
+AGO Chat keeps only event publishing (its outbox) and the report *reads* (Dapper on `ago_analytics`,
+behind the unchanged read-store port). The point is to keep O(conversations) analytics aggregation off
+the operational PostgreSQL, which is the platform's scaling bottleneck — reports became O(days) reads of
+precomputed rollups instead of a live per-conversation scan on every request.
