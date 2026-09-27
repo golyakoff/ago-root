@@ -95,6 +95,11 @@ supposed to prevent.
 | `CacheInvalidated` | key namespace | All nodes (fan-out to every replica, not competing consumers) |
 | `TeamMessagePosted` (`23-32`) | `site_id` | Fan-out to every operator of the site (`TeamChatFanoutConsumer`) - the team chat's own sibling of `MessageAccepted`, keyed by the room's own ordering unit instead of a conversation |
 | `TeamMessageRemoved` (`23-33`) | `site_id` | Fan-out to every operator of the site (`TeamMessageRemovedFanoutConsumer`) - a distinct event and a distinct client push method (`TeamMessageRemoved`, never `TeamMessageReceived`) from `TeamMessagePosted` above, deliberately: the console's own transport-level dedup collapses a repeated push of the same message id, and a removal names an id already delivered once by its own post |
+| `ConversationOpened` (`adr/0186` S1) | `conversation_id` | `Ago.Analytics.AnalyticsIngestConsumer` (raw analytics ingest, `ago-analytics` repo) - the conversation-start fact, carrying channel/referrer/UTM + `site_id`/`tenant_zone`. Wire type is `ConversationOpened`, not `ConversationStarted` (`6-02` convention) |
+| `ConversationOutcomeRecorded` (`adr/0186` S1) | `conversation_id` | `Ago.Analytics.AnalyticsIngestConsumer` - the outcome (converted / not / follow-up) as a raw analytics fact |
+| `ConversationTagged` / `ConversationUntagged` (`adr/0186` S1) | `conversation_id` | `Ago.Analytics.AnalyticsIngestConsumer` - per-tag analytics facts, published from `TagRepository` only when a row actually changed |
+
+**`adr/0186`: `Ago.Analytics.AnalyticsIngestConsumer` is a broad analytics consumer** (in the standalone `ago-analytics` service) subscribing to the whole analytics event set - the four rows just above plus `MessageAccepted` and `ConversationClosed`/`ConversationEnded` on the chat side, and `BookingConfirmed`/`BookingRescheduled` on the calendar side - writing each verbatim into ClickHouse `analytics_events`. It reads, never publishes, so the other rows' consumer columns are not repeated here for it.
 
 ### AGO Calendar's own topics
 
@@ -104,12 +109,15 @@ are identical.
 
 **Since `23-88`/`adr/0165`, `ModuleQuantityImpactComputed` is consumed by AGO Chat** - the first topic
 below this line that crosses the product boundary at all. That sentence was true of every topic below
-it until the async worker-quota impact preview needed the first reply in the opposite direction. It
-stays true of `BookingConfirmed`: that row is still calendar-internal only.
+it until the async worker-quota impact preview needed the first reply in the opposite direction.
+`BookingConfirmed` and `BookingRescheduled` now also cross the boundary the other way, into the
+standalone `ago-analytics` service's `AnalyticsIngestConsumer` (`adr/0186`) - so "calendar-internal
+only" no longer holds for them; their `20-05` SMS consumer is still the unbuilt one.
 
 | Event | Key | Consumers |
 |---|---|---|
 | `BookingConfirmed` (`20-04`) | `event_id` | `20-05`'s SMS delivery, still unbuilt - no consumer subscribes to this topic yet. (`25-44`: the row itself now reaches RabbitMQ - `Ago.Calendar.Worker.OutboxDispatcher` drains it there, same as every other topic on this page. What "None wired yet" always meant, and the only sense it is still true in, is the consumer column: nobody has built `20-05` yet, not that nothing publishes.) |
+| `BookingRescheduled` (`26-208`/`adr/0187`) | `event_id` (new booking anchor) | `Ago.Analytics.AnalyticsIngestConsumer` (raw analytics). Emitted once per operator reschedule instead of a `Cancelled`+`BookingConfirmed` pair, carrying the old→new link (`previousEventId`); the future `20-05` SMS "your appointment moved" consumer is unbuilt |
 | `ModuleQuantityImpactComputed` (`23-88`/`adr/0165`) | `site_id` | `Ago.Chat.Worker.ModuleQuantityImpactComputedConsumer` - the reply to chat's own `ModuleQuantityImpactRequested` (below). Published by `Ago.Calendar.Worker.ModuleQuantityImpactRequestedConsumer` (`Ago.Calendar.Infrastructure.Postgres.WorkerQuotaImpactAnswerer`'s own outbox write) whenever chat asks about the `"calendar"` module - the first calendar-to-chat crossing this table has ever carried |
 
 **`25-44`: `Ago.Calendar.Worker` now runs its own `OutboxDispatcher`**, the identical mechanism
