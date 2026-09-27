@@ -398,6 +398,16 @@ either directly. `Away` is the one state the hub never *chooses*; it only has to
   `OperatorRepository.AnyOnlineForSiteAsync` filter on `Status == Online`, unchanged by this item.
   `Away` needed no new filter anywhere downstream; the only thing missing before `23-20` was a way to
   *reach* the state at all.
+- **`OperatorConversationReleaser` is a second writer of `Offline` (`26-238`).** The hub owns the
+  connect/disconnect transitions above, but it is not the only path that can decide an operator is
+  gone: when the disconnect-grace sweep (or an operator removal) releases an operator's conversations,
+  `OperatorConversationReleaser.ReleaseAllAsync` now also calls `Operator.GoOffline()` in the same
+  transaction as the release. Without it the two subsystems disagreed and looped - assignment claims
+  candidates by `Status == Online`, release decides "gone" from the connection registry, so an operator
+  left `Online` with no live connection (an ungraceful `Ago.Chat.Api` shutdown, where
+  `OnDisconnectedAsync` never ran) was assigned, released, re-assigned every grace tick, writing a
+  fresh `conversation_assignments` interval each cycle (`26-238`'s runaway churn). Reconciling `Status`
+  at the release seam closes that loop; `GoOffline` still leaves a deliberate `Away` alone.
 - **Going away releases nothing.** It is not going offline: the operator's own `Assigned`
   conversations are untouched, `OperatorConversationReleaser` is not invoked, and `23-03`'s assignment
   intervals neither open nor close for it. The console control that flips this
