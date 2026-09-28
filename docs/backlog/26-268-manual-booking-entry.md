@@ -88,27 +88,29 @@ a permission means adding the identical `new("booking:create")` string in **both
 files, and granting it in `ago-chat`'s seeded roles (`RegisterSiteHandler.OperatorRolePermissions` /
 `AdminRolePermissions`).
 
-**Gate the manual-entry handler on `booking:create` AND `customer:edit`** (two `IPermissionChecker`
-checks, the shape `MarkNoShowHandler`/`RescheduleBookingHandler` already use):
-- `booking:create` — placing a booking on the calendar on a client's behalf.
-- `customer:edit` — creating/attaching the client (name + phone) is a lead-card-write-shaped act;
-  `customer:edit` is the permission `personal-data.md` already associates with writing customer
-  identity.
+**DECIDED (author, 2026-09-28): gate the manual-entry handler on `booking:create` ALONE** (a single
+`IPermissionChecker` check, the shape `MarkNoShowHandler`/`RescheduleBookingHandler` already use). Not
+paired with `customer:edit`.
 
-This honors the author's "gate on capability, not role" reasoning: a **phone operator** gets a role
-holding both, without needing Administrator. Seed **both** into the Operator and Admin roles so the
-phone-operator scenario works out of the box (the Operator role today holds `customer:read`, not
-`customer:edit` — see `CalendarBookingsPage.tsx` gating notes — so `customer:edit` must be added to it
-for this feature).
+The reasoning that settled it: `booking:create` without `customer:edit` already gives the whole
+feature, not "nothing". The client is created as the booking's own **trusted server side-effect** — the
+manual store mints the person and stages `PersonRegistered` exactly the way a *widget* booking does
+(`adr/0184`), and that path is gated by **no permission at all**. `customer:edit` gates a *different*
+operation (editing existing lead-card customer identity); it never runs on the manual-entry path, so
+requiring it would be a decorative check that maps to no real sub-operation. Manual entry always creates
+its client this way (v1 mints new, §3.4), so there is no "place a booking without creating a client"
+sub-case for `customer:edit` to guard. Therefore the capability is `booking:create`, full stop.
 
-> **Open sub-decision for the author (chat, not a ticket):** single `booking:create` (subsuming the
-> contact creation, since the person is created via the same trusted server path a widget booking uses —
-> which needs no permission at all) vs. the `booking:create` + `customer:edit` **pair** above. The pair
-> is more granular (`adr/0016`) and matches the author's stated reasoning; the single permission is
-> simpler to seed. Recommendation: the pair. Either way `booking:create` is new and must be added +
-> seeded. **No backfill needed** while there are zero real tenants (re-confirm before relying on it);
-> if tenants exist at build time, existing sites need a re-grant→projection pass
-> (`reference_entitlement_backfill_to_existing_sites`).
+Note the account model already grants `customer:edit`/`customer:read` to the **Operator** role today
+(`RegisterSiteHandler.cs` Operator set, alongside `booking:confirm/reject/cancel/mark_no_show/reschedule`)
+— so this decision is not about withholding it, only about not *coupling* manual entry to it. A phone
+operator qualifies for manual entry through `booking:create` on the Operator role.
+
+`booking:create` is new (it is not among the eight synced permissions). Add the identical
+`new("booking:create")` to both `Permission.cs` files and seed it into the **Operator and Admin** roles
+in `RegisterSiteHandler`. **No backfill needed** while there are zero real tenants (re-confirm before
+relying on it); if tenants exist at build time, existing sites need a re-grant→projection pass
+(`reference_entitlement_backfill_to_existing_sites`).
 
 ---
 
@@ -123,8 +125,8 @@ New use case `Ago.Calendar.Application/UseCases/ManualBooking/` (sibling to `Boo
   convention reschedule uses, never a wall-clock instant), `DisplayName`, `Phone` (raw string),
   `Email` (nullable).
 - `EnterManualBookingHandler.cs` — composes what already exists:
-  1. `IPermissionChecker` × 2 (`booking:create`, `customer:edit`) — first, so a caller with no right
-     never learns whether anything exists (the ordering every lifecycle handler uses).
+  1. `IPermissionChecker` (`booking:create`) — first, so a caller with no right never learns whether
+     anything exists (the ordering every lifecycle handler uses).
   2. Validate phone via `new PhoneNumber(...)` → rejection on `ArgumentException` (BookEventHandler's
      exact pattern). Email, if present, validated shape-only.
   3. Resolve calendar/worker/service/schedule; reject if the worker doesn't offer the service or either
@@ -273,7 +275,8 @@ the calendar backend slice:
 - **Decision**: an operator-authenticated manual booking is a **new use case + `IManualBookingStore`
   port** that claims a run **straight into `Booked`** in one transaction, mints a new person
   (`PersonRegistered`), stages `BookingConfirmed`, sets `PhoneConfirmedByOperatorAt`, and is gated on
-  `booking:create` + `customer:edit`. No veto window (the operator is the business). No dedup in v1.
+  `booking:create` alone (the client is the booking's trusted side-effect, so `customer:edit` guards no
+  real sub-operation here). No veto window (the operator is the business). No dedup in v1.
 - **Alternatives weighed**: (a) reuse `IBookingStore` with a target-status flag — rejected, couples the
   hot public path; (b) claim into `PendingConfirmation` then immediately `Confirm` — rejected, leaks a
   transient pending state and stages the wrong events; (c) a new `Event.EnterManually` domain method —
@@ -319,15 +322,14 @@ manual-entry slices.
 
 ### Manual entry (the primary feature)
 1. **[cross-repo: ago-chat + ago-calendar] Add `booking:create` permission and seed it.** Add the
-   identical `new("booking:create")` string to both `Permission.cs` files (byte-for-byte), grant it (and
-   `customer:edit`, if the pair is chosen) in `ago-chat`'s seeded Operator + Admin roles
-   (`RegisterSiteHandler`). One promise: the capability exists in both products and the right roles hold
-   it. One worker owns the whole contract (`feedback_one_worker_per_cross_repo_task`). No backfill while
-   zero real tenants.
+   identical `new("booking:create")` string to both `Permission.cs` files (byte-for-byte), and grant it
+   in `ago-chat`'s seeded Operator + Admin roles (`RegisterSiteHandler`). Gate is `booking:create` alone
+   (author decision, §2 — `customer:edit` is not coupled in). One promise: the capability exists in both
+   products and the right roles hold it. One worker owns the whole contract
+   (`feedback_one_worker_per_cross_repo_task`). No backfill while zero real tenants.
 2. **[ago-calendar] Manual-booking write + endpoint + ADR-0188.** `EnterManualBooking` use case,
    `IManualBookingStore` port + Postgres adapter (claim straight to `Booked` + person upsert + stage
-   `PersonRegistered` & `BookingConfirmed`, one txn), `POST /api/v1/console/bookings/manual` gated on
-   `booking:create` (+`customer:edit`), unit + integration tests, ADR-0188 in the same change. Ships
+   `PersonRegistered` & `BookingConfirmed`, one txn), `POST /api/v1/console/bookings/manual` gated on `booking:create`, unit + integration tests, ADR-0188 in the same change. Ships
    with name + phone (email deferred to #3). One promise: an authenticated operator POSTs a manual
    booking and the slot lands `Booked` with no conversation. **Migration lane** (adds a column only if
    the origin marker is taken; otherwise no schema change).
