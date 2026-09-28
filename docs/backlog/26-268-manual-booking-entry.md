@@ -183,14 +183,30 @@ Recommendation: the manual store sets `PhoneConfirmedByOperatorAt = now`, leaves
 null. Minor; flag for the author. `RequiresVerifiedPhone` (the `BookEvent` gate) does not apply — the
 manual path never runs through `BookEventHandler`'s verification gate.
 
-### 3.4 Customer: always mint new for v1
+### 3.4 Customer: recognize by phone, operator confirms (author decision 2026-09-28)
 
-`adr/0184` decision 2 mints a person id for a no-chat-origin booking; `adr/0147` is explicit that "a
-phone is a hint, not proof" and nothing auto-merges two people who share a number. So v1 **mints a new
-person every time** — the operator enters name+phone, a new contact is created and attached. This
-matches "enter a client by hand… attach that contact." Picking an **existing** contact (dedup / "this
-is a returning client") is a real enhancement but a **separate, later** decision (it reopens the
-merge/identity question `adr/0184` deliberately simplified) — out of scope here, noted as a follow-up.
+**The flow is phone-first with recognition** (author's call, over the original "always mint new"): the
+operator enters the phone FIRST, the server searches existing clients by that phone, and:
+- **one match** → show the client (name + a history hint like «Постоянный клиент · 3 записи»); the
+  operator taps «Это он» to **reuse** that person, or «Новый клиент» to mint a new one;
+- **several matches** on the same number → a short pick-list, plus «Новый клиент»;
+- **no match** → proceed to new-client entry (name + optional email).
+A recognized client skips name/email re-entry and goes straight to service.
+
+**This does NOT auto-merge**, which is how it stays consistent with `adr/0147` ("a phone is a hint, not
+proof" — a number can be shared, a person can have several): recognition only *surfaces* candidates; the
+**operator** asserts identity by choosing «Это он» / a list row / «Новый клиент». That human
+confirmation is the proof `adr/0147` requires, so surfacing-by-phone does not reopen the auto-merge
+question it closed.
+
+**Backend impact:** the manual path needs a **read that looks up person(s) by phone** for the current
+tenant, returning enough to render the card (name — owned by chat, `adr/0184` — plus a booking-count/
+"returning" hint). Because the name lives in chat and the phone/`PersonRecord` in the calendar, this
+lookup is a cross-cutting read (calendar `PersonRecord` by phone → the chat-owned name/history); scope
+it as its own read in slice #2 (or a dedicated slice #2a) rather than folding it silently into the
+write. On **reuse**, the write skips the mint and claims against the existing person id; on **new**, it
+mints as before (§3.1 step 5 becomes conditional). ADR-0188 covers both the recognition read and the
+reuse-vs-mint branch.
 
 ### 3.5 Outbox events
 
