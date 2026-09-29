@@ -2,8 +2,10 @@
 
 - **Stage**: 26. Kind: design + implementation (ago-android only). Author's intent, 2026-09-29 (verbatim):
   the emoji-pair avatar is a great default but "too playful for serious users", so make it a toggle.
-- **Status**: design written — awaiting the four author decisions in "Author decisions" below, then one
-  implementation slice.
+- **Status**: done 2026-09-29 — merged as ago-android#212. The author decisions below were all taken at
+  their recommended defaults (Emoji default, ClientAvatar initials styling, per-device, fixed titleSmall,
+  emoji fallback on unresolved name). Setting «Аватары посетителей: Эмодзи / Инициалы» ships under the
+  interface-language toggle; all 3 anonymous-visitor avatar sites respect it via `LocalVisitorAvatarStyle`.
 - **Repos touched**: `ago-android` only. No backend, no `ago-chat`, no console. (Rationale in §C — the
   localized names already live in `:app`.)
 
