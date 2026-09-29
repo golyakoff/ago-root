@@ -126,12 +126,41 @@ account" stops meaning "brings no revenue".
 `IBillingOptionEntitlementProvider` reads `BillingOptionEntitlements:<option-key>` and answers with the
 `ModuleKey` that option grants; a key this deployment has not declared throws, loudly, rather than
 granting nothing (`SubscriptionRenewalApplier.ResolveEntitlementOrThrow`'s own remarks). `ago-deploy`
-declares one real mapping today — `BillingOptionEntitlements__channel-telegram` → `channel`, on
-`Ago.Chat.Worker` (the only host that ever calls this port, since `SubscriptionRenewalApplier` is the
-only caller) — deliberately not `calendar` or `faq`: this page's own "a billing grant is not yet
-sufficient to turn on a module that requires registration" a few paragraphs up applies here exactly,
-and pointing this mapping at either would leave chat believing the module is granted while nothing
-routes to it.
+declares one real mapping today — `BillingOptionEntitlements__channel-telegram` → `channel`. Two callers
+resolve it, on two hosts — `SubscriptionRenewalApplier` (`Ago.Chat.Worker`, an option's own recurring
+renewal/lapse) and, since `26-278`, `ChannelAddOnPurchaseApplier` (`Ago.Chat.Api`, a channel add-on's
+first purchase) — so this mapping must be declared on both hosts, not only the Worker, or a purchase
+would throw the identical "not declared" refusal a renewal would. Deliberately not `calendar` or `faq`:
+this page's own "a billing grant is not yet sufficient to turn on a module that requires registration" a
+few paragraphs up applies here exactly, and pointing this mapping at either would leave chat believing
+the module is granted while nothing routes to it.
+
+**What an option costs at renewal is resolved by a separate, code-owned mapping, not deployment
+configuration** (`26-278`). `ChannelAddOnPricing.PriceKeyFor(BillingOptionKey)` answers "which
+`PriceKey` does this option's recurring charge read" — every `channel-*` key resolves to the one flat
+`channel-addon` price (`ChannelAddOnPricing`'s own remarks: one price, independent of which channel
+kind), and every other option key — today, only an AI option (`ai-*`) — resolves to `null`, on which
+`ProcessSubscriptionRenewalHandler` still refuses to charge anything (`ago-business` decision `0012`:
+AI usage has no per-tenant cost accounting yet, so no price is published for it). Unlike
+`IBillingOptionEntitlementProvider` just above, this is **not** resolved through deployment
+configuration: which price key a `channel-*` option charges is a stable fact about this codebase's own
+vocabulary, identical in every deployment, so it lives in `Ago.Chat.Domain` beside
+`ChannelEntitlementOptionKeys` rather than behind a port a deployment could override. A missing
+`channel-addon` *price value* at renewal (the key is known, but nothing has been published for it) still
+throws, matching the seat prices — a channel option only ever exists because it was bought at this
+exact price once, so a deployment un-publishing it afterward is a regression, not an ordinary "not for
+sale" state.
+
+**A lapsed channel is a reversible pause, not a delete.** `EntitlementWatchdogJob` (`25-170`) re-reads
+every active channel credential's effective entitlement once a minute and calls
+`ChannelCredential.PauseForLapsedEntitlement` the moment it drops to zero — including the moment a
+channel option's own renewal charge fails and its retry window closes, the identical
+`SubscriptionRenewalApplier` lapse path that revokes any other option's grant. The poller for that
+channel simply stops within the next tick; the credential and its stored token are untouched, and a
+later successful payment (or an owner's own regrant) resumes it on the following tick with no
+reconnection step. The one-way alternative — deleting the credential outright — exists only as a
+separate, human-reviewed owner action (`DisconnectNonEntitledChannelCredentialsAsOwnerHandler`), never
+as an automatic consequence of a lapsed payment.
 
 ## An unconditional grant overrides billing, never competes with it
 
