@@ -1,8 +1,16 @@
 # ADR-0071: ЮKassa webhook signature scheme and credential shape
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0190
 - **Date**: 2026-08-28
 - **Stage**: 13
+
+> **Superseded by `adr/0190` (2026-09-29).** The signature scheme below was asserted without network
+> access to confirm it, and is wrong: ЮKassa does **not** sign its console-configured HTTP
+> notifications — there is no `Webhook-Signature` header and no shared `webhook_key`. The real,
+> documented verification is re-querying the payment by id (act on the API's authoritative status) plus
+> an IP allowlist. `adr/0190` records the replacement. The credential-shape decision (our own fixed
+> `ShopId`/`SecretKey`, not a per-tenant ciphertext column) and the `(yookassa_payment_id, event_type)`
+> idempotency-ledger decision below still stand — only the signature/`WebhookKey` half is superseded.
 
 ## Context
 
