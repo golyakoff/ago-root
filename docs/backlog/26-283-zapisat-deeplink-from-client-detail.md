@@ -3,7 +3,7 @@
 - **Stage**: 26. Kind: implementation (Android). The **deferred** B4 item from the 26-269
   clients-vs-mockup gap analysis (commit `3f43742`). Filed 2026-09-29 so nothing from the analysis is
   untracked.
-- **Status**: planned. Depends on the manual-booking entry flow (26-268) exposing an entry point that can
+- **Status**: done 2026-09-29 — merged as ago-android#211 («+ Записать» jumps into the manual-booking wizard pre-bound to the client via ReusePersonId). Depends on the manual-booking entry flow (26-268) exposing an entry point that can
   be opened pre-filled for a known person.
 - **Repos touched**: `ago-android` (the client-detail hub + manual-booking wizard entry).
 
