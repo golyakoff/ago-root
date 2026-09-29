@@ -4,7 +4,7 @@
   clients-vs-mockup gap analysis (commit `3f43742`) — real mockup features, held because they need the
   list read to carry per-client booking state (unlike the cosmetic/behavioural halves that shipped from
   already-loaded data). Filed 2026-09-29 so nothing from the analysis is untracked.
-- **Status**: planned — lower priority than 26-269/26-279 (nice-to-have list richness, not core flow).
+- **Status**: done 2026-09-29 — merged as ago-calendar#86 (UpcomingBookingCount) + ago-android#211 (per-row count + «Все / С предстоящей / Без записей» filter), delivered together with 26-283/26-284 in the clients iteration-2 pass.
 - **Repos touched**: `ago-android` (UI) and likely `ago-calendar` (the `/contacts` read must carry a
   per-client upcoming/total booking count — verify whether it already can before assuming a contract
   change).
