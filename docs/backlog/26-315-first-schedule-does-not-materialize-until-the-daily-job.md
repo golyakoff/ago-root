@@ -1,7 +1,9 @@
 # 26-315 · [ago-calendar] a freshly saved schedule has no slots until the daily job — no on-demand or on-save materialisation
 
 - **Stage**: 26
-- **Status**: ready
+- **Status**: done — merged as `ago-calendar#` (`df7f1369`), deployed. «Пересчёт» now bootstraps the
+  first materialisation when a worker has zero slots, and `SaveWorkerScheduleHandler` stages a
+  `WorkerScheduleSaved` outbox event a worker consumer materialises off the API host. No migration.
 - **Found**: 2026-09-30, onboarding the first real (beta) client — tenant «Салон Топаз», worker Алёна
   Матерн. Everything on the readiness screen was green except **«Слоты сгенерированы в пределах
   горизонта»**, and nothing the operator could click fixed it. Confirmed live and unblocked by hand
