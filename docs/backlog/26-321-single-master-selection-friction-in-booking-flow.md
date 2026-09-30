@@ -42,3 +42,29 @@ filed after the author picks.
 
 - [ ] Design doc with surface map + recommended single-master behaviour per surface (incl. plain-text).
 - [ ] Author picks the approach; implementation slice(s) filed.
+
+## Extension (author, 2026-09-30): skip the SERVICE step too when there is only one service
+
+Same rule, applied one step earlier: if the tenant has exactly one selectable service, auto-select it
+and skip the service step — it is shown on the review/confirmation card at the end, exactly like the
+master. Compose the two skips in flow order: `service (skip if 1) → master (skip if 1 eligible for that
+service)`. For a solo tenant (one service + one master) both steps vanish: phone → client → date → slot
+→ review. Keys on the **eligible/selectable list length = 1** for each step (not a global "does the
+tenant have one thing"), consistent with the master rule and correct under 26-317's 2-master default.
+No new copy; the confirmation card already names the service and the master.
+
+## Approach APPROVED (author) — implementation slices
+
+Author approved the single-eligible auto-skip approach (no new copy), extended to the service step.
+Filed as three independent slices (different repos/files, no migration):
+
+- **26-322** — `ago-calendar`: in the visitor/chat state machine (`ReplyToModuleTaskHandler`), skip the
+  service-choice step when one selectable service AND the worker-choice step when one eligible worker;
+  covers widget + plain-text at once. Preserve `25-32` replay-safety across the auto-skips
+  (concurrency-review). Highest leverage.
+- **26-323** — `ago-console`: manual-booking wizard (`ManualBookingButton.tsx`) skip service and worker
+  steps when their eligible list is 1; fix back-navigation across skipped steps.
+- **26-324** — `ago-android`: manual-booking wizard (`ManualBookingViewModel`) same skips in
+  `selectService`/`selectWorker` + fix `back()`.
+
+26-321 stays as the design-of-record; it closes when 26-322/323/324 land.
