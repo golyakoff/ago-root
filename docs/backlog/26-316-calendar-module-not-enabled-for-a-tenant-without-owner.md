@@ -1,7 +1,9 @@
 # 26-316 · [onboarding] the calendar module is not enabled for a tenant without a platform-owner action
 
 - **Stage**: 26
-- **Status**: ready — not yet verified · **carries a product decision, filed as the question**
+- **Status**: done — decision (в) self-serve; ADR-0191. Merged as `ago-chat#404-area` (`2705978`) +
+  `ago-console` (`79aec5a`), deployed. A tenant admin toggles «Модуль «Записи»» Вкл/Выкл in admin
+  settings (`site:configure`); the owner grant stays an override. Non-destructive disable.
 - **Found**: 2026-09-30, onboarding the first real client. The calendar did not turn on for «Салон
   Топаз» on its own — it was enabled by hand, acting **as the platform owner**. A normal tenant admin,
   signing up on their own, would have no calendar and no obvious way to get one.

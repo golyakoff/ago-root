@@ -1,7 +1,9 @@
 # 26-317 · [onboarding/calendar] masters (workers) have no designed way to come to exist
 
 - **Stage**: 26
-- **Status**: needs design (opus) · **carries a product decision**
+- **Status**: done — ADR-0192 (amends 0125). Merged (`df7f1369`) and deployed. A master is a
+  resource-only name (no login); every tenant gets 2 by default (`max(WorkerQuota,2)`), more only via
+  the existing platform-owner grant. No migration. Master self-onboarding: answered NO (no login).
 - **Found**: 2026-09-30, onboarding the first real client. Masters for «Салон Топаз» were added **by the
   platform owner**; there is no thought-through path for how a master appears for a normal tenant.
 
