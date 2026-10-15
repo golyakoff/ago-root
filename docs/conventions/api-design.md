@@ -10,6 +10,12 @@
   idempotency key and return the original result rather than a second row.
 - Errors are RFC 7807 problem details with a stable machine-readable `type` and a `traceId`. Error
   text is for humans; clients branch on `type`, never on the message.
+- **Every response carries `X-Trace-Id`** (`26-330`): the 32-hex W3C trace id of the request's server
+  span - the value a tracing backend (Jaeger) is searched by, and the same value as the problem
+  body's `traceId`. It is on 4xx/5xx and CORS-rejected responses too, and `SiteOriginCorsPolicyProvider`
+  exposes it so the widget and console can read it. It is **absent, not faked,** when a request is not
+  being traced. A user-facing "something went wrong" should show this value so a report can be turned
+  into one trace.
 - Pagination is keyset only: `?before=<cursor>&limit=<n>`, response carries the next cursor. No page
   numbers, no `OFFSET` (`data-model.md`).
 - Timestamps are ISO-8601 with offset (`date-and-time.md`).
@@ -166,7 +172,9 @@ addendum, `docs/backlog/10-04-self-registered-site-embedding-verification.md`.
 `Result<T>`/`Error` failure into an RFC 7807 response - `Ago.Chat.Api.Http.ErrorExtensions.ToProblem`
 maps `ConversationErrors`' stable codes (`Attachment.NotFound`, `Message.RateLimited`, ...) to a
 status code and a bare `type` slug (not a resolvable URL - `AuthEndpoints`' own precedent,
-`"rate-limited"` not `"https://.../rate-limited"`), plus `traceId` from `HttpContext.TraceIdentifier`.
+`"rate-limited"` not `"https://.../rate-limited"`), plus `traceId` - `HttpContext.TraceIdentifier` when shipped, **the W3C trace id since `26-330`**
+(`TraceIdentifier` is Kestrel's request counter, which no tracing backend indexes; it remains only as the
+fallback for an untraced request).
 `AuthEndpoints` predates this: its own `Results.Problem` calls were built by hand because
 `Error`/`Result<T>` had no HTTP-facing consumer yet.
 
