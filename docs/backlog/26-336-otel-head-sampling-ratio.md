@@ -14,12 +14,13 @@
 decision. Out-of-range values fail host startup. Default `1` is exactly today's behaviour.
 
 Head sampling only - the decision is made when the trace starts, so it cannot prefer errors or slow
-requests (`adr/0193`).
+requests (`adr/0194`). Deciding *after* the outcome is `adr/0193` (a tail-sampling collector, proposed);
+with it in the path this ratio stays `1`.
 
 ## Done when
 
 - [x] Option + sampler + validation + tests merged in `ago-platform` (`2f1f511`).
 - [x] `ago-platform` `CHANGELOG.md` records it under `0.21.0`.
-- [x] Decision recorded (`adr/0193`).
+- [x] Decision recorded (`adr/0194`).
 - [~] No host sets it yet, deliberately - default `1` is correct until a measured volume problem says
       otherwise (`CLAUDE.md`: no invented numbers). Adoption of the package is `26-337`.

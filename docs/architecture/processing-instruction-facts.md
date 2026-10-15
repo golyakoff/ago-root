@@ -208,7 +208,7 @@ The statute's own vocabulary is a list of operations. Mapped to mechanisms that 
 | `InboxPruneJob` (`15-04`) | `inbox` idempotency rows | **24 hours** |
 | `WebhookDeliveryPruneJob` (`15-04`) | `webhook_deliveries`, including `response_snippet` | **30 days** |
 | `CronJob/log-retention` (`adr/0057`, `ago-deploy`) | Rotated container logs, including the edge access log and therefore client IPs | **14 days** |
-| Prometheus TSDB / Jaeger ring (`adr/0057`) | Metrics / traces | 14 days or 768MB / 10 000 traces. Probes and scrapes are not traced (`adr/0193`), so the ring holds real requests; `Otel:Sampling:Ratio` (default 1) can thin them further |
+| Prometheus TSDB / Jaeger ring (`adr/0057`) | Metrics / traces | 14 days or 768MB / 10 000 traces. Probes and scrapes are not traced (`adr/0194`), so the ring holds real requests; `Otel:Sampling:Ratio` (default 1) can thin them further |
 | Redis TTL | Rate-limit buckets, presence, the connection registry | Seconds to ~1 hour |
 
 Three things that table does **not** cover, each stated in `personal-data.md` and each load-bearing
