@@ -12,12 +12,12 @@
 `AddPlatformObservability` drops inbound `/healthz*` and `/metrics` requests in the ASP.NET Core
 tracing instrumentation's filter (`Ago.Platform.Observability.TracePathFilter`). Matching is by path
 **segment**, so `/healthzone` is still traced. Request **metrics are unchanged** - probes and scrapes
-are still counted there. There is no configuration key (`adr/0193`).
+are still counted there. There is no configuration key (`adr/0194`).
 
 ## Done when
 
 - [x] `TracePathFilter` + unit tests merged in `ago-platform` (`bc312ac`, `tests/Ago.Platform.Tests/TracePathFilterTests.cs`).
 - [x] `ago-platform` `CHANGELOG.md` records it under `0.21.0`.
-- [x] Decision recorded (`adr/0193`).
+- [x] Decision recorded (`adr/0194`).
 - [~] Not yet taken by a host - carried out to `26-337`, because adopting a package version is a
       different promise from shipping the feature.
