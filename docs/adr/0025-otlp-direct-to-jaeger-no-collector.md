@@ -1,6 +1,6 @@
 # ADR-0025: Direct OTLP export to Jaeger, no collector
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-0193
 - **Date**: 2026-08-24
 - **Stage**: 7
 
