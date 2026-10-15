@@ -14,7 +14,8 @@ telemetry backend or **centralized sampling** becomes real". The second half is 
 - Every request is recorded (the SDK default, `ParentBased(AlwaysOn)`). Jaeger's in-memory store is
   bounded at 10000 traces (`adr/0057`), which at probe-dominated traffic is about an hour - so a trace
   an operator wants may already be gone, and a bigger store is a bigger bill for traces nobody opens.
-- `26-331` removed the probe and scrape traces; `26-332` added `Otel:Sampling:Ratio`. A ratio is a
+- `26-331` removed the probe and scrape traces; `26-336` added `Otel:Sampling:Ratio` (recorded in
+  `adr/0194`; the `ago-platform` changelog calls it `26-332`, a number `ago-root#1897` already held). A ratio is a
   *head* decision: made when the root span starts, before it is known whether the request failed or
   was slow. Lowering it lowers the chance of keeping exactly the traces worth keeping.
 - A trace crosses Api, Worker and Webhooks (outbox → broker → consumer). Deciding after the fact needs
