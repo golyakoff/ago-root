@@ -1,7 +1,7 @@
 # 26-338 · [ago-deploy/observability] a tail-sampling OTel Collector in front of Jaeger
 
 - **Stage**: 26
-- **Status**: proposed - waits on the author accepting `adr/0193`.
+- **Status**: ready - `adr/0193` accepted 2026-10-15; implementation and the measuring run are open.
 - **Numbering note**: the first commit of this branch was made as `26-333`, which `ago-root#1898` already
   held. This item is `26-338`; that commit's subject keeps the old number because it cannot be reworded.
 - **Follows**: `26-331` (probes not traced) and `26-336` (`Otel:Sampling:Ratio`), both `adr/0194`.
@@ -14,7 +14,7 @@ hosts and Jaeger and keeps errors, traces over 500 ms and a 10 % baseline.
 
 ## Done when
 
-- [ ] `adr/0193` accepted by the author (status line changes; `adr/0025` marked superseded).
+- [x] `adr/0193` accepted by the author (2026-10-15); `adr/0025` marked superseded.
 - [ ] Collector manifest + `otel-collector-config.yml` in `ago-deploy`, used by both the compose loop and
       the cluster; hosts export OTLP to it, `Otel:Sampling:Ratio` stays `1`.
 - [ ] A `load/` run puts numbers on the 500 ms threshold, the 10 % baseline and `decision_wait`, and on

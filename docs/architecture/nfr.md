@@ -113,7 +113,7 @@ Everything above must be visible without attaching a debugger:
   end to end (`7-01`, proven by `Ago.Chat.Integration.Tests.TracingEndToEndTests` against an
   in-memory exporter — a live Jaeger is `7-03`'s job). This is what makes the p95 numbers
   explainable instead of merely reportable.
-  Which traces are *kept* (`adr/0193`, proposed): hosts record everything and a tail-sampling
+  Which traces are *kept* (`adr/0193`, accepted; **not yet deployed**, `26-338`): hosts record everything and a tail-sampling
   collector in front of Jaeger keeps every error trace, every trace over 500 ms and 10 % of the rest;
   health probes and metrics scrapes are never traced (`26-331`, `adr/0194`). The 500 ms and 10 % are unmeasured.
 

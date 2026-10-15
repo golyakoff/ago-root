@@ -1,10 +1,10 @@
 # ADR-0193: A tail-sampling OTel Collector sits in front of Jaeger
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-15
 - **Stage**: 26
 
-Supersedes ADR-0025 once accepted (its `Status` line changes then, and only that line).
+Supersedes ADR-0025 (its `Status` line changed with this ADR, and only that line).
 
 ## Context
 
